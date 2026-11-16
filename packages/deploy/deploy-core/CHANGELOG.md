@@ -1,5 +1,21 @@
 # @pikku/deploy
 
+## 0.12.22
+
+### Patch Changes
+
+- 5679af0: Breaking: `db/annotations.ts` is removed. Column annotations (`security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`) are declared only on the columns in `db/tables.ts`; a table the migrations create is declared `declareOnly: true`. `pikku db migrate`, `generate`, `check` and `pikku validate` refuse a project that still has `db/annotations.ts`, pointing at docs/MIGRATION.md. `pikku db annotate`, `.pikku/db/classification-map.gen.d.ts` and `DbClassificationMap` are gone. `db/annotations.gen.json` is still written, now from the declaration alone, and removed when there is no `db/tables.ts`. The PKU910 hint, error messages, docs and skills name the column in `db/tables.ts`.
+- Updated dependencies [681b92b]
+- Updated dependencies [5679af0]
+- Updated dependencies [3b07a5b]
+- Updated dependencies [4c2f5c4]
+- Updated dependencies [cc1735d]
+- Updated dependencies [be8a952]
+- Updated dependencies [e825b1a]
+- Updated dependencies [36d5004]
+- Updated dependencies [5d1ce7a]
+  - @pikku/core@0.12.158
+
 ## 0.12.21
 
 ### Patch Changes

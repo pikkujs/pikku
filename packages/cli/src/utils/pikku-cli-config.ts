@@ -1428,6 +1428,21 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Key pairs (defineKeyPair + generated KeyPairsMap)
+    const keyPairsDir = join(result.outDir, 'keypairs')
+    if (!result.keyPairTypesFile) {
+      result.keyPairTypesFile = join(keyPairsDir, 'pikku-keypair-types.gen.ts')
+    }
+    if (!result.keyPairsFile) {
+      result.keyPairsFile = join(keyPairsDir, 'pikku-keypairs.gen.ts')
+    }
+    if (!result.keyPairsMetaJsonFile) {
+      result.keyPairsMetaJsonFile = join(
+        keyPairsDir,
+        'pikku-keypairs-meta.gen.json'
+      )
+    }
+
     // Credentials (typed wrapper for CredentialService)
     const credentialsDir = join(result.outDir, 'credentials')
     if (!result.credentialsFile) {
@@ -1531,6 +1546,11 @@ const _getPikkuCLIConfig = async (
     }
     if (!result.screensFile) {
       result.screensFile = join(screensDir, 'pikku-screens.gen.ts')
+    }
+    // An addon's definePlugin typed against its functions and message keys,
+    // reached as #pikku/screens.
+    if (!result.pluginTypesFile) {
+      result.pluginTypesFile = join(screensDir, 'pikku-plugin-types.gen.ts')
     }
     if (!result.installedAddonsFile) {
       result.installedAddonsFile = join(

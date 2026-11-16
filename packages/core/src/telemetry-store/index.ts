@@ -1,5 +1,6 @@
 export type {
   FailureRow,
+  FunctionMetricsRow,
   LogFacets,
   LogRecord,
   LogsQuery,
@@ -13,4 +14,7 @@ export type {
   TelemetryAttributes,
   TelemetryScope,
   TelemetryStore,
+  TenantFilter,
+  WireRunRow,
+  WireTypeRow,
 } from './telemetry-store.types.js'

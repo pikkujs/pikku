@@ -29,7 +29,6 @@ import {
   webhooksTeardown,
 } from './functions/commands/webhooks.js'
 import { dbCheck } from './functions/commands/db-check.js'
-import { dbAnnotate } from './functions/commands/db-annotate.js'
 import { dbBaseline } from './functions/commands/db-baseline.js'
 import { dbExport } from './functions/commands/db-export.js'
 import { dbReset } from './functions/commands/db-reset.js'
@@ -438,6 +437,11 @@ wireCLI({
             'Skip the Pikku Studio hosting conventions in the validate stage',
           default: false,
         },
+        allowDestructive: {
+          description:
+            'Let db migrate apply migrations marked -- pikku:destructive. Off unless the run is in a worktree with its own SQLite or embedded database; say so here for any other database you are sure is disposable',
+          default: false,
+        },
       },
     }),
     audit: pikkuCLICommand({
@@ -821,6 +825,11 @@ wireCLI({
               description: 'Refuse any database that is not on this machine',
               default: false,
             },
+            allowDestructive: {
+              description:
+                'Apply migrations marked `-- pikku:destructive` (a migration that drops or rewrites data). Refused without it',
+              default: false,
+            },
           },
         }),
         generate: pikkuCLICommand({
@@ -832,11 +841,6 @@ wireCLI({
           func: dbCheck,
           description:
             'Report how the configured database differs from the schema its migrations define',
-        }),
-        annotate: pikkuCLICommand({
-          func: dbAnnotate,
-          description:
-            'Add a kind to db/annotations.ts for each SQLite column declared BOOLEAN, DATE/TIMESTAMP or JSON, so it types as boolean, Date or parsed JSON',
         }),
         baseline: pikkuCLICommand({
           func: dbBaseline,

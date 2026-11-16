@@ -86,6 +86,9 @@ export const writeLocalServices = async (
     systemRoles: flattenSystemRoleDefinitions(
       visitState.systemRoles.definitions
     ),
+    analyticsEvents: (visitState.analytics ?? []).flatMap(
+      (declaration) => declaration.events
+    ),
     database,
     localCLI,
   })

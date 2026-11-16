@@ -32,11 +32,16 @@
       "verifiers/dev-platform-contributors/contrib-notify",
       "verifiers/dev-platform-contributors/contrib-select",
       "verifiers/dev-platform-contributors/contrib-bad",
-      "verifiers/deploy-standalone/contrib-marker"
+      "verifiers/deploy-standalone/contrib-marker",
+      "benchmarks/http-app",
+      "benchmarks/frameworks/shared",
+      "benchmarks/frameworks/pikku",
+      "benchmarks/frameworks/raw-bun",
+      "benchmarks/frameworks/elysia"
     ]
   },
   "scripts": {
-    "postinstall": "husky && node scripts/setup-merge-drivers.mjs",
+    "postinstall": "husky",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
     "pre-commit": "bun run test && bun run prettier && bun run lint",
@@ -88,6 +93,10 @@
     "benchmark:baseline:uws": "tsx benchmarks/bench-baseline-uws.ts",
     "benchmark:flame": "npx 0x -- npx tsx benchmarks/bench-express.ts --flame",
     "benchmark:workflow": "tsx benchmarks/bench-workflow.ts",
+    "benchmark:telemetry": "tsx benchmarks/bench-telemetry.ts",
+    "benchmark:telemetry:stress": "tsx benchmarks/bench-telemetry-stress.ts",
+    "benchmark:telemetry:http": "tsx benchmarks/bench-telemetry-http.ts",
+    "benchmark:frameworks": "tsx benchmarks/frameworks/run.ts",
     "knip": "knip"
   },
   "packageManager": "bun@1.4.3",
@@ -135,10 +144,6 @@
     "*.ts": [
       "oxlint",
       "prettier --write"
-    ],
-    "packages/core/src/**/*.ts": [
-      "bun run --filter @pikku/core api-report",
-      "git add packages/core/api-report.md"
     ]
   }
 }

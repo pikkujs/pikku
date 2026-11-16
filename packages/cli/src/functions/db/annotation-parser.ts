@@ -1,10 +1,11 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
+import type { ColumnConstraints } from '@pikku/core/db'
 import type { ColumnKind } from '@pikku/kysely'
 import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
 
 /**
- * The kinds a column may declare in `db/annotations.ts`. A strict superset of
+ * The kinds a column may declare in `db/tables.ts`. A strict superset of
  * the runtime `ColumnKind`, which is the value type of the generated
  * `CoercionMap`: `uuid` selects the generated `Uuid` TypeScript type but needs
  * no runtime coercion (a UUID is a string in both Postgres and SQLite), so the
@@ -23,7 +24,7 @@ export const COLUMN_FORMS = [
   'sealed',
 ] as const satisfies readonly ColumnForm[]
 
-export interface ColAnnotation {
+export interface ColAnnotation extends ColumnConstraints {
   /** Column kind override: `date`, `bool`, `json`, or `uuid`. */
   kind?: AnnotationKind
   /** TypeScript type string that overrides the inferred column type, e.g. `string[]`. */
@@ -51,14 +52,14 @@ export interface ColAnnotation {
   keyId?: string
 }
 
-/** Per-table, per-column annotation map sourced from `db/annotations.ts`. */
+/** Per-table, per-column annotation map sourced from the columns in `db/tables.ts`. */
 export type AnnotationMap = Record<string, Record<string, ColAnnotation>>
 
 /**
  * Warn-only naming heuristic. We no longer *infer* a column's kind from its
  * name (it produced wrong types — e.g. SQLite stores `*_at` as ISO TEXT, not a
  * `Date`). Instead the codegen warns when a column name looks like it wants a
- * `kind` but none is declared in `db/annotations.ts`, so the developer can opt
+ * `kind` but none is declared in `db/tables.ts`, so the developer can opt
  * in explicitly. Returns the *suggested* kind, or null.
  */
 export function nameSuggestsKind(colName: string): AnnotationKind | null {
@@ -75,7 +76,7 @@ function parseStrategy(s: string | undefined): AnonymizeStrategy {
     : null
 }
 
-interface RawEntry {
+export interface RawEntry {
   security?: string
   classification?: string
   form?: string
@@ -84,69 +85,77 @@ interface RawEntry {
   tsType?: string
   format?: string
   description?: string
+  enum?: unknown
+  min?: unknown
+  max?: unknown
+  minLength?: unknown
+  maxLength?: unknown
+  pattern?: unknown
 }
 
-export type RawTable = Record<string, RawEntry | null>
+type RawTable = Record<string, RawEntry | null>
 
 /**
- * A column entry's own values are all primitives; a table's are objects. That
- * is the only structural difference between the two levels, and it is what
- * tells a schema-qualified map (`{ app: { user: { … } } }`) from a bare one
- * (`{ user: { … } }`) without having to be told which shape was authored.
+ * One sidecar entry, as the codegen reads it: spelled `security` and
+ * `classification` (the anonymize strategy) on the wire, `classification` and
+ * `anonymize` once parsed. An unknown value is dropped, not carried.
  */
-function isColumnEntry(value: unknown): boolean {
-  if (typeof value !== 'object' || value === null) return false
-  return Object.values(value).every((v) => typeof v !== 'object' || v === null)
-}
-
-/**
- * A classification map's tables, with any schema nesting taken off.
- *
- * `DbClassificationMap` nests under the schema name when the project has one
- * (`{ app: { user: { … } } }`) and is bare otherwise, so a reader that treats
- * the two alike sees a column for every table.
- */
-export function flattenAnnotationTables(
-  raw: Record<string, Record<string, unknown>>
-): Array<[string, RawTable]> {
-  const tables: Array<[string, RawTable]> = []
-  for (const [key, value] of Object.entries(raw)) {
-    if (!value || typeof value !== 'object') continue
-    const isTable = Object.values(value).every(
-      (v) => v === null || isColumnEntry(v)
-    )
-    if (isTable) {
-      tables.push([key, value as RawTable])
-      continue
-    }
-    // `key` is a schema; its values are the tables.
-    for (const [table, cols] of Object.entries(value)) {
-      if (cols && typeof cols === 'object') {
-        tables.push([table, cols as RawTable])
-      }
+export function toColAnnotation(ann: RawEntry): ColAnnotation {
+  const entry: ColAnnotation = {}
+  if (
+    ann.kind === 'bool' ||
+    ann.kind === 'date' ||
+    ann.kind === 'json' ||
+    ann.kind === 'uuid'
+  )
+    entry.kind = ann.kind
+  if (ann.tsType) entry.tsType = ann.tsType
+  if (ann.format && ann.format in ZOD_FORMATS)
+    entry.format = ann.format as ZodFormat
+  // `security` is the privacy level; `form` is how it is held at rest.
+  switch (ann.security) {
+    case 'public':
+    case 'private':
+    case 'pii':
+    case 'secret':
+      entry.classification = ann.security
+      break
+  }
+  if (ann.form && (COLUMN_FORMS as readonly string[]).includes(ann.form)) {
+    entry.form = ann.form as ColumnForm
+  }
+  if (ann.keyId) entry.keyId = ann.keyId
+  if (
+    Array.isArray(ann.enum) &&
+    ann.enum.length > 0 &&
+    ann.enum.every((v) => typeof v === 'string')
+  ) {
+    entry.enum = ann.enum
+  }
+  for (const field of ['min', 'max', 'minLength', 'maxLength'] as const) {
+    const value = ann[field]
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      entry[field] = value
     }
   }
-  return tables
+  if (typeof ann.pattern === 'string') entry.pattern = ann.pattern
+  const strategy = parseStrategy(ann.classification)
+  if (strategy !== null) entry.anonymize = strategy
+  return entry
 }
 
 /**
- * Load annotations from the `db/annotations.gen.json` sidecar, which is
- * compiled from the developer-authored `db/annotations.ts` (`DbClassificationMap`)
- * by `syncClassifications`. This is the single source of column classification
- * and type-override information — there is no SQL-comment fallback.
+ * Load annotations from the `db/annotations.gen.json` sidecar, which `pikku db
+ * migrate` writes from the column annotations in `db/tables.ts`. This is the
+ * single source of column classification and type-override information —
+ * there is no SQL-comment fallback.
  *
- * The authored `ColumnEntry` shape is:
- *   { security?, classification?: <anonymize strategy>, kind?, tsType?, description? }
- * where `security` is the privacy level and `classification` is the anonymize
- * strategy. Returns `{}` if the sidecar doesn't exist yet (first migrate run,
- * before it has been generated).
- *
- * `DbClassificationMap` nests under the schema name whenever the project has
- * one (`{ app: { user: { email: … } } }`), so the sidecar is flattened back to
- * bare table names here — the codegen looks columns up by `bareTableName`.
- * Reading a schema-qualified map as though it were flat silently yields an
- * annotation for every column of every table, which is how a project could
- * classify a column `secret` and still generate it as `private`.
+ * Each entry is `{ security?, classification?: <anonymize strategy>, kind?,
+ * tsType?, format?, form?, keyId?, description?, enum?, min?, max?, minLength?,
+ * maxLength?, pattern? }`, keyed by the bare physical
+ * table name and then the physical column name, which is how the codegen looks
+ * columns up. Returns `{}` when there is no sidecar (a project that declares no
+ * tables).
  */
 export function loadAnnotations(rootDir: string): AnnotationMap {
   const jsonPath = join(rootDir, 'db', 'annotations.gen.json')
@@ -155,39 +164,14 @@ export function loadAnnotations(rootDir: string): AnnotationMap {
     const raw = JSON.parse(readFileSync(jsonPath, 'utf8'))
 
     const result: AnnotationMap = {}
-    for (const [table, cols] of flattenAnnotationTables(raw)) {
+    for (const [table, cols] of Object.entries(
+      raw as Record<string, RawTable>
+    )) {
+      if (!cols || typeof cols !== 'object') continue
       result[table] = {}
       for (const [col, ann] of Object.entries(cols)) {
         if (!ann) continue
-        const entry: ColAnnotation = {}
-        if (
-          ann.kind === 'bool' ||
-          ann.kind === 'date' ||
-          ann.kind === 'json' ||
-          ann.kind === 'uuid'
-        )
-          entry.kind = ann.kind
-        if (ann.tsType) entry.tsType = ann.tsType
-        if (ann.format && ann.format in ZOD_FORMATS)
-          entry.format = ann.format as ZodFormat
-        // `security` is the privacy level; `form` is how it is held at rest.
-        switch (ann.security) {
-          case 'public':
-          case 'private':
-          case 'pii':
-          case 'secret':
-            entry.classification = ann.security
-            break
-        }
-        if (
-          ann.form &&
-          (COLUMN_FORMS as readonly string[]).includes(ann.form)
-        ) {
-          entry.form = ann.form as ColumnForm
-        }
-        if (ann.keyId) entry.keyId = ann.keyId
-        const strategy = parseStrategy(ann.classification)
-        if (strategy !== null) entry.anonymize = strategy
+        const entry = toColAnnotation(ann)
         result[table][col] = entry
       }
     }

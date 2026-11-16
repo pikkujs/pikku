@@ -38,8 +38,8 @@ const classifications = async (annotations: unknown) => {
 
 describe('DbSchemaService.getSchema', () => {
   test('reads the privacy level from `security`, as annotations.gen.json writes it', async () => {
-    // The sidecar is a verbatim dump of db/annotations.ts, so this is the shape
-    // a project actually has. Reading the wrong key here is invisible: every
+    // The sidecar holds the column annotations of db/tables.ts as written, so
+    // this is the shape a project actually has. Reading the wrong key here is invisible: every
     // column silently falls back to `private` and the console looks like it is
     // working.
     assert.deepEqual(
@@ -77,5 +77,21 @@ describe('DbSchemaService.getSchema', () => {
       }),
       { body: 'private', attendee_id: 'private' }
     )
+  })
+})
+
+describe('DbSchemaService constraints', () => {
+  test('carries declared constraints to the column, and none to others', async () => {
+    const service = new DbSchemaService(
+      makeMetaService({
+        question: {
+          body: { security: 'public', minLength: 1, maxLength: 500 },
+          attendee_id: { security: 'private' },
+        },
+      }) as never
+    )
+    const columns = (await service.getSchema())!.tables[0]!.columns
+    assert.deepEqual(columns[0]!.constraints, { minLength: 1, maxLength: 500 })
+    assert.equal(columns[1]!.constraints, undefined)
   })
 })

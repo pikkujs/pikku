@@ -341,9 +341,9 @@ describe('addon packaging', () => {
       await writeBuiltAddon(tmp)
       await write(
         tmp,
-        'dist/.pikku/addon/db/classification-map.gen.d.ts',
-        '// Use this type in db/classifications.ts:\n' +
-          "//   import type { DbClassificationMap } from './.pikku/db/classification-map.gen.d.ts'\n" +
+        'dist/.pikku/addon/db/schema.gen.d.ts',
+        '// Use this type in your own code:\n' +
+          "//   import type { DB } from './.pikku/db/schema.gen.d.ts'\n" +
           "/* import { x } from './missing.js' */\n" +
           "export type Url = 'https://example.com/a'\n" +
           "export { thing } from '../../../src/thing.js'\n"

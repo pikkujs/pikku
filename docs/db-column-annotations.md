@@ -1,34 +1,121 @@
 # DB column annotations — how it works and how to extend it
 
-`pikku db migrate` introspects your database and generates typed artifacts. A
-hand-authored `db/annotations.ts` is the **single source** for everything the raw
-schema can't tell us: privacy classification, anonymize strategy, and type/zod
-refinements. This document explains the pipeline and gives a recipe for each way
-you might want to extend it.
+`pikku db migrate` introspects your database and generates typed artifacts. What
+the raw schema can't tell us (privacy classification, how a value is held at
+rest, the anonymize strategy, and type/zod refinements) is declared on the
+columns in `db/tables.ts`, and nowhere else. This document explains the
+pipeline and gives a recipe for each way you might want to extend it.
 
-A table declared in `db/tables.ts` carries its annotations on the declaration
-instead, and those merge into the same sidecar. See [Declaring tables](./db-tables.md).
+## Declaring annotations
+
+Every annotation is a field on a column in `db/tables.ts` (see
+[Declaring tables](./db-tables.md)). A table your migrations create, or one
+another package owns, is declared `declareOnly: true`: it carries its types and
+annotations, and no SQL is generated for it.
+
+```ts
+import { defineTables } from '@pikku/core/db'
+
+export const tables = defineTables({
+  user: {
+    declareOnly: true,
+    columns: {
+      email: {
+        type: 'text',
+        security: 'pii',
+        format: 'email',
+        classification: 'fake:email',
+      },
+      apiKey: {
+        type: 'text',
+        security: 'secret',
+        form: 'wrapped',
+        keyId: 'api',
+      },
+      settings: { type: 'json', kind: 'json', tsType: '{ theme: string; locale: string }' },
+      createdAt: { type: 'timestamp', kind: 'date' },
+    },
+  },
+})
+```
+
+| Field                                             | Values                                           | Effect                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `security`                                        | `public`, `private` (default), `pii`, `secret`   | the brand on the generated type; who may read the value                                            |
+| `form`                                            | `plain` (default), `hashed`, `wrapped`, `sealed` | what the stored bytes are (see below)                                                              |
+| `keyId`                                           | any string                                       | which key a `wrapped`/`sealed` column is encrypted under                                           |
+| `classification`                                  | `fake:email`, `fake:name`, `hash`, `keep`        | how the anonymizer rewrites the value                                                              |
+| `kind`                                            | `date`, `bool`, `json`, `uuid`                   | the TypeScript type and runtime coercion                                                           |
+| `tsType`                                          | a TypeScript type                                | overrides the type outright; wins over `kind`                                                      |
+| `format`                                          | a `ZOD_FORMATS` key (`email`, `url`, …)          | refines the zod validator only; the type stays `string`                                            |
+| `description`                                     | any string                                       | carried into the schema metadata                                                                   |
+| `min`, `max`, `minLength`, `maxLength`, `pattern` | numbers, a regex string                          | `CHECK`s in SQL (not `pattern`) and zod bounds; see [Declaring tables](./db-tables.md#constraints) |
+| `enum`                                            | a list of strings                                | a `CHECK ... IN (...)` and a union type                                                            |
+
+An unknown value is refused when `db/tables.ts` is loaded. A column the
+declaration does not list is `private`.
+
+## Built-in annotations for the framework's own tables
+
+Tables you did not declare still carry annotations, so `pikku db migrate`
+brands them without you writing anything. The codegen puts them **under** your
+own: a column you annotate in `db/tables.ts` (a `declareOnly: true` entry for a
+table Better Auth created, say) replaces the built-in column outright, with none
+of its fields kept.
+
+A built-in applies only to a table a generated migration created for the
+framework (the `better-auth` and `pikku-runtime` migrations `pikku db generate`
+writes), so a table of your own that happens to be called `user` or `secrets` is
+never touched. It works with no `db/tables.ts` at all.
+
+Better Auth's tables (`builtin-annotations.ts`; a renamed model, `modelName` or
+`usePlural`, is not matched):
+
+| Column                                                              | Annotation                             | Why                                                                                                                                                                                   |
+| ------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user.email`                                                        | `security: 'pii'`, `format: 'email'`   | personal data; the zod validator becomes `z.email()`                                                                                                                                  |
+| `session.token`                                                     | `security: 'secret'`, `form: 'plain'`  | the bearer token, stored as issued: whoever reads the row can act as the user                                                                                                         |
+| `session.ip_address`                                                | `security: 'pii'`                      | an address identifies a person                                                                                                                                                        |
+| `account.password`                                                  | `security: 'secret'`, `form: 'hashed'` | Better Auth stores a scrypt hash, never the password                                                                                                                                  |
+| `account.access_token`, `account.refresh_token`, `account.id_token` | `security: 'secret'`, `form: 'plain'`  | as the provider issued them. With `account.encryptOAuthTokens` Better Auth encrypts them under its own key, which Pikku cannot open, so they are `plain` from Pikku's side either way |
+| `verification.value`                                                | `security: 'secret'`, `form: 'plain'`  | a one-time code or link token, stored as issued                                                                                                                                       |
+
+No built-in is `wrapped` or `sealed`: those make the kysely plugin decrypt on
+read and refuse plaintext writes, and Better Auth writes these tables through
+its own adapter. Every built-in secret states its `form`, so none raises
+PKU483.
+
+The runtime tables (`@pikku/kysely`) annotate their columns on the declaration
+itself, like any table. `secrets` and `credentials` mark `ciphertext` and
+`wrapped_dek` as `security: 'secret'`, `form: 'plain'`: the services seal those
+values with their own envelope encryption before they reach the row, and
+`wrapped` here would have the column plugin decrypt them again and refuse the
+services' own writes.
 
 ## The pipeline
 
 ```
-db/annotations.ts                     ← you author this (satisfies DbClassificationMap)
-   │  compileClassifications()         (local-db.ts: esbuild + vm, in-process)
+db/tables.ts                           ← you author this (defineTables)
+   │  loadTableDeclaration()           (table-declaration.ts)
    ▼
-db/annotations.gen.json                ← compiled sidecar (the machine-readable form)
+db/annotations.gen.json                ← sidecar written by `pikku db migrate`
    │  loadAnnotations()                (annotation-parser.ts)
    ▼
 AnnotationMap  ── generateSchemaTypes() (db-codegen.ts) ──► .pikku/db/schema.gen.d.ts
                                                             .pikku/db/coercion.gen.ts
                                                             .pikku/db/classification.gen.ts
-                                                            .pikku/db/classification-map.gen.d.ts  ← the ColumnEntry type you author against
                                         generateZodTypes()  (zod-codegen.ts) ──► .pikku/db/zod.gen.ts
 ```
+
+The sidecar is keyed by the physical (snake_case) table and column. The console
+reads it too. It is rewritten only when the declaration's annotations change,
+and removed when there is no `db/tables.ts`.
 
 Key files (all under `packages/cli/src/functions/db/`):
 
 | File                                                       | Responsibility                                                                              |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `table-declaration.ts`                                     | loads `db/tables.ts`, refuses unknown annotation values, collects the column annotations    |
 | `annotation-parser.ts`                                     | `ColAnnotation` shape; `AnnotationKind`; `loadAnnotations()` reads + validates the sidecar  |
 | `db-introspector.ts`                                       | dialect-agnostic `ColumnInfo` / `EnumInfo` interfaces                                       |
 | `postgres/postgres-introspector.ts`, `mysql/…`, `sqlite/…` | per-dialect introspection                                                                   |
@@ -68,6 +155,11 @@ This distinction drives every extension decision.
   travels as a **structured hint** from `db-codegen` → `zod-codegen`
   (`CodegenResult.zodFormats`), not via the type string.
 
+- **`min` / `max` / `minLength` / `maxLength` / `pattern`** also leave the TS
+  type alone. They travel the same way, as `CodegenResult.zodConstraints`, and
+  are skipped for columns that are an enum union, a date, or an array. The
+  sidecar carries them to the console's form hints and to `pikku meta db`.
+
 When adding something new, first decide which axis it's on. If it changes the
 type, it's `kind`/`tsType`/auto-detect. If it's a pure string refinement, it's a
 `format`.
@@ -98,15 +190,12 @@ the column that should hold its ciphertext. The branded type stays assignable
 _to_ `string`, so it still works as a query operand and serializes normally: the
 constraint is on construction, not on use.
 
-`security: 'encrypted'` predates this split. It still parses, as the pair it
-always meant (`secret` + `wrapped`), and an explicit `form` wins over it.
-
 ### `keyId` — which key protects the column
 
 An encrypted column may name its key:
 
 ```ts
-notes_body: { security: 'secret', form: 'wrapped', keyId: 'notes' }
+body: { type: 'text', security: 'secret', form: 'wrapped', keyId: 'notes' }
 ```
 
 Absent means the deployment's default key (`DEFAULT_KEY_ID`, exported from
@@ -132,7 +221,8 @@ data or a credential, `pikku db migrate` warns until you say what it is:
 Names are split into whole tokens, so `zip` and `description` never match `ip`.
 Booleans, dates and numbers are skipped, and so are names that end `_at`,
 `_count`, `_id`, `_type`, `_ref`, `_verified` or start `is_` / `has_`. Tables
-that Better Auth, the runtime or an addon create are skipped. Any explicit
+that Better Auth, the runtime or an addon create are skipped (their built-in
+annotations are above). Any explicit
 `security` ends the warning, `private` included, except `public` on a pii-looking
 name. There is no config switch. `--fail-on-warn` turns both into failures.
 
@@ -155,13 +245,14 @@ same explicit annotations, all three dialects emit identical types.
 Cheapest extension. Example: add `z.guid()` as `format: 'guid'`.
 
 1. **`zod-codegen.ts` — `ZOD_FORMATS`**: add `guid: 'z.guid()'`. This is the
-   single source of truth; the token type `ZodFormat` and the `ColumnEntry`
-   union both derive from its keys, so nothing else needs the literal list.
+   single source of truth; the token type `ZodFormat` and the values
+   `db/tables.ts` accepts both derive from its keys, so nothing else needs the
+   literal list.
 2. **Verify the zod method exists** in the installed `zod` version
    (`node -e "const {z}=require('zod'); console.log(typeof z.guid)"`). Formats
    are emitted verbatim — a typo here ships a broken `zod.gen.ts`.
-3. That's it for wiring — `annotation-parser` validates against `ZOD_FORMATS`
-   automatically, and `db-codegen` emits the union from `Object.keys(ZOD_FORMATS)`.
+3. That's it for wiring — `table-declaration` and `annotation-parser` both
+   validate against `ZOD_FORMATS`.
 4. **Test**: add a case to `zod-codegen.test.ts` (`formats` arg) and optionally
    an end-to-end case in `verifiers/classification/src/tests/codegen.assert.ts`.
 
@@ -180,13 +271,14 @@ Example: `kind: 'bigint'` typing a column as `bigint` + `z.bigint()`.
    type, leave `ColumnKind` alone and exclude the kind in db-codegen's coercion
    loop (as `uuid` is excluded).
 2. **`annotation-parser.ts` — `loadAnnotations()`**: add `'bigint'` to the
-   `ann.kind === …` acceptance list.
+   `ann.kind === …` acceptance list. Add it to the `kind` union on
+   `ColumnAnnotation` in `@pikku/core/db` and to `ALLOWED_VALUES.kind` in
+   `table-declaration.ts`, so a column may declare it.
 3. **`db-codegen.ts`**:
    - `selectBase()` / `insertBase()`: map the kind to its TS base (`'bigint'`).
    - `columnTypeExpression()` public branch: add a `kind === 'bigint'` arm if it
      needs special ColumnType read/write types (like `bool`/`date` do); a plain
      scalar can reuse the `tsType` path.
-   - `emitClassificationMap()`: add `'bigint'` to the `kind?` union comment line.
    - If a real Postgres type should auto-derive it, add it to `realKind()`.
 4. **`zod-codegen.ts` — `scalarSchema()`**: add a `case 'bigint': schema =
 'z.bigint()'`. If the type is a **named alias** (the `Uuid` pattern), also
@@ -245,7 +337,7 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
   matching is by bare `udtName`, which can collide across schemas. Fixing this
   is a separate, worthwhile task.
 - **Typing kinds and coercion kinds are two unions, not one.** `AnnotationKind`
-  (`annotation-parser.ts`) is what a column may declare in `db/annotations.ts`;
+  (`annotation-parser.ts`) is what a column may declare in `db/tables.ts`;
   `ColumnKind` (`@pikku/kysely`) is the value type of the generated
   `CoercionMap`, so it may only name kinds `fromDb()` actually acts on.
   `AnnotationKind` is the superset: `uuid` types a column as `Uuid` but needs no

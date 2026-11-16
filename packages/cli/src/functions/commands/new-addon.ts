@@ -219,6 +219,13 @@ export function getAddonFiles(
     category,
   } = vars
   const files: Record<string, string> = {}
+  // The service is built per request from the caller's credential
+  // (`createWireServices`, below) whenever the addon is per-user. Then it must
+  // be a wire service: if it were typed as a singleton, every function would
+  // read only singletons, be marked `singletonServicesOnly`, and core would skip
+  // `createWireServices`, so the credential would never be read. Keep this in
+  // step with the `src/services.ts` branches below.
+  const perUser = !!flags.delegated || !!flags.credential || flags.oauth
 
   // package.json
   files['package.json'] = JSON.stringify(
@@ -286,7 +293,7 @@ export function getAddonFiles(
         categories: [category],
         icon: `./${name}.svg`,
       },
-      forceRequiredServices: [camelName],
+      ...(perUser ? {} : { forceRequiredServices: [camelName] }),
     },
     null,
     2
@@ -667,11 +674,20 @@ export interface Config extends CoreConfig {}
 
 export interface UserSession extends CoreUserSession {}
 
-export interface SingletonServices extends CoreSingletonServices<Config> {
+${
+  perUser
+    ? `export interface SingletonServices extends CoreSingletonServices<Config> {}
+
+// Built per request from the caller's credential, so a wire service.
+export interface Services extends CoreServices<SingletonServices> {
+  ${camelName}: ${pascalName}Service
+}`
+    : `export interface SingletonServices extends CoreSingletonServices<Config> {
   ${camelName}: ${pascalName}Service
 }
 
-export interface Services extends CoreServices<SingletonServices> {}
+export interface Services extends CoreServices<SingletonServices> {}`
+}
 `
 
   // Conditional: credential / secret file

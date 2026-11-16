@@ -24,6 +24,55 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### The event hub is publish-only; a subscribe function decides the topic
+
+`services.eventHub` is now an `EventHubPublisher`: `publish(topic, data, options?)` and nothing else. The runtime creates the hub (the distributor) before `createSingletonServices` in `pikku dev`, `pikku serve` and a standalone build, and adds `services.eventHubRegistry` for relays. A client no longer names a topic: it calls a `pikkuSubscribeFunc`, whose body returns the topic after the normal session, scope and permission checks.
+
+**Removed from `@pikku/core`:** the `EventHubService` interface, `eventHub.subscribe` and `eventHub.unsubscribe`, `LocalEventHubService`, `defineEventHubServiceTests` (now `defineEventHubDeliveryBackendTests`), and the `realtimeEventHubTopicsImport` config key with its `eventhub-topics.d.ts` file (topics are now the generated `EventHubTopic` union).
+**Removed from the runtimes:** `BunEventHubService`, `UWSEventHubService`, `CloudflareEventHubService`, `LambdaEventHubService`, `PgEventHubService`, and the `eventHub` option of `PikkuBunServer`. `PgEventHubService` is replaced by `PgEventHubRelay`: `services.eventHubRegistry.add(new PgEventHubRelay(url), { topics: ['order:${string}'] })`. A Postgres NOTIFY payload of 8 kB or more is refused with the topic named. The serverless backends return in a later change; until then Lambda and Cloudflare have no `services.eventHub`.
+**Added:** an open SSE stream gets a `:` comment frame every `sseHeartbeatMs` (default 5 s, `0` off; set on `createEventHubDistributor`). Open subscriptions are re-checked every `subscriptionRecheckMs` (default one minute, `0` off) by re-running the subscribe function on the session's refreshed scopes, and a subscription whose session cannot be re-read (`mapSession`, `mapKey`) ends after `maxSubscriptionLifetime` (default one hour), so a client must reconnect. A subscribe function must therefore compute a topic and not write. Express, Fastify and uWS responses now report `onClose`, and a custom `PikkuHTTPResponse` can add `heartbeat()`.
+**Removed from the generated client and scaffold:** the open `/events` channel and `/events/:topic` SSE route, `PikkuRealtime.subscribe`, `unsubscribe` and `subscribeToTopic`. `subscribeToSSE` and `connectToChannel` remain.
+**Changed:** `publish(topic, channelId, data)` is now `publish(topic, data, { except })`. A publish to a topic no subscribe function can return is refused.
+
+**Find the code:** search for `eventHub.subscribe`, `eventHub.unsubscribe`, `LocalEventHubService`, `subscribeToTopic` and `eventhub-topics`.
+
+### OTLP and analytics sinks are registries; `analyticsService` and `accepts` are gone
+
+Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build. Register sinks in plain code with `add(sink, map)`. See [telemetry-sinks.md](./telemetry-sinks.md).
+
+**Removed from `@pikku/core`:**
+
+- The `analyticsService` singleton service. Register a sink with `analyticsSinks.add(sink, { event_name: true })` instead.
+- `AnalyticsSink` (`{ service, accepts }`) and its `accepts` predicate. A sink now carries a map of the events it receives; an event not in the map never reaches it (fail closed).
+- The old `fanOutAnalytics(sinks)` signature. It is now `fanOutAnalytics(registry, fallback)`.
+- `OtlpTracer`, `OtlpLogger` and `startProcessMetrics` no longer take an `OtlpHttpExporter`; they take an `OtlpSinkBase`.
+
+**Behaviour change:** with no `PIKKU_OTLP_ENDPOINT` the tracer is now real, not inert. The endpoint only decides whether the HTTP exporter is registered. `PIKKU_TELEMETRY=0` still turns it all off. Callers that passed `{}` as the environment to `createRuntimeTelemetry` and want it off must pass `{ PIKKU_TELEMETRY: '0' }`.
+
+**Find the code:** search for `analyticsService`, `AnalyticsSink` and `accepts`.
+
+### Better Auth's tables and the runtime's secret columns come annotated
+
+`pikku db migrate` now gives the tables `pikku db generate` created for Better Auth (`user`, `session`, `account`, `verification`) and for the runtime (`secrets`, `credentials`) built-in column annotations, with or without a `db/tables.ts`. A table of your own that merely shares a name is untouched.
+
+| Column                                                                                                     | Now                        |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `user.email`                                                                                               | `pii`, `format: 'email'`   |
+| `session.token`, `account.access_token`, `account.refresh_token`, `account.id_token`, `verification.value` | `secret`, `form: 'plain'`  |
+| `account.password`                                                                                         | `secret`, `form: 'hashed'` |
+| `session.ip_address`                                                                                       | `pii`                      |
+| `secrets` and `credentials`: `ciphertext`, `wrapped_dek`                                                   | `secret`, `form: 'plain'`  |
+
+What an app sees:
+
+- **No new PKU483.** Every built-in secret states its `form`.
+- **PKU910 on `pikku all --security`** for a function (sessioned or not) that returns one of the secret columns, for example a `select * from account` result. Strip the column before returning. `user.email` was already `Private` (the default), so a sessionless function returning it was already flagged; it is now `Pii`.
+- **PKU954 on `pikku all --security`** for code that logs or otherwise sinks one of the new pii/secret values, for example `logger.info({ to: user.email })`. Log an id instead; the online-shop template's `sendOrderConfirmation` did exactly this and now logs `userId`.
+- **A compile error on a direct write to `account.password`** through the typed Kysely: the column's insert and update type is now `HashedValue`. Wrap the hash Better Auth produced with `unsafeAsHashed(hash)` from `@pikku/core/classification`. Better Auth's own writes are unaffected.
+- **`user.email`'s zod validator is `z.email()`** in `.pikku/db/zod.gen.ts`.
+- **Opting out of one**: declare the table `declareOnly: true` in `db/tables.ts` and annotate the column. Your column replaces the built-in one entirely (for example `access_token: { type: 'text', security: 'private' }`).
+- A Better Auth `modelName` or `usePlural` that renames a table is not matched; annotate it yourself.
+
 ### Deprecated aliases and packages are deleted
 
 - `@pikku/ai-voice` (an empty package) is gone: use `voiceInput` / `voiceOutput` from `@pikku/core/agent`.
@@ -32,7 +81,7 @@ Version numbers in brackets are the release of the named package that shipped th
 - `PikkuTaskScheduler` is gone: use `InMemorySchedulerService` from `@pikku/schedule`.
 - `pikku semver` is gone: use `pikku release diff` (or `--emit` becomes `pikku release snapshot`).
 - Local content no longer reads files stored outside `private/` and `public/` under `localFileUploadPath`: move any old `<bucket>/<key>` files into `private/<bucket>/<key>`. `resolveContentRequestTarget(basePath, key)` is synchronous and takes no `mode`.
-- A `db/annotations.ts` entry with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
+- A column with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
 
 ### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
 
@@ -144,6 +193,12 @@ Related changes:
 - **A published addon** keeps its old meta until it is rebuilt, so its workflows stay open until then.
 
 To find affected code, search for `pikkuWorkflowFunc`, `pikkuWorkflowGraph`, `pikkuAgent(`, `rpc.startWorkflow`, `workflow.approval(` and `assertWorkflowRunOwner`, and run `pikku validate`.
+
+### `pikku dev` and `pikku serve` read vault secrets over HTTP from a connection file
+
+The vault client in `@pikku/cli` no longer talks to a unix socket. `PIKKU_VAULT_SOCKET` and `PIKKU_VAULT_TOKEN` are deleted and ignored, with no fallback. Set `PIKKU_VAULT_CONNECTION_FILE` to the path of a JSON file `{ "url": "http://...", "token": "..." }` (mode 0600). The CLI calls `POST /rpc/vault:secretGetOwn@v1` on that host with the token as a bearer; on a 401 or a connection error it re-reads the file once and retries, so a renewed token or a new host port reaches a running project. The client stays read-only.
+
+To find affected setups, search for `PIKKU_VAULT_SOCKET` and `PIKKU_VAULT_TOKEN` in scripts and process managers.
 
 ### `pikku cloud report` is now `pikku report`, and findings are no longer anonymous
 
@@ -547,6 +602,25 @@ naming no function of the addon (PKU359) and any non-literal field (PKU345).
 `pikku new addon-ui` scaffolds the new form. Search:
 `rg -n "defineScreens|ScreensManifest|AddonScreen"`.
 
+### `definePlugin` takes widgets, things and arranged screens
+
+Nothing to change: `widgets`, `things` and `arrangedScreens` are optional, and a
+manifest with only `title` and `screens` builds as before. To use them, import
+`definePlugin` from `#pikku/addon/screens`, which `pikku all` now writes for an
+addon, instead of `@pikku/core/addon`: it is the same function, typed against
+the addon's functions and the keys of its `messages/en.json`, so a wrong
+`source`, `from`, variant or message key fails tsc. `wireAddon({ ui: true })`
+now also accepts an addon that declares only arranged screens, things or
+widgets. See [pikku-studio-screens.md](./pikku-studio-screens.md#widgets-things-and-arranged-screens).
+
+The inspector now reads a top-level `const` of the same file, and spreads of
+one, where `definePlugin` (and its screens) previously failed with PKU345; a
+cast (`as`, `satisfies`) is read through. A function call, an import or a `let`
+still fails with PKU345: inline those values. Copy entries may nest and take
+`$` and figure wording, and an action's `run` may be `go:/<path>`. The host's
+`installedAddons` carries `widgets`, `things` and `arrangedScreens` (and their
+`actions`) as records keyed by id, not arrays.
+
 ### Platform-service contributors are declared in code and opted in with `wireAddon`
 
 Contributors are now plain `Contributor` objects an addon registers with `defineContributors`, and a project opts in by name. The string-emitting `PlatformServiceContributor` is gone. The full reference is [`contributors.md`](./contributors.md).
@@ -703,6 +777,10 @@ pikkuUserFlow|FABRIC_|pikkuFabric|pikku (fabric|persona|userflow|tests|console)\
 ---
 
 ## `@pikku/core`
+
+### `TelemetryStore` has three more required methods
+
+(core, patch release) An implementation of `TelemetryStore` must now provide `functionMetrics(scope, q)`, `wireTypes(scope, q)` and `wireRuns(scope, q)`. Their signatures and the ordering, limits and tenant rules are in `@pikku/core/telemetry-store` and proved by `conformance()` from `@pikku/core/telemetry-store/testing`. `trace` takes an optional second argument, `{ tenant }`. A store that has no span tree can return `[]` from the three methods; run `conformance(store, { spans: false })` to see what it must still answer. Find affected code with `grep -rn "implements TelemetryStore"`.
 
 ### The package root, `@pikku/core/ecosystem/*` and `@pikku/core/internal` are gone
 
@@ -1155,6 +1233,15 @@ Declare `VIRTUAL_USER_VERIFY_KEY` as an optional variable. Delete the `SCENARIO_
 
 **Find:** `rg -n "\badmin\(\)|callAdminApi|AdminApiHttpWire|ProjectedAdminRole|ADMIN_ROLE_SCOPES|role\s*===\s*'admin'"`
 
+### Virtual user verify key: checked at start-up, statements carry a `kid`
+
+**What:** `VIRTUAL_USER_VERIFY_KEY` may now be a single key (unchanged) or a JSON list of `{ kid, publicKey }`. Two behaviours change for existing apps:
+
+- A verify key that is not an Ed25519 SPKI (PEM or base64) now throws when `pikkuVirtualUser` or `JoseVirtualUserStatementVerifier` is constructed, instead of failing each sign-in. A valid key behaves exactly as before, and statements without a `kid` still verify.
+- Statements minted by the CLI (`resolveStatementMint`) carry a `kid` header (the RFC 7638 thumbprint of the public key). `signVirtualUserStatement` stays synchronous and takes an optional precomputed `kid`. A verifier holding several keys rejects an unknown `kid`.
+
+**Find:** `rg -n "signVirtualUserStatement|VIRTUAL_USER_VERIFY_KEY"`
+
 ### better-auth 1.7
 
 `@pikku/better-auth` now uses better-auth 1.7.5 (`dfd7019`). Code that calls better-auth's internal adapter directly needs these changes: `findAccountByProviderId(accountId, providerId)` → `findAccountByKey({ providerId, accountId })`, `createUser` takes the provisioning source as its second argument, and `generateState` takes its link target by name.
@@ -1209,16 +1296,68 @@ Created by `pikku db generate`:
 
 ### Declaring tables in `db/tables.ts`
 
-An app can now declare its tables in `db/tables.ts`, with `defineTables` from `@pikku/kysely`, and `pikku db generate` writes the SQL. See [Declaring tables](./db-tables.md). It is opt-in: an app with no `db/tables.ts` and hand-written migrations behaves as before.
+`db/tables.ts` now holds a plain declaration: `defineTables` from `@pikku/core/db`, one entry per table with its `columns`, and the annotations on the columns. See [Declaring tables](./db-tables.md). It is opt-in: an app with no `db/tables.ts` and hand-written migrations behaves as before.
 
-One thing changes for an app that already has a file at that path. `pikku db generate`, `migrate` and `check` now load `db/tables.ts` and stop if it does not export `tables`, so rename a file you keep there for another purpose.
+The earlier shape is gone, with no fallback. `pikku db generate`, `migrate` and `check` stop on a `db/tables.ts` that exports `statements`, and say so. The pieces that shape used are removed from `@pikku/kysely`: `defineTables`, `requiredType`, and the `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` types. `PikkuSchema`, `compileTables`, `tableRequirements`, `pikkuSchemas`, `applyPikkuSchemas` and `requiredPikkuSchemas` stay.
 
-To move an app over:
+Before:
+
+```ts
+import { defineTables, requiredType } from '@pikku/kysely'
+
+export const tables = defineTables({
+  requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
+  statements: [
+    (db, types, ctx) =>
+      db.schema
+        .createTable('note')
+        .addColumn('noteId', ctx.key, (col) => col.primaryKey())
+        .addColumn('body', ctx.text, (col) => col.notNull())
+        .addColumn('userId', requiredType(types, 'user', 'id'), (col) =>
+          col.notNull().references('user.id').onDelete('cascade')
+        ),
+    (db) =>
+      db.schema.createIndex('note_user_id_idx').on('note').column('userId'),
+  ],
+  annotations: { note: { body: { security: 'pii' } } },
+})
+```
+
+After:
+
+```ts
+import { defineTables } from '@pikku/core/db'
+
+export const tables = defineTables({
+  note: {
+    columns: {
+      noteId: { type: 'key', primaryKey: true },
+      body: { type: 'text', required: true, security: 'pii' },
+      userId: { references: 'user.id', onDelete: 'cascade', required: true },
+    },
+    indexes: [{ columns: ['userId'] }],
+  },
+})
+```
+
+- `ctx.key` is `type: 'key'`, `ctx.text` is `type: 'text'`; `.notNull()` is `required: true`.
+- `requires` and `requiredType` go: a `references` without a `type` takes the target's type from the migrations.
+- `annotations.<table>.<column>` moves onto the column itself.
+- An index keeps its name if you give it one (`indexes: [{ columns: ['userId'], name: 'note_user_id_idx' }]`); the default is `<table>_<columns>_idx`. Name it whenever a deployed index already has another name, or generate writes a second one.
+- A foreign key's `onDelete` defaults to `restrict`; write `cascade` where the old statement did.
+- A statement the declaration cannot express (a view, an expression index) has no place in `db/tables.ts`. It goes in a hand-written migration.
+- A table something else creates, which the old shape could only reach through `annotations`, is declared with `declareOnly: true`: it gets types and annotations, and no SQL.
+
+Run `pikku db generate` after converting. A declaration that matches the existing migrations writes nothing and reports `app-tables` as covered; a difference is refused with the column and the change named, so fix the declaration until it is covered.
+
+To move an app that has no `db/tables.ts` yet:
 
 1. Create `db/tables.ts` and declare the existing tables as they stand, one at a time if you like. A table you leave out stays hand-written.
-2. Run `pikku db generate`. A table that matches its migrations is adopted and not created again, and the command reports it as covered. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration.
-3. Move the table's entries from `db/annotations.ts` into `annotations` on the declaration, and run `pikku db migrate`. Declared tables are optional in `db/annotations.ts`, and a value the two files disagree on is an error.
+2. If the project has a `db/annotations.ts`, move each table's entries onto its columns in `db/tables.ts`, then delete that file. `pikku db generate` refuses to run while it exists. See [`db/annotations.ts` is removed](#dbannotationsts-is-removed).
+3. Run `pikku db generate`. A table that matches its migrations is adopted and not created again. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration. Then run `pikku db migrate`.
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
+
+**Find:** search for `statements:` and for `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` imported from `@pikku/kysely`.
 
 ### Column annotation types moved to `@pikku/core/db`
 
@@ -1230,7 +1369,58 @@ import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
 
 Find affected code by searching for `ColumnAnnotation` and `TableAnnotations` imported from `@pikku/kysely`.
 
-`SchemaContext.references` and `foreignKeys` in `@pikku/kysely` now take an `onDelete` and default to `restrict` instead of always cascading. A hand-written `PikkuSchema` statement that relied on the cascade passes it: `ctx.references(col, 'parent.id', 'cascade')`, and `ctx.foreignKeys('child', { parentId: { target: 'parent.id', onDelete: 'cascade' } })`.
+A declared foreign key now defaults to `onDelete: 'restrict'` instead of always cascading. Write `onDelete: 'cascade'` on a column that relied on it.
+
+### `db/annotations.ts` is removed
+
+Column annotations live on the columns in `db/tables.ts`, and nowhere else. `pikku db migrate`, `generate`, `check` and `pikku validate` refuse a project that still has `db/annotations.ts`, with one sentence pointing here. Nothing falls back to it, so a classification it held would otherwise stop applying without a word.
+
+Removed with it:
+
+- `pikku db annotate`, which wrote `db/annotations.ts` for you.
+- `.pikku/db/classification-map.gen.d.ts` and its `DbClassificationMap` type, which the file was written against.
+- The scaffolder that created an empty `db/annotations.ts` on first migrate.
+
+`db/annotations.gen.json` stays: the console, codegen and coercion read it. `pikku db migrate` now writes it from `db/tables.ts` alone, and deletes it when there is no `db/tables.ts`.
+
+The fields keep their names: `security`, `form`, `keyId`, `classification` (the anonymize strategy), `kind`, `tsType`, `format`, `description`. A table your migrations create is declared `declareOnly: true`: it gets its types and annotations, and no SQL is generated for it. Give each column its `type` as the migration made it (`pikku db generate` names any mismatch). Table and column keys may be camelCase or snake_case. A map nested under a schema name (`{ app: { user: … } }`) becomes bare table names.
+
+Before:
+
+```ts
+// db/annotations.ts
+import type { DbClassificationMap } from '../.pikku/db/classification-map.gen.d.ts'
+
+export const classifications = {
+  user: {
+    email: { security: 'pii', classification: 'fake:email' },
+    apiKey: { security: 'secret', form: 'wrapped' },
+    createdAt: { kind: 'date' },
+  },
+} satisfies DbClassificationMap
+```
+
+After:
+
+```ts
+// db/tables.ts
+import { defineTables } from '@pikku/core/db'
+
+export const tables = defineTables({
+  user: {
+    declareOnly: true,
+    columns: {
+      email: { type: 'text', security: 'pii', classification: 'fake:email' },
+      apiKey: { type: 'text', security: 'secret', form: 'wrapped' },
+      createdAt: { type: 'timestamp', kind: 'date' },
+    },
+  },
+})
+```
+
+Then delete `db/annotations.ts` and run `pikku db migrate`. A column you do not list stays `private`, as before.
+
+**Find:** `db/annotations.ts`, `DbClassificationMap`, `classification-map.gen.d.ts` and `pikku db annotate` in scripts.
 
 ### `PikkuSchema` is a table declaration, not a list of statements
 
@@ -1280,18 +1470,18 @@ Spans, logs and process metrics now leave a standalone binary and `pikku serve` 
 
 The full environment, in one table (also in `packages/core/knowledge/decisions/internals/otlp-exporter-is-protobuf-only-and-never-throws.md`):
 
-| Variable | Default | Meaning |
-| --- | --- | --- |
-| `PIKKU_OTLP_ENDPOINT` | unset (off) | OTLP/HTTP base URL. Unset means no exporter, no timer, no connection. |
-| `PIKKU_TELEMETRY` | unset | `0`, `false` or `off` (trimmed, any case) turns telemetry off even when an endpoint is set. |
-| `PIKKU_OTLP_ALLOW_REMOTE` | unset | `1` allows a non-loopback host. The endpoint must then be `https`. |
-| `PIKKU_OTLP_HEADERS` | none | `k=v,k2=v2`, sent with every signal. |
-| `PIKKU_OTLP_TRACES_HEADERS`, `PIKKU_OTLP_LOGS_HEADERS`, `PIKKU_OTLP_METRICS_HEADERS` | none | Added to one signal only. |
-| `PIKKU_OTLP_LOG_LEVEL` | `info` | Lowest level forwarded as an OTLP log. An unknown name logs a warning and uses `info`. |
-| `PIKKU_OTLP_LOG_FIELDS` | unset | `1` also exports an object's fields as log attributes (sensitive names redacted). Off by default: only the message text leaves. |
-| `PIKKU_OTLP_SQL_TEXT` | unset | `1` records the (parameterless) SQL text on `db.*` spans. Off by default. |
-| `PIKKU_OTLP_SERVICE_NAME` | `PIKKU_PROJECT`, else the unit or project name | `service.name`. |
-| `PIKKU_STAGE`, `PIKKU_PROJECT` | none | Resource attributes when set. |
+| Variable                                                                             | Default                                        | Meaning                                                                                                                         |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `PIKKU_OTLP_ENDPOINT`                                                                | unset (off)                                    | OTLP/HTTP base URL. Unset means no exporter, no timer, no connection.                                                           |
+| `PIKKU_TELEMETRY`                                                                    | unset                                          | `0`, `false` or `off` (trimmed, any case) turns telemetry off even when an endpoint is set.                                     |
+| `PIKKU_OTLP_ALLOW_REMOTE`                                                            | unset                                          | `1` allows a non-loopback host. The endpoint must then be `https`.                                                              |
+| `PIKKU_OTLP_HEADERS`                                                                 | none                                           | `k=v,k2=v2`, sent with every signal.                                                                                            |
+| `PIKKU_OTLP_TRACES_HEADERS`, `PIKKU_OTLP_LOGS_HEADERS`, `PIKKU_OTLP_METRICS_HEADERS` | none                                           | Added to one signal only.                                                                                                       |
+| `PIKKU_OTLP_LOG_LEVEL`                                                               | `info`                                         | Lowest level forwarded as an OTLP log. An unknown name logs a warning and uses `info`.                                          |
+| `PIKKU_OTLP_LOG_FIELDS`                                                              | unset                                          | `1` also exports an object's fields as log attributes (sensitive names redacted). Off by default: only the message text leaves. |
+| `PIKKU_OTLP_SQL_TEXT`                                                                | unset                                          | `1` records the (parameterless) SQL text on `db.*` spans. Off by default.                                                       |
+| `PIKKU_OTLP_SERVICE_NAME`                                                            | `PIKKU_PROJECT`, else the unit or project name | `service.name`.                                                                                                                 |
+| `PIKKU_STAGE`, `PIKKU_PROJECT`                                                       | none                                           | Resource attributes when set.                                                                                                   |
 
 Fails closed, at boot (exit 1), never by silently dropping telemetry: a non-loopback host without `PIKKU_OTLP_ALLOW_REMOTE=1`; a non-loopback `http` endpoint; credentials in the URL; a query string, fragment or trailing `?` or `#` in the URL (send credentials in a headers variable); a malformed headers value; a non-http(s) or unparsable URL. Error messages never echo the URL, only the host of a refused remote endpoint.
 

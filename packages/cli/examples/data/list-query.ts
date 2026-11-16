@@ -61,8 +61,8 @@ export const listTodos = pikkuFunc({
       .$if(!!input.search, (qb) => qb.where('title', 'like', `%${input.search}%`))
       .execute()
     //~ Rows come back exactly as the generated schema types them: ISO strings by
-    //~ default, real Date/boolean if the column kind is declared in
-    //~ db/annotations.ts (see the update-mutation scaffold). Match your output
+    //~ default, real Date/boolean if the column's kind is declared in
+    //~ db/tables.ts (see the update-mutation scaffold). Match your output
     //~ schema to that type — do not hand-map `r.done === 1` or reparse strings.
     return { todos: rows }
   },

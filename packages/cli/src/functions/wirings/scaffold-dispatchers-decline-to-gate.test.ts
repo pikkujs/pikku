@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import { serializePublicRPC } from './rpc/serialize-public-rpc.js'
 import { serializePublicAgent } from './agent/serialize-public-agent.js'
 import { serializeWorkflowRoutes } from './workflow/serialize-workflow-routes.js'
-import { serializeEventsScaffold } from './realtime/serialize-events-scaffold.js'
 import { serializeVirtualUserFunctions } from './virtual-user/serialize-virtual-user-functions.js'
 
 const leaf = (name: string) => `#pikku/${name}`
@@ -27,7 +26,6 @@ describe('the scaffold dispatchers decline to gate', () => {
     ['public rpc', serializePublicRPC(leaf).functions],
     ['public agent', serializePublicAgent(leaf).functions],
     ['workflow routes', serializeWorkflowRoutes(leaf).functions],
-    ['events channel', serializeEventsScaffold(leaf).functions],
   ]
 
   for (const [name, output] of dispatchers) {

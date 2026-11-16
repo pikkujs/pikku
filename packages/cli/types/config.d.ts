@@ -301,6 +301,15 @@ export interface PikkuCLICoreOutputFiles {
   // Secrets metadata JSON
   secretsMetaJsonFile: string
 
+  // Key pairs (defineKeyPair)
+  keyPairTypesFile: string
+
+  // Key pairs (generated KeyPairsMap)
+  keyPairsFile: string
+
+  // Key pairs metadata JSON
+  keyPairsMetaJsonFile: string
+
   // Credentials (typed wrapper for CredentialService)
   credentialsFile: string
 
@@ -349,6 +358,9 @@ export interface PikkuCLICoreOutputFiles {
 
   // Addon screens (lazy imports of each screen) — what the host imports
   screensFile: string
+
+  // Addon: definePlugin typed against the addon's functions and message keys (#pikku/screens)
+  pluginTypesFile: string
 
   // Host: the addons wired with ui: true and their screens (lazy imports)
   installedAddonsFile: string
@@ -585,13 +597,6 @@ export type PikkuCLIInput = {
      * function; where people are sent is set by `clientAuth`.
      */
     authClientFile?: string
-    /**
-     * Optional import for the EventHubTopics type so the realtime client is
-     * fully typed. Format: `<path>#<TypeName>` resolved relative to
-     * the realtime client. Example: `../types/eventhub-topics.js#EventHubTopics`.
-     * If unset, the generated client treats topics as `Record<string, unknown>`.
-     */
-    realtimeEventHubTopicsImport?: string
     nextBackendFile?: string
     nextHTTPFile?: string
     /**

@@ -377,8 +377,12 @@ export function aggregateRequiredServices(state: InspectorState): void {
     requiredServices.add('agentRunner')
   }
 
-  // Channels need eventHub for pub/sub
-  if (Object.keys(state.channels.meta).length > 0) {
+  // Channels need eventHub for pub/sub, and so does a subscribe function (an
+  // `sse: true` route has no channel)
+  if (
+    Object.keys(state.channels.meta).length > 0 ||
+    Object.values(state.functions.meta).some((m) => m.subscribe)
+  ) {
     requiredServices.add('eventHub')
   }
 
@@ -399,11 +403,11 @@ export function aggregateRequiredServices(state: InspectorState): void {
   }
 
   // A `defineAnalyticsEvents` declaration means events are emitted, and the
-  // invocation buffer flushes into `analyticsService`. Nothing destructures
+  // invocation buffer flushes into `analyticsSinks`. Nothing destructures
   // that either — functions are handed the request-scoped `analytics` — so the
   // declaration is again the only signal.
   if ((state.analytics?.length ?? 0) > 0) {
-    requiredServices.add('analyticsService')
+    requiredServices.add('analyticsSinks')
   }
 
   if ((state.credentials?.definitions?.length ?? 0) > 0) {

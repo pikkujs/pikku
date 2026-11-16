@@ -35,12 +35,18 @@ export type GetAuditsOutput = {
    * different answers to give someone auditing a system.
    */
   readable: boolean
+  /**
+   * Whether the trail still verifies, so an operator can see tampering. Present
+   * only when the configured sink implements `verify`; absent means the sink
+   * cannot say, which is not the same as intact.
+   */
+  intact?: boolean
 }
 
 export const getAudits = pikkuFunc<GetAuditsInput, GetAuditsOutput>({
   title: 'Get Audits',
   description:
-    'Returns a page of the audit trail, newest first, optionally filtered by user, event type, and time range. Reports readable: false when the configured audit sink is write-only.',
+    'Returns a page of the audit trail, newest first, optionally filtered by user, event type, and time range. Reports readable: false when the configured audit sink is write-only, and intact when the sink can verify its own trail.',
   expose: true,
   scopes: ['admin:audit:read'],
   func: async ({ audit, auth, logger }, input) => {
@@ -55,11 +61,24 @@ export const getAudits = pikkuFunc<GetAuditsInput, GetAuditsOutput>({
       limit: input?.limit,
       offset: input?.offset,
     })
+    // A verifier that throws cannot vouch for the trail, so it reads as not intact.
+    const verified = audit.verify
+      ? await audit.verify().catch((error) => {
+          logger?.warn?.('audit verify failed', error)
+          return { intact: false, checked: 0 }
+        })
+      : undefined
     const users = await resolveAuditUsers(
       auth,
       events.map((event) => event.userIdentity?.userId),
       logger
     )
-    return { events, users, nextCursor, readable: true }
+    return {
+      events,
+      users,
+      nextCursor,
+      readable: true,
+      ...(verified && { intact: verified.intact }),
+    }
   },
 })

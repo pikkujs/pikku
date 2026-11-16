@@ -27,9 +27,9 @@ import { withMysqlClient } from './mysql-client.js'
  */
 const SERVER_URL = process.env.PIKKU_TEST_MYSQL_URL
 
-const ITEM = `(db, _t, ctx) => db.schema.createTable('item')
-      .addColumn('id', ctx.key, (col) => col.primaryKey())
-      .addColumn('name', ctx.text, (col) => col.notNull())`
+const ITEM_COLUMNS = `id: { type: 'key', primaryKey: true },
+      name: { type: 'text', required: true },`
+const ITEM = `item: { columns: { ${ITEM_COLUMNS} } }`
 
 describe('declared tables on mysql', { skip: !SERVER_URL }, () => {
   let root: string
@@ -38,12 +38,9 @@ describe('declared tables on mysql', { skip: !SERVER_URL }, () => {
   let version = 0
   const admin = { connectionString: SERVER_URL! } as ResolvedMysqlDb
 
-  const declare = (statements: string[]) => {
+  const declare = (tables: string) => {
     const file = join(root, 'db', 'tables.ts')
-    writeFileSync(
-      file,
-      `export const tables = { statements: [${statements.join(',\n')}] }\n`
-    )
+    writeFileSync(file, `export const tables = { ${tables} }\n`)
     const at = new Date(Date.now() + ++version * 1000)
     utimesSync(file, at, at)
   }
@@ -87,7 +84,7 @@ describe('declared tables on mysql', { skip: !SERVER_URL }, () => {
   })
 
   test('writes a table, then adds a column and a constraint', async () => {
-    declare([ITEM])
+    declare(ITEM)
     const first = await generate()
     assert.deepEqual(first.refusals, [])
     assert.match(
@@ -95,13 +92,10 @@ describe('declared tables on mysql', { skip: !SERVER_URL }, () => {
       /create table `item`/
     )
 
-    declare([
-      `(db, _t, ctx) => db.schema.createTable('item')
-        .addColumn('id', ctx.key, (col) => col.primaryKey())
-        .addColumn('name', ctx.text, (col) => col.notNull())
-        .addColumn('code', 'varchar(32)')
-        .addUniqueConstraint('item_code_unique', ['code'])`,
-    ])
+    declare(`item: {
+      columns: { ${ITEM_COLUMNS} code: { type: 'string(32)' } },
+      unique: [{ columns: ['code'], name: 'item_code_unique' }],
+    }`)
     const second = await generate()
     assert.deepEqual(second.refusals, [])
     const sql = readFileSync(second.written[0]!.file, 'utf8')
@@ -112,7 +106,7 @@ describe('declared tables on mysql', { skip: !SERVER_URL }, () => {
   })
 
   test('refuses a dropped column', async () => {
-    declare([ITEM])
+    declare(ITEM)
     const { written, refusals } = await generate()
     assert.deepEqual(written, [])
     assert.match(refusals[0]!, /item\.code is in the migrations/)

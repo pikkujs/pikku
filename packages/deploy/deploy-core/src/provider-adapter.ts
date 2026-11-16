@@ -95,7 +95,7 @@ export interface EntryGenerationContext {
      * Import specifier for the generated `coercionMap`, relative to unitDir.
      *
      * Absent when the app generates no coercion map. It is not a SQLite
-     * concern: the map is built from `db/annotations.ts` rather than from the
+     * concern: the map is built from the column kinds in `db/tables.ts` rather than from the
      * dialect, and a Postgres app that annotates a column needs it attached for
      * the same reason.
      */

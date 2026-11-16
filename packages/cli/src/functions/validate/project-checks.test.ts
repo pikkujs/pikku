@@ -144,11 +144,6 @@ async function makeValidProject(root: string) {
   await mkdir(join(root, 'packages', 'components'), {
     recursive: true,
   })
-  await writeFile(
-    join(root, 'db', 'annotations.ts'),
-    '// db column annotations\nexport const annotations = {}\n',
-    'utf8'
-  )
   // A knowledge base in the sectioned profile. The three flat files this fixture
   // used to write (design-language.md, security.md, technology.md) are exactly
   // what the profile rejects: untyped documents at the root of knowledge/ that
@@ -1581,18 +1576,27 @@ describe('knowledge base (live project checks)', () => {
     }
   })
 
-  test('the sectioned shape passes, and db/annotations.ts is still required', async () => {
+  test('the sectioned shape passes, and a leftover db/annotations.ts is refused', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidProject(tmp)
-      await rm(join(tmp, 'db', 'annotations.ts'), { force: true })
+      await mkdir(join(tmp, 'db'), { recursive: true })
+      await writeFile(
+        join(tmp, 'db', 'annotations.ts'),
+        'export const classifications = {}\n',
+        'utf8'
+      )
       const result = await runValidate(tmp, { skipTypecheck: true })
       const ids = result.findings.map((f) => f.id)
       assert.ok(
         !ids.some((id) => id.startsWith('knowledge-')),
         `expected a clean knowledge base, got ${ids.filter((id) => id.startsWith('knowledge-')).join(', ')}`
       )
-      assert.ok(ids.includes('missing-required-file-db-annotations-ts'))
+      const retired = result.findings.find(
+        (f) => f.id === 'retired-annotations-file'
+      )
+      assert.equal(retired?.severity, 'error')
+      assert.match(retired!.message, /docs\/MIGRATION\.md/)
     } finally {
       await rm(tmp, { recursive: true, force: true })
     }

@@ -22,7 +22,7 @@ export const sendOrderConfirmation = pikkuSessionlessFunc({
         .executeTakeFirst(),
       kysely
         .selectFrom('user')
-        .select(['email', 'name'])
+        .select(['id'])
         .where('id', '=', userId)
         .executeTakeFirst(),
     ])
@@ -37,8 +37,7 @@ export const sendOrderConfirmation = pikkuSessionlessFunc({
     // In production: call your email service here (SendGrid, Resend, etc.)
     logger.info({
       event: 'order_confirmation_sent',
-      to: user.email,
-      name: user.name,
+      userId,
       orderId: order.orderId,
       totalCents: order.totalCents,
     })

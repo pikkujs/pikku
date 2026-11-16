@@ -11,7 +11,6 @@ import { rpcService } from '@pikku/core/rpc'
 import { pikkuState } from '@pikku/core/state'
 import type { QueueJob, QueueJobStatus } from '@pikku/core/queue'
 import { CloudflareWebSocketHibernationServer } from './cloudflare-hibernation-websocket-server.js'
-import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
 import {
   type CloudflareEnv,
   getCloudflareEnv,
@@ -499,14 +498,7 @@ export class PikkuWebSocketHibernationServer extends CloudflareWebSocketHibernat
       err.stack = (e as Error)?.stack ?? err.stack
       throw err
     }
-    const servicesWithEventHub = singletonServices as CoreSingletonServices & {
-      eventHub: CloudflareEventHubService
-    }
-    servicesWithEventHub.eventHub = new CloudflareEventHubService(
-      singletonServices.logger,
-      this.ctx
-    )
-    return { singletonServices: servicesWithEventHub }
+    return { singletonServices }
   }
 }
 

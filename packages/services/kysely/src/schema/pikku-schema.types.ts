@@ -7,8 +7,8 @@ import {
   type RawBuilder,
 } from 'kysely'
 import type {
+  ColumnAnnotation,
   OnDelete,
-  TableAnnotations,
   TablesDeclaration,
 } from '@pikku/core/db'
 
@@ -90,8 +90,8 @@ export interface SchemaContext {
   ) => ColumnDefinitionBuilder
   /**
    * The table-level foreign keys MySQL needs in place of inline `references`,
-   * keyed by local column to a `table.column` target, or to the target and its
-   * `onDelete` (default `restrict`). Identity everywhere else, where
+   * keyed by local column to its `table.column` target and `onDelete` (default
+   * `restrict`). Identity everywhere else, where
    * `references` has already done the work.
    */
   foreignKeys: (
@@ -101,7 +101,10 @@ export interface SchemaContext {
 }
 
 /** A foreign key target: `table.column`, with `onDelete` when it is not `restrict`. */
-export type ForeignKeyTarget = string | { target: string; onDelete?: OnDelete }
+export interface ForeignKeyTarget {
+  target: string
+  onDelete?: OnDelete
+}
 
 const ON_DELETE_SQL = {
   cascade: 'cascade',
@@ -111,16 +114,8 @@ const ON_DELETE_SQL = {
 } as const satisfies Record<OnDelete, string>
 
 /** `onDelete` as the schema builder spells it. */
-export const onDeleteAction = (onDelete: OnDelete = 'restrict') =>
+const onDeleteAction = (onDelete: OnDelete = 'restrict') =>
   ON_DELETE_SQL[onDelete]
-
-/**
- * The `SchemaContext` for DDL that names no schema.
- *
- * The default everywhere a schema has not been asked for, which is every engine
- * but postgres and most postgres projects too.
- */
-export const unqualifiedContext: SchemaContext = buildContext(undefined, false)
 
 function buildContext(
   schema: string | undefined,
@@ -144,11 +139,7 @@ function buildContext(
     foreignKeys: (table, keys) => (builder) =>
       mysql
         ? (Object.entries(keys).reduce(
-            (acc, [column, key]) => {
-              const { target, onDelete } =
-                typeof key === 'string'
-                  ? { target: key, onDelete: undefined }
-                  : key
+            (acc, [column, { target, onDelete }]) => {
               const [targetTable, targetColumn] = target.split('.') as [
                 string,
                 string,
@@ -186,19 +177,6 @@ export const schemaContext = (
  * at and that column belongs to somebody else.
  */
 export type RequiredTypes = Record<string, string>
-
-/**
- * The declared type for a foreign key onto a column another source owns.
- *
- * Falls back to `text` when nothing has been introspected — the case when the
- * declaration is compiled without a database, where the real type is unknowable
- * and only the shape of the statement is being inspected.
- */
-export const requiredType = (
-  types: RequiredTypes,
-  table: string,
-  column: string
-): RawBuilder<unknown> => sql.raw(types[`${table}.${column}`] ?? 'text')
 
 /**
  * The tables one part of the pikku runtime needs, declared rather than created.
@@ -254,24 +232,6 @@ export interface PikkuSchema {
 }
 
 /**
- * A project's own tables, declared in `db/tables.ts`.
- *
- * A `PikkuSchema` without the parts that only mean something for the runtime,
- * plus the annotations. `pikku db generate` writes the migrations for it, so a
- * project that declares a table never spells its SQL.
- */
-export interface AppTables {
-  /** `db.schema.createTable(...)` and `createIndex(...)`, and nothing else. */
-  statements: SchemaStatementFactory[]
-  /** Columns outside this declaration that a foreign key here points at. */
-  requires?: SchemaRequirement[]
-  annotations?: TableAnnotations
-}
-
-/** Declare a project's tables. The export has to be named `tables`. */
-export const defineTables = (tables: AppTables): AppTables => tables
-
-/**
  * A column another source owns, which one of these schemas depends on.
  *
  * Named down to the column, not just the table, because that is the granularity
@@ -314,4 +274,21 @@ export function rawStatement(
       compile: () => fragment.compile(db),
     }
   }
+}
+
+/**
+ * What the secret and credential services keep in `ciphertext` and
+ * `wrapped_dek`: the output of their own envelope encryption, already opaque
+ * when it reaches the row.
+ *
+ * `secret`, so no function can hand the row back to a caller. `plain` is the
+ * honest form: `wrapped` would tell the column encryption plugin to decrypt
+ * these values on read and refuse the service's own writes, and none of the
+ * forms means "ciphertext produced by another layer".
+ */
+export const ENVELOPE_CIPHERTEXT: ColumnAnnotation = {
+  security: 'secret',
+  form: 'plain',
+  description:
+    "Sealed by the service's own envelope encryption; the column plugin must not wrap it again.",
 }

@@ -16,7 +16,7 @@ export type ColumnKind = 'date' | 'bool' | 'json'
  * Per-table column kind map. Keys are the table names queries are written
  * against; inner keys are snake_case column names.
  * Generated into `outDir/db/coercion.gen.ts` by `pikku db migrate` from the
- * explicit `kind` entries in `db/annotations.ts`.
+ * explicit `kind` on the columns in `db/tables.ts`.
  */
 export type CoercionMap = Record<string, Record<string, ColumnKind>>
 

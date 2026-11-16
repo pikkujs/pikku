@@ -17,6 +17,7 @@ import { dirname, join } from 'node:path'
 import {
   VIRTUAL_USER_STATEMENT_TTL_SECONDS,
   VIRTUAL_USER_SIGNING_KEY_VARIABLE,
+  okpThumbprint,
   type VariablesService,
 } from '@pikku/core/services'
 import type { VirtualUserStatementMint } from '@pikku/core/virtual-user'
@@ -65,6 +66,8 @@ export interface SignStatementOptions {
   virtualUserId: string
   audience: string
   ttlSeconds?: number
+  /** Names the key in the header: the RFC 7638 thumbprint of its public half (see `okpThumbprint`, which is async). Omitted, the header has no `kid`. */
+  kid?: string
   now?: () => number
 }
 
@@ -74,10 +77,15 @@ export const signVirtualUserStatement = ({
   virtualUserId,
   audience,
   ttlSeconds = VIRTUAL_USER_STATEMENT_TTL_SECONDS,
+  kid,
   now = Date.now,
 }: SignStatementOptions): string => {
   const iat = Math.floor(now() / 1000)
-  const head = b64url(JSON.stringify({ alg: 'EdDSA', typ: 'JWT' }))
+  const head = b64url(
+    JSON.stringify(
+      kid ? { alg: 'EdDSA', typ: 'JWT', kid } : { alg: 'EdDSA', typ: 'JWT' }
+    )
+  )
   const claims = b64url(
     JSON.stringify({
       sub: virtualUserId,
@@ -155,11 +163,13 @@ export const resolveStatementMint = async (
     )
   }
   const audience = new URL(apiUrl).origin
+  const kid = await okpThumbprint(verifyKeyFor(signingKey))
   return (virtualUser) =>
     signVirtualUserStatement({
       signingKey,
       virtualUserId: virtualUser.id,
       audience,
+      kid,
     })
 }
 

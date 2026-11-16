@@ -92,8 +92,8 @@ const tail = (text: string, lines = 25) =>
 
 function freshState() {
   for (const dir of [PROJECT_DIR, PGLITE_DIR]) {
-    // `db migrate` also scaffolds db/annotations.ts, which imports its map by
-    // absolute path and so is never committed.
+    // A db/annotations.ts left by an older CLI now stops `db migrate`, and the
+    // sidecar is regenerated each run, so neither is kept between runs.
     for (const generated of [
       '.pikku',
       '.pikku-runtime',

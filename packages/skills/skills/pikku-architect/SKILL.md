@@ -175,7 +175,8 @@ drops back into a backlog nobody planned.
 Each field carries a `classification`: `public`, `internal`, `personal` or `sensitive`. That is what
 lets a permission claim be checked against the data rather than only against itself — a function
 returning a `personal` column with no permission rule is a defect the gate can name. It is also what
-`db/annotations.ts` ends up expressing, so plan it here rather than discovering it at migrate time.
+each column's `security` in `db/tables.ts` ends up expressing, so plan it here rather than discovering
+it at migrate time.
 
 Each relationship carries `onDelete`: `cascade`, `restrict` or `orphan`. A foreign key states which
 rows are related; it does not state what the product wants when the parent goes, and those three

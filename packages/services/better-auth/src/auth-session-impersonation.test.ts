@@ -71,7 +71,10 @@ describe('resolveImpersonatedSession', () => {
       services,
       () => 'u_guest'
     )
-    assert.deepEqual(out, { userId: 'u_guest' })
+    assert.deepEqual(out, {
+      userId: 'u_guest',
+      impersonated: { by: 'u_admin' },
+    })
     assert.equal(logs.info.length, 1)
   })
 
@@ -105,7 +108,10 @@ describe('resolveImpersonatedSession', () => {
       services,
       () => 'u_admin'
     )
-    assert.deepEqual(out, { userId: 'u_admin' })
+    assert.deepEqual(out, {
+      userId: 'u_admin',
+      impersonated: { by: 'u_guest' },
+    })
   })
 
   test('default gate: fails closed and warns with no ScopeService', async () => {
@@ -141,7 +147,10 @@ describe('resolveImpersonatedSession', () => {
       services,
       () => 'u_admin'
     )
-    assert.deepEqual(out, { userId: 'u_admin' })
+    assert.deepEqual(out, {
+      userId: 'u_admin',
+      impersonated: { by: 'u_guest' },
+    })
   })
 
   test('a custom header name is honored', async () => {
@@ -156,7 +165,10 @@ describe('resolveImpersonatedSession', () => {
         return name === 'x-act-as' ? 'u_guest' : undefined
       }
     )
-    assert.deepEqual(out, { userId: 'u_guest' })
+    assert.deepEqual(out, {
+      userId: 'u_guest',
+      impersonated: { by: 'u_admin' },
+    })
     assert.deepEqual(seen, ['x-act-as'])
   })
 
@@ -169,7 +181,38 @@ describe('resolveImpersonatedSession', () => {
       () => 'u_guest',
       (result) => ({ userId: result.user.id, name: result.user.id })
     )
-    assert.deepEqual(out, { userId: 'u_guest', name: 'u_guest' })
+    assert.deepEqual(out, {
+      userId: 'u_guest',
+      name: 'u_guest',
+      impersonated: { by: 'u_admin' },
+    })
+  })
+
+  test('the impersonator is the real caller, whatever mapSession returns', async () => {
+    const { services } = svc()
+    const out = await resolveImpersonatedSession(
+      caller('u_admin'),
+      { loadUser },
+      services,
+      () => 'u_guest',
+      (result) =>
+        ({
+          userId: result.user.id,
+          impersonated: { by: 'someone_else' },
+        }) as any
+    )
+    assert.deepEqual(out?.impersonated, { by: 'u_admin' })
+  })
+
+  test('a request that is not impersonated carries no impersonated field', async () => {
+    const { services } = svc()
+    const out = await resolveImpersonatedSession(
+      caller('u_admin'),
+      { loadUser },
+      services,
+      () => undefined
+    )
+    assert.equal(out, null)
   })
 
   test('loadUser errors propagate (not swallowed)', async () => {

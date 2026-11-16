@@ -43,6 +43,17 @@ describe('AttributeTypes', () => {
     assert.equal(types.dropped, 0)
   })
 
+  test('the unrecorded parent of a forced span is exported as a string', () => {
+    const types = new AttributeTypes()
+    assert.deepEqual(
+      types.coerce({
+        'pikku.trace.unrecorded_parent_span_id': '00f067aa0ba902b7',
+      }),
+      { 'pikku.trace.unrecorded_parent_span_id': '00f067aa0ba902b7' }
+    )
+    assert.equal(types.dropped, 0)
+  })
+
   test('the network client keys are allow-listed with fixed types', () => {
     const types = new AttributeTypes()
     assert.deepEqual(

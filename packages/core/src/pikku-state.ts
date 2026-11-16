@@ -182,6 +182,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     credentialsMeta: null,
     requiredParentServices: null,
     declaredSecrets: null,
+    eventHubDistributor: null,
   },
 })
 

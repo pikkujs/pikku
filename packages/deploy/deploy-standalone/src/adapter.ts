@@ -77,14 +77,14 @@ const hasSqliteLibrary = (
  * Builds the runtime telemetry from `PIKKU_OTLP_*` before anything that logs or
  * queries is built, so the logger, the database and the services all share it.
  *
- * Only a `serve` run exports: `migrate` and the other commands get an empty
- * environment, which is the inert case, so a one-shot command never opens a
+ * Only a `serve` run traces: `migrate` and the other commands get
+ * `PIKKU_TELEMETRY=0`, which is the inert case, so a one-shot command never opens a
  * connection or starts the metrics sampler. The context storage is what lets a
  * query's span find the function span that is running it; core takes it as an
  * argument because it never imports `node:async_hooks` itself.
  */
 const telemetryLines = (ctx: EntryGenerationContext): string[] => [
-  `  const __pikkuTelemetry = createRuntimeTelemetry(__pikkuCommand.kind === 'serve' ? process.env : {}, {`,
+  `  const __pikkuTelemetry = createRuntimeTelemetry(__pikkuCommand.kind === 'serve' ? process.env : { PIKKU_TELEMETRY: '0' }, {`,
   `    logger: baseLogger,`,
   `    serviceName: '${ctx.unit.name.replace(/'/g, "\\'")}',`,
   `    version: '${(ctx.version ?? 'unknown').replace(/'/g, "\\'")}',`,
@@ -467,6 +467,7 @@ const runtimeServiceNames = (ctx: EntryGenerationContext): string[] => [
   'triggerService',
   'triggerSourceStore',
   'eventHub',
+  'eventHubRegistry',
 ]
 
 export class StandaloneProviderAdapter implements ProviderAdapter {
@@ -536,6 +537,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`,
       `import { AsyncLocalStorage as __pikkuAsyncLocalStorage } from 'node:async_hooks'`,
       `import { asContextStorage as __pikkuAsContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'`,
+      `import { createAnalyticsSinks } from '@pikku/core/analytics'`,
       ...(ctx.db
         ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
         : []),
@@ -543,7 +545,8 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { pikkuState } from '@pikku/core/state'`,
       `import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'`,
       `import { InMemorySchedulerService } from '@pikku/schedule'`,
-      `import { PikkuBunServer, BunEventHubService } from '@pikku/bun-server'`,
+      `import { PikkuBunServer } from '@pikku/bun-server'`,
+      `import { installEventHubDistributor } from '@pikku/core/internal/event-hub'`,
       ...(ctx.frontend
         ? [`import { frontendAssets } from '${STANDALONE_FRONTEND_MANIFEST}'`]
         : []),
@@ -588,13 +591,16 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  const queueService = new InMemoryQueueService()`,
       `  const workflowService = new InMemoryWorkflowService()`,
       `  const triggerService = new InMemoryTriggerService()`,
-      `  const eventHub = new BunEventHubService()`,
+      `  // Created before the app's services so a relay can be added from them; transports reach the distributor, services get its publisher and registry.`,
+      `  const { services: eventHubServices } = installEventHubDistributor()`,
+      `  const { eventHub, eventHubRegistry } = eventHubServices`,
       `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
       ...(ctx.db ? dbSetupLines(ctx.db) : []),
       ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines(ctx),
       ...this.platformServicesCallLines(ctx),
+      `  const __pikkuAnalyticsSinks = createAnalyticsSinks()`,
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -605,9 +611,14 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    triggerService,`,
       `    triggerSourceStore,`,
       `    eventHub,`,
+      `    eventHubRegistry,`,
       `    ...(__pikkuTelemetry.enabled ? { tracer: __pikkuTelemetry.tracer } : {}),`,
+      `    otlpSinks: __pikkuTelemetry.otlpSinks,`,
+      `    analyticsSinks: __pikkuAnalyticsSinks,`,
       ...this.platformServicesSpreadLines(ctx),
       `  })`,
+      `  // The runtime's registries win: the tracer and the analytics fan-out read these instances.`,
+      `  Object.assign(singletonServices, { otlpSinks: __pikkuTelemetry.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, ...eventHubServices })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
       ...(ctx.frontend
@@ -623,7 +634,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
             ``,
           ]
         : []),
-      `  const server = new PikkuBunServer({ ...config, port, hostname${ctx.frontend ? ', staticMounts' : ''} }, logger, { ${ctx.mcpServerOption}eventHub })`,
+      `  const server = new PikkuBunServer({ ...config, port, hostname${ctx.frontend ? ', staticMounts' : ''} }, logger, { ${ctx.mcpServerOption.replace(/,\s*$/, '')} })`,
       `  await server.init()`,
       `  await singletonServices.schedulerService?.start()`,
       `  await singletonServices.triggerService?.start()`,

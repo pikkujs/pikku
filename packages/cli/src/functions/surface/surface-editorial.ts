@@ -86,6 +86,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Small helpers a function body reaches for, such as `parseJson`, which turns text or bytes into JSON or refuses with a 400.',
   },
+  keypairs: {
+    step: 'enhance it',
+    skill: null,
+    summary:
+      'Asymmetric key pairs a project signs or seals with, declared by name with their algorithm, purpose, rotation and verify grace so the build can check them. The declaration never holds key material.',
+  },
   credentials: {
     step: 'enhance it',
     skill: null,
@@ -145,6 +151,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Wires a function as a command, with its flags and arguments derived from the function input.',
   },
+  screens: {
+    step: 'enhance it',
+    skill: 'pikku-addon',
+    summary:
+      "An addon's definePlugin, typed against its own functions and message keys: the screens, widgets, things and arranged screens it brings to Pikku Studio.",
+  },
   auth: {
     step: 'guard it',
     skill: 'pikku-auth',
@@ -191,7 +203,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'wire it up',
     skill: null,
     summary:
-      'Publish and subscribe across channels through the `eventHub` service.',
+      'Publish to the subscribers of a topic through the `eventHub` service; a `pikkuSubscribeFunc` decides who subscribes.',
   },
   react: {
     step: 'wire it up',

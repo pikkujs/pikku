@@ -9,11 +9,11 @@
   },
   {
     "code": "PKU910",
-    "message": "Sessionless function 'sessionlessPrivate' exposes private-classified field(s) in its return type: 'name'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+    "message": "Sessionless function 'sessionlessPrivate' exposes private-classified field(s) in its return type: 'name'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly."
   },
   {
     "code": "PKU910",
-    "message": "Sessionless function 'sessionlessPii' exposes private-classified field(s) in its return type: 'email'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+    "message": "Sessionless function 'sessionlessPii' exposes private-classified field(s) in its return type: 'email'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly."
   },
   {
     "code": "PKU910",
@@ -21,19 +21,19 @@
   },
   {
     "code": "PKU910",
-    "message": "Sessionless function 'sessionlessBoth' exposes private-classified field(s) in its return type: 'z.deep.deeper', 'a'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+    "message": "Sessionless function 'sessionlessBoth' exposes private-classified field(s) in its return type: 'z.deep.deeper', 'a'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly."
   },
   {
     "code": "PKU910",
-    "message": "Sessionless function 'sessionlessInherited' exposes private-classified field(s) in its return type: 'own', 'inherited'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+    "message": "Sessionless function 'sessionlessInherited' exposes private-classified field(s) in its return type: 'own', 'inherited'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly."
   },
   {
     "code": "PKU910",
-    "message": "Sessionless function 'sessionlessSync' exposes private-classified field(s) in its return type: 'own', 'inherited'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+    "message": "Sessionless function 'sessionlessSync' exposes private-classified field(s) in its return type: 'own', 'inherited'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly."
   },
   {
     "code": "PKU910",
-    "message": "Sessionless function 'sessionlessUnion' exposes private-classified field(s) in its return type: 'a'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set the column's security to 'public' in db/annotations.ts if it is safe to expose publicly."
+    "message": "Sessionless function 'sessionlessUnion' exposes private-classified field(s) in its return type: 'a'.\n  Private fields are only safe to return from authenticated (sessioned) functions. Either require a session (use pikkuFunc) or set security: 'public' on the column in db/tables.ts if it is safe to expose publicly."
   },
   {
     "code": "PKU953",

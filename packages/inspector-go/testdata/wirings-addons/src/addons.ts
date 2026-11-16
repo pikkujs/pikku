@@ -32,6 +32,12 @@ wireAddon({
   mcp: true,
   mcpEndpoint: '/mcp/bare-tools',
 })
+// Declares only an arranged screen: ui: true is satisfied without screens.
+wireAddon({
+  name: 'board',
+  package: '@fixture/board-addon',
+  ui: true,
+})
 wireAddon({
   name: 'unbuilt',
   package: '@fixture/unbuilt',

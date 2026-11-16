@@ -27,7 +27,12 @@ CREATE TABLE IF NOT EXISTS invoice (
 );
 `
 
-async function createProject(annotations?: object): Promise<string> {
+/** Column annotations by column, for the `invoice` table the migration makes. */
+type InvoiceAnnotations = Record<string, Record<string, string>>
+
+async function createProject(
+  annotations?: InvoiceAnnotations
+): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), 'pikku-sensitive-names-'))
   await writeFile(
     join(dir, 'pikku.config.json'),
@@ -53,10 +58,20 @@ async function createProject(annotations?: object): Promise<string> {
   await mkdir(join(dir, 'src'), { recursive: true })
   await writeFile(join(dir, 'db', 'sqlite', '001_invoice.sql'), MIGRATION)
   if (annotations) {
-    await writeFile(
-      join(dir, 'db', 'annotations.ts'),
-      `export const classifications = ${JSON.stringify(annotations, null, 2)}\n`
+    // The migration creates the table, so db/tables.ts declares it declareOnly
+    // and only carries its annotations. Every annotated column here is TEXT.
+    const columns = Object.fromEntries(
+      Object.entries(annotations).map(([column, entry]) => [
+        column,
+        { type: 'text', ...entry },
+      ])
     )
+    await writeFile(
+      join(dir, 'db', 'tables.ts'),
+      `export const tables = ${JSON.stringify({ invoice: { declareOnly: true, columns } }, null, 2)}\n`
+    )
+    // An app is an ES module project, and the CLI loads db/tables.ts as one.
+    await writeFile(join(dir, 'package.json'), '{ "type": "module" }\n')
   }
   return dir
 }
@@ -96,10 +111,8 @@ describe('sensitive-looking column names', () => {
 
   test('annotated columns are silent', async (t) => {
     const dir = await createProject({
-      invoice: {
-        customer_email: { security: 'pii' },
-        api_key: { security: 'secret', form: 'wrapped' },
-      },
+      customer_email: { security: 'pii' },
+      api_key: { security: 'secret', form: 'wrapped' },
     })
     t.after(() => rm(dir, { recursive: true, force: true }))
     const { exitCode, output } = migrate(dir)

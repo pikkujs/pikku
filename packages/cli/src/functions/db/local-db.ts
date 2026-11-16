@@ -12,8 +12,6 @@ import { tmpdir } from 'node:os'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { runInNewContext } from 'node:vm'
-import { transformSync } from 'esbuild'
 import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 import { CamelCasePlugin, Kysely, PostgresDialect, sql } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
@@ -21,6 +19,9 @@ import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import {
   migrate,
   baselineMigrations,
+  checkProbeHook,
+  mysqlProbeExecutor,
+  postgresProbeExecutor,
   type MigrateResult,
 } from '@pikku/migrator-sql'
 import type { ColumnInfo, DbIntrospector } from './db-introspector.js'
@@ -30,6 +31,7 @@ import {
   pikkuSchemas,
   requiredPikkuSchemas,
   resolveRequirements,
+  tableRequirements,
   withUserTable,
   createCoercionPlugin,
   type PikkuSchema,
@@ -48,14 +50,14 @@ import {
 } from '@pikku/migrator-sql'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import {
+  declaredTableNames,
   declaredTablesMarker,
+  declareOnlyProblems,
   loadTableDeclaration,
-  mergeAnnotations,
   recordedDeclaredTables,
   refuseTableChanges,
-  strayAnnotations,
   TABLES_FILE,
-  type TableDeclaration,
+  type LoadedDeclaration,
 } from './table-declaration.js'
 import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
@@ -72,6 +74,17 @@ import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
+import {
+  checkChangeStatements,
+  inlineCheckExpression,
+  mysqlCheckRefusal,
+  mysqlCheckSupport,
+  planConstraints,
+} from './check-migration.js'
+import {
+  sqliteConstraintNotice,
+  declaredConstraints,
+} from './sqlite-constraint-notice.js'
 import { MysqlIntrospector } from './mysql/mysql-introspector.js'
 import {
   createMysqlKysely,
@@ -89,9 +102,8 @@ interface ResolvedDbBase {
   schemaFile: string
   coercionFile: string
   manifestFile: string
-  classificationMapFile: string
   schemaJsonFile: string
-  classificationsFile: string
+  /** The annotations sidecar, compiled from the column annotations in db/tables.ts. */
   classificationsGenJsonFile: string
   /** Where the project declares its own tables, whether or not it does. */
   tablesFile: string
@@ -235,14 +247,10 @@ export function resolveDb(
     schemaFile: join(outDir, 'db', 'schema.gen.ts'),
     coercionFile: join(outDir, 'db', 'coercion.gen.ts'),
     manifestFile: join(outDir, 'db', 'classification.gen.ts'),
-    classificationMapFile: join(outDir, 'db', 'classification-map.gen.d.ts'),
     schemaJsonFile: join(outDir, 'db', 'pikku-db-schema.gen.json'),
     enumsFile: join(outDir, 'db', 'enums.gen.ts'),
-    classificationsFile: join(rootDir, 'db', 'annotations.ts'),
-    // Compiled sidecar lives beside the authored annotations.ts in db/ — this is
-    // where both consumers read it: the codegen's loadAnnotations() and the
-    // pikku-console addon (db/annotations.gen.json). Writing it into outDir
-    // (.pikku) would leave both readers looking at a file that never appears.
+    // The sidecar lives in db/, where both readers look for it: the codegen's
+    // loadAnnotations() and the pikku-console addon (db/annotations.gen.json).
     classificationsGenJsonFile: join(rootDir, 'db', 'annotations.gen.json'),
     tablesFile: join(rootDir, TABLES_FILE),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
@@ -671,11 +679,18 @@ export interface MigrateAndCodegenOutcome {
   migrate: MigrateResult
   codegen: CodegenResult
   zod: ZodCodegenResult
-  classificationsScaffolded: boolean
   classificationsJsonWritten: boolean
 }
 
+/**
+ * A replay of the migrations onto a throwaway database, to read what they
+ * define. Nothing there to lose, so a destructive one is no reason to stop.
+ */
+const REPLAY = { allowDestructive: true }
+
 export interface MigrateAndCodegenOptions {
+  /** Apply migrations marked `-- pikku:destructive` to the configured database. */
+  allowDestructive?: boolean
   /**
    * Apply the migrations to a throwaway database and introspect that, instead
    * of touching the configured one.
@@ -700,22 +715,18 @@ export async function migrateAndCodegen(
 ): Promise<MigrateAndCodegenOutcome> {
   let migrateResult!: MigrateResult
   let codegenResult!: CodegenResult
+  // A scratch database holds nothing to lose; the configured one does.
+  const applying = {
+    allowDestructive: options.scratch || options.allowDestructive,
+  }
 
   const declaration = await loadTableDeclaration(resolved.rootDir)
 
-  // Compile any authored db/annotations.ts → sidecar BEFORE codegen so edits
-  // reflect in a single `db migrate` (codegen reads the sidecar).
-  compileClassifications(
-    resolved.classificationsFile,
+  // Codegen reads the sidecar, so it is written first.
+  const classificationsJsonWritten = writeAnnotationsSidecar(
     resolved.classificationsGenJsonFile,
     declaration
   )
-  // Tables with no annotations are declared too, and only the migrations can
-  // say so without materializing the declaration.
-  const declaredTables = new Set([
-    ...recordedDeclaredTables(resolved.migrationsDir),
-    ...Object.keys(declaration?.annotations ?? {}),
-  ])
 
   if (resolved.dialect === 'sqlite') {
     if (!options.scratch) {
@@ -728,7 +739,11 @@ export async function migrateAndCodegen(
     try {
       const executor = new SqliteMigrationExecutor(db)
       try {
-        migrateResult = await migrate(executor, resolved.migrationsDir)
+        migrateResult = await migrate(
+          executor,
+          resolved.migrationsDir,
+          applying
+        )
       } catch (error) {
         throw explainMissingSqliteExtension(error, resolved)
       }
@@ -737,14 +752,12 @@ export async function migrateAndCodegen(
         outFile: resolved.schemaFile,
         coercionFile: resolved.coercionFile,
         manifestFile: resolved.manifestFile,
-        classificationMapFile: resolved.classificationMapFile,
         schemaJsonFile: resolved.schemaJsonFile,
         enumsFile: resolved.enumsFile,
         camelCase: resolved.camelCase,
         defaultSchema: resolved.defaultSchema,
         rootDir: resolved.rootDir,
         dialect: 'sqlite',
-        declaredTables,
         migrationsDir: resolved.migrationsDir,
       })
     } finally {
@@ -758,20 +771,25 @@ export async function migrateAndCodegen(
       const introspector = new MysqlIntrospector(client)
       migrateResult = await migrate(
         new MysqlMigrationExecutor(client),
-        resolved.migrationsDir
+        resolved.migrationsDir,
+        {
+          ...applying,
+          // The configured database has rows a new check has to hold for.
+          beforeMigration: options.scratch
+            ? undefined
+            : checkProbeHook('mysql', mysqlProbeExecutor(client)),
+        }
       )
       codegenResult = await generateSchemaTypes(introspector, {
         outFile: resolved.schemaFile,
         coercionFile: resolved.coercionFile,
         manifestFile: resolved.manifestFile,
-        classificationMapFile: resolved.classificationMapFile,
         schemaJsonFile: resolved.schemaJsonFile,
         enumsFile: resolved.enumsFile,
         camelCase: resolved.camelCase,
         defaultSchema: resolved.defaultSchema,
         rootDir: resolved.rootDir,
         dialect: 'mysql',
-        declaredTables,
         migrationsDir: resolved.migrationsDir,
       })
     })
@@ -787,19 +805,22 @@ export async function migrateAndCodegen(
       await introspector.connect()
       try {
         const executor = new PostgresMigrationExecutor(client)
-        migrateResult = await migrate(executor, resolved.migrationsDir)
+        migrateResult = await migrate(executor, resolved.migrationsDir, {
+          ...applying,
+          beforeMigration: options.scratch
+            ? undefined
+            : checkProbeHook('postgres', postgresProbeExecutor(client)),
+        })
         codegenResult = await generateSchemaTypes(introspector, {
           outFile: resolved.schemaFile,
           coercionFile: resolved.coercionFile,
           manifestFile: resolved.manifestFile,
-          classificationMapFile: resolved.classificationMapFile,
           schemaJsonFile: resolved.schemaJsonFile,
           enumsFile: resolved.enumsFile,
           camelCase: resolved.camelCase,
           defaultSchema: resolved.defaultSchema,
           rootDir: resolved.rootDir,
           dialect: 'postgres',
-          declaredTables,
           migrationsDir: resolved.migrationsDir,
         })
       } finally {
@@ -812,27 +833,14 @@ export async function migrateAndCodegen(
     schemaFile: resolved.schemaFile,
     outFile: resolved.zodFile,
     formats: codegenResult.zodFormats,
+    constraints: codegenResult.zodConstraints,
   })
-
-  // ── Classifications step ──────────────────────────────────────────────────
-  // Scaffold the authored file if missing (needs the table list), then compile
-  // it to the sidecar so a freshly-scaffolded file is captured too.
-  const scaffolded = scaffoldClassificationsFile(
-    resolved.classificationsFile,
-    codegenResult.tables
-  )
-  const jsonWritten = compileClassifications(
-    resolved.classificationsFile,
-    resolved.classificationsGenJsonFile,
-    declaration
-  )
 
   return {
     migrate: migrateResult,
     codegen: codegenResult,
     zod: zodResult,
-    classificationsScaffolded: scaffolded,
-    classificationsJsonWritten: jsonWritten,
+    classificationsJsonWritten,
   }
 }
 
@@ -962,129 +970,32 @@ export async function reset(
   })
 }
 
-// ── Classification sync ───────────────────────────────────────────────────────
+// ── Annotations sidecar ───────────────────────────────────────────────────────
 
 /**
- * If `db/annotations.ts` doesn't exist yet, write a scaffold listing every
- * table/column so the developer has a typed starting point. Every field of
- * `ColumnEntry` is optional, so the empty-per-table scaffold is valid and means
- * "everything default `private`". Returns whether a scaffold was written.
+ * Write the column annotations `db/tables.ts` declares to the
+ * `annotations.gen.json` sidecar that the codegen and the pikku-console addon
+ * read. With no declaration there is nothing to annotate, so a sidecar left
+ * from an earlier run is removed rather than kept classifying columns nothing
+ * declares. Returns whether the sidecar changed on disk.
  */
-function scaffoldClassificationsFile(
-  classificationsFile: string,
-  tableNames: string[]
-): boolean {
-  if (existsSync(classificationsFile)) return false
-
-  const relMap = join(
-    dirname(classificationsFile),
-    '..',
-    '.pikku',
-    'db',
-    'classification-map.gen.d.ts'
-  )
-  const relMapPosix = relMap.replace(/\\/g, '/')
-
-  const groups = new Map<string, string[]>()
-  for (const name of tableNames) {
-    const dot = name.indexOf('.')
-    const schema = dot >= 0 ? name.slice(0, dot) : ''
-    const table = dot >= 0 ? name.slice(dot + 1) : name
-    if (!groups.has(schema)) groups.set(schema, [])
-    groups.get(schema)!.push(table)
-  }
-
-  const bodyLines: string[] = [
-    `import type { DbClassificationMap } from '${relMapPosix}'`,
-    ``,
-    `export const classifications = {`,
-  ]
-  for (const [schema, tables] of groups) {
-    if (schema) bodyLines.push(`  ${JSON.stringify(schema)}: {`)
-    for (const table of tables) {
-      bodyLines.push(
-        schema
-          ? `    ${JSON.stringify(table)}: {`
-          : `  ${JSON.stringify(table)}: {`
-      )
-      bodyLines.push(schema ? `    },` : `  },`)
-    }
-    if (schema) bodyLines.push(`  },`)
-  }
-  bodyLines.push(`} satisfies DbClassificationMap`, ``)
-
-  mkdirSync(dirname(classificationsFile), { recursive: true })
-  writeFileSync(classificationsFile, bodyLines.join('\n'), 'utf8')
-  return true
-}
-
-/**
- * Compile `db/annotations.ts` into the `annotations.gen.json` sidecar that the
- * codegen and the pikku-console addon read. No-op if the authored file doesn't
- * exist (nothing to compile yet). Returns whether the sidecar changed on disk.
- *
- * Uses esbuild (a CLI dependency) to transpile the TS in-process and a `vm`
- * sandbox to evaluate it — no subprocess and no tsx. The previous `node --import
- * tsx/esm` subprocess silently fails on Node ≥ 23 (ERR_REQUIRE_CYCLE_MODULE),
- * which is why this sidecar never materialised before.
- *
- * Run BEFORE codegen so authored edits reflect in a single `db migrate` (and
- * again after, to capture a freshly-scaffolded file).
- */
-function compileClassifications(
-  classificationsFile: string,
+function writeAnnotationsSidecar(
   genJsonFile: string,
-  declaration: TableDeclaration | null = null
+  declaration: LoadedDeclaration | null
 ): boolean {
-  const hasAuthored = existsSync(classificationsFile)
-  if (!hasAuthored && !declaration) return false
-  const value = hasAuthored ? loadClassifications(classificationsFile) : {}
-  if (value === undefined) {
-    // Without a declaration a stale sidecar is what this has always left. With
-    // one, it would also drop the classifications the declaration just added.
-    if (declaration) {
-      throw new Error(
-        `${classificationsFile} could not be compiled, so the annotations in ${TABLES_FILE} cannot be applied.`
-      )
-    }
-    return false
-  }
-  const merged = declaration
-    ? mergeAnnotations(
-        value as Record<string, Record<string, unknown>>,
-        declaration.annotations
-      )
-    : value
-  const next = JSON.stringify(merged, null, 2) + '\n'
   const existing = existsSync(genJsonFile)
     ? readFileSync(genJsonFile, 'utf8')
     : null
-  if (existing !== next) {
-    mkdirSync(dirname(genJsonFile), { recursive: true })
-    writeFileSync(genJsonFile, next, 'utf8')
+  if (!declaration) {
+    if (existing === null) return false
+    rmSync(genJsonFile)
     return true
   }
-  return false
-}
-
-/** Evaluates the authored `db/annotations.ts` and returns its exported map, or undefined when it is missing or does not compile. */
-export function loadClassifications(classificationsFile: string): unknown {
-  if (!existsSync(classificationsFile)) return undefined
-  try {
-    const { code } = transformSync(readFileSync(classificationsFile, 'utf8'), {
-      loader: 'ts',
-      format: 'cjs',
-    })
-    const mod: { exports: Record<string, unknown> } = { exports: {} }
-    runInNewContext(code, {
-      module: mod,
-      exports: mod.exports,
-      require: createRequire(classificationsFile),
-    })
-    return Object.values(mod.exports)[0]
-  } catch {
-    return undefined
-  }
+  const next = JSON.stringify(declaration.annotations, null, 2) + '\n'
+  if (existing === next) return false
+  mkdirSync(dirname(genJsonFile), { recursive: true })
+  writeFileSync(genJsonFile, next, 'utf8')
+  return true
 }
 
 /**
@@ -1691,7 +1602,7 @@ async function coveredSqliteSchema(
   const db = await openSqlite(context, ':memory:')
   try {
     try {
-      await migrate(new SqliteMigrationExecutor(db), migrationsDir)
+      await migrate(new SqliteMigrationExecutor(db), migrationsDir, REPLAY)
     } catch (error) {
       throw explainMissingSqliteExtension(error, context)
     }
@@ -1737,7 +1648,7 @@ async function coveredMysqlSchema(
   resolved: Pick<ResolvedMysqlDb, 'connectionString'>
 ): Promise<SchemaMap> {
   return withScratchMysqlDatabase(resolved, async (client) => {
-    await migrate(new MysqlMigrationExecutor(client), migrationsDir)
+    await migrate(new MysqlMigrationExecutor(client), migrationsDir, REPLAY)
     return introspectorToMap(new MysqlIntrospector(client))
   })
 }
@@ -1766,7 +1677,7 @@ async function coveredPostgresSchema(
   context: PGliteExtensionContext
 ): Promise<SchemaMap> {
   return withScratchPostgresDatabase(context, async (client) => {
-    await migrate(new PostgresMigrationExecutor(client), migrationsDir)
+    await migrate(new PostgresMigrationExecutor(client), migrationsDir, REPLAY)
     return postgresDatabaseToMap(client)
   })
 }
@@ -2016,7 +1927,11 @@ async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
     case 'sqlite': {
       const db = await openSqlite(resolved, ':memory:')
       try {
-        await migrate(new SqliteMigrationExecutor(db), resolved.migrationsDir)
+        await migrate(
+          new SqliteMigrationExecutor(db),
+          resolved.migrationsDir,
+          REPLAY
+        )
         return names(
           db
             .prepare(`select name from sqlite_master where type = 'index'`)
@@ -2031,7 +1946,8 @@ async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
       return withScratchMysqlDatabase(resolved, async (client) => {
         await migrate(
           new MysqlMigrationExecutor(client),
-          resolved.migrationsDir
+          resolved.migrationsDir,
+          REPLAY
         )
         const { rows } = await client.query(
           `select distinct index_name as name from information_schema.statistics
@@ -2043,7 +1959,8 @@ async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
       return withScratchPostgresDatabase(resolved, async (client) => {
         await migrate(
           new PostgresMigrationExecutor(client),
-          resolved.migrationsDir
+          resolved.migrationsDir,
+          REPLAY
         )
         const { rows } = await client.query(
           `select indexname as name from pg_indexes
@@ -2068,27 +1985,28 @@ const coveredTable = (
  * Apply a declaration to an empty database and read back what it creates.
  *
  * A declaration may point a foreign key at a table outside itself: one a
- * hand-written migration made, or Better Auth's `user`. Those have to exist for
- * the engine to accept the DDL, so each one named in `requires` is created here
- * first, with the type the migrations gave it, and left out of the result.
+ * hand-written migration made, a `declareOnly` table, or Better Auth's `user`.
+ * Those have to exist for the engine to accept the DDL, so each one the
+ * declaration references is created here first, with the type the migrations
+ * gave it, and left out of the result.
  *
  * A stand-in instead of the real tables, because the real ones can't be here:
  * the migrations may already create the very tables being declared.
  */
 async function materializeDeclaration(
   resolved: ResolvedDb,
-  { schema }: TableDeclaration,
+  { schema }: LoadedDeclaration,
   covered: SchemaMap,
   schemaName: string | undefined
 ): Promise<{ desired?: DesiredSchema; refusals: string[] }> {
   const refusals: string[] = []
   const standIns = new Map<string, ColumnInfo[]>()
 
-  for (const { table, column, owner } of schema.requires ?? []) {
+  for (const { table, column } of tableRequirements(schema.tables)) {
     const info = coveredTable(covered, table, schemaName)?.get(column)
     if (!info) {
       refusals.push(
-        `${TABLES_FILE} requires ${table}.${column}, which no migration creates yet. ${owner} owns it.`
+        `${TABLES_FILE} references ${table}.${column}, which neither it nor any migration creates.`
       )
       continue
     }
@@ -2118,8 +2036,7 @@ async function materializeDeclaration(
     } catch (error: any) {
       return {
         refusals: [
-          `${TABLES_FILE} does not apply on ${resolved.dialect}: ${error.message}. ` +
-            'A foreign key onto a table outside the declaration has to be listed in `requires`.',
+          `${TABLES_FILE} does not apply on ${resolved.dialect}: ${error.message}.`,
         ],
       }
     }
@@ -2144,6 +2061,8 @@ export interface DeclaredTablesPlan {
   body: string
   /** Why nothing can be written. When present, `body` is empty. */
   refusals: string[]
+  /** What the migration changes about constraints that exist, and why: a stale check dropped, a changed bound. */
+  notes?: string[]
 }
 
 /**
@@ -2163,7 +2082,8 @@ export interface DeclaredTablesPlan {
  */
 export async function planDeclaredTables(
   resolved: ResolvedDb,
-  otherSources: SchemaSource[] = []
+  otherSources: SchemaSource[] = [],
+  options: { serverVersion?: () => Promise<string> } = {}
 ): Promise<DeclaredTablesPlan | null> {
   const recorded = recordedDeclaredTables(resolved.migrationsDir)
   const declaration = await loadTableDeclaration(resolved.rootDir)
@@ -2177,6 +2097,22 @@ export async function planDeclaredTables(
           'gone, and their classifications went with it. Restore it.',
       ],
     }
+  }
+
+  // Before the declaration is materialized: a server that cannot take a CHECK
+  // (MariaDB) would only answer it with a raw syntax error.
+  if (resolved.dialect === 'mysql') {
+    const mysql = resolved
+    const refusal = mysqlCheckRefusal(
+      mysqlCheckSupport(
+        await (options.serverVersion ?? (() => mysqlServerVersion(mysql)))()
+      ),
+      declaredConstraints(declaration.schema.tables).map(
+        (c) => `${c.where}: ${c.constraint}`
+      ),
+      TABLES_FILE
+    )
+    if (refusal) return { tables: [], body: '', refusals: [refusal] }
   }
 
   const schemaName =
@@ -2203,7 +2139,13 @@ export async function planDeclaredTables(
       )
     }
   }
-  refusals.push(...strayAnnotations(declaration.annotations, desired.tables))
+  refusals.push(
+    ...declareOnlyProblems(
+      declaration.declareOnly,
+      (table) => coveredTable(covered, table, schemaName),
+      resolved.dialect
+    )
+  )
 
   for (const source of otherSources) {
     for (const table of tables.filter((t) => source.desired.tables.has(t))) {
@@ -2228,9 +2170,11 @@ export async function planDeclaredTables(
     })
 
   refusals.push(...comparable(covered))
+  const declaredOnly = new Set(declaredTableNames(declaration).declareOnly)
   for (const table of recorded) {
     if (
       !desired.tables.has(table) &&
+      !declaredOnly.has(table) &&
       coveredTable(covered, table, schemaName)
     ) {
       refusals.push(
@@ -2281,6 +2225,49 @@ export async function planDeclaredTables(
     }
   }
 
+  // SQLite gets no generated CHECKs, so there is nothing to compare there.
+  const notes: string[] = []
+  for (const table of resolved.dialect === 'sqlite' ? [] : tables) {
+    const actual = coveredTable(covered, table, schemaName)
+    if (!actual) continue
+    const { columns: definitions } = tableDefinitions(desired.sql, table)
+    for (const [column, info] of desired.tables.get(table)!) {
+      const existing = actual.get(column)
+      if (!existing) continue
+      const plan = planConstraints(table, column, info, existing)
+      if (plan.drop.length + plan.add.length === 0) continue
+      notes.push(...plan.reasons.map((r) => `${table}.${column}: ${r}`))
+
+      const added = plan.add.map((check) => ({
+        column,
+        name: check.name,
+        expression: inlineCheckExpression(
+          definitions.get(column) ?? '',
+          check.name
+        ),
+      }))
+      const lost = added.find((check) => !check.expression)
+      if (lost) {
+        refusals.push(
+          `${table}.${column}: ${lost.name} is not written inline on the column, so generate cannot lift its text.`
+        )
+        continue
+      }
+
+      const dialect = resolved.dialect === 'mysql' ? 'mysql' : 'postgres'
+      statements.push(
+        ...checkChangeStatements(
+          dialect,
+          { schema: schemaName, table, qualified: qualify(table) },
+          {
+            drop: plan.drop,
+            add: added.map((a) => ({ ...a, expression: a.expression! })),
+          },
+          quote
+        )
+      )
+    }
+  }
   // An index on a new table came with its `CREATE TABLE` above.
   const newIndexes = shapes.filter(
     ({ shape }) =>
@@ -2306,7 +2293,20 @@ export async function planDeclaredTables(
       ...left.missingColumns.map((c) => `${c.table} still lacks ${c.columns}`),
     ]
   })
-  return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
+  return {
+    tables,
+    body: rehearsal.length ? '' : body,
+    refusals: rehearsal,
+    notes,
+  }
+}
+
+/** The `version()` the configured MySQL-protocol server reports. */
+async function mysqlServerVersion(resolved: ResolvedMysqlDb): Promise<string> {
+  return withMysqlClient(resolved, async (client) => {
+    const { rows } = await client.query('select version() as v')
+    return String((rows[0] as { v?: unknown } | undefined)?.v ?? '')
+  })
 }
 
 /**
@@ -2356,6 +2356,23 @@ async function rehearseMigration(
 export interface DeclaredTablesDrift {
   pending: boolean
   refusals: string[]
+  /** Why a pending migration changes constraints that exist (a stale check, a changed bound). */
+  notes: string[]
+}
+
+export async function declaredSqliteConstraintNotice(
+  resolved: ResolvedDb
+): Promise<string | undefined> {
+  if (resolved.dialect !== 'sqlite') return undefined
+  const declaration = await loadTableDeclaration(resolved.rootDir)
+  if (!declaration) return undefined
+  // What the migrations already enforce comes from replaying them, as the
+  // declaration is compared with elsewhere.
+  const covered = await coveredSchema(resolved)
+  return sqliteConstraintNotice(
+    declaration.schema.tables,
+    (table, column) => covered.get(table)?.get(column)?.checks
+  )
 }
 
 export async function computeDeclaredTablesDrift(
@@ -2365,6 +2382,7 @@ export async function computeDeclaredTablesDrift(
   return {
     pending: Boolean(plan?.body),
     refusals: plan?.refusals ?? [],
+    notes: plan?.body ? (plan.notes ?? []) : [],
   }
 }
 
@@ -2865,6 +2883,9 @@ export async function generateMigrations(
   addons: AddonDeclaration[] = [],
   services?: ReadonlySet<string>
 ): Promise<GenerateResult> {
+  // Read and checked first: a retired or unreadable declaration refuses the
+  // whole command, so no source's migration may be written before it does.
+  await loadTableDeclaration(resolved.rootDir)
   const sources = await schemaSources(
     resolved,
     rootDir,

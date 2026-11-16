@@ -265,6 +265,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         null
       )
       await workflow.do(
+        'Bootstrap Key pair definition types',
+        'pikkuKeyPairDefinitionTypes',
+        null
+      )
+      await workflow.do(
         'Bootstrap Variable definition types',
         'pikkuVariableDefinitionTypes',
         null
@@ -362,6 +367,11 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do(
         'Secret definition types',
         'pikkuSecretDefinitionTypes',
+        null
+      ),
+      workflow.do(
+        'Key pair definition types',
+        'pikkuKeyPairDefinitionTypes',
         null
       ),
       workflow.do('Scope definition types', 'pikkuScopeDefinitionTypes', null),
@@ -470,6 +480,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Auth', 'pikkuAuth', {}),
       workflow.do('Secrets', 'pikkuSecrets', null),
       workflow.do('Credentials', 'pikkuCredentials', null),
+      workflow.do('Key pairs', 'pikkuKeyPairs', null),
       workflow.do('Scopes', 'pikkuScopes', {}),
       workflow.do('Roles', 'pikkuRoles', {}),
       workflow.do('Flags', 'pikkuFlags', {}),

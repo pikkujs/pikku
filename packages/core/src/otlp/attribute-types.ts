@@ -13,12 +13,16 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
   'pikku.wire.type': 'string',
   'pikku.wire.id': 'string',
   'pikku.function.id': 'string',
+  'pikku.function.version': 'int',
   'pikku.package': 'string',
   'pikku.addon.namespace': 'string',
   'pikku.trace.root': 'bool',
+  'pikku.trace.unrecorded_parent_span_id': 'string',
   'pikku.function.duration_ms': 'int',
   'pikku.user.id': 'string',
   'pikku.org.id': 'string',
+  'pikku.impersonated': 'bool',
+  'pikku.impersonator.id': 'string',
   'http.request.method': 'string',
   'http.route': 'string',
   'http.response.status_code': 'int',
@@ -50,6 +54,14 @@ const ALLOW_LIST_KINDS: Record<string, AttributeKind> = {
  * key must be in the list above.
  */
 const PLUGIN_PREFIXES = ['db.']
+
+/**
+ * Whether a span attribute key may leave the process: allow-listed, or under a plugin prefix. The exporter and the run
+ * stitcher share it, so a key the store never sees never reaches a browser either.
+ */
+export const isAllowedAttributeKey = (key: string): boolean =>
+  Object.hasOwn(ALLOW_LIST_KINDS, key) ||
+  PLUGIN_PREFIXES.some((prefix) => key.startsWith(prefix))
 
 /** The only attributes a span event may carry: the redacted class and message of an error. */
 const EVENT_ATTRIBUTE_KEYS = ['exception.type', 'exception.message']

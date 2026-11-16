@@ -12,6 +12,10 @@ import { runTypeIdentityChecks } from './type-identity-checks.js'
 import { runOxlintRun, runOxlintSetupChecks } from './oxlint-checks.js'
 import { runDeployReadinessChecks } from './deploy-readiness-checks.js'
 import { migrationCreatesTable } from './shared-checks.js'
+import {
+  RETIRED_ANNOTATIONS_FILE,
+  retiredAnnotationsMessage,
+} from '../db/table-declaration.js'
 import { compareMigrationsWithBase, DEFAULT_BASES } from './migration-base.js'
 import { blankComments, lineOfOffset } from '../../utils/blank-comments.js'
 import { blankScenarioMeta } from './blank-scenario-meta.js'
@@ -453,21 +457,19 @@ export async function runProjectChecks(
     }
   }
 
-  // ── required project files ────────────────────────────────────────────
-  // These files must exist and be committed — they are seeded from the sandbox
-  // but belong to the project so the AI agent can read and update them.
-  for (const relPath of ['db/annotations.ts']) {
-    if (!existsSync(join(root, relPath))) {
-      w(
-        `missing-required-file-${relPath.replace(/[^a-z0-9]/gi, '-')}`,
-        `${relPath} is missing — this file must be committed to the project`,
-        join(root, relPath),
-        lines(
-          `Create ${relPath} and commit it.`,
-          'The starter-template ships a stub you can copy as a starting point.'
-        )
+  // ── retired db/annotations.ts ─────────────────────────────────────────
+  // Nothing reads it, so whatever it classifies would silently stop applying.
+  if (existsSync(join(root, RETIRED_ANNOTATIONS_FILE))) {
+    e(
+      'retired-annotations-file',
+      retiredAnnotationsMessage,
+      join(root, RETIRED_ANNOTATIONS_FILE),
+      lines(
+        'Give each table in db/tables.ts its columns with the same fields the file held (security, form, keyId, classification, kind, tsType, format, description).',
+        'Tables your migrations create are declared `declareOnly: true`, so no SQL is generated for them.',
+        'Then delete db/annotations.ts and run `pikku db migrate`.'
       )
-    }
+    )
   }
 
   // ── @pikku/* minimum versions ──────────────────────────────────────────
@@ -1153,7 +1155,7 @@ export async function runProjectChecks(
 
     // ── the coercion map has to reach a Kysely instance ──────────────────
     // `pikku db migrate` generates a CoercionMap from the `kind` entries in
-    // db/annotations.ts, and nothing wires it up on the project's behalf. An
+    // db/tables.ts, and nothing wires it up on the project's behalf. An
     // unwired map is invisible locally and fatal deployed: the dev sqlite
     // driver hydrates a TEXT date into a Date by itself, libsql on a stage
     // returns the raw string, and the generated schema types the column

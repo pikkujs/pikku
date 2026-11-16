@@ -1,4 +1,7 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { readFile } from 'fs/promises'
+import { join } from 'path'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import {
@@ -7,6 +10,8 @@ import {
   serializeScreens,
   serializeAddonRoles,
   serializeInstalledAddons,
+  serializePluginTypes,
+  catalogMessageKeys,
 } from './serialize-screens.js'
 
 export const pikkuScreens = pikkuSessionlessFunc<void, boolean>({
@@ -16,8 +21,31 @@ export const pikkuScreens = pikkuSessionlessFunc<void, boolean>({
       screensFile,
       installedAddonsFile,
       addonRolesFile,
+      pluginTypesFile,
+      rpcInternalMapDeclarationFile,
+      packageMappings,
       rootDir,
     } = config
+    // An addon's typed definePlugin. Written whether or not it declares
+    // screens yet: it is what the declaration imports.
+    if (config.addon && pluginTypesFile) {
+      const en = await readFile(
+        join(rootDir, 'messages', 'en.json'),
+        'utf8'
+      ).catch(() => undefined)
+      await writeFileInDir(
+        logger,
+        pluginTypesFile,
+        serializePluginTypes(
+          getFileImportRelativePath(
+            pluginTypesFile,
+            rpcInternalMapDeclarationFile,
+            packageMappings
+          ),
+          catalogMessageKeys(en)
+        )
+      )
+    }
     if (!screensMetaJsonFile || !screensFile) {
       return false
     }

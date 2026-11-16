@@ -26,7 +26,7 @@ test('stageMigrations ships each engine’s SQL, and no dev seed', async () => {
       join(project, 'db', 'sqlite', 'sqlite-dev-seed.sql'),
       'insert;'
     )
-    writeFileSync(join(project, 'db', 'annotations.ts'), 'export {}')
+    writeFileSync(join(project, 'db', 'tables.ts'), 'export {}')
 
     await stageMigrations(project, provider)
 

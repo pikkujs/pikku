@@ -64,7 +64,7 @@ const IMPORT_RE =
 
 /**
  * The source with its comments blanked. A generated file's header can show the
- * import a hand-written file should make (`classification-map.gen.d.ts` does),
+ * import a hand-written file should make,
  * and that example is not an import the shipped file makes.
  */
 function withoutComments(source: string): string {

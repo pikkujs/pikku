@@ -3,7 +3,8 @@
  * with correct per-column counts and warns on private/secret columns that
  * have no anonymize strategy.
  *
- * Classification is authored in `db/annotations.ts` (the single source).
+ * Classification is declared on the columns in `db/tables.ts`, here as
+ * `declareOnly` tables over the migration that creates them.
  */
 
 import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises'
@@ -12,17 +13,12 @@ import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
+import { declareAnnotations, type Annotations } from './declare-tables.js'
 
 const PIKKU_BIN = join(
   import.meta.dirname!,
   '../../../../packages/cli/dist/bin/pikku.js'
 )
-
-type ColumnEntry = {
-  security?: 'public' | 'private' | 'pii' | 'secret' | 'encrypted'
-  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-}
-type Annotations = Record<string, Record<string, ColumnEntry>>
 
 function runPikku(
   dir: string,
@@ -69,10 +65,7 @@ async function createProject(
   await mkdir(join(tmpDir, 'src'), { recursive: true })
   await writeFile(join(tmpDir, 'db', 'sqlite', '001_init.sql'), migrationSql)
   if (annotations) {
-    await writeFile(
-      join(tmpDir, 'db', 'annotations.ts'),
-      `export const classifications = ${JSON.stringify(annotations, null, 2)}\n`
-    )
+    await declareAnnotations(tmpDir, annotations, migrationSql)
   }
   return tmpDir
 }

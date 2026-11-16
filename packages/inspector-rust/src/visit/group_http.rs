@@ -13,7 +13,7 @@ use super::util_shared::wiring_call;
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::codes;
 use crate::state::{
-    FunctionMeta, HttpRouteMeta, HttpRouteMetaFields, MetaInputTypes, QueueWorkerMeta, QueueWorkerMetaFields, Record,
+    FunctionMeta, HttpRouteMeta, HttpRouteMetaFields, SubscribeMeta, MetaInputTypes, QueueWorkerMeta, QueueWorkerMetaFields, Record,
     ServicesMeta,
 };
 use crate::tsutil::{self, file_name_of, find_property_assignment, first_decl, path_params};
@@ -397,6 +397,18 @@ impl Context<'_> {
             self.log.critical(codes::FUNCTION_METADATA_NOT_FOUND, format!("No function metadata found for '{func_name}'."));
             return;
         };
+        if fn_meta.subscribe.is_some() {
+            if tsutil::get_property_value(obj, "sse").bool != Some(true) {
+                self.check_subscribe_wiring(&func_name, &format!("Route '{} {full_route}'", method.to_uppercase()));
+                return;
+            }
+            // A subscribe function wired auth: false is a public topic.
+            if resolved_auth == Some(false) {
+                if let Some(m) = self.state.functions.meta.get_mut(&func_name) {
+                    m.sessionless = Some(true);
+                }
+            }
+        }
         if !self.validate_auth_sessionless(obj, &func_name, &format!("Route '{full_route}'"), group.auth) {
             return;
         }
@@ -497,6 +509,9 @@ impl Context<'_> {
             return;
         }
         self.ensure_inline_wiring_function(&pikku_func_id, &name, Some(func_init), extracted.is_helper);
+        if !self.check_subscribe_wiring(&pikku_func_id, &format!("Queue worker '{name}'")) {
+            return;
+        }
         let tags = if cm.has_tags { Some(cm.tags.clone()) } else { None };
         let middleware = self.resolve_middleware(obj, tags.as_deref());
         self.state.service_aggregation.used_functions.add(pikku_func_id.clone());
@@ -548,7 +563,8 @@ impl Context<'_> {
             self.state.functions.meta.set(pikku_func_id, m);
             return;
         };
-        let call = if ast::is_call_expression(func_init) {
+        let direct = ast::is_call_expression(func_init);
+        let call = if direct {
             self.resolve_func_config_types(&mut m, pikku_func_id, func_init);
             if !self.types_lookup.contains_key(pikku_func_id) {
                 self.populate_types_lookup(pikku_func_id, func_init);
@@ -561,6 +577,17 @@ impl Context<'_> {
             self.state.functions.meta.set(pikku_func_id, m);
             return;
         };
+        // A subscribe function written inline in its wiring never reaches
+        // addFunctions. (An exported one was read, and refused if bare, there.)
+        if direct
+            && m.subscribe.is_none()
+            && call.expression().is_some_and(|e| ast::is_identifier(e) && e.text() == "pikkuSubscribeFunc")
+        {
+            if let Some(pattern) = self.subscribe_topic_pattern(call, pikku_func_id) {
+                m.subscribe = Some(SubscribeMeta { topic_pattern: pattern });
+                m.sessionless = Some(false);
+            }
+        }
         let a = call.arguments();
         if a.is_empty() || !ast::is_object_literal_expression(a[0]) {
             self.state.functions.meta.set(pikku_func_id, m);

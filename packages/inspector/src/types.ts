@@ -22,6 +22,7 @@ import type { CLIMeta } from '@pikku/core/cli'
 import type { CLICommandMeta } from '@pikku/core/cli'
 import type { NodesMeta } from '@pikku/core/node'
 import type { SecretDefinitions } from '@pikku/core/secret'
+import type { KeyPairDefinitions } from '@pikku/core/keypair'
 import type { CredentialDefinitions } from '@pikku/core/credential'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { SystemRoleDefinitions } from '@pikku/core/role'
@@ -656,11 +657,104 @@ export type StudioScreenMeta = {
   | { app: string; component?: undefined }
 )
 
+/**
+ * One variant's wording: each text a widget shows, by its name, to a message
+ * key, nested for deeper texts. `$` words a value that names the variant.
+ */
+export type StudioCopyEntryMeta = {
+  [text: string]: string | StudioCopyEntryMeta
+}
+
+/** Every variant's wording, by variant. */
+export type StudioCopyMeta = Record<string, StudioCopyEntryMeta>
+
+/** A slot of an arranged screen or a part of a thing, read statically. */
+export type StudioSlotMeta = {
+  widget: string
+  from: string
+  span?: 'full' | 'wide' | 'half'
+  compact?: 'full' | 'tile' | 'hide'
+  /** Per variant, each text the widget shows mapped to a message key. */
+  copy?: StudioCopyMeta
+  /** Whether `widget` is one of the addon's own widgets rather than a core one. */
+  own: boolean
+}
+
+/** An action of a thing or an arranged screen, read statically. */
+export type StudioActionMeta = {
+  id: string
+  /** A function of the addon, a project RPC `<namespace>:<function>`, or `go:/<path>`. */
+  run: string
+  label: string
+  confirm?: string
+  destructive?: boolean
+}
+
+/** A widget an addon ships, read statically. */
+export type StudioWidgetMeta = {
+  id: string
+  title: string
+  description: string
+  states: ('full' | 'tile' | 'chip')[]
+  actions: ('open' | 'run' | 'scope' | 'submit' | 'link' | 'input' | 'event')[]
+  skins?: ('desk' | 'headset')[]
+  /** The lazy import's specifier, relative to the declaring file. */
+  component: string
+}
+
+/** A thing an addon can open as a card, read statically. */
+export type StudioThingMeta = {
+  kind: string
+  label: string
+  /** A function of the addon, or a project RPC `<namespace>:<function>`. */
+  source: string
+  /** The head's wording by variant, its figures' and named values' too. */
+  copy: StudioCopyMeta
+  parts: StudioSlotMeta[]
+  related?: string[]
+  actions?: StudioActionMeta[]
+  alwaysFull?: boolean
+  measure?: 'narrow' | 'normal' | 'fill'
+}
+
+/** A screen the host lays out from widgets, read statically. */
+export type StudioArrangedScreenMeta = {
+  id: string
+  path: string
+  title: string
+  scope: 'studio' | 'team' | 'project'
+  nav?: StudioNavMeta
+  replaces?: boolean
+  needsApp?: boolean
+  layout?: 'bare'
+  scopes?: string[]
+  agent?: string
+  agentTitle?: string
+  agentDescription?: string
+  defaultChat?: boolean
+  about?: string
+  /** A function of the addon, or a project RPC `<namespace>:<function>`. */
+  source: string
+  slots: StudioSlotMeta[]
+  shows?: string[]
+  lanes?: number
+  chat?: 'collapse'
+  scoped?: boolean
+  actions?: StudioActionMeta[]
+  /** Variant to an arranged screen's id or a path. */
+  redirect?: Record<string, string>
+  poll?: number | { fast: number; slow: number }
+}
+
 export type StudioMeta = {
   title: string
   /** The source file whose `definePlugin` call declared this manifest. */
   file: string
   screens: StudioScreenMeta[]
+  /** In declaration order; absent when `definePlugin` declares none. */
+  widgets?: StudioWidgetMeta[]
+  things?: StudioThingMeta[]
+  arrangedScreens?: StudioArrangedScreenMeta[]
   /**
    * The addon's role: every scope its own functions require, derived by
    * `pikku all` and never declared. Absent from the raw `definePlugin` read.
@@ -973,6 +1067,10 @@ export interface InspectorState {
   surfaceUsage: SurfaceUsageCounts
   credentials: {
     definitions: CredentialDefinitions
+    files: Set<string>
+  }
+  keyPairs: {
+    definitions: KeyPairDefinitions
     files: Set<string>
   }
   scopes: {

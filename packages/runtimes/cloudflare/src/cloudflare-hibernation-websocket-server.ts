@@ -11,13 +11,11 @@ import {
 } from '@pikku/core/channel/serverless'
 import { CloudflareWebsocketStore } from './cloudflare-channel-store.js'
 import { createCloudflareChannelHandlerFactory } from './cloudflare-channel-handler-factory.js'
-import { CloudflareEventHubService } from './cloudflare-eventhub-service.js'
 import type { CoreSingletonServices } from '@pikku/core/types'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 export abstract class CloudflareWebSocketHibernationServer<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
 > implements DurableObject {
-  private eventHub: CloudflareEventHubService<{}> | undefined
   private channelStore: CloudflareWebsocketStore
 
   constructor(
@@ -104,17 +102,10 @@ export abstract class CloudflareWebSocketHibernationServer<
       ...params,
       channelId,
     })
-    await this.eventHub?.onChannelClosed(channelId)
   }
 
   private async getAllParams(websocket: WebSocket) {
     const params = await this.getParams()
-    if (!this.eventHub) {
-      this.eventHub = new CloudflareEventHubService(
-        params.singletonServices.logger,
-        this.ctx
-      )
-    }
     const channelHandlerFactory = createCloudflareChannelHandlerFactory(
       params.singletonServices.logger,
       this.channelStore,
@@ -123,10 +114,7 @@ export abstract class CloudflareWebSocketHibernationServer<
     return {
       ...params,
       channelStore: this.channelStore,
-      singletonServices: {
-        ...params.singletonServices,
-        eventHub: this.eventHub,
-      },
+      singletonServices: params.singletonServices,
       channelHandlerFactory,
     }
   }

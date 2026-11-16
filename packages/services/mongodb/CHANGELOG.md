@@ -1,5 +1,26 @@
 # @pikku/mongodb
 
+## 0.12.28
+
+### Patch Changes
+
+- 5181138: `AgentRunStateService.resolveApproval` takes one claim object, `{ runId, toolCallId, status }` (`ApprovalClaim` from `@pikku/core/services`), and claims only an approval pending on that run. The two-argument form is removed. The stores used to claim by tool call id alone, and `resumeAgentSync` claimed whatever ids its caller sent, so a caller authorized for one run could claim and run another run's approved tool. `resumeAgentSync` now refuses an approval list naming a tool call that is not pending on the run, before claiming any of it. A custom store must add the run to its compare-and-swap; see `docs/MIGRATION.md`.
+- 5181138: Agent approvals expire. A run suspended for an approval or a credential stamps `expiresAt` on each `PendingApproval`, from the agent's new `approvalTtlMs` (a finite number above zero; `addAgent` refuses anything else) or `DEFAULT_AGENT_APPROVAL_TTL_MS`, 10 minutes. `resumeAgent`, `resumeAgentSync` and `approveAgent` refuse an expired approval with a `GoneError` (410) before claiming it or calling the tool or the model, and fail the run with `errorMessage: 'approval expired'`; a delegating parent run fails with its sub-agent. Every store also refuses an expired approval in `resolveApproval`. An approval with no expiry, including any saved before this release, is refused.
+
+  `@pikku/kysely`: `agentToolCall` gains a nullable `approvalExpiresAt bigint` column; run `pikku db generate` then `pikku db migrate`. `KyselyAgentRunStateService` now reads its JSON columns through a serializing plugin (SQLite, D1), compares its claim as text so the compare-and-swap matches there, and creates run ids that fit the `varchar(36)` column on Postgres.
+
+- Updated dependencies [5181138]
+- Updated dependencies [5181138]
+- Updated dependencies [71ba80d]
+- Updated dependencies [8d0c2d4]
+- Updated dependencies [b8f3da8]
+- Updated dependencies [b829a15]
+- Updated dependencies [166e343]
+- Updated dependencies [8006227]
+- Updated dependencies [5ea64ad]
+- Updated dependencies [fa3cad1]
+  - @pikku/core@0.12.157
+
 ## 0.12.27
 
 ### Patch Changes

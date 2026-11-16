@@ -8,7 +8,7 @@ import {
   type AnnotationMap,
   type ColAnnotation,
 } from './annotation-parser.js'
-import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
+import type { ZodConstraints, ZodFormat } from './zod-codegen.js'
 import {
   bareUnquotedTableName,
   readMigrationProvenance,
@@ -16,6 +16,7 @@ import {
 import type { CodedDiagnostic } from '@pikku/inspector'
 import { ErrorCode } from '@pikku/inspector'
 import { suggestSecurityForColumn } from './sensitive-names.js'
+import { withBuiltinAnnotations } from './builtin-annotations.js'
 import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
@@ -264,6 +265,39 @@ function bareTableName(name: string): string {
   return dot >= 0 ? name.slice(dot + 1) : name
 }
 
+/** Two enum lists hold the same values, in any order. */
+function sameValues(a: readonly string[], b: readonly string[]): boolean {
+  return (
+    a.length === b.length &&
+    [...a].sort().every((value, i) => value === [...b].sort()[i])
+  )
+}
+
+const enumLabel = (values: readonly string[]): string =>
+  values.map((v) => `'${v}'`).join(' | ')
+
+/** The bounds a column declares that its resolved select type can take, if any. */
+function zodConstraintsFor(
+  ann: ColAnnotation | null,
+  base: string,
+  integer: boolean
+): ZodConstraints | undefined {
+  const picked: ZodConstraints =
+    base === 'number'
+      ? { int: integer ? true : undefined, min: ann?.min, max: ann?.max }
+      : base === 'string'
+        ? {
+            minLength: ann?.minLength,
+            maxLength: ann?.maxLength,
+            pattern: ann?.pattern,
+          }
+        : {}
+  const defined = Object.entries(picked).filter(([, v]) => v !== undefined)
+  return defined.length > 0
+    ? (Object.fromEntries(defined) as ZodConstraints)
+    : undefined
+}
+
 function emitInterface(
   table: TableSchema & { displayName?: string },
   camelCase: boolean,
@@ -271,6 +305,7 @@ function emitInterface(
   dialect: Dialect,
   enumByName: Map<string, string[]>,
   formatHints: Record<string, Record<string, ZodFormat>>,
+  constraintHints: Record<string, Record<string, ZodConstraints>>,
   warnings: CodedDiagnostic[],
   frameworkTables: ReadonlySet<string> = new Set()
 ): string {
@@ -311,7 +346,7 @@ function emitInterface(
             code: ErrorCode.DB_COLUMN_NAME_TYPE_CONTRADICTION,
             message:
               `Column "${bare}.${col.name}" is named like a ${suggested} but its DB type ` +
-              `is ${col.type} (${real}). If intentional, set its kind in db/annotations.ts.`,
+              `is ${col.type} (${real}). If intentional, give the column a kind in db/tables.ts.`,
           })
         }
       }
@@ -322,9 +357,30 @@ function emitInterface(
       // from a Postgres enum (`type` is 'USER-DEFINED', real values via `udtName`)
       // or, on SQLite, from a `CHECK (col IN (…))` constraint the introspector
       // parsed onto `col.enumValues`.
-      const enumValues =
+      // The declaration is the source of truth, so when it and the database
+      // disagree the union follows the declaration (the migration that brings
+      // the database in line is the pending side). That is said, once per
+      // column, rather than done silently.
+      const databaseEnum =
         col.enumValues ??
         (col.udtName ? enumByName.get(col.udtName) : undefined)
+      const enumValues = ann?.enum ?? databaseEnum
+      if (ann?.enum && databaseEnum && !sameValues(ann.enum, databaseEnum)) {
+        warnings.push({
+          severity: 'warn',
+          code: ErrorCode.DB_ENUM_DECLARATION_MISMATCH,
+          message:
+            `Column "${bare}.${col.name}": declared ${enumLabel(ann.enum)} but the ` +
+            `database has ${enumLabel(databaseEnum)}. The generated types follow the ` +
+            `declaration. ` +
+            (dialect === 'sqlite'
+              ? // `pikku db generate` writes no CHECK on SQLite, so it is no way out.
+                `SQLite cannot change a CHECK without rebuilding the table, so Pikku writes none: ` +
+                `add \`CHECK ("${col.name}" IN (${ann.enum.map((v) => `'${v.replace(/'/g, "''")}'`).join(', ')}))\` ` +
+                `by hand in a migration, or change the declaration to the database's values, or drop the stale CHECK by hand.`
+              : `Run \`pikku db generate\` for the migration that brings the database in line.`),
+        })
+      }
       const enumUnion =
         enumValues && enumValues.length > 0
           ? enumValues.map((v) => `'${escapeTsString(v)}'`).join(' | ')
@@ -353,7 +409,7 @@ function emitInterface(
             message:
               `Column "${bare}.${col.name}" is ${col.type} and will be typed as ` +
               `\`${resolved}\` — JSON/JSONB columns need a concrete TypeScript type. ` +
-              `In db/annotations.ts add: "${col.name}": { kind: 'json', tsType: 'YourType' }.`,
+              `In db/tables.ts give the column kind: 'json', tsType: 'YourType'.`,
           })
         }
       }
@@ -376,6 +432,18 @@ function emitInterface(
           })
         }
       }
+
+      // Declared bounds refine the zod schema the same way: `min`/`max` on a
+      // number, the length bounds and `pattern` on a string. On any other
+      // resolved type (an enum union, a Date) they have nothing to refine.
+      // An integer column (INT, BIGINT, SMALLINT, SERIAL, ...) also asks zod for
+      // `.int()`, but only while its type is still the number the DB gave it.
+      const bounds = zodConstraintsFor(
+        ann,
+        selectBase(typeAnn, col),
+        !typeAnn?.tsType && /INT|SERIAL/i.test(col.type)
+      )
+      if (bounds) (constraintHints[ifaceName] ??= {})[fieldName] = bounds
 
       const classification: Classification = ann?.classification ?? 'private'
 
@@ -452,7 +520,7 @@ function emitInterface(
           code: ErrorCode.DB_SECRET_COLUMN_STORED_PLAIN,
           message:
             `Column "${bare}.${col.name}" is classified secret but stored in the clear. ` +
-            `Declare how it is held in db/annotations.ts — form: 'hashed' | 'wrapped' | ` +
+            `Declare how it is held on the column in db/tables.ts — form: 'hashed' | 'wrapped' | ` +
             `'sealed' — or form: 'plain' to state that reading the row is meant to ` +
             `yield a usable credential.`,
         })
@@ -529,103 +597,6 @@ function emitManifest(
   ].join('\n')
 }
 
-// ─── Classification map type emitter ─────────────────────────────────────────
-
-/**
- * Emits a `DbClassificationMap` type declaration that the developer's
- * hand-authored `db/classifications.ts` must satisfy. Every table and column
- * present in the current schema appears as a required key — TypeScript will
- * flag added or removed columns.
- */
-function emitClassificationMap(
-  tables: TableSchema[],
-  declaredTables: ReadonlySet<string> = new Set()
-): string {
-  const colEntry = [
-    `  /** Privacy level — can the value leave the process? Defaults to 'private'. */`,
-    `  security?: 'public' | 'private' | 'pii' | 'secret'`,
-    `  /** How the value is held at rest, independent of \`security\`. A form other`,
-    `   *  than 'plain' makes the column's INSERT/UPDATE type nominal, so only a`,
-    `   *  real encrypt/seal/hash result can be written to it. Defaults to 'plain',`,
-    `   *  which on a \`secret\` column is warned about (PKU483) until stated here. */`,
-    `  form?: 'plain' | 'hashed' | 'wrapped' | 'sealed'`,
-    `  /** Which key protects this column, for a 'wrapped' or 'sealed' form. It is a`,
-    `   *  purpose, not a tenant: naming one here says these columns open together and`,
-    `   *  separately from the rest. Defaults to 'default'. */`,
-    `  keyId?: string`,
-    `  /** Anonymize strategy used by \`pikku db anonymize\`. */`,
-    `  classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'`,
-    `  /** Column kind override for codegen coercion + typing. */`,
-    `  kind?: 'date' | 'bool' | 'json' | 'uuid'`,
-    `  /** TypeScript type override, e.g. \`string[]\` or \`MyJson\`. Wins over \`kind\`. */`,
-    `  tsType?: string`,
-    `  /** Zod string-format validator (keeps the TS type as \`string\`). */`,
-    `  format?: ${Object.keys(ZOD_FORMATS)
-      .map((f) => `'${f}'`)
-      .join(' | ')}`,
-    `  description?: string`,
-  ].join('\n')
-
-  // Group tables by schema (for postgres schema.table names)
-  const schemaMap = new Map<string, Map<string, string[]>>()
-  for (const table of tables) {
-    const dot = table.name.indexOf('.')
-    const schema = dot >= 0 ? table.name.slice(0, dot) : ''
-    const bare = dot >= 0 ? table.name.slice(dot + 1) : table.name
-    if (!schemaMap.has(schema)) schemaMap.set(schema, new Map())
-    schemaMap.get(schema)!.set(
-      bare,
-      table.columns.map((c) => c.name)
-    )
-  }
-
-  const lines: string[] = [
-    `// Generated by @pikku/cli — do not edit by hand.`,
-    `// Run \`pikku db migrate\` to refresh.`,
-    `// Use this type in db/classifications.ts:`,
-    `//   import type { DbClassificationMap } from './.pikku/db/classification-map.gen.d.ts'`,
-    `//   export const classifications = { ... } satisfies DbClassificationMap`,
-    ``,
-    `export type ColumnEntry = {`,
-    `${colEntry}`,
-    `}`,
-    ``,
-    `export type DbClassificationMap = {`,
-  ]
-
-  // A table declared in `db/tables.ts` carries its annotations there, so
-  // leaving it out of `db/annotations.ts` must not be a type error.
-  const key = (table: string) =>
-    `${JSON.stringify(table)}${declaredTables.has(table) ? '?' : ''}`
-  const colKey = (table: string, col: string) =>
-    `${JSON.stringify(col)}${declaredTables.has(table) ? '?' : ''}`
-
-  for (const [schema, tables] of schemaMap) {
-    if (schema) {
-      lines.push(`  ${JSON.stringify(schema)}: {`)
-      for (const [table, cols] of tables) {
-        lines.push(`    ${key(table)}: {`)
-        for (const col of cols) {
-          lines.push(`      ${colKey(table, col)}: ColumnEntry`)
-        }
-        lines.push(`    }`)
-      }
-      lines.push(`  }`)
-    } else {
-      for (const [table, cols] of tables) {
-        lines.push(`  ${key(table)}: {`)
-        for (const col of cols) {
-          lines.push(`    ${colKey(table, col)}: ColumnEntry`)
-        }
-        lines.push(`  }`)
-      }
-    }
-  }
-
-  lines.push(`}`, ``)
-  return lines.join('\n')
-}
-
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 const COERCION_MAP_LITERAL = /export const coercionMap = (\{[\s\S]*\}) as const/
@@ -654,7 +625,6 @@ export interface CodegenOptions {
   outFile: string
   coercionFile: string
   manifestFile?: string
-  classificationMapFile?: string
   schemaJsonFile?: string
   /**
    * When set, emit a standalone module of bare enum unions (one
@@ -685,20 +655,16 @@ export interface CodegenOptions {
    * as app-owned, which is what a project with no generated migrations is.
    */
   migrationsDir?: string
-  /** Tables declared in `db/tables.ts`, which `db/annotations.ts` may omit. */
-  declaredTables?: ReadonlySet<string>
 }
 
 export interface CodegenResult {
   outFile: string
   coercionFile: string
   manifestFile?: string
-  classificationMapFile?: string
   enumsFile?: string
   written: boolean
   coercionWritten: boolean
   manifestWritten: boolean
-  classificationMapWritten: boolean
   enumsWritten: boolean
   tables: string[]
   /**
@@ -713,6 +679,8 @@ export interface CodegenResult {
    * shapes the zod emitter parses out of `schema.gen.ts`.
    */
   zodFormats: Record<string, Record<string, ZodFormat>>
+  /** Per-interface, per-field bounds for the zod codegen, keyed like `zodFormats`. */
+  zodConstraints: Record<string, Record<string, ZodConstraints>>
 }
 
 /**
@@ -730,15 +698,20 @@ export interface CodegenResult {
  */
 function emitEnumsModule(
   tables: TableSchema[],
-  enumByName: Map<string, string[]>
+  enumByName: Map<string, string[]>,
+  explicitAnnotations: AnnotationMap
 ): string {
   const pascal = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1)
   const seen = new Set<string>()
   const lines: string[] = []
   for (const t of tables) {
     const tablePart = pascal(snakeToCamel(bareTableName(t.name)))
+    const tableCols = explicitAnnotations[bareTableName(t.name)] ?? {}
     for (const col of t.columns) {
+      // The same order the schema types use, so a column the declaration
+      // restricts (SQLite carries no CHECK for it) gets its union here too.
       const values =
+        tableCols[col.name]?.enum ??
         col.enumValues ??
         (col.udtName ? enumByName.get(col.udtName) : undefined)
       if (!values || values.length === 0) continue
@@ -774,9 +747,10 @@ export async function generateSchemaTypes(
     columns: columnsByTable.get(name) ?? [],
   }))
 
-  const explicitAnnotations = options.rootDir
-    ? loadAnnotations(options.rootDir)
-    : {}
+  const explicitAnnotations = withBuiltinAnnotations(
+    options.rootDir ? loadAnnotations(options.rootDir) : {},
+    options.migrationsDir
+  )
 
   // Enum types — used to auto-type enum columns as string-literal unions. Keyed
   // by both bare and schema-qualified name; `udtName` is bare so the bare key
@@ -822,6 +796,7 @@ export async function generateSchemaTypes(
       : []
   )
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
+  const zodConstraints: Record<string, Record<string, ZodConstraints>> = {}
   const interfaces = tables
     .map((t) =>
       emitInterface(
@@ -831,6 +806,7 @@ export async function generateSchemaTypes(
         dialect,
         enumByName,
         zodFormats,
+        zodConstraints,
         warnings,
         frameworkTables
       )
@@ -896,7 +872,7 @@ export async function generateSchemaTypes(
   for (const table of tables) {
     const tableCols = explicitAnnotations[bareTableName(table.name)] ?? {}
     for (const col of table.columns) {
-      // Coercion is driven only by an explicit `kind` in db/annotations.ts —
+      // Coercion is driven only by an explicit `kind` in db/tables.ts —
       // no name inference. An unannotated `*_at` column is not coerced. `uuid`
       // is a string in both dialects, so it needs no runtime coercion.
       const ann = tableCols[col.name]
@@ -968,11 +944,6 @@ export async function generateSchemaTypes(
     ? emitManifest(tables, explicitAnnotations)
     : null
 
-  // ── classification-map.gen.d.ts ──────────────────────────────────────────────
-  const classificationMapBody = options.classificationMapFile
-    ? emitClassificationMap(tables, options.declaredTables)
-    : null
-
   // ── pikku-db-schema.gen.json ─────────────────────────────────────────────────
   let schemaJsonBody: string | null = null
   if (options.schemaJsonFile) {
@@ -1011,14 +982,13 @@ export async function generateSchemaTypes(
 
   // ── enums.gen.ts ─────────────────────────────────────────────────────────────
   const enumsBody = options.enumsFile
-    ? emitEnumsModule(tables, enumByName)
+    ? emitEnumsModule(tables, enumByName, explicitAnnotations)
     : null
 
   // ── write files ───────────────────────────────────────────────────────────────
   let existingSchema: string | null = null
   let existingCoercion: string | null = null
   let existingManifest: string | null = null
-  let existingClassificationMap: string | null = null
   let existingSchemaJson: string | null = null
   try {
     existingSchema = readFileSync(options.outFile, 'utf8')
@@ -1033,16 +1003,6 @@ export async function generateSchemaTypes(
   if (options.manifestFile) {
     try {
       existingManifest = readFileSync(options.manifestFile, 'utf8')
-    } catch {
-      /* ok */
-    }
-  }
-  if (options.classificationMapFile) {
-    try {
-      existingClassificationMap = readFileSync(
-        options.classificationMapFile,
-        'utf8'
-      )
     } catch {
       /* ok */
     }
@@ -1067,9 +1027,6 @@ export async function generateSchemaTypes(
   const coercionChanged = existingCoercion !== coercionBody
   const manifestChanged =
     manifestBody !== null && existingManifest !== manifestBody
-  const classificationMapChanged =
-    classificationMapBody !== null &&
-    existingClassificationMap !== classificationMapBody
   const schemaJsonChanged =
     schemaJsonBody !== null && existingSchemaJson !== schemaJsonBody
   const enumsChanged = enumsBody !== null && existingEnums !== enumsBody
@@ -1086,14 +1043,6 @@ export async function generateSchemaTypes(
     mkdirSync(dirname(options.manifestFile), { recursive: true })
     writeFileSync(options.manifestFile, manifestBody, 'utf8')
   }
-  if (
-    classificationMapChanged &&
-    options.classificationMapFile &&
-    classificationMapBody
-  ) {
-    mkdirSync(dirname(options.classificationMapFile), { recursive: true })
-    writeFileSync(options.classificationMapFile, classificationMapBody, 'utf8')
-  }
   if (schemaJsonChanged && options.schemaJsonFile && schemaJsonBody) {
     mkdirSync(dirname(options.schemaJsonFile), { recursive: true })
     writeFileSync(options.schemaJsonFile, schemaJsonBody, 'utf8')
@@ -1107,15 +1056,14 @@ export async function generateSchemaTypes(
     outFile: options.outFile,
     coercionFile: options.coercionFile,
     manifestFile: options.manifestFile,
-    classificationMapFile: options.classificationMapFile,
     enumsFile: options.enumsFile,
     written: schemaChanged,
     coercionWritten: coercionChanged,
     manifestWritten: manifestChanged,
-    classificationMapWritten: classificationMapChanged,
     enumsWritten: enumsChanged,
     tables: tables.map((t) => t.name),
     warnings,
     zodFormats,
+    zodConstraints,
   }
 }

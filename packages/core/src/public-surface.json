@@ -171,11 +171,7 @@
     "virtualUserTarget",
     "writeVirtualUserSchedule"
   ],
-  "./channel/local": [
-    "LocalEventHubService",
-    "PikkuLocalChannelHandler",
-    "runLocalChannel"
-  ],
+  "./channel/local": ["PikkuLocalChannelHandler", "runLocalChannel"],
   "./channel/serverless": [
     "runChannelConnect",
     "runChannelDisconnect",
@@ -319,10 +315,12 @@
     "wireAgentScorerQueueWorkers"
   ],
   "./analytics": [
+    "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
     "anonymousAnalyticsIdentity",
     "composeAnalyticsIdentity",
     "cookieAnalyticsIdentity",
+    "createAnalyticsSinks",
     "createInvocationAnalytics",
     "defineAnalyticsEvents",
     "fanOutAnalytics",
@@ -375,6 +373,15 @@
     "defineSystemRole",
     "flattenSystemRoleDefinitions",
     "validateAndBuildSystemRoleDefinitionsMeta"
+  ],
+  "./keypair": [
+    "DomainPolicyError",
+    "KeyCustodyLostError",
+    "KeyRetiredError",
+    "KeyRotatedError",
+    "KeyUnavailableError",
+    "defineKeyPair",
+    "validateAndBuildKeyPairDefinitionsMeta"
   ],
   "./secret": [
     "SECRET_GENERATE_MIN_SIZE",
@@ -478,18 +485,25 @@
     "VIRTUAL_USER_STATEMENT_ALGORITHM",
     "VIRTUAL_USER_STATEMENT_MAX_TTL_SECONDS",
     "VIRTUAL_USER_STATEMENT_TTL_SECONDS",
+    "VIRTUAL_USER_VERIFY_KEYS_MAX",
     "VIRTUAL_USER_VERIFY_KEY_VARIABLE",
     "VirtualUserStatementError",
     "WebhookService",
     "assertSecretAllowedForHost",
+    "base64ToBytes",
+    "bytesToBase64",
     "createInvocationAudit",
     "createMiddlewareSessionWireProps",
     "createStubProxy",
     "getStubTracker",
     "holdLease",
     "isTestRun",
+    "okpThumbprint",
+    "parseVirtualUserVerifyKeys",
     "pikkuWebhookWorkerFunc",
     "renderEmail",
+    "rsaThumbprint",
+    "spkiToDer",
     "spy",
     "stub",
     "withoutSecrets"
@@ -510,16 +524,20 @@
   ],
   "./otlp": [
     "asContextStorage",
+    "createOtlpSinks",
     "createRuntimeTelemetry",
+    "fanOutOtlp",
     "isLoopbackHost",
     "OTLP_QUEUE_LIMITS",
     "OtlpHttpExporter",
     "OtlpLogger",
+    "OtlpSinkRegistry",
     "OtlpTracer",
     "parseOtlpEndpoint",
     "parseOtlpHeaders",
     "startProcessMetrics"
   ],
+  "./otlp/runs": ["createRunStitcher"],
   "./flag": [
     "CachedFlagSource",
     "assertFeatureAvailable",
@@ -589,9 +607,11 @@
   "./hmac": [
     "hmacDigest",
     "hmacSha256Hex",
+    "importSpkiVerifyKey",
     "timingSafeStringEqual",
     "verifyHmacSignature",
-    "verifyPublicKeySignature"
+    "verifyPublicKeySignature",
+    "verifySpkiSignature"
   ],
   "./state": [
     "addPackageServiceFactories",
@@ -660,15 +680,15 @@
   ],
   "./db": ["defineTables"],
   "./testing": [
+    "RecordingTracer",
     "clearPikkuRuntimeState",
     "decodeLogs",
     "decodeMetrics",
     "decodeTraces",
-    "defineEventHubServiceTests",
+    "defineEventHubDeliveryBackendTests",
     "defineQueueIdentityTransportTests",
     "defineQueueTraceConformance",
-    "defineServiceTests",
-    "RecordingTracer"
+    "defineServiceTests"
   ],
   "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }

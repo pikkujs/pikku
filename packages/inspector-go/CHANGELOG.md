@@ -1,5 +1,41 @@
 # @pikku/inspector-go
 
+## 0.12.15
+
+### Patch Changes
+
+- 5679af0: Breaking: `db/annotations.ts` is removed. Column annotations (`security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`) are declared only on the columns in `db/tables.ts`; a table the migrations create is declared `declareOnly: true`. `pikku db migrate`, `generate`, `check` and `pikku validate` refuse a project that still has `db/annotations.ts`, pointing at docs/MIGRATION.md. `pikku db annotate`, `.pikku/db/classification-map.gen.d.ts` and `DbClassificationMap` are gone. `db/annotations.gen.json` is still written, now from the declaration alone, and removed when there is no `db/tables.ts`. The PKU910 hint, error messages, docs and skills name the column in `db/tables.ts`.
+- 4c2f5c4: `pikkuFunc({ telemetry: { spans } })` sets whether a function's invocations record a span: `'on'` (the default: record unless the caller is unsampled), `'off'` (never, nor the calls it makes), `'always'` (record even under an unsampled caller, as a root of the same trace, and record the calls it makes) or `{ sample: p }` (record a call that starts a trace with probability `p`, from 0 to 1; under a caller, follow it). The decision is made once when the call starts and carried in the trace's sampled flag (`traceparent` flags `00`/`01`), so RPC calls, queue jobs, scheduled RPCs and workflows started by the call follow it. Logs, audit entries, analytics and errors are unaffected. `addFunction` refuses an invalid value. Both inspectors write the setting to the function's metadata as `telemetry`.
+- Updated dependencies [681b92b]
+- Updated dependencies [5679af0]
+- Updated dependencies [3b07a5b]
+- Updated dependencies [4c2f5c4]
+- Updated dependencies [cc1735d]
+- Updated dependencies [be8a952]
+- Updated dependencies [e825b1a]
+- Updated dependencies [36d5004]
+- Updated dependencies [5d1ce7a]
+  - @pikku/core@0.12.158
+
+## 0.12.14
+
+### Patch Changes
+
+- 71ba80d: The generated metadata now says how things are reached. Each CLI program lists its `entrypoints` from `cli.entrypoints` in pikku.config: `{ type: 'local' }` for a CLI that runs the app in-process, `{ type: 'channel', channel, route }` for one that talks to a running app, with the same default name (`<program>-cli`) and route (`<globalHTTPPrefix>/cli/<program>`) the generated channel registers. A webhook source with `verify`, written out or as a shorthand `verify,`, records it as `verify: { kind, header?, algorithm? }` (`hmac`, `token`, `publicKey` or `function`; header and algorithm only when written as string literals) beside the `credential` that holds its secret. A shorthand `verify,` now also declares that secret credential, which it previously skipped. Behaviour change for apps that set `globalHTTPPrefix`: a channel CLI client generated without a configured `route` now connects to `<globalHTTPPrefix>/cli/<program>`, the route its channel is registered on. It previously left the prefix out and connected to the wrong URL. Apps without `globalHTTPPrefix`, or with an explicit `route`, are unaffected.
+- b829a15: `definePlugin` takes optional `widgets`, `things` and `arrangedScreens`: an addon's own widgets, cards it can open beside a screen, and screens Studio lays out from widgets fed by a `source` function. A `source` or action `run` names a function of the addon or a project RPC (`'console:listAgents'`). Sources return data only (`variant`, `values`); the words are message keys declared per variant in `copy`. Actions take `label`, `confirm` and `destructive` (which requires `confirm`); arranged screens take `redirect` and `poll`. `pikku all` writes `#pikku/addon/screens` for an addon: `definePlugin` typed against its functions and `messages/en.json` keys, so a wrong `source`, `from`, variant or key fails tsc; core widgets are typed through `WidgetRegistry`, an empty interface Studio fills by augmentation. The inspectors read the new fields statically (PKU345, PKU357, PKU358 cover them), the screens meta and the host's installed addons carry them, and `ui: true` accepts an addon declaring only these. Copy entries nest (numeric names place list items), a value naming a variant is worded by its `$`, and a head's or slot's `figures` are worded by `{ label, note?, value? }`; an action's `run` may be `go:/<path>`. The inspectors follow same-file top-level `const`s and their spreads (not calls or imports), and PKU358 checks nested, `$` and figure keys. The host's `installedAddons` carries widgets, things, arranged screens and their actions as records keyed by id. Nothing existing changes; see docs/MIGRATION.md.
+- Updated dependencies [5181138]
+- Updated dependencies [5181138]
+- Updated dependencies [71ba80d]
+- Updated dependencies [8d0c2d4]
+- Updated dependencies [b8f3da8]
+- Updated dependencies [b829a15]
+- Updated dependencies [166e343]
+- Updated dependencies [8006227]
+- Updated dependencies [5ea64ad]
+- Updated dependencies [fa3cad1]
+  - @pikku/core@0.12.157
+  - @pikku/inspector@0.12.120
+
 ## 0.12.13
 
 ### Patch Changes

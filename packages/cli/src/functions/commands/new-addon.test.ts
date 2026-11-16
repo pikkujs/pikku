@@ -531,6 +531,70 @@ describe('openapi onboarding', () => {
   const spec = (authType: any) =>
     ({ info: { title: 'Acme', version: '1' }, authType }) as any
 
+  /**
+   * Core builds per-request services only for a function that reads a wire
+   * service. A per-user addon builds its client in `createWireServices` from the
+   * caller's credential, so the client has to be typed as a wire service; typed
+   * as a singleton, every function is marked `singletonServicesOnly`, core
+   * skips `createWireServices`, and nothing ever errors.
+   */
+  describe('where the client is declared', () => {
+    const perUser = {
+      'a bearer credential': { credential: 'bearer', delegated: false },
+      'an api key credential': { credential: 'apikey', delegated: false },
+      'a delegated login': { credential: 'bearer', delegated: true },
+      oauth2: { credential: undefined, delegated: false, oauth: true },
+    } as const
+    const declared = (files: Record<string, string>) => {
+      const types = files['types/application-types.d.ts']!
+      const singleton = types.match(
+        /interface SingletonServices[^{]*\{([^}]*)\}/
+      )![1]!
+      const wire = types.match(/interface Services[^{]*\{([^}]*)\}/)![1]!
+      return { singleton, wire }
+    }
+
+    for (const [label, mode] of Object.entries(perUser)) {
+      test(`${label}: the client is a wire service and is not forced`, () => {
+        const files = getAddonFiles(vars, {
+          secret: false,
+          variable: false,
+          oauth: false,
+          ...mode,
+        })
+        const { singleton, wire } = declared(files)
+        assert.doesNotMatch(singleton, /acme/)
+        assert.match(wire, /acme: AcmeService/)
+        assert.match(files['src/services.ts']!, /createWireServices/)
+        assert.equal(
+          JSON.parse(files['pikku.config.json']!).forceRequiredServices,
+          undefined
+        )
+      })
+    }
+
+    for (const [label, flags] of Object.entries({
+      'a shared secret': { secret: true },
+      'no auth': { secret: false },
+    })) {
+      test(`${label}: the client stays a singleton and is forced`, () => {
+        const files = getAddonFiles(vars, {
+          variable: false,
+          oauth: false,
+          ...flags,
+        })
+        const { singleton, wire } = declared(files)
+        assert.match(singleton, /acme: AcmeService/)
+        assert.doesNotMatch(wire, /acme/)
+        assert.match(files['src/services.ts']!, /createSingletonServices/)
+        assert.deepEqual(
+          JSON.parse(files['pikku.config.json']!).forceRequiredServices,
+          ['acme']
+        )
+      })
+    }
+  })
+
   test('the config lists the addon for the console and keeps its service', () => {
     const files = getAddonFiles(vars, {
       secret: false,

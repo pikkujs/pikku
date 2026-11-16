@@ -12,7 +12,7 @@ import (
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/protocol"
 )
 
-func classificationDiagnostics(t *testing.T, opts protocol.Options, dir string) []diag.Diagnostic {
+func classificationRequest(t *testing.T, dir string) (string, []string) {
 	t.Helper()
 	root, _ := filepath.Abs(dir)
 	var files []string
@@ -22,6 +22,12 @@ func classificationDiagnostics(t *testing.T, opts protocol.Options, dir string) 
 		}
 		return nil
 	})
+	return root, files
+}
+
+func classificationDiagnostics(t *testing.T, opts protocol.Options, dir string) []diag.Diagnostic {
+	t.Helper()
+	root, files := classificationRequest(t, dir)
 	opts.RootDir, opts.Tsconfig = root, filepath.Join(root, "tsconfig.json")
 	res, err := Run(protocol.Request{RouteFiles: files, Options: opts}, nil)
 	if err != nil {
