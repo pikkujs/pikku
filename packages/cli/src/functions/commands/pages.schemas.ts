@@ -66,6 +66,10 @@ export const PagesCompareRow = z.object({
   diff: z.string().nullable(),
   ours: z.string().nullable(),
   sections: SectionDiff.nullable(),
+  styles: z
+    .array(z.object({ what: z.string(), text: z.string(), weight: z.number() }))
+    .nullable()
+    .optional(),
   error: z.string().optional(),
 })
 export const PagesCompareOutput = z.object({
@@ -87,6 +91,7 @@ export const PagesCompareOutput = z.object({
   dirty: z.boolean().nullable(),
   generatedAt: z.string(),
   sectionsNote: z.string().nullable(),
+  stylesNote: z.string().nullable().optional(),
   rows: z.array(PagesCompareRow),
   failed: z.array(z.string()),
 })
