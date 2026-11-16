@@ -38,7 +38,7 @@ export const PagesScreenshotOutput = z.object({
 
 export const PagesCompareInput = z.object({
   reference: z.string(),
-  baseUrl: z.string(),
+  baseUrl: z.string().optional(),
   app: z.string().optional(),
   out: z.string().optional(),
   widths: z.string().optional(),
@@ -71,6 +71,13 @@ export const PagesCompareRow = z.object({
 export const PagesCompareOutput = z.object({
   app: z.string(),
   baseUrl: z.string(),
+  server: z
+    .object({
+      started: z.boolean(),
+      command: z.string().nullable(),
+      apiNote: z.string().nullable(),
+    })
+    .nullable(),
   reference: z.string(),
   dir: z.string(),
   report: z.string(),

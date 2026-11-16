@@ -1621,7 +1621,7 @@ wireCLI({
                 },
                 baseUrl: {
                   description:
-                    'Where the frontend is served, e.g. http://localhost:7104',
+                    'Where the frontend is served, e.g. http://localhost:7104. Defaults to its dev server from pikku.config.json (frontends.<name>.dev): used if it answers, otherwise started for the compare and stopped after. The API is not started; run pikku dev first to compare pages with their data',
                   type: 'string',
                 },
                 app: {
