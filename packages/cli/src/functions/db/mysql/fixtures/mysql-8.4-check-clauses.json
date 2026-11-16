@@ -1,0 +1,35 @@
+{
+  "_about": "information_schema.check_constraints.check_clause as returned by mysql2 from a real MySQL server, for the DDL below. Captured by hand; do not edit.",
+  "version": "8.4.13",
+  "ddl": "SET NAMES utf8mb4;\nCREATE TABLE item (\n  id int primary key,\n  color varchar(20) CONSTRAINT item_color_enum_check CHECK (`color` IN ('red','blue')),\n  tricky varchar(40) CONSTRAINT item_tricky_enum_check CHECK (`tricky` IN ('it''s','a,b','a)b','(x','back\\\\slash','say \"hi\"','é日本','')),\n  qty int CONSTRAINT item_qty_min_check CHECK (`qty` >= 0) CONSTRAINT item_qty_max_check CHECK (`qty` <= 99),\n  slug varchar(16) CONSTRAINT item_slug_minlength_check CHECK (char_length(`slug`) >= 2) CONSTRAINT item_slug_maxlength_check CHECK (char_length(`slug`) <= 16),\n  ratio double CONSTRAINT item_ratio_min_check CHECK (`ratio` >= 0.5)\n);",
+  "rows": [
+    {
+      "name": "item_color_enum_check",
+      "clause": "(`color` in (_utf8mb4\\'red\\',_utf8mb4\\'blue\\'))"
+    },
+    {
+      "name": "item_qty_max_check",
+      "clause": "(`qty` <= 99)"
+    },
+    {
+      "name": "item_qty_min_check",
+      "clause": "(`qty` >= 0)"
+    },
+    {
+      "name": "item_ratio_min_check",
+      "clause": "(`ratio` >= 0.5)"
+    },
+    {
+      "name": "item_slug_maxlength_check",
+      "clause": "(char_length(`slug`) <= 16)"
+    },
+    {
+      "name": "item_slug_minlength_check",
+      "clause": "(char_length(`slug`) >= 2)"
+    },
+    {
+      "name": "item_tricky_enum_check",
+      "clause": "(`tricky` in (_utf8mb4\\'it\\\\\\'s\\',_utf8mb4\\'a,b\\',_utf8mb4\\'a)b\\',_utf8mb4\\'(x\\',_utf8mb4\\'back\\\\\\\\slash\\',_utf8mb4\\'say \"hi\"\\',_utf8mb4\\'Ã©æ¥æ¬\\',_utf8mb4\\'\\'))"
+    }
+  ]
+}

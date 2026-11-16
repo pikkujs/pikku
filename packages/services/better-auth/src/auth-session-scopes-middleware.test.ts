@@ -137,6 +137,7 @@ describe('betterAuthSession scopes — impersonation', () => {
 
     assert.equal(session.userId, 'u_guest')
     assert.deepEqual(session.scopes, ['billing:read'])
+    assert.deepEqual(session.impersonated, { by: 'u_admin' })
   })
 
   test("a denied impersonation keeps the real caller's scopes", async () => {
@@ -147,6 +148,7 @@ describe('betterAuthSession scopes — impersonation', () => {
 
     assert.equal(session.userId, 'u_guest')
     assert.deepEqual(session.scopes, ['billing:read'])
+    assert.equal(session.impersonated, undefined)
   })
 })
 

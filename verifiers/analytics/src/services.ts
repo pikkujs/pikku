@@ -6,12 +6,16 @@ import {
 } from '@pikku/core/services'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
-import type { AnalyticsRecord, AnalyticsService } from '#pikku/analytics'
+import {
+  createAnalyticsSinks,
+  type AnalyticsEventSink,
+  type AnalyticsRecord,
+} from '#pikku/analytics'
 
 /** What the wire handed on, in the order the invocation flushed it. */
 export const collectedAnalytics: AnalyticsRecord[][] = []
 
-const collectingAnalyticsService: AnalyticsService = {
+const collectingAnalyticsService: AnalyticsEventSink = {
   async write(batch) {
     collectedAnalytics.push(batch)
   },
@@ -29,13 +33,21 @@ export const createSingletonServices = pikkuServices(
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
 
+    const analyticsSinks =
+      existingServices?.analyticsSinks ?? createAnalyticsSinks()
+    analyticsSinks.add(collectingAnalyticsService, {
+      page_viewed: true,
+      checkout_completed: true,
+      profile_renamed: true,
+    })
+
     return {
       config,
       secrets,
       logger,
       variables,
       schema,
-      analyticsService: collectingAnalyticsService,
+      analyticsSinks,
     }
   }
 )

@@ -41,11 +41,11 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     )
     assert.match(
       source,
-      /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, schedulerService, queueService, workflowService, triggerService, triggerSourceStore, eventHub \}\)/
+      /const platformServices = await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, schedulerService, queueService, workflowService, triggerService, triggerSourceStore, eventHub, eventHubRegistry \}\)/
     )
     assert.match(
       source,
-      /eventHub,\n    \.\.\.\(__pikkuTelemetry\.enabled \? \{ tracer: __pikkuTelemetry\.tracer \} : \{\}\),\n    \.\.\.platformServices,\n  \}\)/,
+      /analyticsSinks: __pikkuAnalyticsSinks,\n    \.\.\.platformServices,\n  \}\)/,
       'contributed services must be spread last so they override the defaults'
     )
     assert.doesNotMatch(source, /const createPlatformServices = async/)

@@ -41,6 +41,9 @@ func (s *Context) addSchedule(node *ast.Node) {
 	}
 	s.ensureInlineWiringFunction(pikkuFuncId, name, funcInit, isHelper)
 	middleware := s.resolveMiddleware(obj, cm.tagsOrNil())
+	if !s.checkSubscribeWiring(pikkuFuncId, fmt.Sprintf("Scheduled task '%s'", name)) {
+		return
+	}
 	s.State.ServiceAggregation.UsedFunctions.Add(pikkuFuncId)
 	s.addUsedWires(&FunctionMeta{Middleware: middleware})
 

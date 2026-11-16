@@ -3,6 +3,11 @@ export const serializeSecretDefinitionTypes = () => {
 `
 }
 
+export const serializeKeyPairDefinitionTypes = () => {
+  return `export { defineKeyPair } from '@pikku/core/keypair'
+`
+}
+
 export const serializeScopeDefinitionTypes = () => {
   return `export { defineScope, declareScopes, hasScopes } from '@pikku/core/scope'
 export { defineSystemRole } from '@pikku/core/role'
@@ -24,7 +29,7 @@ export const serializeUtilsTypes = () => {
 export const serializeAnalyticsDefinitionTypes = () => {
   return `export {
   defineAnalyticsEvents,
-  fanOutAnalytics,
+  createAnalyticsSinks,
   cookieAnalyticsIdentity,
   composeAnalyticsIdentity,
   anonymousAnalyticsIdentity,
@@ -42,7 +47,9 @@ export type {
   AnalyticsLog,
   AnalyticsRecord,
   AnalyticsService,
-  AnalyticsSink,
+  AnalyticsEventMap,
+  AnalyticsEventSink,
+  AnalyticsSinkRegistry,
 } from '@pikku/core/analytics'
 `
 }

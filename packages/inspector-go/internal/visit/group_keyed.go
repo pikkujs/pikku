@@ -126,6 +126,10 @@ func (s *Context) schemaProperty(obj *ast.Node) (ident *ast.Node, file string) {
 
 var durationRe = regexp.MustCompile(`^(\d+)(ms|milliseconds?|s|sec|seconds?|m|min|minutes?|h|hour|hours?|d|day|days?|w|week|weeks?|y|year|years?)$`)
 
+// validDuration is durationRe, plus the literal `never` that the defineSecret
+// validator tells users to write for an opt-out of rotation.
+func validDuration(v string) bool { return v == "never" || durationRe.MatchString(v) }
+
 // visitKeyedWiring ports createAddKeyedWiring.
 func (s *Context) visitKeyedWiring(node *ast.Node, cfg keyedWiring) {
 	obj := definitionCall(node, cfg.functionName)
@@ -162,7 +166,7 @@ func (s *Context) visitKeyedWiring(node *ast.Node, cfg keyedWiring) {
 		s.Log.Critical(diag.MissingName, cfg.label+" '"+nameValue+"' is missing the required 'schema' property or schema is not a variable reference.")
 		return
 	}
-	if rotation.Truthy() && !durationRe.MatchString(rotation.AsString()) {
+	if rotation.Truthy() && !validDuration(rotation.AsString()) {
 		s.Log.Critical(diag.InvalidValue, cfg.label+" '"+nameValue+"' has an invalid 'rotationPeriod': '"+rotation.AsString()+
 			"'. Use a duration like '1d', '30day', or '1w'.")
 		return
@@ -187,6 +191,11 @@ func (s *Context) visitKeyedWiring(node *ast.Node, cfg keyedWiring) {
 	o.set("docsUrl", orUndefined(docsUrl))
 	if hasHosts {
 		o.set("allowedHosts", state.Strings(allowedHosts))
+	}
+	if cfg.functionName == "defineSecret" {
+		if g := generateOption(obj); g != nil {
+			o.set("generate", g)
+		}
 	}
 	o.set(cfg.idField, orUndefined(id))
 	if flag.Bool != nil && *flag.Bool {
@@ -296,4 +305,58 @@ func recordPropertyValue(obj *ast.Node, name string) *state.Record[string] {
 		return nil
 	}
 	return rec
+}
+
+// keyPairFields are the string-valued properties of defineKeyPair that reach
+// the state, in the order they are written. Values are passed through as read;
+// validation (allow-list, grace and rotation rules) is the build's, in
+// @pikku/core's validateAndBuildKeyPairDefinitionsMeta. `rotationMode` and
+// `signedFormat` are read only so that validation can refuse them by name.
+var keyPairFields = []string{
+	"name", "displayName", "description", "algorithm", "purpose", "rotationPeriod",
+	"verifyGrace", "signedLifetime", "scope", "custody", "public", "docsUrl",
+	"rotationMode", "signedFormat",
+}
+
+func init() {
+	Register(Visitor{Name: "addKeyPair", Phase: PhaseRoutes, Order: OrderAddKeyPair, Visit: (*Context).visitKeyPair})
+}
+
+// visitKeyPair records `defineKeyPair({...})`. It never reads or stores key
+// material: only the fixed fields above are copied.
+func (s *Context) visitKeyPair(node *ast.Node) {
+	obj := definitionCall(node, "defineKeyPair")
+	if obj == nil {
+		return
+	}
+	s.assertStringLiteralProperty(obj, "name", "Key pair")
+	name := tsutil.GetPropertyValue(obj, "name")
+	if !name.Truthy() {
+		s.Log.Critical(diag.MissingName, "Key pair is missing the required 'name' property.")
+		return
+	}
+	sourceFile := ast.GetSourceFileOfNode(node).FileName()
+	s.State.KeyPairs.Files.Add(sourceFile)
+
+	var o jsObject
+	for _, field := range keyPairFields {
+		o.set(field, orUndefined(tsutil.GetPropertyValue(obj, field)))
+	}
+	o.set("sourceFile", sourceFile)
+	s.State.KeyPairs.Definitions = append(s.State.KeyPairs.Definitions, o.raw())
+}
+
+// generateOption reads defineSecret's `generate: { size: <number> }`. Without
+// it a generated secret reaches the state as an ordinary one and nothing
+// creates its value.
+func generateOption(obj *ast.Node) map[string]any {
+	p := tsutil.FindPropertyAssignment(obj, "generate")
+	if p == nil || !ast.IsObjectLiteralExpression(p.Initializer()) {
+		return nil
+	}
+	size := tsutil.GetPropertyValue(p.Initializer(), "size")
+	if size.Num == nil {
+		return nil
+	}
+	return map[string]any{"size": *size.Num}
 }

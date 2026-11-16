@@ -14,6 +14,11 @@ import { handleChannelRPCResponse } from './channel-host-rpc.js'
 import type { SessionService } from '../../services/user-session-service.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import { childTraceWire } from '../../trace.js'
+import {
+  getEventHubDistributor,
+  getSubscribeMeta,
+  subscribeChannelToTopic,
+} from './event-hub/runtime.js'
 const getChannelMeta = (channelName: string) => {
   return pikkuState(null, 'channel', 'meta')[channelName]
 }
@@ -136,7 +141,9 @@ export const processMessageHandlers = (
     const channelMeta = getChannelMeta(channelConfig.name)
     const wireChannelMiddleware = channelConfig.channelMiddleware || []
 
-    return await runPikkuFunc('channel', cacheKey, pikkuFuncId, {
+    const subscribe = getSubscribeMeta(pikkuFuncId, packageName)
+
+    const result = await runPikkuFunc('channel', cacheKey, pikkuFuncId, {
       singletonServices: services,
       wireServices,
       data: () => data,
@@ -156,6 +163,28 @@ export const processMessageHandlers = (
       },
       packageName,
     })
+
+    if (subscribe) {
+      // The function ran the normal path (session, scopes, permissions) and
+      // answered with a topic. That is the framework's, not the client's: the
+      // channel is subscribed to it and the client is told nothing of it.
+      const distributor = getEventHubDistributor()
+      if (!distributor) {
+        throw new Error(
+          `Subscribe function '${pikkuFuncId}' needs an event hub distributor, and none was set by the runtime`
+        )
+      }
+      subscribeChannelToTopic(distributor, channelHandler, result, {
+        pikkuFuncId,
+        packageName,
+        wireType: 'channel',
+        wireId: cacheKey,
+        input: data,
+        session: userSession?.get(),
+      })
+      return undefined
+    }
+    return result
   }
 
   const onMessage = async (rawData: unknown): Promise<unknown> => {

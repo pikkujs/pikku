@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import {
   CamelCasePlugin,
   sql,
@@ -39,6 +40,8 @@ const SIMPLE_TYPES = new Set<string>([
   'json',
 ])
 const BOUNDED_STRING = /^string\((\d+)\)$/
+const NUMERIC_TYPES = new Set<string>(['integer', 'bigint', 'real'])
+const TEXT_TYPES = new Set<string>(['id', 'key', 'text'])
 
 /** Exposes the conversion `CamelCasePlugin` applies, so names match it exactly (`apiURL` is `api_url`). */
 class PhysicalNames extends CamelCasePlugin {
@@ -175,6 +178,214 @@ const defaultValue = (value: ColumnDefault, ctx: SchemaContext) => {
   return typeof value === 'string' ? ctx.defaultText(value) : value
 }
 
+/** The kind of a `CHECK` a column constraint compiles to, which names it. */
+export type CheckKind = 'enum' | 'min' | 'max' | 'minlength' | 'maxlength'
+
+/** Postgres keeps 63 bytes of an identifier and MySQL 64 characters. */
+const MAX_NAME_BYTES = 63
+
+/**
+ * The deterministic name of a column's check, so a later diff finds it again:
+ * `<table>_<column>_<hash>_<kind>_check`, where `<hash>` is eight hex digits of
+ * a hash of the table and column taken as a pair.
+ *
+ * The hash is what keeps names apart. MySQL keeps check names schema-wide, and
+ * joining names with `_` is ambiguous (`sales_line.qty` and `sales.line_qty`
+ * both read `sales_line_qty`), so the pair itself is hashed, with a separator
+ * neither name can hold. When the readable part is too long for the engine it is
+ * cut instead, which also keeps `_min_check` and `_max_check` from colliding.
+ * The name always ends in `_<kind>_check`, which is how a removed bound is
+ * recognised as generated.
+ *
+ * This scheme has not shipped, so there are no deployed names of an older form
+ * to carry. A check a person named by hand is never read as generated.
+ */
+export const checkName = (
+  table: string,
+  column: string,
+  kind: CheckKind
+): string => {
+  const [t, c] = [snake(table), snake(column)]
+  const hash = createHash('sha1').update(`${t}\0${c}`).digest('hex').slice(0, 8)
+  const tail = `_${hash}_${kind}_check`
+  // Cut by code point, never through a surrogate pair, so the name stays valid
+  // text whatever the table and column are called.
+  const head = [...`${t}_${c}`]
+  while (
+    head.length > 0 &&
+    Buffer.byteLength(head.join('')) + Buffer.byteLength(tail) > MAX_NAME_BYTES
+  ) {
+    head.pop()
+  }
+  return `${head.join('')}${tail}`
+}
+
+/**
+ * The `CHECK`s a column's constraints compile to on postgres and MySQL, as the SQL each one tests.
+ *
+ * The value is quoted by the engine's own rules (`sql.lit`), because DDL cannot
+ * take bound parameters. `pattern` is not here: it never reaches SQL.
+ */
+const columnChecks = (
+  table: string,
+  name: string,
+  column: ColumnDeclaration
+): { name: string; test: ReturnType<typeof sql> }[] => {
+  const col = sql.id(name)
+  const length = sql`char_length(${col})`
+  const checks: { name: string; test: ReturnType<typeof sql> }[] = []
+  const add = (kind: CheckKind, test: ReturnType<typeof sql>) =>
+    checks.push({ name: checkName(table, name, kind), test })
+  if (column.enum) {
+    add(
+      'enum',
+      sql`${col} in (${sql.join(column.enum.map((v) => sql.lit(v)))})`
+    )
+  }
+  if (column.min !== undefined)
+    add('min', sql`${col} >= ${sql.lit(column.min)}`)
+  if (column.max !== undefined)
+    add('max', sql`${col} <= ${sql.lit(column.max)}`)
+  if (column.minLength !== undefined) {
+    add('minlength', sql`${length} >= ${sql.lit(column.minLength)}`)
+  }
+  if (column.maxLength !== undefined) {
+    add('maxlength', sql`${length} <= ${sql.lit(column.maxLength)}`)
+  }
+  return checks
+}
+
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0
+
+/** What is wrong with a column's constraints, if anything. */
+const constraintProblems = (
+  tables: TablesDeclaration,
+  table: string,
+  name: string,
+  column: ColumnDeclaration
+): string[] => {
+  const here = `${table}.${name}`
+  const problems: string[] = []
+  const { enum: values, min, max, minLength, maxLength, pattern } = column
+  const has = (value: unknown) => value !== undefined
+
+  const resolved = resolveType(tables, table, name)
+  // A column typed by a table outside the declaration has no type to judge yet.
+  const type = resolved.kind === 'declared' ? resolved.type : undefined
+  const numeric = type === undefined || NUMERIC_TYPES.has(type)
+  const text =
+    type === undefined || TEXT_TYPES.has(type) || BOUNDED_STRING.test(type)
+
+  if ((has(min) || has(max)) && !numeric) {
+    problems.push(
+      `'${here}' is ${type}, so it cannot have a min or max. They are for integer, bigint and real columns.`
+    )
+  }
+  for (const [field, value] of [
+    ['min', min],
+    ['max', max],
+  ] as const) {
+    if (has(value) && !(typeof value === 'number' && Number.isFinite(value))) {
+      problems.push(`'${here}' ${field} must be a finite number.`)
+    }
+  }
+  if (typeof min === 'number' && typeof max === 'number' && min > max) {
+    problems.push(`'${here}' has a min (${min}) above its max (${max}).`)
+  }
+
+  if (
+    (has(values) || has(minLength) || has(maxLength) || has(pattern)) &&
+    !text
+  ) {
+    problems.push(
+      `'${here}' is ${type}, so it cannot have an enum, minLength, maxLength or pattern. They are for text columns.`
+    )
+  }
+  for (const [field, value] of [
+    ['minLength', minLength],
+    ['maxLength', maxLength],
+  ] as const) {
+    if (has(value) && !isCount(value)) {
+      problems.push(`'${here}' ${field} must be a whole number, 0 or more.`)
+    }
+  }
+  if (isCount(minLength) && isCount(maxLength) && minLength > maxLength) {
+    problems.push(
+      `'${here}' has a minLength (${minLength}) above its maxLength (${maxLength}).`
+    )
+  }
+  const bounded = type ? BOUNDED_STRING.exec(type) : null
+  if (bounded && isCount(maxLength) && maxLength > Number(bounded[1])) {
+    problems.push(
+      `'${here}' is ${type}, so a maxLength of ${maxLength} could never be reached. Lower it or widen the type.`
+    )
+  }
+  if (has(values)) {
+    if (
+      !Array.isArray(values) ||
+      values.length === 0 ||
+      values.some((v) => typeof v !== 'string')
+    ) {
+      problems.push(`'${here}' enum must be a non-empty list of strings.`)
+    } else {
+      if (new Set(values).size !== values.length) {
+        problems.push(`'${here}' enum lists a value more than once.`)
+      }
+      if (
+        typeof column.default === 'string' &&
+        !values.includes(column.default)
+      ) {
+        problems.push(
+          `'${here}' defaults to '${column.default}', which is not in its enum.`
+        )
+      }
+    }
+  }
+  if (has(values) && has(pattern)) {
+    problems.push(
+      `'${here}' has both an enum and a pattern. A pattern adds nothing to a fixed list of values, and the generated validator cannot carry both; drop the pattern, or the enum.`
+    )
+  }
+  // A default the column's own bounds would reject is a table that cannot take
+  // its own default row.
+  if (typeof column.default === 'number') {
+    if (typeof min === 'number' && column.default < min) {
+      problems.push(
+        `'${here}' defaults to ${column.default}, which is below its min (${min}).`
+      )
+    }
+    if (typeof max === 'number' && column.default > max) {
+      problems.push(
+        `'${here}' defaults to ${column.default}, which is above its max (${max}).`
+      )
+    }
+  }
+  if (typeof column.default === 'string') {
+    const length = [...column.default].length
+    if (isCount(minLength) && length < minLength) {
+      problems.push(
+        `'${here}' defaults to '${column.default}', which is shorter than its minLength (${minLength}).`
+      )
+    }
+    if (isCount(maxLength) && length > maxLength) {
+      problems.push(
+        `'${here}' defaults to '${column.default}', which is longer than its maxLength (${maxLength}).`
+      )
+    }
+  }
+  if (has(pattern)) {
+    try {
+      new RegExp(pattern!)
+    } catch {
+      problems.push(
+        `'${here}' pattern '${pattern}' is not a valid regular expression.`
+      )
+    }
+  }
+  return problems
+}
+
 const validate = (tables: TablesDeclaration): void => {
   for (const [table, declaration] of Object.entries(tables)) {
     const columns = declaration.columns
@@ -251,6 +462,8 @@ const validate = (tables: TablesDeclaration): void => {
         }
         resolveType(tables, table, name)
       }
+      const problems = constraintProblems(tables, table, name, column)
+      if (problems.length > 0) throw new Error(problems.join(' '))
     }
   }
 }
@@ -316,6 +529,15 @@ const createTable = (
         if (column.references) {
           col = ctx.references(col, column.references, column.onDelete)
         }
+        // SQLite gets none: it cannot drop or change a CHECK without rebuilding
+        // the table, so Pikku leaves enforcement there to the app's validation.
+        for (const check of postgres || ctx.mysql
+          ? columnChecks(table, name, column)
+          : []) {
+          col = col.modifyEnd(
+            sql`constraint ${sql.id(check.name)} check (${check.test})`
+          )
+        }
         return col
       })
       if (column.references) {
@@ -368,7 +590,8 @@ const createIndex = (
 
 /**
  * Compile a plain table declaration into the statements a `PikkuSchema`
- * carries: every table in declaration order, then every index.
+ * carries: every managed table in declaration order, then every index. A
+ * `declareOnly` table is validated but emits nothing.
  *
  * The declaration is checked up front, so a mistake in it is a sentence naming
  * the column rather than a database error. Dialect differences are settled when
@@ -383,10 +606,15 @@ export const compileTables = (
   tables: TablesDeclaration
 ): SchemaStatementFactory[] => {
   validate(tables)
-  const creates = Object.entries(tables).map(([table, declaration]) =>
+  // A `declareOnly` table is described for validation and for the types other
+  // tables reference, but something else creates it: nothing is emitted for it.
+  const managed = Object.entries(tables).filter(
+    ([, declaration]) => declaration.declareOnly !== true
+  )
+  const creates = managed.map(([table, declaration]) =>
     createTable(tables, table, declaration)
   )
-  const indexes = Object.entries(tables).flatMap(([table, declaration]) => [
+  const indexes = managed.flatMap(([table, declaration]) => [
     ...Object.entries(declaration.columns)
       .filter(([, column]) => column.index)
       .map(([name]) => createIndex(table, [name], {})),

@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type {
   ColumnAnnotation,
+  ColumnConstraints,
   ColumnType,
   TableAnnotations,
   TablesDeclaration,
@@ -54,8 +55,19 @@ const ALLOWED_VALUES: Record<
   description: 'string',
 }
 
+/** The constraint fields of a column, which the sidecar carries beside its annotations. */
+const CONSTRAINT_FIELDS = new Set<string>([
+  'enum',
+  'min',
+  'max',
+  'minLength',
+  'maxLength',
+  'pattern',
+])
+
 /** The column fields that are not annotations. */
 const COLUMN_FIELDS = new Set([
+  ...CONSTRAINT_FIELDS,
   'type',
   'required',
   'default',
@@ -64,12 +76,6 @@ const COLUMN_FIELDS = new Set([
   'index',
   'references',
   'onDelete',
-  'enum',
-  'min',
-  'max',
-  'minLength',
-  'maxLength',
-  'pattern',
 ])
 
 const TABLE_FIELDS = new Set([
@@ -111,13 +117,20 @@ function columnProblems(at: string, column: Record<string, unknown>): string[] {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-/** The annotation fields of a column, without its shape. */
-const annotationOf = (column: Record<string, unknown>): ColumnAnnotation =>
+/**
+ * What a column says about itself beyond its shape: its annotations and its
+ * constraints, which is what the codegen and the console read from the sidecar.
+ */
+export const annotationOf = (
+  column: Record<string, unknown>
+): ColumnAnnotation & ColumnConstraints =>
   Object.fromEntries(
     Object.entries(column).filter(
-      ([field, value]) => field in ALLOWED_VALUES && value !== undefined
+      ([field, value]) =>
+        (field in ALLOWED_VALUES || CONSTRAINT_FIELDS.has(field)) &&
+        value !== undefined
     )
-  ) as ColumnAnnotation
+  ) as ColumnAnnotation & ColumnConstraints
 
 /**
  * Read `db/tables.ts`, or `null` when the project declares nothing. A
@@ -170,7 +183,7 @@ export async function loadTableDeclaration(
         problems.push(`${table} has an unknown field '${field}'`)
       }
     }
-    const physical: Record<string, ColumnAnnotation> = {}
+    const physical: TableAnnotations[string] = {}
     for (const [column, entry] of Object.entries(declaration.columns)) {
       if (!isObject(entry)) {
         problems.push(`${table}.${column} must be an object`)
@@ -184,6 +197,15 @@ export async function loadTableDeclaration(
     }
     if (Object.keys(physical).length > 0) {
       annotations[snakeCase(table)] = physical
+    }
+    if (
+      declaration.declareOnly !== undefined &&
+      typeof declaration.declareOnly !== 'boolean'
+    ) {
+      problems.push(
+        `${table} has declareOnly ${JSON.stringify(declaration.declareOnly)}, which must be true or false`
+      )
+      continue
     }
     const target = declaration.declareOnly === true ? declareOnly : managed
     target[table] = declaration as unknown as TablesDeclaration[string]
@@ -352,16 +374,31 @@ export function refuseTableChanges(
   return refusals
 }
 
+/**
+ * `array` and `interval` are families no declared type accepts: they are
+ * recognised so they are not mistaken for the element or the lookalike type.
+ */
 type TypeFamily =
-  'text' | 'integer' | 'real' | 'boolean' | 'timestamp' | 'uuid' | 'json'
+  | 'text'
+  | 'integer'
+  | 'real'
+  | 'boolean'
+  | 'timestamp'
+  | 'uuid'
+  | 'json'
+  | 'array'
+  | 'interval'
 
 /** What an introspected type holds, or `undefined` when it is not one this can judge. */
 const familyOf = (type: string): TypeFamily | undefined => {
   const t = type.toLowerCase()
+  // Postgres reports an array as `ARRAY` with a `_`-prefixed udt name.
+  if (/\barray\b|\[\]|(^|\s)_/.test(t)) return 'array'
+  if (/interval/.test(t)) return 'interval'
   if (/bool/.test(t)) return 'boolean'
   if (/uuid/.test(t)) return 'uuid'
   if (/json/.test(t)) return 'json'
-  if (/int/.test(t)) return 'integer'
+  if (/\b(tiny|small|medium|big)?int(eger)?[248]?\b/.test(t)) return 'integer'
   if (/real|double|float|numeric|decimal/.test(t)) return 'real'
   if (/timestamp|datetime|date|time/.test(t)) return 'timestamp'
   if (/char|text|clob|user-defined/.test(t)) return 'text'

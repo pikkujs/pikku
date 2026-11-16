@@ -10,11 +10,33 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
   #streaming = false
   #headersSent = false
   #pendingChunks: string[] = []
+  #closeCallbacks: Array<() => void> = []
 
   constructor(
     private res: HttpResponse,
-    private isAborted: () => boolean
+    private isAborted: () => boolean,
+    /** Registers a callback for the connection being aborted (the handler's `onAborted`). */
+    private onAbort?: (callback: () => void) => void
   ) {}
+
+  /** Calls `callback` once when the client aborts or the stream is closed by the server. */
+  public onClose(callback: () => void): void {
+    let called = false
+    const once = () => {
+      if (called) return
+      called = true
+      callback()
+    }
+    this.#closeCallbacks.push(once)
+    this.onAbort?.(once)
+  }
+
+  /** An SSE comment frame: keeps an idle stream open and is ignored by the client. */
+  public heartbeat(): void {
+    if (!this.#streaming || this.#ended || this.isAborted()) return
+    this.#pendingChunks.push(':\n\n')
+    this.#drainChunks()
+  }
 
   public get statusCode(): number {
     return this.#statusCode
@@ -106,6 +128,7 @@ export class UWSPikkuHTTPResponse implements PikkuHTTPResponse {
         }
         this.res.end()
       })
+      for (const callback of this.#closeCallbacks) callback()
       return
     }
     this.flush()

@@ -12,6 +12,11 @@ export class ScopedSecretService implements SecretService {
     private allowedKeys: Set<string>
   ) {}
 
+  /** Read-only view: `setSecret` throws, so a scoped view is never usable for custody that must write. */
+  get durable(): boolean | undefined {
+    return this.secrets.durable
+  }
+
   private assertAllowed(key: string): void {
     if (!this.allowedKeys.has(key)) {
       throw new Error(`Access denied to secret key: ${key}`)

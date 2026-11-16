@@ -117,6 +117,19 @@ export type AuditQueryResult = {
 }
 
 /**
+ * The outcome of {@link AuditService.verify}: whether the stored trail still
+ * matches what was written.
+ */
+export type AuditVerifyResult = {
+  /** True only when every checked event verified. */
+  intact: boolean
+  /** How many events were checked. */
+  checked: number
+  /** The first event that failed verification, when one did. */
+  firstBadId?: string
+}
+
+/**
  * The durable sink for audit events, provided as the `audit` singleton service.
  * Functions do not call it directly: they write through the per-invocation
  * {@link AuditLog} from {@link createInvocationAudit}, which adds the caller's
@@ -137,6 +150,13 @@ export interface AuditService {
   query?(query: AuditQuery): Promise<AuditQueryResult>
   /** Distinct users and types across the whole trail. Paired with {@link query}. */
   facets?(): Promise<AuditFacets>
+  /**
+   * Tamper evidence. A sink that chains or signs its events implements this to
+   * re-check them and report whether the trail is intact. Optional: a sink with
+   * no such mechanism leaves it absent, and a reader must treat absent as
+   * "not verifiable", never as "intact".
+   */
+  verify?(): Promise<AuditVerifyResult>
 }
 
 /**

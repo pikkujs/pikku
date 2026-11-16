@@ -3,7 +3,7 @@ import {
   pikkuChannelDisconnectionFunc,
   pikkuChannelFunc,
 } from '#pikku/channel'
-import { pikkuSessionlessFunc } from '#pikku/function'
+import { pikkuSessionlessFunc, pikkuSubscribeFunc } from '#pikku/function'
 
 export const onConnect = pikkuChannelConnectionFunc<'hello!'>(
   async ({ logger }, _, { channel }) => {
@@ -39,20 +39,20 @@ export const logout = pikkuSessionlessFunc<void, void>({
   },
 })
 
-export const subscribe = pikkuChannelFunc<{ name: string }, void>(
-  async ({ eventHub }, { name }, { channel }) => {
-    await eventHub?.subscribe(name, channel.channelId)
+// The function decides the topic, so a client can only follow a topic this
+// function returns. There is no unsubscribe: a channel leaves on disconnect.
+export const subscribe = pikkuSubscribeFunc<{ name: string }, `room:${string}`>(
+  {
+    func: async (_services, { name }) => `room:${name}`,
   }
 )
 
 export const unsubscribe = pikkuChannelFunc<{ name: string }, 'valid'>(
-  async ({ eventHub }, { name }, { channel }) => {
+  async (_services, _data, { channel }) => {
     // @ts-expect-error - We should only be able to send data that is in the output type
     await channel.send('invalid')
 
     await channel.send('valid')
-
-    await eventHub?.unsubscribe(name, channel.channelId)
   }
 )
 
@@ -62,10 +62,14 @@ export const emitMessage = pikkuChannelFunc<
 >(async ({ eventHub }, { name }, { channel, session }) => {
   const sessionData = session
 
-  await eventHub?.publish(name, channel.channelId, {
-    timestamp: new Date().toISOString(),
-    from: sessionData ?? 'anonymous',
-  })
+  await eventHub?.publish(
+    `room:${name}`,
+    {
+      timestamp: new Date().toISOString(),
+      from: sessionData ?? 'anonymous',
+    },
+    { except: channel.channelId }
+  )
 })
 
 export const onMessage = pikkuChannelFunc<'hello', 'hey'>(

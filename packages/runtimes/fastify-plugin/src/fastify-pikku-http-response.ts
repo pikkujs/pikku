@@ -91,6 +91,23 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
     }
   }
 
+  /** Calls `callback` once when the client goes away or the response ends, so a stream can stop feeding it. */
+  public onClose(callback: () => void): void {
+    let called = false
+    this.reply.raw.on('close', () => {
+      if (called) return
+      called = true
+      callback()
+    })
+  }
+
+  /** An SSE comment frame: keeps an idle stream open and is ignored by the client. */
+  public heartbeat(): void {
+    if (!this.#streaming || this.#ended) return
+    this.#flushHeadersOnce()
+    this.reply.raw.write(':\n\n')
+  }
+
   public setMode(_mode: 'stream'): void {
     this.#streaming = true
   }
@@ -119,6 +136,9 @@ export class FastifyPikkuHTTPResponse implements PikkuHTTPResponse {
         {} as Record<string, string | string[]>
       )
     )
+    // writeHead only buffers the head; without this the client sees no
+    // response until the first event, and an idle stream looks hung.
+    this.reply.raw.flushHeaders()
   }
 
   public flush(): void {

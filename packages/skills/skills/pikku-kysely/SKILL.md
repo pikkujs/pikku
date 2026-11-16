@@ -238,7 +238,7 @@ reads that only needed `Promise.all`.
 Pikku provides SQL database services through six packages:
 
 - `@pikku/kysely` — Base service implementations (database-agnostic), the serialize plugins, `createAuditedKysely` and the `pikkuSchemas` helpers
-- `@pikku/kysely-postgres` — PostgreSQL-specific implementations + the `PikkuKysely` connection wrapper and `PgEventHubService` (LISTEN/NOTIFY-backed)
+- `@pikku/kysely-postgres` — PostgreSQL-specific implementations + the `PikkuKysely` connection wrapper
 - `@pikku/kysely-mysql` — MySQL-specific implementations
 - `@pikku/kysely-sqlite` — SQLite-specific implementations, `createSQLiteKysely`, and the `LibsqlWebDialect`
 - `@pikku/kysely-node-sqlite` — `createNodeSqliteKysely` over `node:sqlite`, plus user-defined SQL functions and the coercion plugin
@@ -330,6 +330,44 @@ pikku db migrate    # applies it and regenerates the types
   pii-looking name. Booleans, dates and numbers, and names ending `_at`,
   `_count`, `_id`, `_type`, `_ref`, `_verified`, are never flagged. Framework
   tables are skipped. There is no config opt-out: annotate the column.
+- **Constraints drive validation everywhere, the database on Postgres and
+  MySQL.** `enum`, `min`, `max`, `minLength`, `maxLength` reach the zod schema,
+  the generated union types and the console hints; `pattern` is zod only. On
+  Postgres and MySQL (8.0.16+, older is refused) they become named `CHECK`s
+  (`<table>_<col>_<hash>_<kind>_check`, the hash being of the table+column
+  pair so names stay unique schema-wide on MySQL, readable front cut when too
+  long for the engine) on a new table, a new column, or an existing column via
+  `ADD`/`DROP CONSTRAINT` (postgres `NOT VALID` then `VALIDATE`, though one
+  transaction still holds the lock; MySQL swaps a changed check in under an
+  interim name), each added check preceded by a `-- pikku:check-probe` line that
+  `migrate` runs against existing rows first. A generated-shape check
+  (`..._<8 hex>_<kind>_check`) the declaration no longer wants under that exact
+  name is dropped (add first, then drop, so a bound is never unenforced), which
+  is what removes the old rule after you rename a table or column by hand; `db
+  check` reports it, a check with a name of your own is left alone. Aurora MySQL 3.x is
+  accepted, MariaDB, Aurora 2.x and 5.7 are refused. **SQLite gets no CHECK at all**:
+  validation only, and `db generate`/`db check` print one notice with the
+  `CHECK` SQL to add by hand (constraints a hand-written check in the migrations
+  already enforces are left out, so the notice goes once you add them) (silence: `validate.rules["db-sqlite-unenforced-constraints"]
+= "off"`). A table too large to validate, or data that breaks the check, is for
+  a person to migrate; say so rather than editing around it. **A declared
+  constraint is enforced at runtime only where a function uses the generated zod
+  (`<Table>InsertZ` / `PatchZ` / `Z`) as its `input`**; a Kysely write that skips
+  such a function is guarded only by the DB `CHECK`s (Postgres/MySQL), and on
+  SQLite not at all, so route values that must be right through a function with
+  that input. Integer columns are generated as `z.number().int()`. When a
+  declared `enum` differs from the database's, the generated union follows the
+  declaration and codegen warns `PKU488` per column; run `pikku db generate`.
+- **Better Auth's and the runtime's own tables come annotated.** `user.email` is
+  `pii` (+ `format: 'email'`), `session.token`, `account.access_token` /
+  `refresh_token` / `id_token` and `verification.value` are `secret` + `form:
+'plain'`, `account.password` is `secret` + `form: 'hashed'`, and the
+  `secrets`/`credentials` ciphertext columns are `secret` + `form: 'plain'`.
+  They apply with no `db/tables.ts`. To change one, declare the table
+  `declareOnly: true` and annotate the column: yours replaces the built-in
+  column whole. A secret column comes back `Secret<...>`, so a function that
+  returns it fails PKU910: strip it. A direct write to `account.password`
+  needs `unsafeAsHashed(hash)` from `@pikku/core/classification`.
 - **An annotation typo is an error**, as is any field a column or table does
   not have. `security` is `public`, `private`, `pii` or `secret`.
 - **`db check` and `db migrate` stop** when `db/tables.ts` is ahead of the

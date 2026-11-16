@@ -346,6 +346,10 @@
       "definitions": [],
       "files": []
     },
+    "keyPairs": {
+      "definitions": [],
+      "files": []
+    },
     "scopes": {
       "definitions": [
         {
@@ -605,7 +609,7 @@
       "requiredServices": [
         "scopeService",
         "featureFlags",
-        "analyticsService"
+        "analyticsSinks"
       ],
       "usedFunctions": [],
       "usedMiddleware": [],

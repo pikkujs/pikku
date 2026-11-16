@@ -37,8 +37,36 @@ export interface ColumnAnnotation {
   description?: string
 }
 
-/** Annotations keyed by table, then column, spelled the way the statements spell them. */
-export type TableAnnotations = Record<string, Record<string, ColumnAnnotation>>
+/**
+ * What a column's value may be, beyond its type. The database enforces `enum`,
+ * `min`, `max`, `minLength` and `maxLength` as named `CHECK` constraints
+ * (`<table>_<column>_<kind>_check`); `pattern` is checked in the generated Zod
+ * schema only, because engines disagree on regular expression syntax.
+ *
+ * Constraints go in when a table or column is created. Adding or changing one
+ * on a column that already exists is refused by `pikku db generate`: a person
+ * writes that migration, because existing rows may break it.
+ */
+export interface ColumnConstraints {
+  /** The values the column may hold. */
+  enum?: readonly string[]
+  /** Smallest numeric value. */
+  min?: number
+  /** Largest numeric value. */
+  max?: number
+  /** Shortest string length. */
+  minLength?: number
+  /** Longest string length. */
+  maxLength?: number
+  /** A regular expression a string value must match. Zod only, never SQL. */
+  pattern?: string
+}
+
+/** Annotations and constraints keyed by table, then column, spelled the way the statements spell them. */
+export type TableAnnotations = Record<
+  string,
+  Record<string, ColumnAnnotation & ColumnConstraints>
+>
 
 /**
  * A column's type, in engine-neutral words.
@@ -82,7 +110,7 @@ export type ColumnDefault =
   string | number | boolean | { now: true } | { sql: string }
 
 /** The parts of a column declaration that do not depend on its type. */
-export interface ColumnFields extends ColumnAnnotation {
+export interface ColumnFields extends ColumnAnnotation, ColumnConstraints {
   /** `not null`. Primary key columns are required whether or not this says so. */
   required?: boolean
   default?: ColumnDefault
@@ -99,18 +127,6 @@ export interface ColumnFields extends ColumnAnnotation {
   references?: string
   /** Only meaningful with `references`. Defaults to `restrict`. */
   onDelete?: OnDelete
-  /** The values the column may hold. */
-  enum?: readonly string[]
-  /** Smallest numeric value. */
-  min?: number
-  /** Largest numeric value. */
-  max?: number
-  /** Shortest string length. */
-  minLength?: number
-  /** Longest string length. */
-  maxLength?: number
-  /** A regular expression a string value must match. */
-  pattern?: string
 }
 
 /**

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
+import type { AnnotationMap, ColAnnotation } from '../db/annotation-parser.js'
 
 /**
  * One thing `pikku meta` knows, in the shape every short listing shares:
@@ -119,6 +120,8 @@ export type DbColumn = {
   nullable: boolean
   generated: boolean
   classification: 'private' | 'pii' | 'secret' | null
+  /** What the column's declaration restricts it to, e.g. `min 0, max 99`. */
+  constraints?: string
 }
 
 export type DbTable = { table: string; columns: DbColumn[] }
@@ -233,6 +236,46 @@ export const parseDbSchema = (source: string): DbTable[] => {
   }))
 }
 
+const snakeCase = (name: string): string =>
+  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+
+/**
+ * The bounds a column declares, in a line an agent can read. An enum is left
+ * out, because the column's type already is the union of its values.
+ */
+const describeConstraints = (annotation: ColAnnotation): string =>
+  [
+    annotation.min !== undefined && `min ${annotation.min}`,
+    annotation.max !== undefined && `max ${annotation.max}`,
+    annotation.minLength !== undefined && `minLength ${annotation.minLength}`,
+    annotation.maxLength !== undefined && `maxLength ${annotation.maxLength}`,
+    annotation.pattern !== undefined && `pattern ${annotation.pattern}`,
+  ]
+    .filter(Boolean)
+    .join(', ')
+
+/**
+ * Adds each column's declared constraints, read from the annotations sidecar,
+ * which is keyed by physical table and column where the generated `DB`
+ * interface uses camelCase.
+ */
+export const withConstraints = (
+  tables: DbTable[],
+  annotations: AnnotationMap
+): DbTable[] =>
+  tables.map((table) => ({
+    ...table,
+    columns: table.columns.map((column) => {
+      const annotation =
+        // `app.item` is `item` in the sidecar, which is keyed by bare name.
+        annotations[snakeCase(table.table.replace(/^.*\./, ''))]?.[
+          snakeCase(column.name)
+        ]
+      const constraints = annotation ? describeConstraints(annotation) : ''
+      return constraints ? { ...column, constraints } : column
+    }),
+  }))
+
 export const dbTableRows = (tables: DbTable[]): MetaRow[] =>
   tables.map(({ table, columns }) => ({
     kind: 'table',
@@ -248,6 +291,7 @@ export const dbColumnRows = (table: DbTable): MetaRow[] =>
       `${column.type}${column.nullable ? ' | null' : ''}`,
       column.generated ? 'generated' : '',
       column.classification ?? '',
+      column.constraints ? `[${column.constraints}]` : '',
     ]
       .filter(Boolean)
       .join(' '),

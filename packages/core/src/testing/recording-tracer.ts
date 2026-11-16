@@ -66,6 +66,9 @@ export class RecordingTracer implements Tracer {
       setAttribute: (key, value) => {
         if (!ended) set(key, value)
       },
+      removeAttribute: (key) => {
+        if (!ended) delete attributes[key]
+      },
       addEvent: (eventName, eventAttributes) => {
         if (ended) return
         if (events.length >= SPAN_LIMITS.events) {

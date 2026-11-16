@@ -3,14 +3,7 @@ import {
   pikkuChannelDisconnectionFunc,
   pikkuChannelFunc,
 } from '#pikku/channel'
-import {
-  ChannelAuthInputSchema,
-  ChannelAuthOutputSchema,
-  SubscribeInputSchema,
-  SubscribeOutputSchema,
-  UnsubscribeInputSchema,
-  UnsubscribeOutputSchema,
-} from '../schemas.js'
+import { ChannelAuthInputSchema, ChannelAuthOutputSchema } from '../schemas.js'
 
 /**
  * Handle new WebSocket connection.
@@ -24,7 +17,7 @@ export const onConnect = pikkuChannelConnectionFunc<{ connected: true }>(
 
 /**
  * Handle WebSocket disconnection.
- * Note: EventHub automatically unsubscribes on disconnect.
+ * Note: the event hub drops a channel's subscriptions on disconnect.
  */
 export const onDisconnect = pikkuChannelDisconnectionFunc(
   async ({ logger }, _, { channel }) => {
@@ -58,37 +51,5 @@ export const authenticate = pikkuChannelFunc({
     await setSession({ userId: user.id })
     logger.info(`WebSocket authenticated as ${user.id}`)
     return { authenticated: true, userId: user.id }
-  },
-})
-
-/**
- * Subscribe to todo update events via EventHub.
- */
-export const subscribe = pikkuChannelFunc({
-  input: SubscribeInputSchema,
-  output: SubscribeOutputSchema,
-  func: async ({ eventHub, logger }, { topic }, { channel }) => {
-    if (eventHub) {
-      await eventHub.subscribe(topic, channel.channelId)
-      logger.info(`WebSocket ${channel.channelId} subscribed to ${topic}`)
-      return { subscribed: true, topic }
-    }
-    return { subscribed: false, topic }
-  },
-})
-
-/**
- * Unsubscribe from todo update events.
- */
-export const unsubscribe = pikkuChannelFunc({
-  input: UnsubscribeInputSchema,
-  output: UnsubscribeOutputSchema,
-  func: async ({ eventHub, logger }, { topic }, { channel }) => {
-    if (eventHub) {
-      await eventHub.unsubscribe(topic, channel.channelId)
-      logger.info(`WebSocket ${channel.channelId} unsubscribed from ${topic}`)
-      return { unsubscribed: true, topic }
-    }
-    return { unsubscribed: false, topic }
   },
 })

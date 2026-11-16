@@ -11,13 +11,14 @@ import {
 
 function generate(
   schema: string,
-  formats?: ZodCodegenOptions['formats']
+  formats?: ZodCodegenOptions['formats'],
+  constraints?: ZodCodegenOptions['constraints']
 ): string {
   const dir = mkdtempSync(join(tmpdir(), 'zod-codegen-'))
   const schemaFile = join(dir, 'schema.gen.ts')
   const outFile = join(dir, 'zod.gen.ts')
   writeFileSync(schemaFile, schema, 'utf8')
-  generateZodTypes({ schemaFile, outFile, formats })
+  generateZodTypes({ schemaFile, outFile, formats, constraints })
   return readFileSync(outFile, 'utf8')
 }
 
@@ -139,4 +140,80 @@ export interface User {
   assert.match(insert, /avatar: z\.nanoid\(\)\.optional\(\),/)
   // Unformatted string stays plain.
   assert.match(out, /bio: z\.string\(\),/)
+})
+
+test('constraints refine a number and a string, before .nullable()', () => {
+  const out = generate(
+    `
+export interface Item {
+  qty: number | null
+  code: string
+  email: string
+  rate: number
+}
+`,
+    { Item: { email: 'email' } },
+    {
+      Item: {
+        qty: { min: 0, max: 9 },
+        code: { minLength: 2, maxLength: 4, pattern: '^[a-z]+$' },
+        email: { maxLength: 254 },
+        rate: { min: 0.5 },
+      },
+    }
+  )
+  assert.match(out, /qty: z\.number\(\)\.min\(0\)\.max\(9\)\.nullable\(\),/)
+  assert.match(
+    out,
+    /code: z\.string\(\)\.min\(2\)\.max\(4\)\.regex\(new RegExp\("\^\[a-z\]\+\$"\)\),/
+  )
+  assert.match(out, /email: z\.email\(\)\.max\(254\),/)
+  assert.match(out, /rate: z\.number\(\)\.min\(0\.5\),/)
+})
+
+test('constraints leave an enum union, a date and an array alone', () => {
+  const out = generate(
+    `
+export interface Item {
+  kind: 'a' | 'b'
+  at: Date
+  tags: string[]
+}
+`,
+    undefined,
+    {
+      Item: {
+        kind: { maxLength: 1 },
+        at: { min: 1 },
+        tags: { maxLength: 1 },
+      },
+    }
+  )
+  assert.match(out, /kind: z\.enum\(\['a', 'b'\]\),/)
+  assert.match(out, /at: z\.date\(\),/)
+  assert.match(out, /tags: z\.array\(z\.string\(\)\),/)
+})
+
+test('a pattern with a quote and a backslash is emitted as a string, not a literal', () => {
+  const out = generate(
+    `export interface Item {\n  code: string\n}\n`,
+    undefined,
+    { Item: { code: { pattern: `^"\\d+'/$` } } }
+  )
+  assert.match(out, /\.regex\(new RegExp\("\^\\"\\\\d\+'\/\$"\)\)/)
+})
+
+test('an integer hint puts .int() before the bounds and .nullable()', () => {
+  const out = generate(
+    `
+export interface Item {
+  qty: number | null
+  rate: number
+}
+`,
+    {},
+    { Item: { qty: { int: true, min: 0 }, rate: { min: 0.5 } } }
+  )
+  assert.match(out, /qty: z\.number\(\)\.int\(\)\.min\(0\)\.nullable\(\),/)
+  assert.match(out, /rate: z\.number\(\)\.min\(0\.5\),/)
 })

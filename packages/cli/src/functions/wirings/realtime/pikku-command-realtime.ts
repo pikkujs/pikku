@@ -24,13 +24,12 @@ export const pikkuRealtime = pikkuSessionlessFunc<void, void>({
       })
       return
     }
-    const topicsImport = config.clientFiles?.realtimeEventHubTopicsImport
     const fetchImportPath = getFileImportRelativePath(
       realtimeFile,
       fetchFile,
       config.packageMappings
     )
-    const content = serializeRealtimeClient(topicsImport, fetchImportPath)
+    const content = serializeRealtimeClient(fetchImportPath)
     await writeFileInDir(logger, realtimeFile, content)
   },
   middleware: [

@@ -7,11 +7,11 @@ installGroups: [core, client]
 
 # Pikku Realtime (SSE + WebSocket channels)
 
-For the server half, run this once: `pikku doc eventhub EventHubService wireChannel pikkuChannelFunc`. The client half is below.
+For the server half, run this once: `pikku doc eventhub pikkuSubscribeFunc wireChannel pikkuChannelFunc`. The client half is below.
 
-There is NOTHING to hand-roll and NOTHING to "find". `pikku enable events` wires
-the event-hub SSE transport and generates the typed client, and the two patterns
-below ARE the realtime templates. Start from them and rename — never grep the
+There is NOTHING to hand-roll and NOTHING to "find". A `pikkuSubscribeFunc`
+returns the topic a client may follow, `wireHTTP({ sse: true })` exposes it, and
+the generated client follows it; the patterns below ARE the realtime templates. Start from them and rename — never grep the
 project for existing `sse`/`eventHub` code to copy, never write a custom
 `EventSource`, and never write a bespoke `sse: true` route for a plain live feed.
 
@@ -43,29 +43,35 @@ const lot = await kysely
   .where('id', '=', input.lotId)
   .returning(['id', 'status', 'currentBid', 'updatedAt'])
   .executeTakeFirstOrThrow()
-await eventHub.publish('lot-updated', null, { topic: 'lot-updated', data: lot })
+await eventHub.publish('lot-updated', lot)
 return lot
 ```
 
-**A topic is PUBLIC — publish a projection, never `returningAll()`.** The generated
-`/events/:topic` route is wired `auth: false` with a sessionless handler, so anyone who can
-reach the origin can subscribe to any topic name and read every frame on it. `returningAll()`
-then ships the whole row — `reservePrice`, `sellerId`, internal notes, whatever the table
-grows next — to unauthenticated subscribers, and it does it silently because the RPC's own
-`output` schema never sees the event payload. List the columns the topic is FOR, the way the
-example does. If a change genuinely has per-viewer content, it does not belong on a topic:
-publish an id-only "something changed" frame and let each client refetch through an
-authenticated RPC that applies its own permissions.
+**A topic is only as private as its subscribe function.** The function returns the
+topic, so it is where `scopes` and `permissions` go; whoever it admits reads every
+frame on that topic. Publish a projection, never `returningAll()`: it would ship
+`reservePrice`, `sellerId`, internal notes and whatever the table grows next to
+every subscriber, silently, because the RPC's own `output` schema never sees the
+event payload. If a change has per-viewer content, publish an id-only "something
+changed" frame and let each client refetch through an authenticated RPC.
 
-The **2nd arg is the channel to EXCLUDE** from the broadcast: pass `null` from a
-normal HTTP/RPC write (there is no one to skip); pass `channel.channelId` ONLY
-when you publish from INSIDE a channel handler, or the sender gets an echo of its
-own update. `eventHub` is already injected — do not wire it.
+The 3rd arg is options: `{ except: channel.channelId }` skips the sender, and only
+matters when you publish from INSIDE a channel handler. `eventHub` is already
+injected, and is publish-only; do not wire it.
+
+**The subscribe function.**
+
+```ts
+export const watchLots = pikkuSubscribeFunc<void, `lot-updated:${string}`>({
+  scopes: ['lots:read'],
+  func: async () => 'lot-updated:all',
+})
+// wiring: wireHTTP({ route: '/lots/events', method: 'get', sse: true, func: watchLots })
+```
 
 **Frontend — subscribe over SSE.** The generated
-`PikkuRealtime.subscribeToTopic(topic, handler)` opens an SSE stream to the
-built-in `/events/:topic` route. Seed state from a normal query, then patch it as
-events arrive; the event is the `{ topic, data }` envelope, so read `.data`.
+`PikkuRealtime.subscribeToSSE(path, handler)` opens the SSE stream of the route
+above. Seed state from a normal query, then refresh it as events arrive.
 
 ```tsx
 import { useEffect } from 'react'
@@ -76,7 +82,7 @@ export function useLiveLots() {
   const queryClient = useQueryClient()
 
   useEffect(() => {
-    const subscription = realtime.subscribeToTopic('lot-updated', () => {
+    const subscription = realtime.subscribeToSSE('/lots/events', () => {
       queryClient.invalidateQueries({ queryKey: ['listLots'] })
     })
     return () => subscription.close()
@@ -96,7 +102,7 @@ updater is reading `.map` off an object. Refetching sidesteps both, and it re-ap
 which a locally patched row does not: a lot that just moved to `sold` may no longer belong in
 an "open lots" list at all.
 
-`subscribeToTopic` returns `{ close }` — ALWAYS close on unmount or you leak the
+`subscribeToSSE` returns `{ close }` — ALWAYS close on unmount or you leak the
 stream. Never hand-roll an `EventSource`.
 
 ## Level 2 — two-way channel
@@ -116,8 +122,9 @@ useEffect(() => {
 ```
 
 Publish server→client fan-out from a channel handler with
-`eventHub.publish(topic, channel.channelId, envelope)` — the 2nd arg excludes the
-sender, so the browser that sent the message does not receive its own echo.
+`eventHub.publish(topic, data, { except: channel.channelId })` — `except` skips
+the sender, so the browser that sent the message does not receive its own echo.
+A channel subscribes through a `pikkuSubscribeFunc` wired as a message action.
 
 ## Do NOT
 

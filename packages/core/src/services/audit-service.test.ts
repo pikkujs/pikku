@@ -4,6 +4,9 @@ import {
   createInvocationAudit,
   type AuditEvent,
   type AuditEventBatch,
+  type AuditService,
+  type AuditVerifyResult,
+  NoopAuditService,
 } from './audit-service.js'
 
 describe('audit-service', () => {
@@ -40,5 +43,27 @@ describe('audit-service', () => {
     })
     assert.equal(warnings.length, 1)
     assert.equal(warnings[0]?.[0], 'best-effort audit flush failed')
+  })
+})
+
+describe('AuditService.verify', () => {
+  test('is optional: NoopAuditService and a bare sink leave it absent', () => {
+    const bare: AuditService = { async audit() {} }
+    assert.equal('verify' in bare, false)
+    assert.equal('verify' in new NoopAuditService(), false)
+  })
+
+  test('a sink may report a broken trail with the first bad id', async () => {
+    const sink: AuditService = {
+      async audit() {},
+      async verify(): Promise<AuditVerifyResult> {
+        return { intact: false, checked: 5, firstBadId: 'evt_3' }
+      },
+    }
+    assert.deepEqual(await sink.verify!(), {
+      intact: false,
+      checked: 5,
+      firstBadId: 'evt_3',
+    })
   })
 })

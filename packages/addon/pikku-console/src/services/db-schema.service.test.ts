@@ -79,3 +79,19 @@ describe('DbSchemaService.getSchema', () => {
     )
   })
 })
+
+describe('DbSchemaService constraints', () => {
+  test('carries declared constraints to the column, and none to others', async () => {
+    const service = new DbSchemaService(
+      makeMetaService({
+        question: {
+          body: { security: 'public', minLength: 1, maxLength: 500 },
+          attendee_id: { security: 'private' },
+        },
+      }) as never
+    )
+    const columns = (await service.getSchema())!.tables[0]!.columns
+    assert.deepEqual(columns[0]!.constraints, { minLength: 1, maxLength: 500 })
+    assert.equal(columns[1]!.constraints, undefined)
+  })
+})

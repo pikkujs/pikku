@@ -46,3 +46,17 @@ func TestWiredIncomingWebhooksStillRequireTheService(t *testing.T) {
 		t.Fatalf("requiredServices = %v", st.ServiceAggregation.RequiredServices.Values())
 	}
 }
+
+func TestSubscribeFunctionRequiresTheEventHub(t *testing.T) {
+	st := state.New(".")
+	st.Functions.Meta.Set("orderEvents", &state.FunctionMeta{Subscribe: &state.SubscribeMeta{TopicPattern: "order:${string}"}})
+	aggregateRequiredServices(st)
+	if !st.ServiceAggregation.RequiredServices.Has("eventHub") {
+		t.Fatalf("eventHub not required: %v", st.ServiceAggregation.RequiredServices.Values())
+	}
+	plain := state.New(".")
+	aggregateRequiredServices(plain)
+	if plain.ServiceAggregation.RequiredServices.Has("eventHub") {
+		t.Fatal("eventHub required with no channel and no subscribe function")
+	}
+}
