@@ -327,7 +327,7 @@ async function capturePage(browser, out, entry, vps, tiles, opts = {}) {
       writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
       writeFileSync(join(out, `${id}-${w}.style.json`), JSON.stringify({ ...(await page.evaluate(extractStyleInPage)), ...(scale !== 1 ? { scale: +scale.toFixed(4) } : {}) }, null, 1))
       if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
-      await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80 })
+      await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80, animations: 'disabled' })
       rec.viewports[w] = { ...layout.counts, scrollWidth: layout.doc.w, ...(scale !== 1 ? { scale: +scale.toFixed(4) } : {}) }
       if (tiles) makeTiles(join(out, `${id}-${w}.jpg`), join(out, 'small'), `${id}-${w}`, w)
     } catch (e) { rec.viewports[w] = { error: String(e).slice(0, 120) } }
