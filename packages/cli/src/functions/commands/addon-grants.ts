@@ -9,7 +9,7 @@ export const grantLines = (
     Object.values(uses).map((used) => `${name} can use ${used}`)
   )
 
-const askYesNo = async (question: string): Promise<boolean> => {
+export const askYesNo = async (question: string): Promise<boolean> => {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
   try {
     return /^y(es)?$/i.test((await rl.question(question)).trim())
