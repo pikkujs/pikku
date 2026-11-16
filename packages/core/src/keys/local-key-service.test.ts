@@ -23,7 +23,7 @@ import {
 import { testCrypto } from './test-crypto.test.js'
 import { MemoryKeyStore } from './memory-key-store.js'
 import { signJws } from './sign-jws.js'
-import { toBase64 } from './base64.js'
+import { toBase64, toBase64Url } from './base64.js'
 
 const createLocalKeyService = (
   options: Omit<LocalKeyServiceOptions, 'crypto'> &
@@ -1020,6 +1020,60 @@ describe('review fixes', () => {
     assert.match(await signJws(signer, {}, 'ok'), /^[\w-]+\.[\w-]+\.[\w-]+$/)
     // and the handle signs a signing input only, never arbitrary bytes
     await assert.rejects(signer.sign('ok'), DomainPolicyError)
+  })
+
+  test('a jws signer refuses an input whose header names another kid or alg, and signJws still verifies', async () => {
+    const { svc } = await setup()
+    await svc.generate('token')
+    const signer = await svc.signer('token')
+    const input = (head: Record<string, unknown>) =>
+      `${toBase64Url(new TextEncoder().encode(JSON.stringify(head)))}.${toBase64Url(new TextEncoder().encode('{}'))}`
+    await assert.rejects(
+      signer.sign(input({ alg: signer.jwsAlg, kid: 'someone-else' })),
+      DomainPolicyError
+    )
+    await assert.rejects(
+      signer.sign(input({ alg: 'RS256', kid: signer.kid })),
+      DomainPolicyError
+    )
+    await assert.rejects(
+      signer.sign(input({ kid: signer.kid })),
+      DomainPolicyError
+    )
+    const jws = await signJws(signer, {}, { a: 1 })
+    const [h, p, sig] = jws.split('.')
+    assert.equal(
+      await svc.verify('token', `${h}.${p}`, sig!, { kid: signer.kid }),
+      true
+    )
+  })
+
+  test('the domain-format header is exactly {"alg","kid"} in that key order', async () => {
+    const seen: string[] = []
+    const spy = {
+      ...testCrypto,
+      sign: async (
+        alg: 'ed25519' | 'rs256',
+        key: object,
+        header: Record<string, unknown>,
+        payload: Uint8Array
+      ) => {
+        seen.push(JSON.stringify(header))
+        return testCrypto.sign(alg, key, header, payload)
+      },
+    }
+    const { svc } = await setup({ crypto: spy })
+    const info = await svc.generate('audit')
+    const signer = await svc.signer('audit', { domain: 'd' })
+    await signer.sign('doc')
+    const last = seen.at(-1)
+    assert.equal(last, `{"alg":"EdDSA","kid":"${info.kid}"}`)
+    assert.equal(
+      await svc.verify('audit', 'doc', await signer.sign('doc'), {
+        domain: 'd',
+      }),
+      true
+    )
   })
 
   test('verify rejects a signature made by a different kid when both are accepted', async () => {
