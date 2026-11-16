@@ -47,7 +47,17 @@ requests and a second tour of the project are separate jobs: do them only when t
 
 ## Filing a plan from a brief
 
-File from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
+**A brief to clone, rebuild or convert an existing site** (it names a site or a URL) is planned in two
+steps, because you cannot plan what you have not seen. If `knowledge/site/` does not exist yet, file
+exactly one change and stop: specialist `knowledge`, title "The existing site is crawled and written
+down", body: crawl every page of the site (the pikku-site-clone skill's page list), write what each
+page, form, price, language and outside service is into `knowledge/site/` (pikku-site-archaeology
+skill), done when you can read the notes and every page on the list is in them. Do not plan anything
+else. If `knowledge/site/` exists, read it first and plan from it: the data change stores what
+`things-kept.md` and `forms.md` say, in the currency and languages `prices-and-languages.md` says,
+then file the usual plan below.
+
+Otherwise, file from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
 says what each piece does for the person, and the agent that builds it reads the code. Write the whole
 plan as one JSON file and file it in one call: `pikku changes file --plan plan.json` (`--plan -` reads stdin).
 
