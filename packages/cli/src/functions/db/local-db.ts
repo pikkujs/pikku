@@ -60,6 +60,7 @@ import {
   type DestructiveChange,
   TABLES_FILE,
   type LoadedDeclaration,
+  type ColumnRename,
 } from './table-declaration.js'
 import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
@@ -1984,6 +1985,57 @@ const coveredTable = (
     : (covered.get(table) ?? schemaQualifiedMatch(covered, table))
 
 /**
+ * Read `renamedFrom` against what the migrations hold, and rename the columns in
+ * `covered` the way the migration will, so everything compared with it afterwards
+ * sees a column that moved rather than one that is gone and one that is new.
+ *
+ * Returns the renames still to be written. One already applied (the new name is
+ * there, the old one is not) is said, because the declaration still carries it.
+ */
+function applyRenames(
+  renames: ColumnRename[],
+  covered: SchemaMap,
+  columnIndexes: Map<string, string[]>,
+  schemaName: string | undefined
+): { pending: ColumnRename[]; notes: string[]; refusals: string[] } {
+  const out = {
+    pending: [] as ColumnRename[],
+    notes: [] as string[],
+    refusals: [] as string[],
+  }
+  for (const rename of renames) {
+    const { table, from, to } = rename
+    const actual = coveredTable(covered, table, schemaName)
+    if (!actual) continue
+    const old = actual.get(from)
+    if (old && actual.has(to)) {
+      out.refusals.push(
+        `${table}.${to} is declared renamedFrom '${from}', but the migrations have both columns. ` +
+          `generate cannot tell which one to keep: a person moves the data and drops one.`
+      )
+    } else if (old) {
+      actual.delete(from)
+      actual.set(to, { ...old, name: to })
+      const indexes = columnIndexes.get(`${table}.${from}`)
+      if (indexes) {
+        columnIndexes.delete(`${table}.${from}`)
+        columnIndexes.set(`${table}.${to}`, indexes)
+      }
+      out.pending.push(rename)
+    } else if (actual.has(to)) {
+      out.notes.push(
+        `${table}.${to} is already renamed from '${from}' by an applied migration: delete renamedFrom from ${TABLES_FILE}.`
+      )
+    } else {
+      out.notes.push(
+        `${table}.${to} is declared renamedFrom '${from}', but no column of that name exists, so it is a new column.`
+      )
+    }
+  }
+  return out
+}
+
+/**
  * Apply a declaration to an empty database and read back what it creates.
  *
  * A declaration may point a foreign key at a table outside itself: one a
@@ -2133,12 +2185,20 @@ export async function planDeclaredTables(
     resolved.dialect === 'postgres' ? resolved.schema : undefined
   const columnIndexes = new Map<string, string[]>()
   const covered = await coveredSchema(resolved, columnIndexes)
+  const renamed = applyRenames(
+    declaration.renames,
+    covered,
+    columnIndexes,
+    schemaName
+  )
+  const notes: string[] = renamed.notes
   const { desired, refusals } = await materializeDeclaration(
     resolved,
     declaration,
     covered,
     schemaName
   )
+  refusals.push(...renamed.refusals)
   if (!desired) return { tables: [], bodies: [], refusals, destructive: [] }
 
   const tables = [...desired.tables.keys()]
@@ -2273,8 +2333,10 @@ export async function planDeclaredTables(
         ]
   })
 
+  // What has to leave a renamed column before it moves: MySQL refuses to rename
+  // a column a CHECK still names. The new checks go in the file after the rename.
+  const beforeRename = new Map<string, string[]>()
   // SQLite gets no generated CHECKs, so there is nothing to compare there.
-  const notes: string[] = []
   for (const table of resolved.dialect === 'sqlite' ? [] : tables) {
     const actual = coveredTable(covered, table, schemaName)
     if (!actual) continue
@@ -2303,17 +2365,31 @@ export async function planDeclaredTables(
       }
 
       const dialect = resolved.dialect === 'mysql' ? 'mysql' : 'postgres'
-      statements.push(
-        ...checkChangeStatements(
-          dialect,
-          { schema: schemaName, table, qualified: qualify(table) },
-          {
-            drop: plan.drop,
-            add: added.map((a) => ({ ...a, expression: a.expression! })),
-          },
-          quote
+      const where = { schema: schemaName, table, qualified: qualify(table) }
+      const add = added.map((a) => ({ ...a, expression: a.expression! }))
+      if (renamed.pending.some((r) => r.table === table && r.to === column)) {
+        beforeRename.set(
+          `${table}.${column}`,
+          checkChangeStatements(
+            dialect,
+            where,
+            { drop: plan.drop, add: [] },
+            quote
+          )
         )
-      )
+        statements.push(
+          ...checkChangeStatements(dialect, where, { drop: [], add }, quote)
+        )
+      } else {
+        statements.push(
+          ...checkChangeStatements(
+            dialect,
+            where,
+            { drop: plan.drop, add },
+            quote
+          )
+        )
+      }
     }
   }
   // An index on a new table came with its `CREATE TABLE` above.
@@ -2331,10 +2407,18 @@ export async function planDeclaredTables(
   }
   if (refusals.length > 0) return { tables, bodies: [], refusals, destructive }
 
-  const bodies = [statements, drops]
+  // One file per kind of change, in the order they can apply: a rename first
+  // (nothing else names the old column by then), additions, drops last.
+  const renames = renamed.pending.flatMap(({ table, from, to }) => [
+    ...(beforeRename.get(`${table}.${to}`) ?? []),
+    `ALTER TABLE ${qualify(table)} RENAME COLUMN ${quote(from)} TO ${quote(to)};`,
+  ])
+  const bodies = [renames, statements, drops]
     .filter((group) => group.length > 0)
     .map((group) => group.join('\n\n'))
-  if (bodies.length === 0) return { tables, bodies, refusals, destructive }
+  if (bodies.length === 0) {
+    return { tables, bodies, refusals, destructive, notes }
+  }
 
   const dropped = destructive.filter((d) => d.kind === 'dropTable')
   const rehearsal = await rehearseMigration(resolved, bodies, (after) => {
@@ -2943,6 +3027,8 @@ export interface GenerateResult {
    * caller still has to say so.
    */
   refusals: string[]
+  /** What `db/tables.ts` asks that needs no decision but is worth saying, such as a `renamedFrom` already applied. */
+  notes: string[]
   /**
    * Drops of db/tables.ts that nothing was written for, because they were not
    * approved. Acting on them is a decision for a person, so the command lists
@@ -2997,6 +3083,7 @@ export async function generateMigrations(
     written: [],
     refusals: [],
     destructive: [],
+    notes: [],
   }
 
   for (const source of sources) {
@@ -3126,6 +3213,7 @@ export async function generateMigrations(
   })
   if (plan) {
     result.refusals.push(...plan.refusals)
+    result.notes.push(...(plan.notes ?? []))
     if (plan.destructive.length > 0 && !options.allowDestructive) {
       result.destructive.push(...plan.destructive)
     }

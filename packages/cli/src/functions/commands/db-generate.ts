@@ -124,7 +124,8 @@ export const dbGenerate = pikkuSessionlessFunc<
         })
       }
     )
-    const { upToDate, written, refusals, destructive } = result
+    const { upToDate, written, refusals, destructive, notes } = result
+    for (const note of notes) logger.warn(`db generate: ${note}`)
     if (declined) {
       reportWritten(written)
       logger.error(

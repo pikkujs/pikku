@@ -1411,6 +1411,103 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
     'a further generate writes nothing'
   )
 
+  // 16c. A column renamed with `renamedFrom` keeps its rows. On MySQL the engine
+  //      refuses to rename a column a CHECK still names, so the old checks are
+  //      dropped in the file that renames and the new ones are added in the
+  //      next: the order is what is tested here, against the real server.
+  await store.exec(
+    'CREATE TABLE rename_probe (id INTEGER PRIMARY KEY, v INTEGER)'
+  )
+  if (useMysql) {
+    await store.exec(
+      'ALTER TABLE rename_probe ADD CONSTRAINT rename_probe_v_chk CHECK (v >= 0)'
+    )
+  }
+  const renameRefusal = await store.tryExec(
+    'ALTER TABLE rename_probe RENAME COLUMN v TO w'
+  )
+  check(
+    useMysql
+      ? /cannot be dropped or renamed/.test(renameRefusal ?? '')
+      : renameRefusal === undefined,
+    useMysql
+      ? 'mysql: the server refuses to rename a column a CHECK uses'
+      : `${dialect}: a plain RENAME COLUMN is accepted`
+  )
+  await store.exec('DROP TABLE rename_probe')
+
+  declareTables(
+    probeSource(`score: { type: 'integer', min: 0, max: 9 },`, false)
+  )
+  run('app: pikku db generate (score column)', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+  ])
+  run('app: pikku db migrate (score column)', 'node', [PIKKU, 'db', 'migrate'])
+  await store.exec(
+    "INSERT INTO probe (id, title, score) VALUES (2, 'renamed', 7)"
+  )
+
+  declareTables(
+    probeSource(
+      `points: { type: 'integer', min: 0, max: 9, renamedFrom: 'score' },`,
+      false
+    )
+  )
+  const beforeRename = new Set(migrationFiles())
+  const renameOutput = captureAll('app: pikku db generate (rename)', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+  ])
+  const renameFiles = migrationFiles()
+    .sort()
+    .filter((f) => !beforeRename.has(f))
+    .map(sqlOf)
+  check(
+    !renameOutput.includes('--allowDestructive') &&
+      renameFiles.length === (dialect === 'sqlite' ? 1 : 2) &&
+      /RENAME COLUMN/.test(renameFiles[0]) &&
+      !/DROP COLUMN|pikku:destructive/.test(renameFiles.join('\n')),
+    `${dialect}: a rename is written without approval, as a rename and not a drop`
+  )
+  if (dialect !== 'sqlite') {
+    check(
+      /DROP (CONSTRAINT|CHECK)[^;]*score[^;]*;[^]*RENAME COLUMN/i.test(
+        renameFiles[0]
+      ) &&
+        !/ADD CONSTRAINT/i.test(renameFiles[0]) &&
+        /ADD CONSTRAINT[^;]*points/i.test(renameFiles[1]),
+      `${dialect}: the old check goes before the rename, the new one comes in the next file`
+    )
+  }
+  run('app: pikku db migrate (rename)', 'node', [PIKKU, 'db', 'migrate'])
+  const moved = await store.rows('SELECT id, points FROM probe WHERE id = 2')
+  check(
+    moved.length === 1 && Number(moved[0].points) === 7,
+    `${dialect}: the row kept its value under the new name`
+  )
+  check(
+    dialect === 'sqlite' ||
+      /check|constraint/i.test(
+        (await store.tryExec(
+          "INSERT INTO probe (id, title, points) VALUES (3, 'x', 99)"
+        )) ?? ''
+      ),
+    `${dialect}: the new name is held to the bound`
+  )
+  const settled = captureAll(
+    'app: pikku db generate (rename settled)',
+    'node',
+    [PIKKU, 'db', 'generate']
+  )
+  check(
+    !settled.includes('wrote') &&
+      /already renamed from 'score'.*delete renamedFrom/.test(settled),
+    'a further generate writes nothing and says to delete renamedFrom'
+  )
+
   // The probe table was only for this: take it out of the declaration too.
   writeFileSync(TABLES_TS, saved)
   run('app: pikku db generate --allowDestructive (probe table)', 'node', [
