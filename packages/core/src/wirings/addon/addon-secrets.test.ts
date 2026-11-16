@@ -159,6 +159,40 @@ describe('addon secrets are scoped to what the addon declared', () => {
     await assert.doesNotReject(() => secrets.setSecret('ADDON_KEY', 'x'))
   })
 
+  // The shape @pikku/addon-admin is wired with: it declares no secrets itself,
+  // so secretHas / secretGet reach a name only through the exemption.
+  test('an addon declaring nothing reads and checks any name once globalSecrets is set', async () => {
+    registerAddon([])
+    wireAddon({
+      name: 'admin',
+      package: ADDON_PACKAGE,
+      expose: true,
+      globalSecrets: 'administers secrets named by the operator at runtime',
+    })
+
+    const secrets = await secretsHandedToAddon('admin')
+    assert.equal(await secrets.hasSecret('UNDECLARED_KEY'), true)
+    assert.equal(
+      await secrets.getSecret('UNDECLARED_KEY'),
+      'value-of-UNDECLARED_KEY'
+    )
+  })
+
+  test('the same addon without globalSecrets is refused on has and get', async () => {
+    registerAddon([])
+    wireAddon({ name: 'admin', package: ADDON_PACKAGE, expose: true })
+
+    const secrets = await secretsHandedToAddon('admin')
+    await assert.rejects(
+      () => secrets.hasSecret('UNDECLARED_KEY'),
+      /Access denied to secret key: UNDECLARED_KEY/
+    )
+    await assert.rejects(
+      () => secrets.getSecret('UNDECLARED_KEY'),
+      /Access denied to secret key: UNDECLARED_KEY/
+    )
+  })
+
   test('an addon with no singleton factory is still scoped', async () => {
     pikkuState(ADDON_PACKAGE, 'package', 'declaredSecrets', ['ADDON_KEY'])
     wireAddon({
