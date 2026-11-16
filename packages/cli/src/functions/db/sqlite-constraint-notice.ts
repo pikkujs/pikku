@@ -1,15 +1,10 @@
 import type { TablesDeclaration } from '@pikku/core/db'
 import type { ColumnCheck } from './db-introspector.js'
 import { checkFingerprint } from './check-enums.js'
+import { snakeCase as snake } from './snake-case.js'
 
 /** The `validate.rules` id that silences the notice, the one place Pikku already lets a project turn a rule off. */
 export const SQLITE_UNENFORCED_RULE = 'db-sqlite-unenforced-constraints'
-
-const snake = (name: string): string =>
-  name
-    .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
-    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2')
-    .toLowerCase()
 
 const literal = (value: unknown): string =>
   typeof value === 'number'
