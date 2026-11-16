@@ -57,6 +57,7 @@ import {
   loadTableDeclaration,
   recordedDeclaredTables,
   refuseTableChanges,
+  type DestructiveChange,
   TABLES_FILE,
   type LoadedDeclaration,
 } from './table-declaration.js'
@@ -2062,6 +2063,8 @@ export interface DeclaredTablesPlan {
   body: string
   /** Why nothing can be written. When present, `body` is empty. */
   refusals: string[]
+  /** Changes that lose data or break running code, which a person approves. */
+  destructive: DestructiveChange[]
   /** What the migration changes about constraints that exist, and why: a stale check dropped, a changed bound. */
   notes?: string[]
 }
@@ -2093,6 +2096,7 @@ export async function planDeclaredTables(
     return {
       tables: [],
       body: '',
+      destructive: [],
       refusals: [
         `The migrations record declared tables (${[...recorded].join(', ')}), but ${TABLES_FILE} is ` +
           'gone, and their classifications went with it. Restore it.',
@@ -2113,7 +2117,8 @@ export async function planDeclaredTables(
       ),
       TABLES_FILE
     )
-    if (refusal) return { tables: [], body: '', refusals: [refusal] }
+    if (refusal)
+      return { tables: [], body: '', refusals: [refusal], destructive: [] }
   }
 
   const schemaName =
@@ -2125,7 +2130,7 @@ export async function planDeclaredTables(
     covered,
     schemaName
   )
-  if (!desired) return { tables: [], body: '', refusals }
+  if (!desired) return { tables: [], body: '', refusals, destructive: [] }
 
   const tables = [...desired.tables.keys()]
   const shapes = splitStatements(desired.sql).map((statement) => ({
@@ -2156,21 +2161,34 @@ export async function planDeclaredTables(
     }
   }
 
-  const comparable = (against: SchemaMap): string[] =>
-    tables.flatMap((table) => {
+  const compare = (against: SchemaMap) => {
+    const compared = tables.flatMap((table) => {
       const actual = coveredTable(against, table, schemaName)
       return actual
-        ? refuseTableChanges(
-            table,
-            desired.tables.get(table)!,
-            actual,
-            resolved.migrationsDir,
-            resolved.rootDir
-          )
+        ? [
+            refuseTableChanges(
+              table,
+              desired.tables.get(table)!,
+              actual,
+              resolved.migrationsDir,
+              resolved.rootDir
+            ),
+          ]
         : []
     })
+    return {
+      refusals: compared.flatMap((c) => c.refusals),
+      destructive: compared.flatMap((c) => c.destructive),
+    }
+  }
+  const comparable = (against: SchemaMap): string[] => {
+    const { refusals, destructive } = compare(against)
+    return [...refusals, ...destructive.map((d) => d.what)]
+  }
 
-  refusals.push(...comparable(covered))
+  const compared = compare(covered)
+  refusals.push(...compared.refusals)
+  const destructive: DestructiveChange[] = compared.destructive
   const declaredOnly = new Set(declaredTableNames(declaration).declareOnly)
   for (const table of recorded) {
     if (
@@ -2178,14 +2196,22 @@ export async function planDeclaredTables(
       !declaredOnly.has(table) &&
       coveredTable(covered, table, schemaName)
     ) {
-      refusals.push(
-        `${table} was declared and no longer is. generate never drops or renames a table. Put it back ` +
-          `in ${TABLES_FILE}, or, if the data really is to go or move, a person writes that migration in ` +
-          `${relative(resolved.rootDir, resolved.migrationsDir)} and generate will then agree with it.`
-      )
+      destructive.push({
+        kind: 'dropTable',
+        table,
+        what: `DROP TABLE ${table}: its rows are lost`,
+      })
     }
   }
-  if (refusals.length > 0) return { tables, body: '', refusals }
+  // Nothing is dropped yet: a destructive change is refused, as it was.
+  refusals.push(
+    ...destructive.map(
+      (d) =>
+        `${d.what}. Put it back in ${TABLES_FILE}, or a person writes that migration in ` +
+        `${relative(resolved.rootDir, resolved.migrationsDir)}.`
+    )
+  )
+  if (refusals.length > 0) return { tables, body: '', refusals, destructive }
 
   const { missingTables, missingColumns } = diffSchemas(
     desired.tables,
@@ -2282,8 +2308,9 @@ export async function planDeclaredTables(
       }
     }
   }
-  if (refusals.length > 0) return { tables, body: '', refusals }
-  if (statements.length === 0) return { tables, body: '', refusals }
+  if (refusals.length > 0) return { tables, body: '', refusals, destructive }
+  if (statements.length === 0)
+    return { tables, body: '', refusals, destructive }
 
   const body = statements.join('\n\n')
   const rehearsal = await rehearseMigration(resolved, body, (after) => {
@@ -2298,6 +2325,7 @@ export async function planDeclaredTables(
     tables,
     body: rehearsal.length ? '' : body,
     refusals: rehearsal,
+    destructive,
     notes,
   }
 }

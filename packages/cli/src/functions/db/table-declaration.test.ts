@@ -195,8 +195,8 @@ describe('declared tables on sqlite', () => {
     const { written, refusals } = await generate(resolved)
     assert.deepEqual(written, [])
     assert.equal(refusals.length, 1)
-    assert.match(refusals[0]!, /item\.name is in the migrations/)
-    assert.match(refusals[0]!, /rename to title/)
+    assert.match(refusals[0]!, /DROP COLUMN item\.name/)
+    assert.match(refusals[0]!, /renamedFrom: 'name'/)
     assert.deepEqual(migrations('sqlite'), before)
   })
 
@@ -208,7 +208,7 @@ describe('declared tables on sqlite', () => {
     declare(ITEM)
     const { written, refusals } = await generate(resolved)
     assert.deepEqual(written, [])
-    assert.match(refusals[0]!, /box was declared and no longer is/)
+    assert.match(refusals[0]!, /DROP TABLE box/)
   })
 
   test('accepts the same table once a person has dropped it', async () => {
@@ -571,7 +571,7 @@ describe('declared tables on postgres', () => {
     declare(ITEM)
     const third = await generate(resolved)
     assert.deepEqual(third.written, [])
-    assert.match(third.refusals[0]!, /item\.qty is in the migrations/)
+    assert.match(third.refusals[0]!, /DROP COLUMN item\.qty/)
   })
 
   test('adds a table-level constraint with its column', async () => {
