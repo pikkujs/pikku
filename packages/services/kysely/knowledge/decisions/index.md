@@ -7,6 +7,7 @@ description: How encrypted columns are wrapped, and which key wraps them
 # Decisions
 
 <!-- pikku:knowledge-index -->
+
 - [A console role cannot take a system role's name](a-console-role-cannot-take-a-system-roles-name.md) — createRole refuses any name the store holds as a system role, and asks the pikkuRoles table rather than the declared list, so one name never answers to two roles
 - [A credential with no user is one row per name](a-credential-with-no-user-is-one-row-per-name.md) — The database enforces one app-wide credential per name by indexing COALESCE(user_id, ''), and the service maps a missing user to IS NULL
 - [A lease is taken by one guarded UPDATE](a-lease-is-taken-by-one-guarded-update.md) — Acquire inserts the key's row already lapsed, takes it with a guarded UPDATE, and reads the row back, because that is the one shape that behaves the same on SQLite, Postgres and MySQL
@@ -21,4 +22,6 @@ description: How encrypted columns are wrapped, and which key wraps them
 - [Query spans record operation and table, SQL text is opt-in, parameters are never read](query-spans-record-operation-and-table-sql-text-opt-in-never-parameters.md) — A db span is a driver-wrapper span carrying the operation and first table; statement text is off by default and masked, parameters are never read, and a database error leaves only its class
 - [A declared foreign key restricts unless it says otherwise](a-declared-foreign-key-restricts-unless-it-says-otherwise.md) — compileTables and SchemaContext.references default onDelete to restrict; the framework schemas say cascade explicitly, and dialect mapping stays in the compiler, not the declaration
 - [A declaration emits tables, then indexes, then extra statements](a-declaration-emits-tables-then-indexes-then-extra-statements.md) — compileTables has one statement order for every schema; porting the framework schemas rearranged three of them (agent, virtualUser, credential) and nothing else
+- [The key ledger holds one active and one pending in slot columns](the-key-ledger-holds-one-active-and-one-pending-in-slot-columns.md) — pikku_key keeps one-active and one-pending per name and scope as unique indexes over two nullable slot columns, because MySQL has no partial indexes and the table DSL has no CHECK, so the store keeps status, slots and retired_at together
+
 <!-- /pikku:knowledge-index -->
