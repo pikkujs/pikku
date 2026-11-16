@@ -4,6 +4,7 @@ import { LogLevel, type Logger } from '../services/logger.js'
 import { decodeLogs } from '../testing/otlp-decoder.js'
 import { OtlpHttpExporter } from './otlp-http-exporter.js'
 import { OtlpLogger, scrubText, SCRUB_INPUT_LIMIT } from './otlp-logger.js'
+import { createOtlpSinks, fanOutOtlp } from './otlp-sink.js'
 
 const setup = (options: ConstructorParameters<typeof OtlpLogger>[2] = {}) => {
   const bodies: Uint8Array[] = []
@@ -481,5 +482,63 @@ describe('OtlpLogger', () => {
     logger.info({ message: shapes.hex, blob: shapes.base64 })
     const [record] = await sent()
     assert.ok(record!.attributes.blob !== undefined)
+  })
+})
+
+describe('OtlpLogger with the sink registry', () => {
+  const registrySetup = () => {
+    const registry = createOtlpSinks()
+    const received: string[] = []
+    const sink = {
+      exportSpans: () => {},
+      exportLogs: (records: { body: string }[]) =>
+        void received.push(...records.map((r) => r.body)),
+      exportMetrics: () => {},
+      flush: async () => {},
+      close: async () => {},
+    }
+    const written: string[] = []
+    const inner: Logger = {
+      info: (m: unknown) => void written.push(String(m)),
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+      setLevel: () => {},
+    }
+    const logger = new OtlpLogger(inner, fanOutOtlp(registry))
+    return { registry, sink, received, written, logger }
+  }
+
+  test('does no record work while the registry is empty', () => {
+    const { logger, written, received } = registrySetup()
+    let touched = 0
+    logger.info({
+      get message() {
+        touched++
+        return 'built'
+      },
+    } as never)
+    assert.equal(touched, 0)
+    assert.equal(received.length, 0)
+    assert.equal(written.length, 1)
+  })
+
+  test('logs flow once a sink registers', () => {
+    const { registry, sink, logger, received } = registrySetup()
+    let touched = 0
+    const record = () =>
+      ({
+        get message() {
+          touched++
+          return 'built'
+        },
+      }) as never
+    logger.info(record())
+    assert.equal(touched, 0, 'no record work while the registry is empty')
+    assert.deepEqual(received, [])
+    registry.add(sink as never, { logs: 'all' } as never)
+    logger.info(record())
+    assert.ok(touched > 0, 'record work resumes once a sink registers')
+    assert.deepEqual(received, ['built'])
   })
 })

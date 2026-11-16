@@ -1579,6 +1579,7 @@ describe('runPikkuFunc - scopes', () => {
         { scopes: [], scopesResolvedAt: Date.now() },
         async () => {
           reads++
+          console.log(new Error().stack?.split('\n').slice(1, 5).join('\n'))
           return ['admin']
         }
       )
@@ -1615,6 +1616,7 @@ describe('runPikkuFunc - scopes', () => {
         { scopes: ['admin'], scopesResolvedAt: Date.now() },
         async () => {
           reads++
+          console.log(new Error().stack?.split('\n').slice(1, 5).join('\n'))
           return []
         }
       )
@@ -1627,6 +1629,7 @@ describe('runPikkuFunc - scopes', () => {
       let reads = 0
       const result = await runLive({ scopes: ['admin'] }, async () => {
         reads++
+        console.log(new Error().stack?.split('\n').slice(1, 5).join('\n'))
         return []
       })
       assert.equal(result, 'ok')
@@ -1849,6 +1852,91 @@ describe('runPikkuFunc - secrets', () => {
 
     assert.equal(await run('claimsAnExemption'), 'denied')
     assert.ok(seen.error instanceof SecretAccessDeniedError)
+  })
+})
+
+describe('runPikkuFunc - hot-path services', () => {
+  test('permissions get one cached secretless view of the singleton services across invocations', async () => {
+    const singletons = {
+      ...mockSingletonServices,
+      secrets: { getSecret: async () => 'super-secret' },
+    } as any
+    const seen: any[] = []
+    let secretsError: unknown
+    addTestFunction('permHotPath', {
+      func: async () => 'ok',
+      permissions: {
+        allow: [
+          async (services: any) => {
+            seen.push(services)
+            try {
+              services.secrets
+            } catch (error) {
+              secretsError = error
+            }
+            return true
+          },
+        ],
+      },
+    })
+    const run = () =>
+      runPikkuFunc('rpc', Math.random().toString(), 'permHotPath', {
+        singletonServices: singletons,
+        getAllServices: () => singletons,
+        data: () => ({}),
+        auth: false,
+        wire: {},
+      })
+    await run()
+    await run()
+    assert.equal(seen.length, 2)
+    assert.notEqual(seen[0], singletons)
+    assert.equal(seen[0], seen[1], 'the view is built once, not per call')
+    assert.ok(secretsError instanceof SecretAccessDeniedError)
+  })
+
+  test('the credential wire service is only built when credentials are used', async () => {
+    // Building the service resolves the declared credentials, which lists their keys.
+    let resolved = 0
+    pikkuState(
+      null,
+      'package',
+      'credentialsMeta',
+      new Proxy(
+        {},
+        {
+          ownKeys() {
+            resolved++
+            return []
+          },
+        }
+      ) as any
+    )
+    const singletons = {
+      ...mockSingletonServices,
+      credentialService: {
+        getAll: async () => ({}),
+        get: async () => undefined,
+      },
+    } as any
+    let wireSeen: any
+    addTestFunction('lazyCreds', {
+      func: async (_s: any, _d: any, wire: any) => {
+        wireSeen = wire
+        return 'ok'
+      },
+    })
+    await runPikkuFunc('rpc', Math.random().toString(), 'lazyCreds', {
+      singletonServices: singletons,
+      getAllServices: () => singletons,
+      data: () => ({}),
+      auth: false,
+      wire: {},
+    })
+    assert.equal(typeof wireSeen.getCredentials, 'function')
+    assert.equal(resolved, 0, 'not built when the function never asks')
+    await wireSeen.getCredentials().catch(() => undefined)
+    assert.ok(resolved > 0, 'built on first use')
   })
 })
 

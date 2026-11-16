@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 import { setSingletonServices } from '@pikku/core/state'
 import { resetPikkuState } from '@pikku/core/state'
 import type { Logger } from '@pikku/core/services'
+import { pikkuState } from '@pikku/core/state'
+import { httpRouter, wireHTTP } from '@pikku/core/http'
+import { addFunction } from '@pikku/core/function'
 import { PikkuBunServer } from './pikku-bun-server.js'
 
 const HEALTH = '/__health'
@@ -90,5 +93,104 @@ describe('PikkuBunServer idleTimeout', () => {
 
   test('omits idleTimeout when unset so Bun keeps its default', async () => {
     assert.equal('idleTimeout' in (await serveOptions()), false)
+  })
+})
+
+describe('PikkuBunServer request body read path', () => {
+  let server: PikkuBunServer
+  let origin: string
+
+  before(async () => {
+    resetPikkuState()
+    httpRouter.reset()
+    setSingletonServices({
+      logger: noopLogger,
+      schema: {
+        compileSchema: () => {},
+        getSchemaNames: () => new Set<string>(),
+      },
+    } as any)
+    pikkuState(null, 'package', 'factories', {
+      createWireServices: async () => ({}),
+    } as any)
+    const id = 'echoBody'
+    const func = async (_s: any, data: any) => data
+    pikkuState(null, 'function', 'meta')[id] = {
+      pikkuFuncId: id,
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+    } as any
+    pikkuState(null, 'http', 'meta').post['/echo'] = {
+      pikkuFuncId: id,
+      route: '/echo',
+      method: 'post',
+    } as any
+    addFunction(id, { func })
+    wireHTTP({
+      route: '/echo',
+      method: 'post',
+      auth: false,
+      func: { func } as any,
+    })
+    httpRouter.initialize()
+    server = new PikkuBunServer({ port: 0, hostname: 'localhost' }, noopLogger)
+    await server.init()
+    await server.start()
+    origin = `http://localhost:${server.port}`
+  })
+
+  after(async () => {
+    await server.stop()
+    resetPikkuState()
+  })
+
+  test('a content-length body is read with the native arrayBuffer', async () => {
+    const proto = Request.prototype as any
+    const real = proto.arrayBuffer
+    let native = 0
+    proto.arrayBuffer = function (...args: unknown[]) {
+      native++
+      return real.apply(this, args)
+    }
+    try {
+      const res = await fetch(`${origin}/echo`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ a: 1 }),
+      })
+      assert.equal(res.status, 200)
+      assert.deepEqual(await res.json(), { a: 1 })
+    } finally {
+      proto.arrayBuffer = real
+    }
+    assert.ok(native >= 1, 'the Bun server never used the native body read')
+  })
+
+  test('a configured maxBodySize refuses a larger body with 413', async () => {
+    const limited = new PikkuBunServer(
+      { port: 0, hostname: 'localhost' },
+      noopLogger,
+      { maxBodySize: 16 }
+    )
+    await limited.init()
+    await limited.start()
+    try {
+      const url = `http://localhost:${limited.port}/echo`
+      const small = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ a: 1 }),
+      })
+      assert.equal(small.status, 200)
+      const large = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ a: 'x'.repeat(64) }),
+      })
+      assert.equal(large.status, 413)
+    } finally {
+      await limited.stop()
+    }
   })
 })

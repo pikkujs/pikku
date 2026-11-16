@@ -9,7 +9,7 @@ import {
   wrapChannelWithMiddleware,
 } from '../channel-middleware-runner.js'
 import { runPermissions, type PermissionWire } from '../permissions.js'
-import { withoutSecrets } from '../services/secretless.js'
+import { secretlessView, withoutSecrets } from '../services/secretless.js'
 import {
   traceQueueService,
   traceSchedulerService,
@@ -47,6 +47,7 @@ import { verifyScopes, withLiveScopes } from '../scopes.js'
 import { assertFeatureAvailable } from '../wirings/flag/assert-feature-available.js'
 import {
   PikkuCredentialWireService,
+  createLazyCredentialWireProps,
   createWireServicesCredentialWireProps,
 } from '../services/credential-wire-service.js'
 import {
@@ -388,22 +389,24 @@ export const runPikkuFunc = async <In = any, Out = any>(
       createWireServicesCredentialWireProps(aliasedCredentialWireService)
     )
   } else if (!resolvedWire.getCredentials) {
-    const resolvedCredentialWireService =
-      credentialWireService ??
-      new PikkuCredentialWireService(
-        resolvedSingletonServices.credentialService,
-        resolvedWire,
-        undefined,
-        {
-          resolutions: buildCredentialResolutions(
-            declaredCredentials,
-            undefined
-          ),
-        }
-      )
     Object.assign(
       resolvedWire,
-      createWireServicesCredentialWireProps(resolvedCredentialWireService)
+      credentialWireService
+        ? createWireServicesCredentialWireProps(credentialWireService)
+        : createLazyCredentialWireProps(
+            () =>
+              new PikkuCredentialWireService(
+                resolvedSingletonServices.credentialService,
+                resolvedWire,
+                undefined,
+                {
+                  resolutions: buildCredentialResolutions(
+                    declaredCredentials,
+                    undefined
+                  ),
+                }
+              )
+          )
     )
   }
 
@@ -583,7 +586,7 @@ export const runPikkuFunc = async <In = any, Out = any>(
 
     await runPermissions({
       funcPermissions: funcConfig.permissions,
-      services: withoutSecrets(
+      services: secretlessView(
         resolvedSingletonServices,
         'a permission'
       ) as CoreSingletonServices,

@@ -3,6 +3,7 @@ import assert from 'node:assert'
 import {
   PikkuCredentialWireService,
   createMiddlewareCredentialWireProps,
+  createLazyCredentialWireProps,
   createWireServicesCredentialWireProps,
 } from './credential-wire-service.js'
 import type { CredentialService } from './credential-service.js'
@@ -333,5 +334,44 @@ describe('PikkuCredentialWireService type-driven resolution', () => {
     assert.deepStrictEqual(await service.get('gmailOAuth'), {
       accessToken: 'from-middleware',
     })
+  })
+})
+
+describe('createLazyCredentialWireProps', () => {
+  test('builds nothing until a credential accessor is used, and builds once', async () => {
+    let built = 0
+    const props = createLazyCredentialWireProps(() => {
+      built++
+      return new PikkuCredentialWireService(
+        mockCredentialService({ stripe: 'sk' })
+      )
+    })
+    assert.equal(built, 0)
+    assert.equal(typeof props.getCredential, 'function')
+    assert.equal(typeof props.getCredentials, 'function')
+    assert.equal(typeof props.setCredential, 'function')
+    assert.equal(built, 0)
+    props.setCredential('github', 'ghp')
+    assert.equal(await props.getCredential('github'), 'ghp')
+    assert.equal(built, 1)
+  })
+
+  test('a credential set before it is read is the one the function sees', async () => {
+    const props = createLazyCredentialWireProps(
+      () => new PikkuCredentialWireService()
+    )
+    props.setCredential('a', 1)
+    assert.deepEqual(await props.getCredentials(), { a: 1 })
+  })
+
+  test('behaves like the eager props for the same service', async () => {
+    const make = () =>
+      new PikkuCredentialWireService(mockCredentialService({ x: 'y' }), {
+        pikkuUserId: 'u1',
+      } as PikkuWire)
+    const eager = createWireServicesCredentialWireProps(make())
+    const lazy = createLazyCredentialWireProps(make)
+    assert.deepEqual(await lazy.getCredentials(), await eager.getCredentials())
+    assert.equal(await lazy.getCredential('x'), await eager.getCredential('x'))
   })
 })

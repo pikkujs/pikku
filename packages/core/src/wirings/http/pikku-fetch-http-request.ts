@@ -10,9 +10,18 @@ import { mergeRequestData } from './merge-request-data.js'
 /** The request body limit, in bytes (10 MiB), applied when a web `Request` is wrapped and no `maxBodySize` is given. A larger body is refused with a 413 before it is fully read. */
 export const DEFAULT_MAX_BODY_SIZE = 10 * 1024 * 1024
 
+const DIGITS = /^\d+$/
+
 export type PikkuFetchHTTPRequestOptions = Partial<{
   /** Maximum request body size in bytes. Defaults to {@link DEFAULT_MAX_BODY_SIZE}. */
   maxBodySize: number
+  /**
+   * The runtime's HTTP parser has already enforced body framing, so a request
+   * with a plain numeric `content-length` and no `transfer-encoding` may be read
+   * with the native `arrayBuffer()` instead of the bounded reader. Defaults to
+   * false; only set it for a server that is known to do that (Bun's).
+   */
+  trustedFraming: boolean
 }>
 
 /**
@@ -28,11 +37,16 @@ export class PikkuFetchHTTPRequest<
   #rawBodyBuffer: ArrayBuffer | undefined
   #rawBufferPromise: Promise<ArrayBuffer> | undefined
   #maxBodySize: number
+  #trustedFraming: boolean
 
   constructor(
     private request: Request,
-    { maxBodySize = DEFAULT_MAX_BODY_SIZE }: PikkuFetchHTTPRequestOptions = {}
+    {
+      maxBodySize = DEFAULT_MAX_BODY_SIZE,
+      trustedFraming = false,
+    }: PikkuFetchHTTPRequestOptions = {}
   ) {
+    this.#trustedFraming = trustedFraming
     this.#url = new URL(request.url)
     this.#maxBodySize = maxBodySize
   }
@@ -81,11 +95,24 @@ export class PikkuFetchHTTPRequest<
   }
 
   async #readBoundedBuffer(): Promise<ArrayBuffer> {
-    const contentLength = this.request.headers.get('content-length')
+    const headers = this.request.headers
+    const contentLength = headers.get('content-length')
     if (contentLength !== null) {
       const declaredSize = Number(contentLength)
       if (Number.isFinite(declaredSize) && declaredSize > this.#maxBodySize) {
         throw this.#payloadTooLarge()
+      }
+      // knowledge: decisions/internals/the-body-fast-path-relies-on-the-bun-parser-framing.md
+      if (
+        this.#trustedFraming &&
+        DIGITS.test(contentLength) &&
+        !headers.has('transfer-encoding')
+      ) {
+        const buffer = await this.request.arrayBuffer()
+        if (buffer.byteLength > this.#maxBodySize) {
+          throw this.#payloadTooLarge()
+        }
+        return buffer
       }
     }
 

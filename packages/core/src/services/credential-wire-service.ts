@@ -177,3 +177,16 @@ export function createWireServicesCredentialWireProps(
         : credentialWire.getAll(),
   }
 }
+
+/** {@link createWireServicesCredentialWireProps} over a service built the first time one of its accessors is used. */
+export function createLazyCredentialWireProps(
+  create: () => PikkuCredentialWireService
+) {
+  let service: PikkuCredentialWireService | undefined
+  const resolve = () => (service ??= create())
+  return {
+    setCredential: (name: string, value: unknown) => resolve().set(name, value),
+    getCredential: <T = unknown>(name: string) => resolve().get<T>(name),
+    getCredentials: () => resolve().getAll(),
+  }
+}
