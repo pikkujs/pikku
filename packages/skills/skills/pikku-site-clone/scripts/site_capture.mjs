@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // site_capture.mjs: capture and compare the reference of a website you are cloning, from the RENDERED page.
 //   node site_capture.mjs pages <root-url>                          page list: sitemap(s), else internal links
-//   node site_capture.mjs capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file-with-urls> ...
+//   node site_capture.mjs capture <out-dir> [--viewports 1440,390,1920] [--tiles] [--jobs 4] <url|@file-with-urls> ...
 //   node site_capture.mjs shot <out-dir> <url> [--width 1440]       one page, one width: screenshot + tiles, quick (use after each change)
 //   node site_capture.mjs compare <reference-dir> <clone-dir> [--page id] [--width 1440]
 //                                                                   section-by-section differences (columns, pictures, height) and a match score
@@ -112,32 +112,58 @@ async function launch(out) {
   })
 }
 
-async function capture(out, urls, vps, tiles) {
+/**
+ * "Ready" for a screenshot is not the network going quiet (a Wix page never stops asking). It is: the page has loaded,
+ * the fonts are in, the lazy pictures have loaded and decoded, and the page has stopped changing height. Each wait has a cap.
+ */
+async function settle(page) {
+  await page.evaluate(async () => {
+    const cap = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))])
+    await cap(document.fonts.ready, 5000)
+    for (let y = 0; y < document.body.scrollHeight; y += 700) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 120)) }
+    await cap(Promise.all([...document.images].map((img) => img.decode().catch(() => {}))), 8000)
+    scrollTo(0, 0)
+    let last = -1
+    for (let i = 0; i < 20; i++) {
+      const h = document.body.scrollHeight
+      if (h === last) break
+      last = h
+      await new Promise((r) => setTimeout(r, 300))
+    }
+  })
+}
+
+async function capturePage(browser, out, entry, vps, tiles) {
+  const [url, idOverride] = entry.split('|')   // `url|id` names the page's id (a clone whose paths differ from the original's)
+  const id = idOverride || idOf(url); const rec = { id, url, viewports: {} }
+  try { writeFileSync(join(out, `${id}.html`), await (await fetch(url, { headers: { 'user-agent': UA } })).text()) } catch {}
+  for (const w of vps) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, userAgent: UA, deviceScaleFactor: 1, isMobile: w < 600 })
+    const page = await ctx.newPage()
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout: 45000 }).catch(() => {})
+      await settle(page).catch(() => {})
+      const layout = await page.evaluate(extractInPage)
+      writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
+      if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
+      await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80 })
+      rec.viewports[w] = layout.counts
+      if (tiles) makeTiles(join(out, `${id}-${w}.jpg`), join(out, 'small'), `${id}-${w}`, w)
+    } catch (e) { rec.viewports[w] = { error: String(e).slice(0, 120) } }
+    await ctx.close()
+  }
+  console.log(id, JSON.stringify(rec.viewports))
+  return rec
+}
+
+/** Pages are independent, so `jobs` of them are captured at once (default 4); the index keeps the order of the list. */
+async function capture(out, urls, vps, tiles, jobs = 4) {
   mkdirSync(out, { recursive: true })
   const browser = await launch(out)
-  const index = []
-  for (const entry of urls) {
-    const [url, idOverride] = entry.split('|')   // `url|id` names the page's id (a clone whose paths differ from the original's)
-    const id = idOverride || idOf(url); const rec = { id, url, viewports: {} }
-    try { writeFileSync(join(out, `${id}.html`), await (await fetch(url, { headers: { 'user-agent': UA } })).text()) } catch {}
-    for (const w of vps) {
-      const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, userAgent: UA, deviceScaleFactor: 1, isMobile: w < 600 })
-      const page = await ctx.newPage()
-      try {
-        await page.goto(url, { waitUntil: 'networkidle', timeout: 90000 }).catch(() => {})
-        // scroll through the page so lazy pictures load, then back to the top
-        await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 700) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 120)) } scrollTo(0, 0); await new Promise((r) => setTimeout(r, 400)) })
-        const layout = await page.evaluate(extractInPage)
-        writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
-        if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
-        await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80 })
-        rec.viewports[w] = layout.counts
-        if (tiles) makeTiles(join(out, `${id}-${w}.jpg`), join(out, 'small'), `${id}-${w}`, w)
-      } catch (e) { rec.viewports[w] = { error: String(e).slice(0, 120) } }
-      await ctx.close()
-    }
-    index.push(rec); console.log(id, JSON.stringify(rec.viewports))
-  }
+  const index = new Array(urls.length)
+  let next = 0
+  const worker = async () => { while (next < urls.length) { const i = next++; index[i] = await capturePage(browser, out, urls[i], vps, tiles) } }
+  await Promise.all(Array.from({ length: Math.min(jobs, urls.length) }, worker))
   await browser.close()
   writeFileSync(join(out, 'index.json'), JSON.stringify(index, null, 1))
 }
@@ -250,9 +276,9 @@ const [cmd, ...rest] = process.argv.slice(2)
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
   if (cmd === 'pages') await pages(rest[0])
   else if (cmd === 'capture') {
-    const out = rest.shift(); let vps = [1440, 390, 1920], tiles = false, urls = []
-    while (rest.length) { const a = rest.shift(); if (a === '--viewports') vps = rest.shift().split(',').map(Number); else if (a === '--tiles') tiles = true; else if (a.startsWith('@')) urls.push(...readFileSync(a.slice(1), 'utf8').split(/\s+/).filter(Boolean)); else urls.push(a) }
-    await capture(out, urls, vps, tiles)
+    const out = rest.shift(); let vps = [1440, 390, 1920], tiles = false, jobs = 4, urls = []
+    while (rest.length) { const a = rest.shift(); if (a === '--viewports') vps = rest.shift().split(',').map(Number); else if (a === '--tiles') tiles = true; else if (a === '--jobs') jobs = Math.max(1, Number(rest.shift()) || 4); else if (a.startsWith('@')) urls.push(...readFileSync(a.slice(1), 'utf8').split(/\s+/).filter(Boolean)); else urls.push(a) }
+    await capture(out, urls, vps, tiles, jobs)
   } else if (cmd === 'compare') {
     let only = null, width = null; const pos = []
     for (let k = 0; k < rest.length; k++) { if (rest[k] === '--page') only = rest[++k]; else if (rest[k] === '--width') width = rest[++k]; else pos.push(rest[k]) }
