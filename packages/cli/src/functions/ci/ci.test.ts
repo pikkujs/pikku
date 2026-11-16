@@ -569,6 +569,20 @@ describe('worktreeOwnsConfiguredDatabase', () => {
     })
   })
 
+  test('a default that stood in for a config that would not load owns nothing', async () => {
+    const config = project(`throw new Error('not installed yet')\n`)
+    mkdirSync(join(dir, 'db', 'sqlite'), { recursive: true })
+    assert.equal(
+      await worktreeOwnsConfiguredDatabase(
+        config,
+        logger,
+        dir,
+        join(dir, '.pikku')
+      ),
+      false
+    )
+  })
+
   test('a config that cannot be loaded is not known to be disposable', async () => {
     const config = project(`throw new Error('boom')\n`)
     assert.equal(

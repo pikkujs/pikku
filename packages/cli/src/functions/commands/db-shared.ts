@@ -14,6 +14,8 @@ export interface UserConfigShape {
 interface LoadOptions {
   config: { rootDir: string; srcDirectories: string[] }
   logger: { error: (msg: string) => void; warn: (msg: string) => void }
+  /** Called when the config could not be read and a default stood in for it. */
+  onFallback?: () => void
 }
 
 function findUserConfigFactoryFile(
@@ -46,6 +48,7 @@ export async function loadUserConfigForDb(
     hasSqliteDbAssets || hasPostgresDbAssets || hasMysqlDbAssets
 
   const getFallbackConfig = (): UserConfigShape | null => {
+    options.onFallback?.()
     if (hasSqliteDbAssets) return { sqliteDb: '.pikku-runtime/dev.db' }
     if (hasPostgresDbAssets || hasMysqlDbAssets) return {}
     return null

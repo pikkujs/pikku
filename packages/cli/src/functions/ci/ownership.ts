@@ -32,9 +32,19 @@ export const worktreeOwnsConfiguredDatabase = async (
   try {
     // From the worktree's own copy of the config, which is what runs there.
     const inTree = { ...config, rootDir: dir }
-    const userConfig = await loadUserConfigForDb({ config: inTree, logger })
+    // A config that stood in for one that would not load (it may load once the
+    // install has run, and name another database) is not one that was read.
+    let fellBack = false
+    const userConfig = await loadUserConfigForDb({
+      config: inTree,
+      logger,
+      onFallback: () => {
+        fellBack = true
+      },
+    })
     return (
       !!userConfig &&
+      !fellBack &&
       worktreeOwnsDatabase(
         resolveDb(userConfig, dir, outDir, config.runtimeDir, config.db),
         dir
