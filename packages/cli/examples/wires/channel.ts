@@ -32,12 +32,12 @@ export const onTodoDisconnect = pikkuChannelDisconnectionFunc(
 //~ throws, nothing is subscribed. Add `scopes`/`permissions` to gate a topic.
 //~ The second generic is the topic's SHAPE; publishers are checked against it.
 //~ There is no unsubscribe: a channel leaves its topics on disconnect.
-export const subscribeTodo = pikkuSubscribeFunc<{ list: string }, `todos:${string}`>(
-  async ({ logger }, { list }, { channel }) => {
-    logger.info(`${channel.channelId} subscribing to todos:${list}`)
+export const subscribeTodo = pikkuSubscribeFunc<{ list: string }, `todos:${string}`>({
+  func: async ({ logger }, { list }) => {
+    logger.info(`subscribing to todos:${list}`)
     return `todos:${list}`
   },
-)
+})
 
 // ===== FILE: packages/functions/src/wires/channel/todos-live.channel.ts =====
 import { wireChannel } from '#pikku/channel'

@@ -48,7 +48,11 @@ export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
             : 'db reset: cleared non-system Postgres schemas'
     )
 
-    const { migrate, codegen, zod } = await migrateAndCodegen(resolved)
+    const { migrate, codegen, zod } = await migrateAndCodegen(
+      resolved,
+      // Reset has just emptied the database, so there are no rows to rewrite.
+      { allowDestructive: true }
+    )
     for (const warning of codegen.warnings) {
       logger.diagnostic(warning)
     }

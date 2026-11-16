@@ -234,6 +234,10 @@ export interface SerializableInspectorState {
     definitions: InspectorState['credentials']['definitions']
     files: string[]
   }
+  keyPairs: {
+    definitions: InspectorState['keyPairs']['definitions']
+    files: string[]
+  }
   scopes: {
     definitions: InspectorState['scopes']['definitions']
     files: string[]
@@ -491,6 +495,10 @@ export function serializeInspectorState(
       definitions: state.credentials.definitions,
       files: Array.from(state.credentials.files),
     },
+    keyPairs: {
+      definitions: state.keyPairs.definitions,
+      files: Array.from(state.keyPairs.files),
+    },
     scopes: {
       definitions: state.scopes.definitions,
       files: Array.from(state.scopes.files),
@@ -726,6 +734,10 @@ export function deserializeInspectorState(
     credentials: {
       definitions: data.credentials?.definitions || [],
       files: new Set(data.credentials?.files || []),
+    },
+    keyPairs: {
+      definitions: data.keyPairs?.definitions || [],
+      files: new Set(data.keyPairs?.files || []),
     },
     scopes: {
       definitions: data.scopes?.definitions || [],

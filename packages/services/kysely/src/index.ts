@@ -95,6 +95,7 @@ export {
   requirePikkuSchema,
   resolveRequirements,
   withUserTable,
+  checkName,
   compileTables,
   tableRequirements,
   type PikkuSchema,

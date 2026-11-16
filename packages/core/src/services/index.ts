@@ -107,6 +107,9 @@ export {
   type VirtualUserStatementVerifier,
 } from './virtual-user-statement.js'
 export {
+  base64ToBytes,
+  bytesToBase64,
+  spkiToDer,
   VIRTUAL_USER_VERIFY_KEYS_MAX,
   okpThumbprint,
   rsaThumbprint,

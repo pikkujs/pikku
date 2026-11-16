@@ -24,6 +24,9 @@ export const VIRTUAL_USER_VERIFY_KEYS_MAX = 4
 // SubjectPublicKeyInfo of an Ed25519 key: this 12-byte prefix, then the 32-byte key.
 const ED25519_SPKI_PREFIX = '302a300506032b6570032100'
 const ED25519_SPKI_LENGTH = 44
+// The same layout for X25519 (OID 1.3.101.110): key pairs of purpose sealing
+// are named by the same RFC 7638 OKP thumbprint, with crv X25519.
+const X25519_SPKI_PREFIX = '302a300506032b656e032100'
 
 const fail = (message: string): never => {
   throw new VirtualUserStatementError(
@@ -31,64 +34,56 @@ const fail = (message: string): never => {
   )
 }
 
-const toBytes = (base64: string): Uint8Array =>
-  Uint8Array.from(atob(base64), (c) => c.charCodeAt(0))
+import { base64ToBytes, bytesToBase64, spkiToDer } from '../utils/base64.js'
 
-const toBase64 = (bytes: Uint8Array, url = false): string => {
-  const base64 = btoa(String.fromCharCode(...bytes))
-  return url
-    ? base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-    : base64
-}
+export { base64ToBytes, bytesToBase64, spkiToDer }
 
 const hex = (bytes: Uint8Array) =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 
-/** An SPKI PEM, or bare base64 DER, to its DER bytes. Throws if it is neither. */
 const spkiBytes = (publicKey: string): Uint8Array => {
-  const text = publicKey
-    .trim()
-    .replace(/\\n/g, '\n')
-    .replace(/-----(BEGIN|END) PUBLIC KEY-----/g, '')
-    .replace(/\s+/g, '')
-  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(text)) {
-    return fail('a public key is not valid base64 SPKI')
-  }
   try {
-    return toBytes(text)
+    return spkiToDer(publicKey)
   } catch {
     return fail('a public key is not valid base64 SPKI')
   }
 }
 
 /** An Ed25519 SPKI, PEM or bare base64 DER, to base64 DER on one line. */
-const spkiBase64 = (publicKey: string): string => {
+const spkiBase64 = (
+  publicKey: string,
+  prefixes: string[] = [ED25519_SPKI_PREFIX]
+): string => {
   const bytes = spkiBytes(publicKey)
   if (
     bytes.length !== ED25519_SPKI_LENGTH ||
-    hex(bytes.subarray(0, 12)) !== ED25519_SPKI_PREFIX
+    !prefixes.includes(hex(bytes.subarray(0, 12)))
   ) {
     return fail('a public key is not an Ed25519 SPKI key')
   }
-  return toBase64(bytes)
+  return bytesToBase64(bytes)
 }
 
 /**
- * The RFC 7638 JWK thumbprint of an Ed25519 public key: the SHA-256 of
- * `{"crv":"Ed25519","kty":"OKP","x":"..."}` (members in canonical order),
+ * The RFC 7638 JWK thumbprint of an Ed25519 or X25519 public key: the SHA-256
+ * of `{"crv":"Ed25519","kty":"OKP","x":"..."}` (members in canonical order),
  * base64url. Async because core only has WebCrypto digests.
  *
- * `spki` is a PEM or base64 DER; anything but an Ed25519 SPKI throws.
+ * `spki` is a PEM or base64 DER; anything but an Ed25519 or X25519 SPKI throws.
  */
 export const okpThumbprint = async (spki: string): Promise<string> => {
-  const bytes = toBytes(spkiBase64(spki))
-  const x = toBase64(bytes.subarray(12), true)
-  const canonical = `{"crv":"Ed25519","kty":"OKP","x":"${x}"}`
+  const bytes = base64ToBytes(
+    spkiBase64(spki, [ED25519_SPKI_PREFIX, X25519_SPKI_PREFIX])
+  )
+  const crv =
+    hex(bytes.subarray(0, 12)) === X25519_SPKI_PREFIX ? 'X25519' : 'Ed25519'
+  const x = bytesToBase64(bytes.subarray(12), true)
+  const canonical = `{"crv":"${crv}","kty":"OKP","x":"${x}"}`
   const digest = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(canonical)
   )
-  return toBase64(new Uint8Array(digest), true)
+  return bytesToBase64(new Uint8Array(digest), true)
 }
 
 /**
@@ -116,7 +111,7 @@ export const rsaThumbprint = async (spki: string): Promise<string> => {
     'SHA-256',
     new TextEncoder().encode(canonical)
   )
-  return toBase64(new Uint8Array(digest), true)
+  return bytesToBase64(new Uint8Array(digest), true)
 }
 
 /**

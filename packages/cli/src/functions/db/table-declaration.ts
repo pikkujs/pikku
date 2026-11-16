@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type {
   ColumnAnnotation,
+  ColumnConstraints,
   ColumnType,
   TableAnnotations,
   TablesDeclaration,
@@ -54,8 +55,19 @@ const ALLOWED_VALUES: Record<
   description: 'string',
 }
 
+/** The constraint fields of a column, which the sidecar carries beside its annotations. */
+const CONSTRAINT_FIELDS = new Set<string>([
+  'enum',
+  'min',
+  'max',
+  'minLength',
+  'maxLength',
+  'pattern',
+])
+
 /** The column fields that are not annotations. */
 const COLUMN_FIELDS = new Set([
+  ...CONSTRAINT_FIELDS,
   'type',
   'required',
   'default',
@@ -64,12 +76,6 @@ const COLUMN_FIELDS = new Set([
   'index',
   'references',
   'onDelete',
-  'enum',
-  'min',
-  'max',
-  'minLength',
-  'maxLength',
-  'pattern',
 ])
 
 const TABLE_FIELDS = new Set([
@@ -111,15 +117,20 @@ function columnProblems(at: string, column: Record<string, unknown>): string[] {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-/** The annotation fields of a column, without its shape. */
+/**
+ * What a column says about itself beyond its shape: its annotations and its
+ * constraints, which is what the codegen and the console read from the sidecar.
+ */
 export const annotationOf = (
   column: Record<string, unknown>
-): ColumnAnnotation =>
+): ColumnAnnotation & ColumnConstraints =>
   Object.fromEntries(
     Object.entries(column).filter(
-      ([field, value]) => field in ALLOWED_VALUES && value !== undefined
+      ([field, value]) =>
+        (field in ALLOWED_VALUES || CONSTRAINT_FIELDS.has(field)) &&
+        value !== undefined
     )
-  ) as ColumnAnnotation
+  ) as ColumnAnnotation & ColumnConstraints
 
 /**
  * Read `db/tables.ts`, or `null` when the project declares nothing. A
@@ -172,7 +183,7 @@ export async function loadTableDeclaration(
         problems.push(`${table} has an unknown field '${field}'`)
       }
     }
-    const physical: Record<string, ColumnAnnotation> = {}
+    const physical: TableAnnotations[string] = {}
     for (const [column, entry] of Object.entries(declaration.columns)) {
       if (!isObject(entry)) {
         problems.push(`${table}.${column} must be an object`)

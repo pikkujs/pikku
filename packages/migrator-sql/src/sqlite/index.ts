@@ -2,6 +2,7 @@ export {
   SqliteMigrationExecutor,
   dropTrackingTable,
 } from './sqlite-migrator.js'
+export { splitSqliteStatements } from './sqlite-statements.js'
 export { loadSqliteRuntime } from './sqlite-runtime.js'
 export type {
   SqliteOpenOptions,

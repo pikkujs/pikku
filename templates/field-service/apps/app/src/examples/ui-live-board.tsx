@@ -9,7 +9,8 @@
 //~ The event invalidates; it does not carry the row. That is the whole trick. A push that
 //~ patches the cache directly needs the payload to match the query's shape forever, and it
 //~ drifts the first time the backend adds a field — whereas invalidating makes the server
-//~ the single source of truth and costs one cheap refetch. Topics are plain strings.
+//~ the single source of truth and costs one cheap refetch. The client names no topic: the
+//~ route is a pikkuSubscribeFunc, and the server derives the board from the session.
 // ===== FILE: src/components/live-board.tsx =====
 import { useEffect } from 'react'
 import { usePikkuRealtime } from '@pikku/react'
@@ -17,21 +18,22 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { PikkuRealtime } from '@sdk/api/pikku-realtime.gen.js'
 import { usePikkuQuery } from '@sdk/api/pikku-react-query.gen'
 
-export const LiveBoard = ({ companyId }: { companyId: string }) => {
+export const LiveBoard = () => {
   const realtime = usePikkuRealtime<PikkuRealtime>()
   const queryClient = useQueryClient()
   const jobs = usePikkuQuery('listJobs', {})
 
   useEffect(() => {
-    //~ `subscribe` returns its own unsubscribe, so the effect's cleanup is the
-    //~ return value verbatim. Forgetting it leaks a handler per mount, which is
-    //~ how a board ends up refetching six times per event.
-    return realtime.subscribe(`board:${companyId}`, () => {
-      // Not awaited: the subscriber callback is synchronous. A failed refetch
-      // surfaces through the query's own error state, so nothing is lost.
+    //~ `subscribeToSSE` returns a handle, so the effect's cleanup closes it.
+    //~ Forgetting that leaks a stream per mount, which is how a board ends up
+    //~ refetching six times per event.
+    const stream = realtime.subscribeToSSE('/board/events', () => {
+      // Not awaited: the handler is synchronous. A failed refetch surfaces
+      // through the query's own error state, so nothing is lost.
       void queryClient.invalidateQueries({ queryKey: ['listJobs'] })
     })
-  }, [realtime, queryClient, companyId])
+    return () => stream.close()
+  }, [realtime, queryClient])
 
   return (
     <ul>

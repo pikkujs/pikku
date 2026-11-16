@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { createPublicKey, generateKeyPairSync } from 'node:crypto'
+import { createHash, createPublicKey, generateKeyPairSync } from 'node:crypto'
 
 import {
   okpThumbprint,
   rsaThumbprint,
   parseVirtualUserVerifyKeys,
+  spkiToDer,
+  base64ToBytes,
+  bytesToBase64,
 } from './virtual-user-verify-keys.js'
 
 const spki = () =>
@@ -40,6 +43,40 @@ describe('okpThumbprint', () => {
       .toString('base64')
     await assert.rejects(okpThumbprint(rsa), /Ed25519/)
     await assert.rejects(okpThumbprint('not base64!'), /base64/)
+  })
+})
+
+describe('okpThumbprint for X25519 (sealing keys)', () => {
+  test('is the RFC 7638 thumbprint with crv X25519, as node computes it', async () => {
+    const { publicKey } = generateKeyPairSync('x25519')
+    const jwk = publicKey.export({ format: 'jwk' }) as { x: string }
+    const canonical = `{"crv":"X25519","kty":"OKP","x":"${jwk.x}"}`
+    const expected = createHash('sha256').update(canonical).digest('base64url')
+    const b64 = publicKey
+      .export({ format: 'der', type: 'spki' })
+      .toString('base64')
+    assert.equal(await okpThumbprint(b64), expected)
+  })
+
+  test('is not the thumbprint of an Ed25519 key with the same bytes', async () => {
+    const { publicKey } = generateKeyPairSync('x25519')
+    const der = publicKey.export({ format: 'der', type: 'spki' })
+    const asEd = Buffer.concat([
+      Buffer.from('302a300506032b6570032100', 'hex'),
+      der.subarray(12),
+    ]).toString('base64')
+    assert.notEqual(
+      await okpThumbprint(der.toString('base64')),
+      await okpThumbprint(asEd)
+    )
+  })
+
+  test('parseVirtualUserVerifyKeys still refuses an X25519 key', () => {
+    const { publicKey } = generateKeyPairSync('x25519')
+    const b64 = publicKey
+      .export({ format: 'der', type: 'spki' })
+      .toString('base64')
+    assert.throws(() => parseVirtualUserVerifyKeys(b64), /Ed25519/)
   })
 })
 
@@ -162,5 +199,23 @@ describe('parseVirtualUserVerifyKeys', () => {
         ),
       /Ed25519/
     )
+  })
+})
+
+describe('spkiToDer and the base64 helpers', () => {
+  test('PEM, escaped PEM and bare base64 give the same DER; junk throws', () => {
+    const key = generateKeyPairSync('ed25519').publicKey
+    const der = key.export({ format: 'der', type: 'spki' })
+    const pem = key.export({ format: 'pem', type: 'spki' }) as string
+    assert.deepEqual(Buffer.from(spkiToDer(pem)), der)
+    assert.deepEqual(Buffer.from(spkiToDer(pem.replace(/\n/g, '\\n'))), der)
+    assert.deepEqual(Buffer.from(spkiToDer(der.toString('base64'))), der)
+    assert.throws(() => spkiToDer('not a key!'))
+  })
+
+  test('bytesToBase64 and base64ToBytes round trip, url form is unpadded', () => {
+    const bytes = Uint8Array.from([251, 255, 0, 1])
+    assert.deepEqual(base64ToBytes(bytesToBase64(bytes)), bytes)
+    assert.equal(bytesToBase64(bytes, true), '-_8AAQ')
   })
 })

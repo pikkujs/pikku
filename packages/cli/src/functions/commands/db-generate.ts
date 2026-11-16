@@ -1,6 +1,11 @@
 import { CLIError } from '@pikku/core/cli'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { resolveDb, generateMigrations } from '../db/local-db.js'
+import {
+  resolveDb,
+  generateMigrations,
+  declaredSqliteConstraintNotice,
+} from '../db/local-db.js'
+import { SQLITE_UNENFORCED_RULE } from '../db/sqlite-constraint-notice.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbGenerate = pikkuSessionlessFunc<{}, void>({
@@ -69,6 +74,11 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
     }
     if (written.length > 0) {
       logger.info('  Review them, then run `pikku db migrate` to apply.')
+    }
+
+    if (config.validate?.rules?.[SQLITE_UNENFORCED_RULE] !== 'off') {
+      const notice = await declaredSqliteConstraintNotice(resolved)
+      if (notice) logger.warn(`db generate: ${notice}`)
     }
 
     if (refusals.length > 0) {

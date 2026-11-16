@@ -65,6 +65,7 @@ const (
 	DbDefaultSchemaNameCollision      Code = "PKU485"
 	DbPiiNameNotAnnotated             Code = "PKU486"
 	DbSecretNameNotAnnotated          Code = "PKU487"
+	DbEnumDeclarationMismatch         Code = "PKU488"
 	SchemaGenerationError             Code = "PKU456"
 	SchemaReferenceUnresolved         Code = "PKU463"
 	InlineSchema                      Code = "PKU489"

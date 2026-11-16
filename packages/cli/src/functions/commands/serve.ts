@@ -48,7 +48,7 @@ import { resolveProjectVersion } from '../../deploy/build-pipeline.js'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
 import { createAnalyticsSinks } from '@pikku/core/analytics'
-import { installEventHubDistributor } from '../../utils/host-event-hub.js'
+import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 
 export const serve = pikkuSessionlessFunc<
   { port?: string; model?: string; backend?: string },
