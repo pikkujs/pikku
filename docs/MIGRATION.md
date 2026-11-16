@@ -51,6 +51,12 @@ Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, befor
 
 **Find the code:** search for `analyticsService`, `AnalyticsSink` and `accepts`.
 
+### `pikku db generate` writes drops and renames
+
+A column or a table that left `db/tables.ts` used to be refused. It is now written as `DROP COLUMN` / `DROP TABLE` behind a `-- pikku:destructive` line, once a person approves: `generate` asks on a terminal, and elsewhere refuses until `pikku db generate --allowDestructive` is given. `pikku db migrate` stops on the marked file until it is given `--allowDestructive` too. Only a table a previous `generate` recorded is dropped. A drop the engine will not do (a column a `UNIQUE` key holds on sqlite, a table another table references) is still refused, with the engine's reason; there is no `CASCADE`.
+
+To keep a column's rows through a rename, declare the column under the new name with `renamedFrom: 'old_name'`; `generate` writes `RENAME COLUMN` and needs no approval. Delete `renamedFrom` once the migration is applied. A table rename is not supported: it is a drop and a create. Changing an existing column's type or making it `NOT NULL` is still refused.
+
 ### Better Auth's tables and the runtime's secret columns come annotated
 
 `pikku db migrate` now gives the tables `pikku db generate` created for Better Auth (`user`, `session`, `account`, `verification`) and for the runtime (`secrets`, `credentials`) built-in column annotations, with or without a `db/tables.ts`. A table of your own that merely shares a name is untouched.

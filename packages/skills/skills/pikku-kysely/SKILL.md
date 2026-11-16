@@ -294,10 +294,17 @@ pikku db migrate    # applies it and regenerates the types
   old `statements` shape is refused.
 - **Change a table by editing its entry** in place and running `generate`
   again. It writes only the difference: new tables, new columns, new indexes.
-- **`generate` adds and nothing else.** A dropped column or table, a rename, a
-  changed type, and a new `NOT NULL` column with no default are refused with the
-  reason, and nothing is written. Declare a new column nullable or with a
-  default. Taking data away is a person's decision, so stop and ask.
+- **`generate` never takes data away on its own.** A dropped column or table is
+  written as `DROP COLUMN` / `DROP TABLE` behind `-- pikku:destructive` only once
+  a person approves (a prompt on a terminal, or `--allowDestructive`); `db migrate`
+  then asks again. Taking data away is a person's decision, so stop and ask.
+  A changed type, and a new `NOT NULL` column with no default, are refused with
+  the reason and nothing is written: declare a new column nullable or with a
+  default.
+- **Rename a column with `renamedFrom`.** `caption: { type: 'text', renamedFrom:
+  'label' }` writes `RENAME COLUMN` and keeps the rows. Delete `renamedFrom` once
+  the migration is applied. It is refused on a column in a key, an index or a
+  reference. A table rename is a drop and a create.
 - **A foreign key onto a table outside this file** (Better Auth's `user`, a
   hand-written table) is a `references: 'user.id'` with no `type`: it takes the type the
   migrations gave the target. `onDelete` defaults to `restrict`.
