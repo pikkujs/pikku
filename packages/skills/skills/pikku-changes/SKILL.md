@@ -33,7 +33,11 @@ what you have not seen, so look first. Follow the pikku-site-archaeology skill: 
 the site and write what you find into `knowledge/site/` (notes only, no code). Then file the plan
 from those notes: the data change stores what `things-kept.md` and `forms.md` say, in the currency and
 languages `prices-and-languages.md` says, and the plan covers every form and page you found. File it
-as below, and stop.
+as below, and stop. A clone also needs its look: after the data change, file a capture change
+(`artifacts`: capture every page at the three widths with the pikku-site-clone scripts, done when the
+screenshots and layout notes are in `reference/` for every page on the list), then a frame change
+(`frontend`: header, footer, theme; depends on the capture), and make every page change depend on the
+frame change, so no page is built before the capture and the frame exist.
 
 Otherwise, file from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
 says what each piece does for the person, and the agent that builds it reads the code. Write the whole
