@@ -1,5 +1,5 @@
 import { pikkuAddonServices } from '#pikku/addon/setup'
-import { WiringService } from './services/wiring.service.js'
+import { WiringService } from '@pikku/core/services/wiring-service'
 import { AddonService } from './services/addon.service.js'
 import { AddonReadinessService } from './services/addon-readiness.service.js'
 import type { CodeEditService } from '@pikku/code-edit'

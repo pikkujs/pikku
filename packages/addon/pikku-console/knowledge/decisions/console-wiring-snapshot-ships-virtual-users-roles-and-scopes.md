@@ -7,16 +7,16 @@ tags: console, wiring, meta, scopes
 
 # The console wiring snapshot carries virtual users, system roles and scope trees, and the addon filter does not narrow them
 
-`PikkuMetaState` (`packages/addon/pikku-console/src/services/wiring.service.ts:265`)
-declares `virtualUsers` (`wiring.service.ts:277`), `systemRoles`
-(`wiring.service.ts:285`) and `scopes` (`wiring.service.ts:291`). `AllMeta`
-extends it (`wiring.service.ts:316`), so the snapshot carries all three.
+`PikkuMetaState` (`packages/core/src/services/wiring-service.ts:291`)
+declares `virtualUsers` (`wiring-service.ts:303`), `systemRoles`
+(`wiring-service.ts:311`) and `scopes` (`wiring-service.ts:317`). `AllMeta`
+extends it (`wiring-service.ts:342`), so the snapshot carries all three.
 
 The comments give the reason. Roles ship with the virtual users "because a
 virtual user only ever names roles, and nothing about what they can reach is
-readable without the scopes each one confers" (`wiring.service.ts:281-283`). The
+readable without the scopes each one confers" (`wiring-service.ts:307-309`). The
 scope trees are keyed by root and say whether the app, a CLI-generated file or an
-installed addon declared them (`wiring.service.ts:286-290`).
+installed addon declared them (`wiring-service.ts:312-316`).
 
 `get-all-meta.function.ts` is gated by `pikku:console:wirings:read`
 (`get-all-meta.function.ts:11`). It returns `filterAllMetaByAddon(...)` on the
@@ -24,10 +24,10 @@ installed addon declared them (`wiring.service.ts:286-290`).
 (`get-all-meta.function.ts:13`).
 
 `filterAllMetaByAddon` returns the snapshot unchanged when no addon is given
-(`wiring.service.ts:325`). With an addon it narrows the function, HTTP, MCP,
+(`wiring-service.ts:351`). With an addon it narrows the function, HTTP, MCP,
 gateway, channel, queue, scheduler, RPC, workflow, trigger, agent and
-outgoing-webhook lists (`wiring.service.ts:330-342`). It then returns `...meta`
-(`wiring.service.ts:344`) with only those lists replaced, so `virtualUsers`,
+outgoing-webhook lists (`wiring-service.ts:356-368`). It then returns `...meta`
+(`wiring-service.ts:370`) with only those lists replaced, so `virtualUsers`,
 `systemRoles` and `scopes` pass through whatever addon is asked for.
 
 **What this rules out:** moving these three fields to a different gate while they

@@ -36,7 +36,9 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
-### `agentCredentialCheck` moved from `@pikku/addon-console` to `@pikku/addon-admin`
+### `WiringService` moved to `@pikku/core`; `agentCredentialCheck` moved to `@pikku/addon-admin`
+
+`WiringService`, `readAllMeta` and the `AllMeta` types now live in `@pikku/core/services/wiring-service` (MIT). `@pikku/addon-console` no longer exports them and the `@pikku/addon-console/services` entry is removed; import from `@pikku/core/services/wiring-service` instead.
 
 The console's `agentCredentialCheck` (scope `pikku:console:credentials:read`) was removed. `@pikku/addon-admin` has `agentCredentialCheck` under `admin:credentials:read`; call `admin:agentCredentialCheck` instead and grant `admin:credentials:read`. It reads the agent from the running app, not from `.pikku` files, so it works in a deployed stage.
 

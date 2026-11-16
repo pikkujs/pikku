@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { WiringService } from './wiring.service.js'
+import { WiringService } from './wiring-service.js'
 
 const makeMetaService = (
   overrides: Record<string, () => Promise<unknown>> = {}

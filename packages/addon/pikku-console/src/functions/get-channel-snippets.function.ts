@@ -1,6 +1,6 @@
 import { pikkuFunc } from '#pikku/addon/function'
 import type { ChannelMeta } from '@pikku/core/channel'
-import type { ChannelSnippets } from '../services/wiring.service.js'
+import type { ChannelSnippets } from '@pikku/core/services/wiring-service'
 
 export const getChannelSnippets = pikkuFunc<
   { channelName: string },

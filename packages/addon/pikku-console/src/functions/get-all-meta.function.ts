@@ -1,7 +1,7 @@
 import { pikkuFunc } from '#pikku/addon/function'
 import type { AddonFilter } from '../lib/addon-scope.js'
-import { filterAllMetaByAddon } from '../services/wiring.service.js'
-import type { AllMeta } from '../services/wiring.service.js'
+import { filterAllMetaByAddon } from '@pikku/core/services/wiring-service'
+import type { AllMeta } from '@pikku/core/services/wiring-service'
 
 export const getAllMeta = pikkuFunc<AddonFilter | null, AllMeta>({
   title: 'Get All Metadata',

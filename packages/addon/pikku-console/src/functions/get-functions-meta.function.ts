@@ -1,5 +1,5 @@
 import { pikkuFunc } from '#pikku/addon/function'
-import type { FunctionMeta } from '../services/wiring.service.js'
+import type { FunctionMeta } from '@pikku/core/services/wiring-service'
 import { filterListByAddon } from '../lib/addon-scope.js'
 import type { AddonFilter } from '../lib/addon-scope.js'
 
