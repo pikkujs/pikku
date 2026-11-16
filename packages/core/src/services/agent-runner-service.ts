@@ -80,6 +80,12 @@ export type AgentStepResult = {
   usage: { inputTokens: number; outputTokens: number }
   finishReason: 'stop' | 'tool-calls' | 'length' | 'error' | 'unknown'
   reasoningContent?: string
+  /**
+   * What the call cost in US dollars, when the runner could read it from the
+   * response (an LLM proxy such as LiteLLM reports it in a header). Absent
+   * when the provider does not say; never estimated.
+   */
+  cost?: number
 }
 
 export type AITranscriptionParams = {
