@@ -34,6 +34,8 @@ import {
   resolveScenarioBrowserProvider,
 } from './scenario-browser.js'
 import { primaryFrontendName, resolveEnvironment } from './environment.js'
+import { devFrontendFor, serveFrontend, type Served } from './pages-serve.js'
+import { frontendEnv, readEnvFile } from './dev-env.js'
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
   resolveStatementMint,
@@ -370,12 +372,38 @@ export const pagesCompare = pikkuSessionlessFunc({
       return false
     })
 
+    let served: Served | null = null
+    let url = baseUrl
     if (present.length) {
       const driver = await loadDriver()
+      if (!url) {
+        const frontend = devFrontendFor(config.frontends, resolve(root, target))
+        if (!frontend)
+          throw new Error(
+            `No --baseUrl, and ${target} has no frontends.<name>.dev (command, port, healthPath) in pikku.config.json to start it with. Pass --baseUrl.`
+          )
+        const apiPort = Object.values(config.backends ?? {}).find(
+          (b) => b?.dev?.port
+        )?.dev?.port
+        served = await serveFrontend({
+          frontend,
+          apiUrl: apiPort ? `http://localhost:${apiPort}` : undefined,
+          envFor: (f) =>
+            frontendEnv(
+              process.env,
+              readEnvFile(join(config.rootDir, '.env')),
+              f.cwd
+            ),
+        })
+        url = served.baseUrl
+      }
       const { session, close } = await openSession(
         { config, getInspectorState, variables },
-        { baseUrl, as, environment, backend }
-      )
+        { baseUrl: url, as, environment, backend }
+      ).catch((error) => {
+        served?.stop()
+        throw error
+      })
       try {
         for (const width of [...new Set(present.map((shot) => shot.width))]) {
           const atWidth = present.filter((shot) => shot.width === width)
@@ -466,6 +494,7 @@ export const pagesCompare = pikkuSessionlessFunc({
         }
       } finally {
         await close()
+        served?.stop()
       }
     }
 
@@ -478,7 +507,14 @@ export const pagesCompare = pikkuSessionlessFunc({
     )
     const result = {
       app: target,
-      baseUrl,
+      baseUrl: url ?? 'none needed: every page is missing',
+      server: served
+        ? {
+            started: served.started,
+            command: served.command,
+            apiNote: served.apiNote,
+          }
+        : null,
       reference: rel(refDir),
       dir: rel(dir),
       report: rel(join(dir, 'report.json')),
@@ -509,6 +545,7 @@ export const renderPagesCompare = (
     threshold,
     failed,
     sectionsNote,
+    server,
   }: z.infer<typeof PagesCompareOutput>
 ): void => {
   const compared = rows.filter((row) => row.status === 'compared')
@@ -538,6 +575,11 @@ export const renderPagesCompare = (
     for (const note of row.sections?.notes.slice(0, 2) ?? [])
       process.stdout.write(`        ${dim(note)}\n`)
   }
+  if (server?.started)
+    process.stdout.write(
+      `${dim(`Started ${server.command} for the compare and stopped it again.`)}\n`
+    )
+  if (server?.apiNote) process.stdout.write(`${changed(server.apiNote)}\n`)
   if (sectionsNote) process.stdout.write(`${dim(sectionsNote)}\n`)
   process.stdout.write(`Report: ${report}\n`)
   if (threshold !== null)
