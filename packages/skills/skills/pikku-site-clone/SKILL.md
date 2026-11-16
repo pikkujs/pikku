@@ -69,15 +69,16 @@ pikku ui pages compare --reference $REF --page <page>   # every width in $REF; s
 ```
 
 It photographs your page at each width the reference has, writes `<page>-<width>.diff.png` (original | changed pixels in
-red | yours) and `report.json` under `<outDir>/pages/compare/<app>/` (or `--out`), and prints the changed-pixel share, both page heights and
-the biggest section differences, worst first. A reference page your app has no route for is reported MISSING (when your
-paths differ from the original's, put `{ "<page>": "/your/path" }` in `$REF/map.json`). Leave out `--page` to compare every page.
-Read the diff image, not only the number: left is the original, the middle is red where pixels differ, right is yours; a
-red band from some height down means your page is shorter or longer from there. A page change is done only when this
-passes: `pikku changes done` refuses a change that touched pages until a compare made after your last commit covers each
-touched page at every width within 40% changed pixels (`pagesCompare.threshold` in pikku.config.json), and prints what to
-run. Commit, compare, then `done`. For a page that cannot match (live data, a third-party embed, content you must not copy),
-`pikku changes done ... --waive "<why it cannot match>"`; the reason goes on the change.
+red | yours) and `report.json` under `artifacts/tmp/compare/<app>/` (or `--out`), and prints the changed-pixel share, both page
+heights, the style differences and the biggest section differences, worst first. A reference page your app has no route for is
+reported MISSING (`home` and `index` are `/`; when your paths differ, put `{ "<page>": "/your/path" }` in `$REF/map.json`).
+Read the `style` lines first and fix those first: they say what differs without an image (`h1: original 56px 700 #a3132f
+center; yours 40px 300 #111111 left`, `page background: original #ffffff; yours #fdf3f1`). Then open the diff image of the
+worst page: left the original, middle red where pixels differ, right yours; a red band from some height down means your page
+is shorter or longer from there. A page change is done only when this passes: `pikku changes done` refuses a change that
+touched pages until a compare made after your last commit has each touched page at every width within 40% changed pixels
+(`pagesCompare.threshold`). Commit, compare, then `done`. A waiver is only for phone widths (under 1000 px) that cannot
+match: `pikku changes done ... --waive "<why, 30+ characters>"`; desktop widths must pass.
 For a quick look at one width while you build, the script still works:
 
 ```bash
