@@ -21,6 +21,8 @@ import {
 import { normalizeBranch } from './branch.js'
 import { nativeSpecFor } from './native-map.js'
 import { computedSetSource } from './set-translate.js'
+import { translateCodeNode } from './code-translate.js'
+import type { HasSyntaxError } from './code-translate.js'
 import { vectorStoreNamespace, splitterStrategy } from './rag-map.js'
 import { findAgentSubNode, walkAiChain } from './ai-subnodes.js'
 
@@ -214,7 +216,21 @@ export function decideShape(nodes: ParsedNode[]): WorkflowShape {
  * and without a hint they would all collapse onto the same `importedWorkflow`
  * slug. A present, non-blank `wf.name` always wins over the hint.
  */
-export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
+export interface ParseOptions {
+  /**
+   * Syntax check for translated Code-node bodies (true when the source has TS
+   * syntax errors). The CLI passes the `@pikku/inspector-go` parser; without it
+   * the check is skipped.
+   */
+  hasSyntaxError?: HasSyntaxError
+}
+
+export function parseN8n(
+  raw: unknown,
+  nameHint?: string,
+  options: ParseOptions = {}
+): ParsedWorkflow {
+  const { hasSyntaxError } = options
   const wf = raw as N8nWorkflow
   if (!wf || !Array.isArray(wf.nodes)) {
     throw new Error('Invalid n8n workflow: missing `nodes` array')
@@ -333,7 +349,8 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
     // `graph:editFields` call that would drop the field.
     let computedSet: string | undefined
     if (role === 'set') {
-      computedSet = computedSetSource(node.parameters ?? {}) ?? undefined
+      computedSet =
+        computedSetSource(node.parameters ?? {}, hasSyntaxError) ?? undefined
       if (computedSet) role = 'code'
     }
 
@@ -522,6 +539,12 @@ export function parseN8n(raw: unknown, nameHint?: string): ParsedWorkflow {
     connections[splitNode.name] = {
       main: [[{ node: store.name, type: 'main', index: 0 }]],
     }
+  }
+
+  // Code-node translation is decided once, here, so codegen needs no syntax
+  // checker of its own.
+  for (const n of nodes) {
+    if (n.role === 'code') n.translation = translateCodeNode(n, hasSyntaxError)
   }
 
   const shape = decideShape(nodes)

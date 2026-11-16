@@ -1,5 +1,11 @@
-import { readSyntaxErrors } from '@pikku/inspector-go'
 import type { ParsedNode } from './types.js'
+
+/**
+ * Reports whether a TypeScript source string has syntax errors. Injected by the
+ * caller (the CLI passes the `@pikku/inspector-go` parser) so this package does
+ * not depend on it. When omitted, no syntax check is performed.
+ */
+export type HasSyntaxError = (source: string) => boolean
 
 /**
  * The outcome of trying to translate an n8n Code / Function node into a real
@@ -65,9 +71,12 @@ const BAIL: Array<[RegExp, string]> = [
  * @ts-nocheck cannot silence. Parse the body in its emitted function context and
  * report any syntactic diagnostic, so such nodes fall back to a throwing stub.
  */
-function hasTsSyntaxError(source: string): boolean {
+function hasTsSyntaxError(
+  source: string,
+  hasSyntaxError: HasSyntaxError | undefined
+): boolean {
   const wrapped = `async function __n8n(){\n${source}\n}`
-  return readSyntaxErrors(wrapped).length > 0
+  return hasSyntaxError?.(wrapped) ?? false
 }
 
 /**
@@ -80,15 +89,22 @@ function hasTsSyntaxError(source: string): boolean {
  * when it can. Shared by Code-node translation and computed Set-node synthesis
  * so a Set node is only functionized when the result would actually translate.
  */
-export function untranslatableReason(source: string): string | null {
+export function untranslatableReason(
+  source: string,
+  hasSyntaxError?: HasSyntaxError
+): string | null {
   const code = source.trim()
   if (!code) return 'empty code'
   for (const [pattern, reason] of BAIL) if (pattern.test(code)) return reason
-  if (hasTsSyntaxError(code)) return 'not valid TypeScript syntax'
+  if (hasTsSyntaxError(code, hasSyntaxError))
+    return 'not valid TypeScript syntax'
   return null
 }
 
-export function translateCodeNode(node: ParsedNode): CodeTranslation {
+export function translateCodeNode(
+  node: ParsedNode,
+  hasSyntaxError?: HasSyntaxError
+): CodeTranslation {
   const source =
     node.computedSetSource ??
     (node.parameters.jsCode as string | undefined) ??
@@ -100,7 +116,7 @@ export function translateCodeNode(node: ParsedNode): CodeTranslation {
   if (typeof language === 'string' && language !== 'javaScript')
     return { translatable: false, reason: `unsupported language "${language}"` }
 
-  const reason = untranslatableReason(code)
+  const reason = untranslatableReason(code, hasSyntaxError)
   if (reason) return { translatable: false, reason }
 
   const mode: 'all' | 'each' =

@@ -1,4 +1,6 @@
 export { parseN8n, UnsupportedTopologyError } from './parse-n8n.js'
+export type { ParseOptions } from './parse-n8n.js'
+export type { HasSyntaxError } from './code-translate.js'
 export { generateWorkflowFromN8n } from './codegen.js'
 
 /**

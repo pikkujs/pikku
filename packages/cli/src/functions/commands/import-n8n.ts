@@ -52,9 +52,12 @@ async function importOne(
   // other command run needs.
   const { parseN8n, generateWorkflowFromN8n } =
     await import('@pikku/n8n-import')
+  const { readSyntaxErrors } = await import('@pikku/inspector-go')
   let parsed
   try {
-    parsed = parseN8n(raw, nameHint)
+    parsed = parseN8n(raw, nameHint, {
+      hasSyntaxError: (source) => readSyntaxErrors(source).length > 0,
+    })
   } catch (err) {
     logger.error(`Failed to parse "${nameHint}": ${(err as Error).message}`)
     return false

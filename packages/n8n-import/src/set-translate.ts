@@ -1,5 +1,6 @@
 import { classifyExpression, type ExprContext } from './expressions.js'
 import { untranslatableReason } from './code-translate.js'
+import type { HasSyntaxError } from './code-translate.js'
 
 /** Top-level Set/Edit-Fields parameters that are node config, never fields. */
 const SET_CONFIG_KEYS = new Set([
@@ -106,7 +107,8 @@ function setValueToJs(value: unknown): string {
  * node has no such transform (stays editFields).
  */
 export function computedSetSource(
-  parameters: Record<string, unknown>
+  parameters: Record<string, unknown>,
+  hasSyntaxError?: HasSyntaxError
 ): string | null {
   const assignments = setAssignments(parameters)
   if (assignments.length === 0) return null
@@ -125,5 +127,5 @@ export function computedSetSource(
   // value reaching outside its own input (`$vars`, `$secrets`, a dynamic node
   // ref, …) would bail to a throwing stub, which is worse than the declarative
   // editFields node that merely drops the one field. Leave those as editFields.
-  return untranslatableReason(source) ? null : source
+  return untranslatableReason(source, hasSyntaxError) ? null : source
 }
