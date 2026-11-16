@@ -2059,8 +2059,12 @@ async function materializeDeclaration(
 export interface DeclaredTablesPlan {
   /** Tables the declaration names. */
   tables: string[]
-  /** The migration body, empty when the migrations already cover the declaration. */
-  body: string
+  /**
+   * The migration bodies, one file each, in the order they apply: additions,
+   * then drops. Empty when the migrations already cover the declaration, and
+   * when a destructive change has not been approved.
+   */
+  bodies: string[]
   /** Why nothing can be written. When present, `body` is empty. */
   refusals: string[]
   /** Changes that lose data or break running code, which a person approves. */
@@ -2070,14 +2074,15 @@ export interface DeclaredTablesPlan {
 }
 
 /**
- * Bring the declaration and the migrations into line, by adding only.
+ * Bring the declaration and the migrations into line.
  *
  * The same delta `generateMigrations` writes for every other source, with one
- * difference that matters: those sources are a package's published schema, and
- * a column they stopped writing is relaxed or dropped on their behalf. This one
- * is the project's data, and a column that left the declaration may be a slip
- * of the keyboard. So everything but an addition is refused here, with the
- * reason, and nothing is written.
+ * difference that matters: this one is the project's data, and a column or
+ * table that left the declaration may be a slip of the keyboard. Additions are
+ * written. A drop is written only when `allowDestructive` says a person
+ * approved it, and each statement carries the destructive marker so `migrate`
+ * asks again. Changing a type or a constraint on an existing column is refused
+ * with the reason, and nothing is written.
  *
  * Whatever passes is rehearsed before it is handed back: applied on top of the
  * real migrations in a throwaway database and diffed again. That is the check
@@ -2087,7 +2092,10 @@ export interface DeclaredTablesPlan {
 export async function planDeclaredTables(
   resolved: ResolvedDb,
   otherSources: SchemaSource[] = [],
-  options: { serverVersion?: () => Promise<string> } = {}
+  options: {
+    serverVersion?: () => Promise<string>
+    allowDestructive?: boolean
+  } = {}
 ): Promise<DeclaredTablesPlan | null> {
   const recorded = recordedDeclaredTables(resolved.migrationsDir)
   const declaration = await loadTableDeclaration(resolved.rootDir)
@@ -2095,7 +2103,7 @@ export async function planDeclaredTables(
     if (recorded.size === 0) return null
     return {
       tables: [],
-      body: '',
+      bodies: [],
       destructive: [],
       refusals: [
         `The migrations record declared tables (${[...recorded].join(', ')}), but ${TABLES_FILE} is ` +
@@ -2118,19 +2126,20 @@ export async function planDeclaredTables(
       TABLES_FILE
     )
     if (refusal)
-      return { tables: [], body: '', refusals: [refusal], destructive: [] }
+      return { tables: [], bodies: [], refusals: [refusal], destructive: [] }
   }
 
   const schemaName =
     resolved.dialect === 'postgres' ? resolved.schema : undefined
-  const covered = await coveredSchema(resolved)
+  const columnIndexes = new Map<string, string[]>()
+  const covered = await coveredSchema(resolved, columnIndexes)
   const { desired, refusals } = await materializeDeclaration(
     resolved,
     declaration,
     covered,
     schemaName
   )
-  if (!desired) return { tables: [], body: '', refusals, destructive: [] }
+  if (!desired) return { tables: [], bodies: [], refusals, destructive: [] }
 
   const tables = [...desired.tables.keys()]
   const shapes = splitStatements(desired.sql).map((statement) => ({
@@ -2203,15 +2212,7 @@ export async function planDeclaredTables(
       })
     }
   }
-  // Nothing is dropped yet: a destructive change is refused, as it was.
-  refusals.push(
-    ...destructive.map(
-      (d) =>
-        `${d.what}. Put it back in ${TABLES_FILE}, or a person writes that migration in ` +
-        `${relative(resolved.rootDir, resolved.migrationsDir)}.`
-    )
-  )
-  if (refusals.length > 0) return { tables, body: '', refusals, destructive }
+  if (refusals.length > 0) return { tables, bodies: [], refusals, destructive }
 
   const { missingTables, missingColumns } = diffSchemas(
     desired.tables,
@@ -2251,6 +2252,26 @@ export async function planDeclaredTables(
       }
     }
   }
+
+  // Dropped last: what the additions above need is still there when they run.
+  const drops = destructive.flatMap((change) => {
+    const qualified = qualify(change.table)
+    return change.kind === 'dropTable'
+      ? [
+          `${DESTRUCTIVE_MIGRATION_MARKER}${change.what}\nDROP TABLE ${qualified};`,
+        ]
+      : [
+          dropColumnStatements(
+            resolved.dialect,
+            qualified,
+            change.table,
+            change.column!,
+            change.what,
+            columnIndexes,
+            quote
+          ).join('\n'),
+        ]
+  })
 
   // SQLite gets no generated CHECKs, so there is nothing to compare there.
   const notes: string[] = []
@@ -2308,26 +2329,33 @@ export async function planDeclaredTables(
       }
     }
   }
-  if (refusals.length > 0) return { tables, body: '', refusals, destructive }
-  if (statements.length === 0)
-    return { tables, body: '', refusals, destructive }
+  if (refusals.length > 0) return { tables, bodies: [], refusals, destructive }
 
-  const body = statements.join('\n\n')
-  const rehearsal = await rehearseMigration(resolved, body, (after) => {
+  const bodies = [statements, drops]
+    .filter((group) => group.length > 0)
+    .map((group) => group.join('\n\n'))
+  if (bodies.length === 0) return { tables, bodies, refusals, destructive }
+
+  const dropped = destructive.filter((d) => d.kind === 'dropTable')
+  const rehearsal = await rehearseMigration(resolved, bodies, (after) => {
     const left = diffSchemas(desired.tables, after, schemaName)
     return [
       ...comparable(after),
+      ...dropped
+        .filter((d) => coveredTable(after, d.table, schemaName))
+        .map((d) => `${d.table} is still there`),
       ...left.missingTables.map((t) => `${t} is still missing`),
       ...left.missingColumns.map((c) => `${c.table} still lacks ${c.columns}`),
     ]
   })
-  return {
-    tables,
-    body: rehearsal.length ? '' : body,
-    refusals: rehearsal,
-    destructive,
-    notes,
+  if (rehearsal.length > 0) {
+    return { tables, bodies: [], refusals: rehearsal, destructive, notes }
   }
+  // Rehearsed first, so what is asked for approval is what would be written.
+  if (destructive.length > 0 && !options.allowDestructive) {
+    return { tables, bodies: [], refusals, destructive, notes }
+  }
+  return { tables, bodies, refusals, destructive, notes }
 }
 
 /** The `version()` the configured MySQL-protocol server reports. */
@@ -2346,7 +2374,7 @@ async function mysqlServerVersion(resolved: ResolvedMysqlDb): Promise<string> {
  */
 async function rehearseMigration(
   resolved: ResolvedDb,
-  body: string,
+  bodies: string[],
   check: (after: SchemaMap) => string[]
 ): Promise<string[]> {
   const dir = mkdtempSync(join(tmpdir(), 'pikku-rehearsal-'))
@@ -2354,11 +2382,13 @@ async function rehearseMigration(
     if (existsSync(resolved.migrationsDir)) {
       cpSync(resolved.migrationsDir, dir, { recursive: true })
     }
-    writeFileSync(
-      nextMigrationFile(dir, APP_TABLES_SOURCE),
-      `${body}\n`,
-      'utf8'
-    )
+    for (const body of bodies) {
+      writeFileSync(
+        nextMigrationFile(dir, APP_TABLES_SOURCE),
+        `${body}\n`,
+        'utf8'
+      )
+    }
     let after: SchemaMap
     try {
       after = await coveredSchema({
@@ -2385,6 +2415,8 @@ async function rehearseMigration(
 export interface DeclaredTablesDrift {
   pending: boolean
   refusals: string[]
+  /** Changes that wait for approval: `db generate --allowDestructive`. */
+  destructive: string[]
   /** Why a pending migration changes constraints that exist (a stale check, a changed bound). */
   notes: string[]
 }
@@ -2409,9 +2441,10 @@ export async function computeDeclaredTablesDrift(
 ): Promise<DeclaredTablesDrift> {
   const plan = await planDeclaredTables(resolved)
   return {
-    pending: Boolean(plan?.body),
+    pending: Boolean(plan?.bodies.length || plan?.destructive.length),
     refusals: plan?.refusals ?? [],
-    notes: plan?.body ? (plan.notes ?? []) : [],
+    destructive: plan?.destructive.map((d) => d.what) ?? [],
+    notes: plan?.bodies.length ? (plan.notes ?? []) : [],
   }
 }
 
@@ -2816,6 +2849,30 @@ function addColumnStatements(
 }
 
 /**
+ * Drop one column, marked destructive with `reason`. SQLite refuses to drop a
+ * column an index still names, so its indexes go first; the other engines
+ * drop (or shrink) their own, and a primary key, unique, foreign key or check
+ * that cannot go with the column fails the statement, which no flag overrides.
+ */
+function dropColumnStatements(
+  dialect: ResolvedDb['dialect'],
+  qualified: string,
+  table: string,
+  column: string,
+  reason: string,
+  columnIndexes: Map<string, string[]>,
+  quote: (name: string) => string
+): string[] {
+  const indexes =
+    dialect === 'sqlite' ? (columnIndexes.get(`${table}.${column}`) ?? []) : []
+  return [
+    `${DESTRUCTIVE_MIGRATION_MARKER}${reason}`,
+    ...indexes.map((index) => `DROP INDEX ${quote(index)};`),
+    `ALTER TABLE ${qualified} DROP COLUMN ${quote(column)};`,
+  ]
+}
+
+/**
  * The statements that stop an orphaned required column failing every insert.
  *
  * PostgreSQL and MySQL relax it — the column and what it holds stay, only the
@@ -2848,14 +2905,17 @@ function orphanedColumnStatements(
       )
       continue
     }
-    const indexes = columnIndexes.get(`${table}.${column.name}`) ?? []
     statements.push(
       note +
-        `${DESTRUCTIVE_MIGRATION_MARKER}${table}.${column.name} is dropped: its data is lost\n` +
-        [
-          ...indexes.map((index) => `DROP INDEX ${quote(index)};`),
-          `ALTER TABLE ${qualified} DROP COLUMN ${quote(column.name)};`,
-        ].join('\n')
+        dropColumnStatements(
+          dialect,
+          qualified,
+          table,
+          column.name,
+          `DROP COLUMN ${table}.${column.name}: its data is lost`,
+          columnIndexes,
+          quote
+        ).join('\n')
     )
   }
   return statements
@@ -2883,6 +2943,12 @@ export interface GenerateResult {
    * caller still has to say so.
    */
   refusals: string[]
+  /**
+   * Drops of db/tables.ts that nothing was written for, because they were not
+   * approved. Acting on them is a decision for a person, so the command lists
+   * them and stops.
+   */
+  destructive: DestructiveChange[]
 }
 
 /**
@@ -2912,7 +2978,8 @@ export async function generateMigrations(
   srcDirectories: string[],
   logger: { error: (msg: string) => void },
   addons: AddonDeclaration[] = [],
-  services?: ReadonlySet<string>
+  services?: ReadonlySet<string>,
+  options: { allowDestructive?: boolean } = {}
 ): Promise<GenerateResult> {
   // Read and checked first: a retired or unreadable declaration refuses the
   // whole command, so no source's migration may be written before it does.
@@ -2925,7 +2992,12 @@ export async function generateMigrations(
     addons,
     services
   )
-  const result: GenerateResult = { upToDate: [], written: [], refusals: [] }
+  const result: GenerateResult = {
+    upToDate: [],
+    written: [],
+    refusals: [],
+    destructive: [],
+  }
 
   for (const source of sources) {
     // Re-read after each write: a migration just written for an earlier source
@@ -3049,23 +3121,33 @@ export async function generateMigrations(
 
   // Last, and only now: a declared table may reference any of the above, and
   // what those sources just wrote is part of what it is compared against.
-  const plan = await planDeclaredTables(resolved, sources)
+  const plan = await planDeclaredTables(resolved, sources, {
+    allowDestructive: options.allowDestructive,
+  })
   if (plan) {
     result.refusals.push(...plan.refusals)
-    if (plan.body) {
+    if (plan.destructive.length > 0 && !options.allowDestructive) {
+      result.destructive.push(...plan.destructive)
+    }
+    for (const body of plan.bodies) {
       const file = nextMigrationFile(resolved.migrationsDir, APP_TABLES_SOURCE)
       const header =
         `-- Generated by \`pikku db generate\` from ${TABLES_FILE}.\n` +
         '-- Change that file and re-run the command; do not edit this one.\n' +
         `${declaredTablesMarker(plan.tables)}\n\n`
-      writeFileSync(file, header + plan.body + '\n', 'utf8')
+      writeFileSync(file, header + body + '\n', 'utf8')
       result.written.push({
         source: APP_TABLES_SOURCE,
         file,
         needsBackfill: [],
         orphaned: [],
       })
-    } else if (plan.refusals.length === 0) {
+    }
+    if (
+      plan.bodies.length === 0 &&
+      plan.refusals.length === 0 &&
+      plan.destructive.length === 0
+    ) {
       result.upToDate.push(APP_TABLES_SOURCE)
     }
   }

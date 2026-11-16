@@ -241,6 +241,7 @@ const store = useMysql
           )
           return Number(row.n) > 0
         },
+        rows: async (statement) => await one(statement),
         close: async () => {},
       }
     })()
@@ -290,6 +291,7 @@ const store = useMysql
             )
             return row.n > 0
           },
+          rows: async (statement) => [...(await sql.unsafe(statement))],
           close: async () => await sql.end(),
         }
       })()
@@ -315,6 +317,32 @@ const store = useMysql
             return db
               .prepare(`SELECT count(*) AS n FROM ${TRACKING_TABLE}`)
               .get().n
+          } finally {
+            db.close()
+          }
+        },
+        rows: async (statement) => {
+          const db = new DatabaseSync(SQLITE_FILE)
+          try {
+            return db.prepare(statement).all()
+          } finally {
+            db.close()
+          }
+        },
+        exec: async (statement) => {
+          const db = new DatabaseSync(SQLITE_FILE)
+          try {
+            db.exec(statement)
+          } finally {
+            db.close()
+          }
+        },
+        tryExec: async (statement) => {
+          const db = new DatabaseSync(SQLITE_FILE)
+          try {
+            db.exec(statement)
+          } catch (error) {
+            return String(error.message)
           } finally {
             db.close()
           }
@@ -1265,6 +1293,142 @@ if (changeFile && dialect !== 'sqlite') {
 // records it, and a migration later written under the same name would drift.
 if (changeFile && dialect === 'sqlite') {
   rmSync(join(MIGRATIONS_DIR, changeFile), { force: true })
+}
+
+// 16b. Destructive generate: a column and a table that left db/tables.ts are
+//      listed and not written without approval; approved, they are written
+//      marked, `migrate` stops on them until it is allowed too, and the rows
+//      that stay are untouched. Every engine, because what a drop does to an
+//      index, a check or a key is the engine's to say. (On postgres and MySQL
+//      `legacy` carries generated checks, which go with the column.)
+{
+  const saved = readFileSync(TABLES_TS, 'utf8')
+  const probeSource = (probeColumns, tag) =>
+    saved.replace(
+      /\}\)\n$/,
+      `  probe: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      title: { type: 'text', required: true },
+      ${probeColumns}
+    },
+  },
+${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" : ''}})
+`
+    )
+  const migrationFiles = () =>
+    readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql'))
+
+  declareTables(
+    probeSource(
+      `legacy: { type: 'integer', min: 0, max: 9 },
+      code: { type: 'text', index: true },`,
+      true
+    )
+  )
+  capture('app: pikku db generate (probe and tag)', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+  ])
+  run('app: pikku db migrate (probe and tag)', 'node', [PIKKU, 'db', 'migrate'])
+  await store.exec(
+    "INSERT INTO probe (id, title, legacy, code) VALUES (1, 'keep me', 5, 'c')"
+  )
+  await store.exec('INSERT INTO tag (id) VALUES (1)')
+
+  declareTables(probeSource('', false))
+  const knownFiles = new Set(migrationFiles())
+  const filesBefore = knownFiles.size
+  const unapproved = refusedBy('app: pikku db generate (drops, not approved)')
+  check(
+    unapproved.status !== 0 &&
+      unapproved.output.includes('DROP COLUMN probe.legacy') &&
+      unapproved.output.includes('DROP COLUMN probe.code') &&
+      unapproved.output.includes('DROP TABLE tag') &&
+      unapproved.output.includes('--allowDestructive'),
+    'generate lists each drop and says how to approve it'
+  )
+  check(
+    migrationFiles().length === filesBefore,
+    'and writes nothing without approval'
+  )
+
+  run('app: pikku db generate --allowDestructive', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+    '--allowDestructive',
+  ])
+  const dropFile = migrationFiles().find((f) => !knownFiles.has(f))
+  const dropSql = dropFile ? sqlOf(dropFile) : ''
+  check(
+    migrationFiles().length === filesBefore + 1 &&
+      /^-- pikku:destructive DROP COLUMN probe\.legacy/m.test(dropSql) &&
+      /^-- pikku:destructive DROP COLUMN probe\.code/m.test(dropSql) &&
+      /^-- pikku:destructive DROP TABLE tag/m.test(dropSql) &&
+      !/cascade/i.test(dropSql),
+    `approved, one file carries the three drops, each marked (${dropFile})`
+  )
+
+  const stopped = refusedBy(
+    'app: pikku db migrate (drops, not allowed)',
+    'migrate'
+  )
+  check(
+    stopped.status !== 0 && stopped.output.includes('PKU-DB-DESTRUCTIVE'),
+    'migrate stops on the marked drops'
+  )
+  check(
+    (await store.rows('SELECT legacy FROM probe')).length === 1 &&
+      (await store.hasTable('tag')),
+    'and nothing was dropped'
+  )
+  run('app: pikku db migrate --allowDestructive (drops)', 'node', [
+    PIKKU,
+    'db',
+    'migrate',
+    '--allowDestructive',
+  ])
+  const kept = await store.rows('SELECT id, title FROM probe')
+  check(
+    kept.length === 1 && kept[0].title === 'keep me',
+    `${dialect}: the row and its remaining column survived the drops`
+  )
+  check(
+    (await store.tryExec('SELECT legacy FROM probe')) !== undefined &&
+      (await store.tryExec('SELECT code FROM probe')) !== undefined &&
+      !(await store.hasTable('tag')),
+    `${dialect}: the columns and the table are gone`
+  )
+  check(
+    migrationFiles().length === filesBefore + 1 &&
+      !capture('app: pikku db generate (drops settled)', 'node', [
+        PIKKU,
+        'db',
+        'generate',
+      ]).includes('wrote'),
+    'a further generate writes nothing'
+  )
+
+  // The probe table was only for this: take it out of the declaration too.
+  writeFileSync(TABLES_TS, saved)
+  run('app: pikku db generate --allowDestructive (probe table)', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+    '--allowDestructive',
+  ])
+  run('app: pikku db migrate --allowDestructive (probe table)', 'node', [
+    PIKKU,
+    'db',
+    'migrate',
+    '--allowDestructive',
+  ])
+  check(
+    !(await store.hasTable('probe')),
+    `${dialect}: a table with data in it is dropped once approved twice`
+  )
 }
 
 // 17. Real-engine behaviour of the generated checks that only a server settles.

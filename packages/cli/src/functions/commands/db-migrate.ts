@@ -88,8 +88,13 @@ export const dbMigrate = pikkuSessionlessFunc<
     if (declared.pending || declared.refusals.length > 0) {
       logger.error('db migrate: the migrations do not cover db/tables.ts:')
       for (const refusal of declared.refusals) logger.error(`  ${refusal}`)
+      for (const change of declared.destructive) logger.error(`  ${change}`)
       if (declared.pending) {
-        logger.error('  Run `pikku db generate` to write them, then re-run.')
+        logger.error(
+          declared.destructive.length > 0
+            ? '  Run `pikku db generate --allowDestructive` to write them, then re-run.'
+            : '  Run `pikku db generate` to write them, then re-run.'
+        )
       }
       throw new CLIError('db/tables.ts is ahead of the migrations')
     }

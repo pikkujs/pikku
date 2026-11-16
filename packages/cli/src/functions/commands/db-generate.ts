@@ -8,9 +8,12 @@ import {
 import { SQLITE_UNENFORCED_RULE } from '../db/sqlite-constraint-notice.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
-export const dbGenerate = pikkuSessionlessFunc<{}, void>({
+export const dbGenerate = pikkuSessionlessFunc<
+  { allowDestructive?: boolean },
+  void
+>({
   remote: true,
-  func: async ({ logger, config, getInspectorState }) => {
+  func: async ({ logger, config, getInspectorState }, data) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
@@ -39,14 +42,16 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       })
     )
 
-    const { upToDate, written, refusals } = await generateMigrations(
-      resolved,
-      config.rootDir,
-      config.srcDirectories,
-      logger,
-      addons,
-      state.serviceAggregation.requiredServices
-    )
+    const { upToDate, written, refusals, destructive } =
+      await generateMigrations(
+        resolved,
+        config.rootDir,
+        config.srcDirectories,
+        logger,
+        addons,
+        state.serviceAggregation.requiredServices,
+        { allowDestructive: data?.allowDestructive }
+      )
 
     for (const source of upToDate) {
       logger.info(
@@ -54,7 +59,12 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       )
     }
 
-    if (written.length === 0 && upToDate.length === 0 && !refusals.length) {
+    if (
+      written.length === 0 &&
+      upToDate.length === 0 &&
+      !refusals.length &&
+      !destructive.length
+    ) {
       logger.info('db generate: nothing declares tables — nothing to generate')
       return
     }
@@ -81,6 +91,17 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       if (notice) logger.warn(`db generate: ${notice}`)
     }
 
+    if (destructive.length > 0) {
+      logger.error(
+        'db generate: db/tables.ts asks for changes that lose data, and nothing was written for them:'
+      )
+      for (const change of destructive) logger.error(`  ${change.what}`)
+      if (refusals.length === 0) {
+        logger.error(
+          '  Re-run with --allowDestructive to write them. Each is marked, so `db migrate` asks once more before applying.'
+        )
+      }
+    }
     if (refusals.length > 0) {
       logger.error(
         'db generate: refused to write the migration for db/tables.ts:'
@@ -88,5 +109,6 @@ export const dbGenerate = pikkuSessionlessFunc<{}, void>({
       for (const refusal of refusals) logger.error(`  ${refusal}`)
       throw new CLIError('db generate refused')
     }
+    if (destructive.length > 0) throw new CLIError('db generate refused')
   },
 })
