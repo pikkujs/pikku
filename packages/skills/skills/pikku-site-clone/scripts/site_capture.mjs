@@ -103,11 +103,34 @@ export function extractStyleInPage() {
   const words = (el) => (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim()
   // size, weight and colour from the element holding the first words (a site builder puts them on nested spans)
   const textHolder = (el) => { const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); for (let n = w.nextNode(); n; n = w.nextNode()) if (n.textContent.trim() && n.parentElement && vis(n.parentElement)) return n.parentElement; return el }
+  // what is behind the words on screen: the first colour or picture under their centre (scrolled into view to look)
+  const behind = (el) => {
+    const holder = textHolder(el); const rg = document.createRange(); rg.selectNodeContents(holder)
+    holder.scrollIntoView({ block: 'center' })
+    const r = [...rg.getClientRects()].find((q) => q.width > 2) || holder.getBoundingClientRect()
+    const x = Math.min(innerWidth - 1, Math.max(0, r.left + r.width / 2)), y = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2))
+    for (const e of document.elementsFromPoint(x, y)) {
+      if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(e.tagName) || /^wow-image$|^wix-video$/i.test(e.tagName)) return 'picture'
+      const cs = getComputedStyle(e)
+      if (cs.backgroundImage && /url\(/.test(cs.backgroundImage)) return 'picture'
+      if (!clear(cs.backgroundColor)) return cs.backgroundColor
+    }
+    return bgOf(el)
+  }
+  // one line of text centred on the page reads as centred, whatever text-align says (a builder centres the box instead)
+  const visualAlign = (el, computed) => {
+    if (computed === 'center' || computed === 'justify') return computed
+    const rg = document.createRange(); rg.selectNodeContents(el)
+    const rects = [...rg.getClientRects()].filter((q) => q.width > 2)
+    if (!rects.length || rects.some((q) => Math.abs(q.top - rects[0].top) > 4)) return computed
+    const l = Math.min(...rects.map((q) => q.left)), rr = Math.max(...rects.map((q) => q.right))
+    return Math.abs((l + rr) / 2 - vw / 2) < vw * 0.03 && rr - l < vw * 0.85 ? 'center' : computed
+  }
   const describe = (el) => {
     if (!el) return null
     const cs = getComputedStyle(textHolder(el)), own = getComputedStyle(el)
     const weight = Number(cs.fontWeight) || (cs.fontWeight === 'bold' ? 700 : 400)
-    return { text: words(el).slice(0, 60), size: Math.round(parseFloat(cs.fontSize) * 10) / 10, weight, color: cs.color, align: alignOf(own), family: fam(cs), background: bgOf(el) }
+    return { text: words(el).slice(0, 60), size: Math.round(parseFloat(cs.fontSize) * 10) / 10, weight, color: cs.color, align: visualAlign(el, alignOf(own)), family: fam(cs), background: behind(el) }
   }
   const first = (sel, ok = () => true) => [...document.querySelectorAll(sel)].find((el) => vis(el) && !inChrome(el) && words(el) && ok(el)) || null
   const vw = document.documentElement.clientWidth || innerWidth, docH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)
@@ -131,13 +154,15 @@ export function extractStyleInPage() {
   const isButton = (el) => { const cs = getComputedStyle(el); const t = words(el); return t.length >= 2 && t.length <= 40 && (!clear(cs.backgroundColor) || (parseFloat(cs.borderTopWidth) >= 1 && !clear(cs.borderTopColor) && el.tagName !== 'INPUT')) }
   const button = first('button, [role=button], input[type=submit], a', isButton) || first('a[class*=btn i], a[class*=button i], button')
   const btn = describe(button)
-  if (btn && button) { const cs = getComputedStyle(button); btn.background = clear(cs.backgroundColor) ? bgOf(button) : cs.backgroundColor }
+  if (btn && button) { const cs = getComputedStyle(button); if (!clear(cs.backgroundColor)) btn.background = cs.backgroundColor }
+  const elements = { h1: describe(first('h1')), h2: describe(first('h2')), h3: describe(first('h3')), p: describe(paras[0] || null), button: btn }
+  scrollTo(0, 0)
   return {
     viewport: innerWidth,
     pageBackground: pageBg || bgOf(document.body),
     header: header ? { height: Math.round(header.getBoundingClientRect().height), background: headerBg } : null,
     contentWidth: widths.length ? widths[Math.floor(widths.length / 2)] : null,
-    elements: { h1: describe(first('h1')), h2: describe(first('h2')), h3: describe(first('h3')), p: describe(paras[0] || null), button: btn },
+    elements,
   }
 }
 
@@ -170,43 +195,132 @@ async function launch(out) {
   })
 }
 
+/** What a phone sends: a site that picks its markup by user agent serves its mobile page (and its viewport meta) to it. */
+export const PHONE_UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'
+export const PHONE_WIDTH = 600
+
+/**
+ * The browser context for one width. Under 600 px it is a phone: an iPhone Safari user agent, isMobile and hasTouch
+ * (device scale 1, so screenshot pixels stay CSS pixels). The old desktop user agent with mobile emulation got the
+ * desktop markup, which has no viewport meta, so the phone laid it out 980 px wide.
+ * A mobile page that fixes its own width (Wix: `width=320`) is scaled up by the phone; `scale` (device scale factor)
+ * does the same for the screenshot, so it is `w` pixels wide as on the phone.
+ * `viewportMeta` also adds `<meta name=viewport content="width=device-width, initial-scale=1">` before layout when the page has none.
+ */
+export async function newCaptureContext(browser, w, { viewportMeta = false, phoneUa = true, scale = 1 } = {}) {
+  const phone = w < PHONE_WIDTH
+  const ctx = await browser.newContext({ viewport: { width: w, height: phone ? 844 : 900 }, userAgent: phone && phoneUa ? PHONE_UA : UA, deviceScaleFactor: scale, isMobile: phone, hasTouch: phone })
+  if (phone && viewportMeta)
+    await ctx.addInitScript(() => {
+      const add = () => { if (!document.head || document.querySelector('meta[name=viewport]')) return !!document.head; const m = document.createElement('meta'); m.name = 'viewport'; m.content = 'width=device-width, initial-scale=1'; document.head.prepend(m); return true }
+      if (!add()) { const o = new MutationObserver(() => { if (add()) o.disconnect() }); o.observe(document, { childList: true, subtree: true }) }
+    })
+  return ctx
+}
+
+/**
+ * A cookie or consent banner over the hero is not part of the page. Click an accept-style button inside an element whose
+ * id/class/aria/data attributes mention cookie|consent|gdpr (or a known consent tool); then hide whatever fixed or sticky
+ * element still mentions cookie|consent. Returns the text of the button clicked, if any.
+ */
+export async function dismissConsent(page) {
+  const clicked = await page.evaluate(() => {
+    const RX = /cookie|consent|gdpr|onetrust|cookiebot|usercentrics|didomi|cmp-/i
+    const ACCEPT = /^(accept|agree|allow|i agree|i accept|ok|okay|got it|understood|alle akzeptieren|akzeptieren|zustimmen|accepter|tout accepter|aceptar|accetta)\b/i
+    const tag = (el) => [el.id, el.getAttribute('class'), el.getAttribute('aria-label'), el.getAttribute('aria-labelledby'), el.getAttribute('data-hook'), el.getAttribute('data-testid')].filter(Boolean).join(' ')
+    for (const root of document.querySelectorAll('body *')) {
+      if (!RX.test(tag(root))) continue
+      for (const scope of [root, root.shadowRoot].filter(Boolean))
+        for (const b of scope.querySelectorAll('button, a, [role=button], input[type=button], input[type=submit]')) {
+          const t = (b.innerText || b.value || b.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim()
+          const r = b.getBoundingClientRect()
+          if (t && t.length <= 40 && ACCEPT.test(t) && r.width > 0 && r.height > 0) { b.click(); return t }
+        }
+    }
+    return null
+  }).catch(() => null)
+  if (clicked) await page.waitForTimeout(800)
+  await page.evaluate(() => {
+    const RX = /cookie|consent|gdpr|onetrust|cookiebot|usercentrics|didomi/i
+    const tag = (el) => [el.id, el.getAttribute('class'), el.getAttribute('aria-label'), el.getAttribute('data-hook'), el.getAttribute('data-testid')].filter(Boolean).join(' ')
+    for (const el of document.querySelectorAll('body *')) {
+      const cs = getComputedStyle(el)
+      if (cs.position !== 'fixed' && cs.position !== 'sticky') continue
+      const text = el.innerText || ''
+      if (RX.test(tag(el)) || (/cookie|consent/i.test(text) && text.length < 1500 && el.getBoundingClientRect().height < innerHeight * 0.6)) el.style.setProperty('display', 'none', 'important')
+    }
+  }).catch(() => {})
+  return clicked
+}
+
 /**
  * "Ready" for a screenshot is not the network going quiet (a Wix page never stops asking). It is: the page has loaded,
- * the fonts are in, the lazy pictures have loaded and decoded, and the page has stopped changing height. Each wait has a cap.
+ * the fonts are in, a consent banner is gone, every lazy picture and section has been scrolled past slowly and has loaded
+ * and decoded, the page is back at the top and has stopped changing height. Each wait has a cap (about 45 s in all).
  */
 export async function settle(page) {
+  await dismissConsent(page)
   await page.evaluate(async () => {
-    const cap = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))])
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+    const cap = (p, ms) => Promise.race([p, wait(ms)])
+    const t0 = Date.now()
     await cap(document.fonts.ready, 5000)
-    for (let y = 0; y < document.body.scrollHeight; y += 700) { scrollTo(0, y); await new Promise((r) => setTimeout(r, 120)) }
-    await cap(Promise.all([...document.images].map((img) => img.decode().catch(() => {}))), 8000)
+    // lazy pictures: load now, and copy data-src style attributes over a missing or placeholder src
+    const eager = () => {
+      const placeholder = (v) => !v || v.startsWith('data:') || /blank|placeholder|spacer|lazy/i.test(v)
+      for (const img of document.images) {
+        if (img.loading === 'lazy') img.loading = 'eager'
+        for (const [from, to] of [['data-src', 'src'], ['data-lazy-src', 'src'], ['data-original', 'src'], ['data-srcset', 'srcset'], ['data-lazy-srcset', 'srcset']]) {
+          const v = img.getAttribute(from)
+          if (v && placeholder(img.getAttribute(to))) img.setAttribute(to, v)
+        }
+      }
+      for (const s of document.querySelectorAll('source[data-srcset]')) if (!s.getAttribute('srcset')) s.setAttribute('srcset', s.getAttribute('data-srcset'))
+      for (const f of document.querySelectorAll('iframe[loading=lazy]')) f.loading = 'eager'
+    }
+    eager()
+    // scroll down slowly, a bit more than half a window at a time, so each section enters the view and starts loading
+    const step = Math.max(300, Math.round(innerHeight * 0.6))
+    for (let y = 0; y < document.documentElement.scrollHeight && Date.now() - t0 < 25000; y += step) { scrollTo(0, y); await wait(250) }
+    scrollTo(0, document.documentElement.scrollHeight); await wait(500)
+    eager()
+    await cap(Promise.all([...document.images].map((img) => (img.complete && img.naturalWidth ? null : img.decode().catch(() => {})))), 8000)
     scrollTo(0, 0)
     let last = -1
     for (let i = 0; i < 20; i++) {
-      const h = document.body.scrollHeight
+      const h = document.documentElement.scrollHeight
       if (h === last) break
       last = h
-      await new Promise((r) => setTimeout(r, 300))
+      await wait(300)
     }
+    await wait(1000) // entrance animations of the first sections, started again by the scroll back up
   })
+  await dismissConsent(page) // a banner that came in late
 }
 
-async function capturePage(browser, out, entry, vps, tiles) {
+async function capturePage(browser, out, entry, vps, tiles, opts = {}) {
   const [url, idOverride] = entry.split('|')   // `url|id` names the page's id (a clone whose paths differ from the original's)
   const id = idOverride || idOf(url); const rec = { id, url, viewports: {} }
   try { writeFileSync(join(out, `${id}.html`), await (await fetch(url, { headers: { 'user-agent': UA } })).text()) } catch {}
   for (const w of vps) {
-    const ctx = await browser.newContext({ viewport: { width: w, height: 900 }, userAgent: UA, deviceScaleFactor: 1, isMobile: w < 600 })
-    const page = await ctx.newPage()
+    let ctx = await newCaptureContext(browser, w, opts)
+    let page = await ctx.newPage(), scale = 1
     try {
       await page.goto(url, { waitUntil: 'load', timeout: 45000 }).catch(() => {})
+      const inner = await page.evaluate(() => innerWidth).catch(() => w)
+      if (w < PHONE_WIDTH && inner > 0 && inner < w - 4) {
+        // the mobile page lays itself out narrower than the phone and the phone zooms it to fit: photograph it the same way
+        await ctx.close(); scale = w / inner
+        ctx = await newCaptureContext(browser, w, { ...opts, scale }); page = await ctx.newPage()
+        await page.goto(url, { waitUntil: 'load', timeout: 45000 }).catch(() => {})
+      }
       await settle(page).catch(() => {})
       const layout = await page.evaluate(extractInPage)
       writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
-      writeFileSync(join(out, `${id}-${w}.style.json`), JSON.stringify(await page.evaluate(extractStyleInPage), null, 1))
+      writeFileSync(join(out, `${id}-${w}.style.json`), JSON.stringify({ ...(await page.evaluate(extractStyleInPage)), ...(scale !== 1 ? { scale: +scale.toFixed(4) } : {}) }, null, 1))
       if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
       await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80 })
-      rec.viewports[w] = layout.counts
+      rec.viewports[w] = { ...layout.counts, scrollWidth: layout.doc.w, ...(scale !== 1 ? { scale: +scale.toFixed(4) } : {}) }
       if (tiles) makeTiles(join(out, `${id}-${w}.jpg`), join(out, 'small'), `${id}-${w}`, w)
     } catch (e) { rec.viewports[w] = { error: String(e).slice(0, 120) } }
     await ctx.close()
@@ -216,12 +330,12 @@ async function capturePage(browser, out, entry, vps, tiles) {
 }
 
 /** Pages are independent, so `jobs` of them are captured at once (default 4); the index keeps the order of the list. */
-async function capture(out, urls, vps, tiles, jobs = 4) {
+async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
   mkdirSync(out, { recursive: true })
   const browser = await launch(out)
   const index = new Array(urls.length)
   let next = 0
-  const worker = async () => { while (next < urls.length) { const i = next++; index[i] = await capturePage(browser, out, urls[i], vps, tiles) } }
+  const worker = async () => { while (next < urls.length) { const i = next++; index[i] = await capturePage(browser, out, urls[i], vps, tiles, opts) } }
   await Promise.all(Array.from({ length: Math.min(jobs, urls.length) }, worker))
   await browser.close()
   writeFileSync(join(out, 'index.json'), JSON.stringify(index, null, 1))

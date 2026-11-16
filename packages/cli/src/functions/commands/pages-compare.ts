@@ -245,6 +245,8 @@ export interface ElementStyle {
 /** `<id>-<width>.style.json`: what a reader notices first on a page. */
 export interface StyleSummary {
   viewport?: number
+  /** Screen pixels per CSS pixel, when the phone zoomed a page laid out narrower than itself (Wix: 320 on a 390 phone). */
+  scale?: number
   pageBackground?: string | null
   header?: { height: number; background: string | null } | null
   contentWidth?: number | null
@@ -332,6 +334,45 @@ export function colourDistance(a: string | null, b: string | null): number {
 /** Colours further apart than this are a difference a reader notices. */
 export const NOTICEABLE_COLOUR = 60
 
+/** A font name without its web-font decorations: `playfair-display-v2` and `Playfair Display` are one font. */
+export function fontName(family: string): string {
+  return family
+    .toLowerCase()
+    .replace(/["']/g, '')
+    .replace(/[-_]+/g, ' ')
+    .split(/\s+/)
+    .filter(
+      (w) =>
+        w &&
+        !/^(v\d+|w\d+|\d+|regular|normal|bold|light|medium|semibold|italic|web|webfont)$/.test(
+          w
+        )
+    )
+    .join(' ')
+}
+
+/** Sizes in screen pixels, font names plain. */
+function onScreen(s: StyleSummary): StyleSummary {
+  const k = s.scale && s.scale > 0 ? s.scale : 1
+  const px = (n: number) => Math.round(n * k * 10) / 10
+  const elements: StyleSummary['elements'] = {}
+  for (const [key, e] of Object.entries(s.elements ?? {}))
+    elements[key as StyleElement] = e
+      ? { ...e, size: px(e.size), family: fontName(e.family ?? '') }
+      : null
+  return {
+    ...s,
+    scale: 1,
+    header: s.header
+      ? { ...s.header, height: Math.round(s.header.height * k) }
+      : s.header,
+    contentWidth: s.contentWidth
+      ? Math.round(s.contentWidth * k)
+      : s.contentWidth,
+    elements,
+  }
+}
+
 const sizeOff = (a: number, b: number) =>
   a > 0 && b > 0 ? Math.max(a, b) / Math.min(a, b) - 1 : 0
 
@@ -346,6 +387,8 @@ export function styleDiff(
   mine: StyleSummary,
   max = 6
 ): StyleDifference[] {
+  ref = onScreen(ref)
+  mine = onScreen(mine)
   const out: StyleDifference[] = []
   const far = (a?: string | null, b?: string | null) =>
     !!a && !!b && colourDistance(a, b) > NOTICEABLE_COLOUR
@@ -407,7 +450,7 @@ export function styleDiff(
     const b = mine.elements?.[key]
     const label = STYLE_LABEL[key]
     const look = (e: ElementStyle, family: boolean, bg: boolean) =>
-      `${+e.size.toFixed(1)}px ${e.weight} ${toHex(e.color)} ${e.align}${family ? ` "${e.family}"` : ''}${bg && e.background ? ` on ${toHex(e.background)}` : ''}`
+      `${+e.size.toFixed(1)}px ${e.weight} ${toHex(e.color)}${key === 'button' ? '' : ` ${e.align}`}${family ? ` "${e.family}"` : ''}${bg && e.background ? ` on ${toHex(e.background)}` : ''}`
     if (!b) {
       out.push({
         what: key,
@@ -419,7 +462,8 @@ export function styleDiff(
     const size = sizeOff(a.size, b.size)
     const weight = Math.abs(a.weight - b.weight)
     const colour = colourDistance(a.color, b.color)
-    const align = a.align !== b.align
+    // a link's text-align says nothing about where the button sits
+    const align = key !== 'button' && a.align !== b.align
     const family = !!a.family && !!b.family && a.family !== b.family
     const bg = far(a.background, b.background)
     const score =
