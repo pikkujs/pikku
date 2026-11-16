@@ -185,9 +185,10 @@ migrations by `plan progress`, and needs `provedBy` naming a scenario in this sa
 the parent and asserts the children are gone.
 
 A table that already exists is altered by changing its declaration in `db/tables.ts`:
-`pikku db generate` writes the next migration, and adds only. Plan a new column as nullable or with
-a default. A drop, a rename or a type change is refused, so plan that as a person's decision rather
-than as a step of the build.
+`pikku db generate` writes the next migration. Plan a new column as nullable or with a default. A
+type change is refused, and a drop needs a person's approval (`--allowDestructive`, each drop marked
+so `db migrate` asks again), so plan those as a person's decision rather than as a step of the build.
+A rename that keeps its rows is `renamedFrom: 'old_name'` on the new column.
 
 ### `functions` — with their wire and their rule on them
 

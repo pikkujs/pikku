@@ -105,10 +105,11 @@ describe('declared tables on mysql', { skip: !SERVER_URL }, () => {
     assert.deepEqual((await generate()).written, [])
   })
 
-  test('refuses a dropped column', async () => {
+  test('lists a dropped column and writes nothing without approval', async () => {
     declare(ITEM)
-    const { written, refusals } = await generate()
+    const { written, refusals, destructive } = await generate()
     assert.deepEqual(written, [])
-    assert.match(refusals[0]!, /item\.code is in the migrations/)
+    assert.deepEqual(refusals, [])
+    assert.match(destructive[0]!.what, /DROP COLUMN item\.code/)
   })
 })
