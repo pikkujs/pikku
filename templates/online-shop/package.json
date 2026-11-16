@@ -4,7 +4,6 @@
   "private": true,
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.71",
-    "@pikku/addon-console": "workspace:*",
     "@pikku/addon-stripe": "^0.1.8",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "^0.12.65",

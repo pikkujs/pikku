@@ -13,18 +13,13 @@ The comment there says the gate is the definition and not the provider count, so
 auth, which has no OAuth providers, still generates its `/auth/*` wiring (`pikku-command-auth.ts:53-55`).
 
 When a definition exists, `serializeAuthGen` is called with the definition, the providers, the
-generated file path, and `Boolean(config.scaffold?.console)` as its last argument
-(`pikku-command-auth.ts:58-64`). The console flag is passed through here, so the console scaffold
-changes the generated output rather than being checked separately.
+generated file path and the package mappings (`pikku-command-auth.ts:58-64`).
 
 The output goes to three files. The wiring goes to `authFile` and the secrets to
 `auth-secrets.gen.ts` (`pikku-command-auth.ts:69-71`), kept apart because the CLI forbids Zod
 schemas and HTTP wiring in one file (`pikku-command-auth.ts:66-68`). The session middleware goes
 to `auth-middleware.gen.ts`, and that file is removed when no middleware is produced
 (`pikku-command-auth.ts:74-77`, with the removal at `:78-79`).
-
-The console scaffold has its own check that requires a `pikkuBetterAuth` declaration, covered in
-[scaffold console needs better-auth](scaffold-console-needs-better-auth.md).
 
 **What this rules out:** gating auth codegen on the number of OAuth providers, which would leave a
 credentials-only app with no `/auth` routes and no session middleware.

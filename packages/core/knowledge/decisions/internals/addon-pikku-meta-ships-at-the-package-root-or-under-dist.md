@@ -15,9 +15,8 @@ resolving by specifier: `"./.pikku/*"` points at wherever it landed, so
 `require.resolve('<pkg>/.pikku/scopes/pikku-scopes-meta.gen.json')` works for
 either shape, and that is the resolution every consumer should prefer.
 
-Code that builds the path itself must probe both. `addonPikkuDir`
-(`packages/addon/pikku-console/src/lib/derive-instance-overrides.ts`) tries
-`<pkg>/.pikku` then `<pkg>/dist/.pikku` and returns `null` when neither exists.
+Code that builds the path itself must probe both: `<pkg>/.pikku`, then
+`<pkg>/dist/.pikku`, with `null` when neither exists.
 The reason to say so out loud is the failure mode: a reader that assumes the
 root finds nothing under a `dist`-shipping addon and cannot distinguish that
 from an addon that declares no secrets, variables or scopes at all. Both answers

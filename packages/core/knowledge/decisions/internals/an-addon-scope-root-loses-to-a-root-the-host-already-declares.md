@@ -28,8 +28,8 @@ is about `flattenScopeDefinitions` deduping ids _within_ a build where both
 declarations are present and identical. This one is about the addon's copy never
 arriving. The consequence for addon authors is the same either way — own a root
 outright, named for the package or vendor, and nest everything under it. It is
-why `@pikku/addon-console` declares `pikku:console:*` rather than
-`admin:console:*`.
+why an addon declares `vendor:*` rather than a child of a root the host is likely
+to own.
 
 **What this rules out:** shipping an addon whose scopes hang off a root a host
 is likely to declare, and deep-merging the two trees here so both survive. A

@@ -2,7 +2,6 @@
 '@pikku/core': patch
 '@pikku/cli': patch
 '@pikku/kysely': patch
-'@pikku/addon-console': patch
 '@pikku/migrator-sql': patch
 '@pikku/deploy-standalone': patch
 '@pikku/skills': patch

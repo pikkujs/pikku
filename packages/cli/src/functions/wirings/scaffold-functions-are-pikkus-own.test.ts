@@ -7,7 +7,6 @@ import { serializeRemoteJobs } from './remote-jobs/serialize-remote-jobs.js'
 import { serializeWebhook } from './webhook/serialize-webhook.js'
 import { serializePublicAgent } from './agent/serialize-public-agent.js'
 import { serializeWorkflowRoutes } from './workflow/serialize-workflow-routes.js'
-import { serializeConsoleFunctions } from './console/serialize-console-functions.js'
 import { serializeVirtualUserFunctions } from './virtual-user/serialize-virtual-user-functions.js'
 import { serializeAnalytics } from './analytics/serialize-analytics.js'
 import { serializeFeatureFlagsScaffold } from './flags/serialize-feature-flags-scaffold.js'
@@ -62,7 +61,6 @@ describe("every function a scaffold generates is tagged as pikku's own", () => {
     ['outgoing webhooks', serializeWebhook(leaf).functions],
     ['public agent', serializePublicAgent(leaf).functions],
     ['workflow routes', serializeWorkflowRoutes(leaf).functions],
-    ['console', serializeConsoleFunctions(leaf, '#agentTypes').functions],
     [
       'virtual user',
       serializeVirtualUserFunctions(leaf, '#virtualUsers').functions,

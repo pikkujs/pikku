@@ -72,8 +72,6 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
   ['agent', 'publicAgentFile', 'agent', 'agent.gen.ts', true],
   ['agent', 'publicAgentSchemasFile', 'agent', 'agent.schemas.gen.ts', false],
   ['admin', 'adminFunctionsFile', 'admin', 'admin.gen.ts', true],
-  ['console', 'consoleFunctionsFile', 'console', 'console.gen.ts', true],
-  ['console', 'consoleSchemasFile', 'console', 'console.schemas.gen.ts', false],
   [
     'virtualUser',
     'virtualUserFunctionsFile',
@@ -107,7 +105,6 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
  */
 const SCAFFOLD_ADDONS: Record<string, { name: string; package: string }> = {
   admin: { name: 'admin', package: '@pikku/addon-admin' },
-  console: { name: 'console', package: '@pikku/addon-console' },
   graph: { name: 'graph', package: '@pikku/addon-graph' },
 }
 

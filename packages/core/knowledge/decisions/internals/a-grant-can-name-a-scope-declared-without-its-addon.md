@@ -22,7 +22,7 @@ exists so that an app can grant a scope, in a system role or a function's
 two calls "never conflict, unlike a second `defineScope` for the same root"
 (`define-scope.ts:44-46`).
 
-The example is `declareScopes(['pikku:console'])` (`define-scope.ts:49-51`).
+The example is `declareScopes(['admin:users:list'])` (`define-scope.ts:49-51`).
 
 **What this rules out:** declaring the same scope root with `defineScope` in two
 places, which the doc says conflicts, and making a grant valid only by wiring the

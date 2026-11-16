@@ -3,7 +3,7 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { promisify } from 'node:util'
-import { PikkuCiFailedError } from './console-removal.js'
+import { PikkuCiFailedError } from './errors.js'
 
 const run = promisify(execFile)
 

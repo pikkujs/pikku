@@ -21,13 +21,12 @@ Version numbers in brackets are the release of the named package that shipped th
 
 ## Licence change: CLI and inspectors are AGPL-3.0-only
 
-`@pikku/cli`, `@pikku/inspector` and `@pikku/inspector-go` (and the unpublished Rust inspector) move from the Business Source License 1.1 to **AGPL-3.0-only**. The packages that depend on or import them move from MIT to **AGPL-3.0-only** as well: `@pikku/addon-console`, `@pikku/code-edit`, and the unpublished `@pikku/addon-changes-cli` and `@pikku/addon-cloud-cli`. Every other package (`@pikku/core`, the runtimes, services, clients, the other addons and skills) stays **MIT**.
+`@pikku/cli`, `@pikku/inspector` and `@pikku/inspector-go` (and the unpublished Rust inspector) move from the Business Source License 1.1 to **AGPL-3.0-only**. The packages that depend on or import them move from MIT to **AGPL-3.0-only** as well: `@pikku/code-edit`, and the unpublished `@pikku/addon-changes-cli` and `@pikku/addon-cloud-cli`. Every other package (`@pikku/core`, the runtimes, services, clients, the other addons and skills) stays **MIT**.
 
 - **What changes for you:** usually nothing. You run the CLI to build your app; your app depends on the MIT packages. The AGPL matters if you modify the CLI or the inspectors and distribute them, or let others use a modified version over a network: then you must share your changes under the AGPL. The old BUSL ban on commercial visual Pikku tools is gone.
 - **Generated code:** _[LAWYER: draft, not yet reviewed]_ the code, types and files the CLI generates into your project are not meant to be covered by the AGPL. See [LICENSE](../LICENSE).
 - **Older versions:** releases published before this change keep the BUSL-1.1 terms they were published under, including `@pikku/console`.
 - **If the AGPL does not work for you:** other licensing is available. See [LICENSE-COMMERCIAL.md](../LICENSE-COMMERCIAL.md).
-- **The console addon:** `@pikku/addon-console` (and `@pikku/code-edit`, which it uses) is now AGPL-3.0-only. With `scaffold.console` on, it is wired into your app by codegen. `pikku ci` removes it from deployed bundles; if you build and ship your app another way with `scaffold.console` on, you ship AGPL code. Turn `scaffold.console` off for production builds.
 - **How to find affected code:** if you vendor or fork `packages/cli`, `packages/inspector`, `packages/inspector-go`, `packages/inspector-rust` or one of the AGPL packages above, those copies are now AGPL-3.0-only. Run `bun run check:licenses` in a fork: it fails when an MIT package depends on or imports an AGPL one.
 
 ## 0.13.0 changes
@@ -41,6 +40,22 @@ Version numbers in brackets are the release of the named package that shipped th
 `WiringService`, `readAllMeta` and the `AllMeta` types now live in `@pikku/core/services/wiring-service` (MIT). `@pikku/addon-console` no longer exports them and the `@pikku/addon-console/services` entry is removed; import from `@pikku/core/services/wiring-service` instead.
 
 The console's `agentCredentialCheck` (scope `pikku:console:credentials:read`) was removed. `@pikku/addon-admin` has `agentCredentialCheck` under `admin:credentials:read`; call `admin:agentCredentialCheck` instead and grant `admin:credentials:read`. It reads the agent from the running app, not from `.pikku` files, so it works in a deployed stage.
+
+### `@pikku/addon-console` is removed
+
+**What:** the package is deleted and no longer published. The functions that a deployed stage needs moved to `@pikku/addon-admin` (see the two `admin:*` entries under [`@pikku/cli` and `pikku.config.json`](#pikkucli-and-pikkuconfigjson), and `admin:agentCredentialCheck` above); the rest (source editing, project meta, knowledge, scenarios, addon installation, design) moves to Pikku Studio, which is not part of this repository.
+
+**Config and CLI:**
+
+- `scaffold.console` is no longer a config key. Delete it from `pikku.config.json`; an unknown scaffold key is rejected. Delete the generated `console/console.gen.ts` and `console.schemas.gen.ts` from your scaffold directory, and the `@pikku/addon-console` dependency from your functions package.
+- `pikku enable console` is gone.
+- The generated auth wiring no longer adds the `authBearer` middleware for `PIKKU_CONSOLE_TOKEN`. If something still calls your app with that bearer token, add `authBearer({ token: { secretId, userSession } })` to your own global middleware, with the scopes it needs.
+- `pikku dev` installs the studio header session (`PIKKU_STUDIO_TOKEN`) with the scope `['admin']` only; `pikku:console` is no longer granted.
+- `pikku ci` no longer removes a console scaffold, and its `console` step is gone.
+- `pikku knowledge plan show|progress|set` no longer return or print a `/console/knowledge` link.
+- Roles and functions that grant or require `pikku:console` or `pikku:console:*` reference scopes nothing in this repository declares any more. Grant the matching `admin:*` scope instead, or drop the grant.
+
+**Find:** `rg -n "addon-console|scaffold.*console|pikku:console|PIKKU_CONSOLE_TOKEN|console:[a-zA-Z]+"`
 
 ### The event hub is publish-only; a subscribe function decides the topic
 
@@ -213,19 +228,20 @@ Related changes:
 - **The workflow, agent-thread, webhook-delivery and virtual-user read functions moved from `@pikku/addon-console` to `@pikku/addon-admin`**, because a deployed stage has those and no console. Call them as `admin:getWorkflowRuns`, `admin:getAgentThreads`, `admin:listWebhookDeliveries`, `admin:getVirtualUserRuns` and so on, with the scopes `admin:workflows:read|manage`, `admin:agents:read|manage`, `admin:webhooks:deliveries` and `admin:virtualUsers:read`, in place of the `pikku:console:*` ones. A project that opens these screens must wire `@pikku/addon-admin`. The console's `startVirtualUserRun` and `setVirtualUserSchedule` pass-throughs are deleted: call the host's own `startVirtualUserRun` and `setVirtualUserSchedule` functions directly.
 - **The secret, variable, installed-addon, scorer and access functions moved from `@pikku/addon-console` to `@pikku/addon-admin`**, because a deployed stage has those and no console. Wire `@pikku/addon-admin` to call them. The host must supply `secrets` and `variables` (and optionally `metaService`, read only for an addon icon). The RPC names and scopes changed:
 
-  | Was | Now | Scope |
-  | --- | --- | --- |
-  | `console:secretGet` | `admin:secretGet` | `pikku:console:secrets:read` -> `admin:secrets:read` |
-  | `console:secretHas` | `admin:secretHas` | `pikku:console:secrets:read` -> `admin:secrets:read` |
-  | `console:secretSet` | `admin:secretSet` | `pikku:console:secrets:write` -> `admin:secrets:write` |
-  | `console:variableGet` | `admin:variableGet` | `pikku:console:variables:read` -> `admin:variables:read` |
-  | `console:variableSet` | `admin:variableSet` | `pikku:console:variables:write` -> `admin:variables:write` |
-  | `console:getInstalledAddons` | `admin:getInstalledAddons` | `pikku:console:addons:read` -> `admin:addons:read` |
-  | `console:getAddonInstances` | `admin:getAddonInstances` | `pikku:console:addons:read` -> `admin:addons:read` |
-  | `console:getScorers` | `admin:getScorers` | none |
-  | `console:getMyAccess` | `admin:getMyAccess` | none |
+  | Was                          | Now                        | Scope                                                      |
+  | ---------------------------- | -------------------------- | ---------------------------------------------------------- |
+  | `console:secretGet`          | `admin:secretGet`          | `pikku:console:secrets:read` -> `admin:secrets:read`       |
+  | `console:secretHas`          | `admin:secretHas`          | `pikku:console:secrets:read` -> `admin:secrets:read`       |
+  | `console:secretSet`          | `admin:secretSet`          | `pikku:console:secrets:write` -> `admin:secrets:write`     |
+  | `console:variableGet`        | `admin:variableGet`        | `pikku:console:variables:read` -> `admin:variables:read`   |
+  | `console:variableSet`        | `admin:variableSet`        | `pikku:console:variables:write` -> `admin:variables:write` |
+  | `console:getInstalledAddons` | `admin:getInstalledAddons` | `pikku:console:addons:read` -> `admin:addons:read`         |
+  | `console:getAddonInstances`  | `admin:getAddonInstances`  | `pikku:console:addons:read` -> `admin:addons:read`         |
+  | `console:getScorers`         | `admin:getScorers`         | none                                                       |
+  | `console:getMyAccess`        | `admin:getMyAccess`        | none                                                       |
 
   `console:startVirtualUserRun` and `console:setVirtualUserSchedule` are deleted, not moved. The scopes `pikku:console:secrets:*`, `pikku:console:variables:*`, `pikku:console:virtualUsers:run` and `pikku:console:virtualUsers:schedule` are removed from the `pikku:console` tree. Grant `admin:secrets:*`, `admin:variables:*` and `admin:addons:read` instead; `ADMIN_SCOPE_TREE` in `@pikku/better-auth` gained the same three branches.
+
 - **`/workflow-run/:runId/stream` is no longer generated by `scaffold.console`.** The stream is `admin:streamWorkflowRun`: set `"scaffold": { "admin": true }` in `pikku.config.json` and it is generated, together with `wireAddon({ name: 'admin', package: '@pikku/addon-admin', expose: true, globalCredentials: ... })`, as `workflowRunStream: { route: '/workflow-run/:runId/stream', method: 'get', sse: true, auth: true, func: ref('admin:streamWorkflowRun') }`. If you already wire `@pikku/addon-admin` by hand, add the route yourself and leave `scaffold.admin` off: wiring it twice is a duplicate. It needs a session and the `admin:workflows:read` scope, which is console-style access to every run, ownerless ones included, not run ownership: grant it only to people who may see every run.
 - **`pikku validate` exits with code 1** when it reports errors. CI that ignored these will start failing.
 - **A route built for one agent cannot resume another agent's run.** `rpc.exposedAgent.resume` and `.approve` take the route's `expectedAgentName`; after the run's owner is checked, a run of a different agent answers 403 `This run does not belong to this agent`. `rpc.agent.resume`, `.approve`, `resumeAgent` and `resumeAgentSync` take no agent name: they check only the run's owner and the run's own agent's auth. The `agentApprove(name)` helper now calls `rpc.exposedAgent.approve`, so its agent must be `expose: true`.

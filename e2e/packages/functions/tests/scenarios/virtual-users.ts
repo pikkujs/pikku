@@ -81,10 +81,6 @@ defineVirtualUsers({
   admin: {
     name: 'Admin',
     jobTitle: 'Console administrator',
-    // The one virtual user here carrying a picture, so the console's avatar has both
-    // branches covered by the same suite. Same-origin and always served, which
-    // an external URL would not be on a machine with no network.
-    avatarUrl: '/console/pikku-console-logo.png',
     description:
       'Edits code through the console and always puts it back the way they found it',
     personality:
@@ -99,7 +95,7 @@ defineVirtualUsers({
 
   /**
    * Holds the `admin` umbrella through `platform-admin` but not `console-admin`,
-   * which is exactly the seam the console-authz scenarios test one assertion at
+   * which is exactly the seam the authorization scenarios test one assertion at
    * a time. Adversarial is shown the whole catalogue rather than the narrowed
    * one — being offered a call they should not be able to make is the test —
    * while their roles stay live as the oracle: a success outside what those

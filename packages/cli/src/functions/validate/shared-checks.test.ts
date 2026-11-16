@@ -419,23 +419,21 @@ describe('WIRES_ADMIN_ADDON', () => {
   test('does not match a different addon', () => {
     assert.ok(
       !wires(`wireAddon({
-  name: 'console',
-  package: '@pikku/addon-console',
-  scopes: ['pikku:console'],
+  name: 'graph',
+  package: '@pikku/addon-graph',
 })`)
     )
   })
 
-  // The scaffolded console wiring ships a comment naming this package to say
-  // why it is not the console's scope root. Reading it as a wiring reported
-  // every app that scaffolded a console as already administered.
+  // A comment naming this package must not read as a wiring, or every app
+  // that mentions it would be reported as already administered.
   test('does not match the package named in a neighbouring comment', () => {
     assert.ok(
       !wires(`// Administering the application is \`@pikku/addon-admin\` under the
 // \`admin\` tree, and the two are granted separately.
 wireAddon({
-  name: 'console',
-  package: '@pikku/addon-console',
+  name: 'graph',
+  package: '@pikku/addon-graph',
 })`)
     )
   })
@@ -479,7 +477,7 @@ describe('runSharedProjectChecks: admin addon wiring', () => {
     await withBetterAuthSession()
     await writeSource(
       'addons.ts',
-      "wireAddon({ name: 'console', package: '@pikku/addon-console' })"
+      "wireAddon({ name: 'graph', package: '@pikku/addon-graph' })"
     )
 
     const findings = await adminFindings()

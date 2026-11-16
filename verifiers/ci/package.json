@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@pikku/addon-admin": "workspace:*",
-    "@pikku/addon-console": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/bun-server": "workspace:*",
     "@pikku/core": "workspace:*",

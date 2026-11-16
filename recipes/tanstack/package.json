@@ -16,7 +16,6 @@
     "test:browser": "npx tsx client/browser.ts"
   },
   "dependencies": {
-    "@pikku/addon-console": "workspace:*",
     "@pikku/better-auth": "^0.12.65",
     "@pikku/core": "^0.12.158",
     "@pikku/fetch": "^0.12.16",

@@ -17,8 +17,7 @@ The file's comment gives the reason (`services.ts:3-6`). An addon that made its 
 grant roles nothing checks. The comment says these are "the application's choice."
 
 Lines 8-10 record a second property: nothing here touches a filesystem or a project
-root. That is what lets this addon run in a deployed serverless unit, which the
-comment contrasts with `@pikku/addon-console`.
+root. That is what lets this addon run in a deployed serverless unit.
 
 `secrets`, `variables` and the optional `metaService` are forwarded the same way, for the
 secret, variable and installed-addon functions. The one exception is `secretAdminService`:

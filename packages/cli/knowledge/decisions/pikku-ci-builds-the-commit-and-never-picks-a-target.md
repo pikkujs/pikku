@@ -33,5 +33,5 @@ set, so `--deploy -p cloudflare` treats every shipped migration as pending until
 no secrets, and a valid setup keeps them only in Cloudflare.
 
 **What this rules out:** running the `-p` pipeline in the caller's tree (codegen
-and console removal would dirty it, and uncommitted work would ship), and a
+would dirty it, and uncommitted work would ship), and a
 default deploy target for `pikku ci`.

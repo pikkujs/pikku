@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { PikkuCiFailedError } from './console-removal.js'
+import { PikkuCiFailedError } from './errors.js'
 
 /**
  * Cloudflare's adapter neither applies migrations nor uploads secrets, so

@@ -101,7 +101,7 @@ export const pikkuNodesMeta = pikkuSessionlessFunc<void, boolean | undefined>({
       metaData.requiredParentServices = state.addonRequiredParentServices
     }
 
-    if (addonMetaJsonFile && (config.scaffold?.console || config.addon)) {
+    if (addonMetaJsonFile && config.addon) {
       await writeMetaSidecar({
         logger,
         meta: metaData,

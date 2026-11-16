@@ -16,9 +16,8 @@ import type { PluginObj, NodePath, types as BabelTypes } from '@babel/core'
  *   meaning does — at which point a scenario naming the old one SHOULD fail.
  * - **A component's root element** gets `data-testid` = its component name, kebab-cased.
  *   Keys are NOT unique — `m.common__save()` is meant to be reused — so the id alone is
- *   ambiguous whenever two forms are open at once. That is not a flaw to design out: this
- *   app's own console steps already handle testids matching several nodes by filtering
- *   (`addon-console.steps.ts`), and pikku's TestIdSelector has `within`/`containing` for
+ *   ambiguous whenever two forms are open at once. That is not a flaw to design out: scenario
+ *   steps can handle testids matching several nodes by filtering, and pikku's TestIdSelector has `within`/`containing` for
  *   exactly this. Scoping only works if the containers are addressable too, which is what
  *   this second rule provides — `clicks common__save within entry-form`.
  *

@@ -29,10 +29,7 @@ Three functions use it, each `expose: true`:
 - `secretSet` is gated by `admin:secrets:write`. Reading and overwriting are separate
   grants: a holder of only the read scope is refused.
 
-These functions moved from `@pikku/addon-console`, where they were
-`pikku:console:secrets:read|write`. The RPC names changed from `console:secretGet`,
-`console:secretHas` and `console:secretSet` to `admin:secretGet`, `admin:secretHas`
-and `admin:secretSet`.
+The RPC names are `admin:secretGet`, `admin:secretHas` and `admin:secretSet`.
 
 **What this rules out:** a second function or service that reveals a secret value,
 reaching the `SecretService` from a function body,

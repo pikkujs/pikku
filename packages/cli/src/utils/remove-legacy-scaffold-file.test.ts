@@ -62,7 +62,6 @@ describe('pruneLegacyScaffoldFiles', () => {
         'rpc-public.schemas.gen.ts'
       ),
       authFile: await seed(scaffold, 'auth', 'auth.gen.ts'),
-      consoleFunctionsFile: await seed(scaffold, 'console', 'console.gen.ts'),
     } as unknown as PikkuCLIConfig
 
     await writeFile(join(scaffold, 'auth-secrets.gen.ts'), '// legacy')
@@ -70,11 +69,7 @@ describe('pruneLegacyScaffoldFiles', () => {
 
     await pruneLegacyScaffoldFiles(config)
 
-    assert.deepEqual((await readdir(scaffold)).sort(), [
-      'auth',
-      'console',
-      'rpc',
-    ])
+    assert.deepEqual((await readdir(scaffold)).sort(), ['auth', 'rpc'])
   })
 
   test('tolerates a config that has no scaffolds enabled', async () => {
@@ -170,13 +165,13 @@ describe('removeRetiredScaffoldFiles', () => {
 
   test('leaves the rest of the scaffold directory alone', async () => {
     const { scaffold } = await adminScaffold()
-    await seed(scaffold, 'console', 'console.gen.ts')
+    await seed(scaffold, 'other', 'other.gen.ts')
 
     await removeRetiredScaffoldFiles({
       resolvedScaffoldDir: scaffold,
     } as PikkuCLIConfig)
 
-    assert.ok(existsSync(join(scaffold, 'console', 'console.gen.ts')))
+    assert.ok(existsSync(join(scaffold, 'other', 'other.gen.ts')))
   })
 
   test('tolerates a config that never went through scaffold resolution', async () => {

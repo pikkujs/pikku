@@ -47,7 +47,7 @@ async function setLintRule(root: string, severity: string) {
         'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
-    scaffold: { console: true },
+    scaffold: { rpc: true },
     lint: { customServerBootstrap: severity },
   })
 }
@@ -67,7 +67,6 @@ async function makeValidWorkspace(root: string) {
       reactQueryFile: 'packages/functions-sdk/src/pikku/api.gen.ts',
     },
     scaffold: {
-      console: true,
       rpc: true,
       agent: true,
       workflow: true,
@@ -208,11 +207,11 @@ describe('pikku validate', () => {
     }
   })
 
-  test('missing scaffold.console → error finding', async () => {
+  test('missing scaffold.rpc → error finding', async () => {
     const tmp = await makeTmp()
     try {
       await makeValidWorkspace(tmp)
-      // Drop scaffold.console from the otherwise-valid config.
+      // Drop scaffold.rpc from the otherwise-valid config.
       await writeJson(join(tmp, 'pikku.config.json'), {
         srcDirectories: ['packages/functions/src'],
         outDir: 'packages/functions/.pikku',
@@ -227,9 +226,9 @@ describe('pikku validate', () => {
         skipDeployChecks: true,
       })
       const finding = result.findings.find(
-        (f) => f.id === 'pikku-config-no-scaffold-console'
+        (f) => f.id === 'pikku-config-no-scaffold-rpc'
       )
-      assert.ok(finding, 'expected pikku-config-no-scaffold-console finding')
+      assert.ok(finding, 'expected pikku-config-no-scaffold-rpc finding')
       assert.strictEqual(finding!.severity, 'error')
       assert.strictEqual(result.ok, false)
     } finally {

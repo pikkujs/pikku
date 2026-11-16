@@ -60,8 +60,7 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
       state.auth.providers,
       authFile,
       (name) => getLeafImportPath(authFile, name, config),
-      packageMappings ?? {},
-      Boolean(config.scaffold?.console)
+      packageMappings ?? {}
     )
     // The secrets file sits alongside authFile so re-inspection rediscovers it.
     // It is kept separate from the wiring file because the CLI forbids Zod

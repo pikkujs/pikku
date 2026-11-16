@@ -126,16 +126,9 @@ describe('pikku ci', () => {
     const [kept] = readdirSync(f.worktrees)
     assert.ok(kept, 'the worktree was kept')
     const worktree = join(f.worktrees, kept)
-    const config = JSON.parse(
-      readFileSync(join(worktree, 'pikku.config.json'), 'utf8')
-    )
-    assert.equal(config.scaffold.console, false)
-    assert.ok(
-      !existsSync(join(worktree, 'packages/functions/src/scaffold/console'))
-    )
     assert.ok(
       existsSync(join(worktree, 'packages/functions/src/scaffold/auth')),
-      'only the console scaffold is removed'
+      'the scaffold is left in place'
     )
     assert.equal(await git(f.repo, 'status', '--porcelain'), '')
     await git(f.repo, 'worktree', 'remove', '--force', worktree)

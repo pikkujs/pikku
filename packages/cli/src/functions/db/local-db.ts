@@ -256,7 +256,7 @@ export function resolveDb(
     schemaJsonFile: join(outDir, 'db', 'pikku-db-schema.gen.json'),
     enumsFile: join(outDir, 'db', 'enums.gen.ts'),
     // The sidecar lives in db/, where both readers look for it: the codegen's
-    // loadAnnotations() and the pikku-console addon (db/annotations.gen.json).
+    // loadAnnotations() and Studio (db/annotations.gen.json).
     classificationsGenJsonFile: join(rootDir, 'db', 'annotations.gen.json'),
     tablesFile: join(rootDir, TABLES_FILE),
     zodFile: join(outDir, 'db', 'zod.gen.ts'),
@@ -980,7 +980,7 @@ export async function reset(
 
 /**
  * Write the column annotations `db/tables.ts` declares to the
- * `annotations.gen.json` sidecar that the codegen and the pikku-console addon
+ * `annotations.gen.json` sidecar that the codegen and Studio
  * read. With no declaration there is nothing to annotate, so a sidecar left
  * from an earlier run is removed rather than kept classifying columns nothing
  * declares. Returns whether the sidecar changed on disk.

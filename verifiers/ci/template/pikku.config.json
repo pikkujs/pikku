@@ -9,8 +9,7 @@
     "rpc": true,
     "agent": true,
     "workflow": true,
-    "events": true,
-    "console": true
+    "events": true
   },
   "frontends": {
     "web": {

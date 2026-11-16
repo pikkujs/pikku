@@ -25,7 +25,6 @@ import {
   KnowledgePlanShowInputSchema,
   KnowledgePlanShowOutputSchema,
 } from '../knowledge/schemas.js'
-import { knowledgeConsoleUrl } from '../knowledge/console-url.js'
 
 export const knowledgePlanSchema = pikkuSessionlessFunc({
   description:
@@ -41,8 +40,7 @@ export const knowledgePlanShow = pikkuSessionlessFunc({
   input: KnowledgePlanShowInputSchema,
   output: KnowledgePlanShowOutputSchema,
   func: async ({ config }, input) => {
-    const result = await runKnowledgePlanShow(config.rootDir, input)
-    return { ...result, consoleUrl: knowledgeConsoleUrl(config, result.path) }
+    return runKnowledgePlanShow(config.rootDir, input)
   },
 })
 
@@ -52,8 +50,7 @@ export const knowledgePlanProgress = pikkuSessionlessFunc({
   input: KnowledgePlanProgressInputSchema,
   output: KnowledgePlanProgressOutputSchema,
   func: async ({ config }, input) => {
-    const result = await runKnowledgePlanProgress(config.rootDir, input)
-    return { ...result, consoleUrl: knowledgeConsoleUrl(config, result.path) }
+    return runKnowledgePlanProgress(config.rootDir, input)
   },
 })
 
@@ -63,8 +60,7 @@ export const knowledgePlanSet = pikkuSessionlessFunc({
   input: KnowledgePlanSetInputSchema,
   output: KnowledgePlanSetOutputSchema,
   func: async ({ config }, input) => {
-    const result = await runKnowledgePlanSet(config.rootDir, input)
-    return { ...result, consoleUrl: knowledgeConsoleUrl(config, result.path) }
+    return runKnowledgePlanSet(config.rootDir, input)
   },
 })
 

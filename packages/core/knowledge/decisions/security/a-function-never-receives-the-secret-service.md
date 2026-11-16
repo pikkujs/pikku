@@ -27,7 +27,7 @@ middleware — and the function is handed the configured client.
 The cost is that a function which needs to _ask about_ a secret rather than read
 one — "is this key set?", for a readiness or provisioning check — cannot do it
 directly either. It goes through a service that holds `secrets` and exposes only
-that question, which is how `@pikku/addon-console` checks whether an installed
+that question, which is how `@pikku/addon-admin` checks whether an installed
 addon's declared secrets are present.
 
 **What this rules out:** widening a function's services type back to

@@ -9,7 +9,7 @@ This is the opposite of code generation: generated `*.gen.ts` files are owned by
 the tool and rewritten wholesale, while these files are owned by you and are
 only ever patched in place.
 
-Most users get this transitively via the Pikku CLI or `@pikku/addon-console`;
+Most users get this transitively via the Pikku CLI;
 install it directly only if you are building your own tooling that edits Pikku
 declarations.
 

@@ -38,7 +38,7 @@ export const defineScope = (_config: CoreScopes): void => {}
  * addon it has not wired. `wireAddon({ scopes })` does not declare anything: it
  * only requires the scope of the addon's functions, and the tree itself arrives
  * with the addon's metadata. Declaring by id lets an app grant
- * `pikku:console` without wiring `@pikku/addon-console`, which would otherwise
+ * `admin:users:list` without wiring `@pikku/addon-admin`, which would otherwise
  * be the only way to make that grant valid.
  *
  * Each id declares that node and its ancestors. When the addon IS wired, its
@@ -47,7 +47,7 @@ export const defineScope = (_config: CoreScopes): void => {}
  *
  * @example
  * ```typescript
- * declareScopes(['pikku:console'])
+ * declareScopes(['admin:users:list'])
  * ```
  */
 export const declareScopes = (_ids: string[]): void => {}

@@ -28,7 +28,6 @@
       "originLock": false
     },
     "workflow": true,
-    "console": true,
     "events": true,
     "meshRpc": true,
     "webhook": true,

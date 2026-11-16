@@ -49,22 +49,14 @@ defineSystemRole({
    * `catalogue` is `catalogue:read` and `catalogue:write` in one word instead
    * of a list that drifts as the tree grows.
    *
-   * `pikku:console` comes from `@pikku/addon-console`, not from this app, and
-   * `virtualUser` from the virtual-user scaffold, whose RPCs no role could
-   * otherwise reach. Both are parents rather than `virtualUser:*`: a wildcard
-   * has no row in pikku_scopes for pikku_role_scopes to reference.
+   * `virtualUser` comes from the virtual-user scaffold, whose RPCs no role
+   * could otherwise reach. It is a parent rather than `virtualUser:*`: a
+   * wildcard has no row in pikku_scopes for pikku_role_scopes to reference.
    */
   admin: {
     displayName: 'Administrator',
-    description: 'Everything the shop can do, plus console administration',
-    scopes: [
-      'catalogue',
-      'orders',
-      'payments',
-      'reports',
-      'pikku:console',
-      'virtualUser',
-    ],
+    description: 'Everything the shop can do',
+    scopes: ['catalogue', 'orders', 'payments', 'reports', 'virtualUser'],
   },
 })
 // @snippet end defineRoles

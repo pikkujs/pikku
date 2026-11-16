@@ -10,7 +10,7 @@
 // workspace CLI (`pikku all`, or a `build.sh` that runs
 // `cli/dist/bin/pikku.js`) can read `packages/cli/dist` mid-wipe and fail with
 // `Cannot find module '.../cli/dist/src/services.js'`. This raced
-// `@pikku/addon-console` against `@pikku/cli` and broke the release.
+// an addon's publish build against `@pikku/cli` and broke the release.
 //
 // `yarn release` already fully builds every package (`build:packages` →
 // `build:addons`) BEFORE `npx changeset publish`, and that

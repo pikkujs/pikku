@@ -56,7 +56,7 @@ export const ciWorkflow = pikkuWorkflowFunc<CiRun, void>({
     // validate type-checks the project, and the frontends' own generated files
     // (a router tree, compiled messages) only exist once they have built. A
     // clean checkout has none, so the first app build comes before it. With a
-    // provider the deployed builds below run again, after console removal.
+    // provider the deployed builds below run again.
     await workflow.do(
       'App build',
       'pikkuCiStep',
@@ -78,31 +78,6 @@ export const ciWorkflow = pikkuWorkflowFunc<CiRun, void>({
       )
     }
     if (data.provider) {
-      if (data.hasConsole) {
-        await workflow.do(
-          'Console removal',
-          'pikkuCiRemoveConsole',
-          {
-            run: data,
-          },
-          { retries: 0 }
-        )
-        await workflow.do(
-          'All without console',
-          'pikkuCiStep',
-          {
-            stages: ['all'],
-            run: data,
-          },
-          { retries: 0 }
-        )
-        await workflow.do(
-          'Console check',
-          'pikkuCiCheckConsole',
-          { run: data },
-          { retries: 0 }
-        )
-      }
       await workflow.do(
         'Served app build',
         'pikkuCiStep',

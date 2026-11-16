@@ -19,7 +19,6 @@ no `userId` or `scopes`, which a session still can be.
 
 Most admin functions state their access rule as one `admin:*` scope. The ping probe declares none, on purpose (see
 [the ping probe has no scopes](../decisions/the-ping-probe-has-no-scopes-so-any-answer-but-404-means-wired.md)).
-This function moved here from `@pikku/addon-console` with the same gate.
 
 Question: is it intended that any signed-in session may call this, including a session that holds no admin
 scope at all, or should it declare a scope? The code returns only the caller's own session data, so the open

@@ -33,8 +33,8 @@ describe('resolveScaffoldFeature', () => {
 
   test('carries an explicit output path', () => {
     assert.equal(
-      resolveScaffoldFeature('console', { path: 'src/console.gen.ts' }).path,
-      'src/console.gen.ts'
+      resolveScaffoldFeature('admin', { path: 'src/admin.gen.ts' }).path,
+      'src/admin.gen.ts'
     )
   })
 
@@ -68,9 +68,9 @@ describe('resolveScaffoldFeature', () => {
 
   test('the removed auth key is refused by name', () => {
     assert.throws(
-      () => resolveScaffoldFeature('console', { auth: false } as never),
+      () => resolveScaffoldFeature('admin', { auth: false } as never),
       (error: Error) => {
-        assert.match(error.message, /scaffold\.console/)
+        assert.match(error.message, /scaffold\.admin/)
         assert.match(error.message, /no longer takes "auth"/)
         assert.match(error.message, /who may call it/)
         return true
