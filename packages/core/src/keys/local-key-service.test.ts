@@ -17,13 +17,18 @@ import { TypedSecretService } from '../services/typed-secret-service.js'
 import type { SecretService } from '../services/secret-service.js'
 import { createSecretValue } from '../classification/index.js'
 import {
-  createLocalKeyService,
+  createLocalKeyService as create,
   type LocalKeyServiceOptions,
 } from './local-key-service.js'
+import { testCrypto } from './test-crypto.test.js'
 import { MemoryKeyStore } from './memory-key-store.js'
 import { signJws } from './sign-jws.js'
-import { seal } from './sealed-box.js'
 import { toBase64 } from './base64.js'
+
+const createLocalKeyService = (
+  options: Omit<LocalKeyServiceOptions, 'crypto'> &
+    Partial<Pick<LocalKeyServiceOptions, 'crypto'>>
+) => create({ crypto: testCrypto, ...options })
 
 const HOUR = 3_600_000
 const START = Date.parse('2026-01-01T00:00:00Z')
@@ -78,6 +83,7 @@ const setup = async (over: Partial<LocalKeyServiceOptions> = {}) => {
   const secrets = (over.secrets as DurableSecrets) ?? new DurableSecrets()
   const logs: string[] = []
   const options: LocalKeyServiceOptions = {
+    crypto: testCrypto,
     definitions: DEFS,
     store,
     secrets,
@@ -782,17 +788,18 @@ describe('sealing keys', () => {
   test('seal to the public key, open through the service', async () => {
     const a = await setup()
     const info = await a.svc.generate('vault')
-    const sealed = await seal(info.publicKey, info.kid, 'api-token-123')
-    assert.equal(
-      await a.svc.open('vault', JSON.stringify(sealed)),
+    const sealed = await testCrypto.seal(
+      info.publicKey,
+      info.kid,
       'api-token-123'
     )
+    assert.equal(await a.svc.open('vault', sealed), 'api-token-123')
   })
 
   test('previous opens past verifyUntil (rows await re-seal); retired does not; retire needs a usage counter', async () => {
     const a = await setup({ publishDelayMs: 0 })
     const first = await a.svc.generate('vault')
-    const sealed = JSON.stringify(await seal(first.publicKey, first.kid, 'v'))
+    const sealed = await testCrypto.seal(first.publicKey, first.kid, 'v')
     const next = await a.svc.rotate('vault')
     await a.svc.promote('vault', next.kid)
     a.clock.t += 3 * HOUR
@@ -912,11 +919,11 @@ describe('other custodies and listings', () => {
     )
   })
 
-  test('the secret id follows KEY_<NAME>_<hash16>', async () => {
+  test('the secret id follows KEY_<NAME>_<kid prefix 16>', async () => {
     const a = await setup()
     const info = await a.svc.generate('strict-audit')
     const row: KeyRecord = (await a.store.get(info.kid))!
-    assert.match(row.privateRef!, /^KEY_STRICT_AUDIT_[0-9a-f]{16}$/)
+    assert.match(row.privateRef!, /^KEY_STRICT_AUDIT_[A-Za-z0-9]{16}$/)
     assert.deepEqual(
       Object.keys(a.secrets.map.get(row.privateRef!) as object),
       ['privateKey']
@@ -1010,7 +1017,9 @@ describe('review fixes', () => {
     await assert.rejects(svc.sign('audit', 'raw'), DomainPolicyError)
     // the handle path stays the one way to sign a jws name
     const signer = await svc.signer('token')
-    await signer.sign('ok')
+    assert.match(await signJws(signer, {}, 'ok'), /^[\w-]+\.[\w-]+\.[\w-]+$/)
+    // and the handle signs a signing input only, never arbitrary bytes
+    await assert.rejects(signer.sign('ok'), DomainPolicyError)
   })
 
   test('verify rejects a signature made by a different kid when both are accepted', async () => {

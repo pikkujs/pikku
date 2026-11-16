@@ -22,13 +22,14 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.144"
+    "@pikku/core": "^0.12.158"
   },
   "dependencies": {
     "jose": "^6.2.12"
   },
   "exports": {
     ".": "./dist/index.js",
+    "./keys": "./dist/keys.js",
     "./package.json": "./package.json"
   },
   "files": [
