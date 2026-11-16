@@ -247,6 +247,19 @@ export async function loadTableDeclaration(
     )
   }
 
+  return parseDeclaration(exported, TABLES_FILE)
+}
+
+/**
+ * Check a declaration that is already in hand and read it into the form the
+ * planner works from. Pure: `db/tables.ts` and an addon's published JSON both go
+ * through it, so a declaration means the same thing wherever it came from.
+ * `label` names the source in every message.
+ */
+export function parseDeclaration(
+  exported: Record<string, unknown>,
+  label: string
+): LoadedDeclaration {
   const problems: string[] = []
   const annotations: TableAnnotations = {}
   const managed: TablesDeclaration = {}
@@ -304,14 +317,14 @@ export async function loadTableDeclaration(
     target[table] = declaration as unknown as TablesDeclaration[string]
   }
   if (problems.length > 0) {
-    throw new Error(`${TABLES_FILE}: ${problems.join('; ')}.`)
+    throw new Error(`${label}: ${problems.join('; ')}.`)
   }
 
   try {
     // Checks the whole declaration, references between both kinds included.
     compileTables({ ...managed, ...declareOnly })
   } catch (error: any) {
-    throw new Error(`${TABLES_FILE}: ${error.message}`)
+    throw new Error(`${label}: ${error.message}`)
   }
 
   return {

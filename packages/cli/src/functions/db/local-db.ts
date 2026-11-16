@@ -2167,6 +2167,7 @@ export interface DeclaredTablesPlan {
  */
 export async function planDeclaredTables(
   resolved: ResolvedDb,
+  declaration: LoadedDeclaration | null,
   otherSources: SchemaSource[] = [],
   options: {
     serverVersion?: () => Promise<string>
@@ -2174,7 +2175,6 @@ export async function planDeclaredTables(
   } = {}
 ): Promise<DeclaredTablesPlan | null> {
   const recorded = recordedDeclaredTables(resolved.migrationsDir)
-  const declaration = await loadTableDeclaration(resolved.rootDir)
   if (!declaration) {
     if (recorded.size === 0) return null
     return {
@@ -2575,7 +2575,10 @@ export async function declaredSqliteConstraintNotice(
 export async function computeDeclaredTablesDrift(
   resolved: ResolvedDb
 ): Promise<DeclaredTablesDrift> {
-  const plan = await planDeclaredTables(resolved)
+  const plan = await planDeclaredTables(
+    resolved,
+    await loadTableDeclaration(resolved.rootDir)
+  )
   return {
     pending: Boolean(plan?.bodies.length || plan?.destructive.length),
     refusals: plan?.refusals ?? [],
@@ -3127,7 +3130,7 @@ export async function generateMigrations(
 ): Promise<GenerateResult> {
   // Read and checked first: a retired or unreadable declaration refuses the
   // whole command, so no source's migration may be written before it does.
-  await loadTableDeclaration(resolved.rootDir)
+  const declaration = await loadTableDeclaration(resolved.rootDir)
   const sources = await schemaSources(
     resolved,
     rootDir,
@@ -3266,7 +3269,7 @@ export async function generateMigrations(
 
   // Last, and only now: a declared table may reference any of the above, and
   // what those sources just wrote is part of what it is compared against.
-  const plan = await planDeclaredTables(resolved, sources, {
+  const plan = await planDeclaredTables(resolved, declaration, sources, {
     allowDestructive: options.allowDestructive,
   })
   if (plan) {

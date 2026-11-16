@@ -31,6 +31,7 @@ import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { readMigrationProvenance } from './migration-provenance.js'
 import {
   loadTableDeclaration,
+  parseDeclaration,
   recordedDeclaredTables,
   tableRenames,
   TABLES_FILE,
@@ -1242,9 +1243,14 @@ describe('a MySQL-protocol server that cannot take a CHECK', () => {
 
   test('MariaDB is refused first, before anything is run against the server', async () => {
     declare(item(`qty: { type: 'integer', min: 0 },`))
-    const plan = await planDeclaredTables(resolved(), [], {
-      serverVersion: async () => '11.4.2-MariaDB-ubu2404',
-    })
+    const plan = await planDeclaredTables(
+      resolved(),
+      await loadTableDeclaration(root),
+      [],
+      {
+        serverVersion: async () => '11.4.2-MariaDB-ubu2404',
+      }
+    )
     assert.deepEqual(plan!.bodies, [])
     assert.equal(plan!.refusals.length, 1)
     assert.match(plan!.refusals[0]!, /MariaDB is not supported/)
@@ -1253,9 +1259,14 @@ describe('a MySQL-protocol server that cannot take a CHECK', () => {
 
   test('a MySQL older than 8.0.16 is refused the same way, with its own reason', async () => {
     declare(item(`qty: { type: 'integer', min: 0 },`))
-    const plan = await planDeclaredTables(resolved(), [], {
-      serverVersion: async () => '8.0.15',
-    })
+    const plan = await planDeclaredTables(
+      resolved(),
+      await loadTableDeclaration(root),
+      [],
+      {
+        serverVersion: async () => '8.0.15',
+      }
+    )
     assert.match(plan!.refusals.join(), /older than 8\.0\.16/)
   })
 
@@ -1264,7 +1275,7 @@ describe('a MySQL-protocol server that cannot take a CHECK', () => {
     // The server is never reached for the version; materializing would need one,
     // so this only proves the refusal is not raised.
     await assert.rejects(
-      planDeclaredTables(resolved(), [], {
+      planDeclaredTables(resolved(), await loadTableDeclaration(root), [], {
         serverVersion: async () => '11.4.2-MariaDB',
       })
     )
@@ -1483,5 +1494,22 @@ describe('renamedFrom', () => {
       assert.doesNotMatch(probe[0]!.sql, /"state"/)
       assert.equal(probesIn(additions!).length, 1)
     })
+  })
+})
+
+describe('parseDeclaration', () => {
+  test('names its source in what it refuses, wherever the declaration came from', () => {
+    assert.throws(
+      () => parseDeclaration({ item: { columns: { id: {} } } }, 'a label'),
+      /^Error: a label: /
+    )
+  })
+
+  test('reads a declaration without touching the project', () => {
+    const parsed = parseDeclaration(
+      { item: { columns: { id: { type: 'id', primaryKey: true } } } },
+      'a label'
+    )
+    assert.deepEqual(Object.keys(parsed.schema.tables), ['item'])
   })
 })
