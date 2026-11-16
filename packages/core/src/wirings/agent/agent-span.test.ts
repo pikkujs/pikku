@@ -281,7 +281,8 @@ describe('an agent run is a span', () => {
     const event = model.events?.[0]
     assert.equal(event?.name, 'exception')
     assert.deepEqual(event?.attributes, { 'exception.type': 'TypeError' })
-    assert.equal(dump(model).includes('hunter2'), false)
+    assert.equal(dump(tracer.spans).includes('hunter2'), false)
+    assert.equal(run.events?.[0]?.attributes?.['exception.type'], 'TypeError')
   })
 
   test('an error thrown before the run starts still closes the span', async () => {
@@ -478,7 +479,7 @@ describe('a streamed agent run is a span', () => {
     const tracer = install({
       agentRunner: {
         stream: async () => {
-          throw new Error('stream failed')
+          throw new Error('https://user:hunter2@llm.internal rejected')
         },
       },
     })
@@ -489,6 +490,7 @@ describe('a streamed agent run is a span', () => {
 
     assert.ok(events.some((e) => e.type === 'error'))
     assert.equal(only(tracer, 'stream-fails').status.code, 'error')
+    assert.equal(dump(tracer.spans).includes('hunter2'), false)
     assert.equal(only(tracer, 'chat').status.code, 'error')
   })
 

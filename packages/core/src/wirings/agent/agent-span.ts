@@ -5,6 +5,7 @@ import {
   openFunctionSpan,
   runInFunctionSpan,
 } from '../../function/function-span.js'
+import { redactSpanError } from '../../tracer.js'
 import { createMiddlewareSessionWireProps } from '../../services/user-session-service.js'
 import { childTraceWire, createTrace } from '../../trace.js'
 import type { AgentStepResult } from '../../services/agent-runner-service.js'
@@ -23,6 +24,16 @@ type RunHandle = {
 
 const handles = new WeakMap<object, RunHandle>()
 
+/** Errors a model call failed with: a provider error can carry a URL or part of a request, so the run keeps only the class too. */
+const modelCallErrors = new WeakSet<object>()
+
+const redactedFailure = (error: unknown): { error: unknown } => ({
+  error:
+    typeof error === 'object' && error !== null && modelCallErrors.has(error)
+      ? Object.assign(new Error(), { name: redactSpanError(error).type })
+      : error,
+})
+
 /** Stamps the run's id on its span once the run exists. A no-op when the run is not recorded. */
 export const recordAgentRunId = (params: RunAgentParams, runId: string) =>
   handles.get(params)?.setRunId(runId)
@@ -35,7 +46,7 @@ export const recordAgentRunFailure = (params: RunAgentParams, error: unknown) =>
   handles.get(params)?.fail(error)
 
 /** What a run starts from: an agent's name and, when already known, its run id. */
-export type AgentRunSpanOptions = { agentName: string; runId?: string }
+type AgentRunSpanOptions = { agentName: string; runId?: string }
 
 /**
  * Runs one agent run (sync or streaming, a resume, a sub-agent) as a span of
@@ -91,14 +102,16 @@ export const inAgentRunSpan = async <T>(
       } catch {}
     },
     fail(error) {
-      failure ??= { error }
+      failure ??= redactedFailure(error)
     },
   })
   const startedAt = performance.now()
   try {
     return await runInFunctionSpan(open, () => fn(scoped))
   } catch (error) {
-    if (!(error instanceof AgentInterruptedError)) failure ??= { error }
+    if (!(error instanceof AgentInterruptedError)) {
+      failure ??= redactedFailure(error)
+    }
     throw error
   } finally {
     endFunctionSpan(open, Math.round(performance.now() - startedAt), failure)
@@ -169,6 +182,7 @@ export const inModelCallSpan = async (
     boundary.end(undefined, resultAttributes(result))
     return result
   } catch (error) {
+    if (typeof error === 'object' && error !== null) modelCallErrors.add(error)
     boundary.end({ error })
     throw error
   }
