@@ -16,7 +16,7 @@ Use the crawler from the pikku-site-clone skill (read that skill's first section
 
 ```bash
 SC=<pikku-site-clone folder>/scripts/site_capture.mjs
-node $SC pages https://the-site.example > reference/pages.txt
+mkdir -p artifacts/references/<site> && node $SC pages https://the-site.example > artifacts/references/<site>/pages.txt
 ```
 
 That list is your to-do list. Look at **every** page on it: a page you did not look at is a page the plan will miss. If
