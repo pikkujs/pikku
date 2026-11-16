@@ -3,7 +3,7 @@ import { addGlobalMiddleware, pikkuMiddleware } from '@pikku/core/middleware'
 
 export const STUDIO_HEADER = 'x-pikku-studio'
 
-export const STUDIO_SESSION = { userId: 'studio', scopes: ['admin'] }
+export const STUDIO_SESSION = { userId: 'studio', scopes: ['admin', 'pikku:otlp:runs'] }
 
 const matches = (presented: string, token: string) => {
   const a = Buffer.from(presented)

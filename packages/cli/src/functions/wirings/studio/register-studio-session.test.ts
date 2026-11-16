@@ -29,7 +29,7 @@ describe('studio session', () => {
   test('the matching token becomes the studio admin', async () => {
     assert.deepEqual(await run({ [STUDIO_HEADER]: TOKEN }), {
       userId: 'studio',
-      scopes: ['admin'],
+      scopes: ['admin', 'pikku:otlp:runs'],
     })
   })
 
