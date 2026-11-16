@@ -338,6 +338,8 @@ export function colourDistance(a: string | null, b: string | null): number {
 
 /** Colours further apart than this are a difference a reader notices. */
 export const NOTICEABLE_COLOUR = 60
+/** A tint over a whole background shows at a smaller distance (white and a cream #fdf3f1 are about 30 apart). */
+export const NOTICEABLE_BACKGROUND = 20
 
 /** A font name without its web-font decorations: `playfair-display-v2` and `Playfair Display` are one font. */
 export function fontName(family: string): string {
@@ -395,8 +397,9 @@ export function styleDiff(
   ref = onScreen(ref)
   mine = onScreen(mine)
   const out: StyleDifference[] = []
+  // only backgrounds are compared with far(): a tint over an area shows sooner than in a letter
   const far = (a?: string | null, b?: string | null) =>
-    !!a && !!b && colourDistance(a, b) > NOTICEABLE_COLOUR
+    !!a && !!b && colourDistance(a, b) > NOTICEABLE_BACKGROUND
 
   if (far(ref.pageBackground, mine.pageBackground))
     out.push({

@@ -93,7 +93,15 @@ export function extractInPage() {
  * the primary button or link, and the width of the text column. Colours are left as the browser gives them.
  */
 export function extractStyleInPage() {
-  const clear = (c) => !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c)
+  // any CSS colour (oklch, oklab, color(), named) as rgb()/rgba(), read back through a 1x1 canvas
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1; const g = cv.getContext('2d', { willReadFrequently: true })
+  const rgb = (c) => {
+    if (!c || /^rgba?\(/.test(c) || !g) return c
+    g.clearRect(0, 0, 1, 1); g.fillStyle = '#000'; g.fillStyle = c; g.fillRect(0, 0, 1, 1)
+    const [r, gg, b, a] = g.getImageData(0, 0, 1, 1).data
+    return a === 255 ? `rgb(${r}, ${gg}, ${b})` : `rgba(${r}, ${gg}, ${b}, ${+(a / 255).toFixed(3)})`
+  }
+  const clear = (c) => !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c) || /\/\s*0\)$/.test(c)
   const vis = (el) => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false; const r = el.getBoundingClientRect(); return r.width > 4 && r.height > 4 }
   const chrome = 'header, nav, footer, [role=banner], [role=navigation], [role=contentinfo], #SITE_HEADER, #SITE_FOOTER'
   const inChrome = (el) => !!el.closest(chrome)
@@ -113,9 +121,9 @@ export function extractStyleInPage() {
       if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(e.tagName) || /^wow-image$|^wix-video$/i.test(e.tagName)) return 'picture'
       const cs = getComputedStyle(e)
       if (cs.backgroundImage && /url\(/.test(cs.backgroundImage)) return 'picture'
-      if (!clear(cs.backgroundColor)) return cs.backgroundColor
+      if (!clear(cs.backgroundColor)) return rgb(cs.backgroundColor)
     }
-    return bgOf(el)
+    return rgb(bgOf(el))
   }
   // one line of text centred on the page reads as centred, whatever text-align says (a builder centres the box instead)
   const visualAlign = (el, computed) => {
@@ -130,7 +138,7 @@ export function extractStyleInPage() {
     if (!el) return null
     const cs = getComputedStyle(textHolder(el)), own = getComputedStyle(el)
     const weight = Number(cs.fontWeight) || (cs.fontWeight === 'bold' ? 700 : 400)
-    return { text: words(el).slice(0, 60), size: Math.round(parseFloat(cs.fontSize) * 10) / 10, weight, color: cs.color, align: visualAlign(el, alignOf(own)), family: fam(cs), background: behind(el) }
+    return { text: words(el).slice(0, 60), size: Math.round(parseFloat(cs.fontSize) * 10) / 10, weight, color: rgb(cs.color), align: visualAlign(el, alignOf(own)), family: fam(cs), background: behind(el) }
   }
   const first = (sel, ok = () => true) => [...document.querySelectorAll(sel)].find((el) => vis(el) && !inChrome(el) && words(el) && ok(el)) || null
   const vw = document.documentElement.clientWidth || innerWidth, docH = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)
@@ -154,13 +162,13 @@ export function extractStyleInPage() {
   const isButton = (el) => { const cs = getComputedStyle(el); const t = words(el); return t.length >= 2 && t.length <= 40 && (!clear(cs.backgroundColor) || (parseFloat(cs.borderTopWidth) >= 1 && !clear(cs.borderTopColor) && el.tagName !== 'INPUT')) }
   const button = first('button, [role=button], input[type=submit], a', isButton) || first('a[class*=btn i], a[class*=button i], button')
   const btn = describe(button)
-  if (btn && button) { const cs = getComputedStyle(button); if (!clear(cs.backgroundColor)) btn.background = cs.backgroundColor }
+  if (btn && button) { const cs = getComputedStyle(button); if (!clear(cs.backgroundColor)) btn.background = rgb(cs.backgroundColor) }
   const elements = { h1: describe(first('h1')), h2: describe(first('h2')), h3: describe(first('h3')), p: describe(paras[0] || null), button: btn }
   scrollTo(0, 0)
   return {
     viewport: innerWidth,
-    pageBackground: pageBg || bgOf(document.body),
-    header: header ? { height: Math.round(header.getBoundingClientRect().height), background: headerBg } : null,
+    pageBackground: rgb(pageBg || bgOf(document.body)),
+    header: header ? { height: Math.round(header.getBoundingClientRect().height), background: rgb(headerBg) } : null,
     contentWidth: widths.length ? widths[Math.floor(widths.length / 2)] : null,
     elements,
   }

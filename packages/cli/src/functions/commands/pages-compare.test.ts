@@ -268,19 +268,18 @@ describe('gitStamp', () => {
     const diffs = styleDiff(ref, mine)
     assert.deepEqual(
       diffs.map((d) => d.text),
-      ['h1: original 56px 700 #a3132f center; yours 40px 300 #111111 left']
+      [
+        'h1: original 56px 700 #a3132f center; yours 40px 300 #111111 left',
+        'page background: original #ffffff; yours #fdf3f1',
+      ]
     )
-    // the cream background only counts once it is noticeably far from white
-    const cream = styleDiff(ref, {
-      ...mine,
-      pageBackground: 'rgb(245, 222, 200)',
-    })
-    assert.ok(
-      cream.some(
-        (d) => d.text === 'page background: original #ffffff; yours #f5dec8'
-      )
+    // a background a hair off white is not a difference
+    assert.deepEqual(
+      styleDiff(ref, { ...mine, pageBackground: 'rgb(255, 253, 249)' }).map(
+        (d) => d.what
+      ),
+      ['h1']
     )
-    assert.equal(cream[0]!.what, 'h1')
   })
 
   test('an element the original has and ours lacks, a header, the text column; at most six lines', () => {
