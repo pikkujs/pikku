@@ -723,7 +723,6 @@
       "name": "@pikku/n8n-import",
       "version": "0.0.11",
       "dependencies": {
-        "@pikku/inspector-go": "^0.12.13",
         "@pikku/openapi-parser": "^0.12.26",
         "to-json-schema": "^0.2.5",
       },
