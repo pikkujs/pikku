@@ -18,6 +18,7 @@
  */
 
 import { splitStatements } from './schema-sql.js'
+import { endOfQuoted } from './sql-scan.js'
 
 /** A camelCase identifier a migration declares, and what it should have said. */
 export interface CamelCaseIdentifier {
@@ -66,22 +67,7 @@ export function stripSqlComments(sql: string): string {
 
     if (ch === "'" || ch === '"' || ch === '`') {
       const start = i
-      i++
-      while (i < sql.length) {
-        if (sql[i] === '\\' && ch === "'") {
-          i += 2
-          continue
-        }
-        if (sql[i] === ch) {
-          if (sql[i + 1] === ch) {
-            i += 2
-            continue
-          }
-          i++
-          break
-        }
-        i++
-      }
+      i = endOfQuoted(sql, i, true)
       out += sql.slice(start, i)
       continue
     }

@@ -1,3 +1,5 @@
+import { endOfComment } from './sql-scan.js'
+
 /**
  * The question a migration that adds a `CHECK` to a table that has rows asks
  * first: do the rows already there satisfy it?
@@ -253,15 +255,9 @@ function firstDataChange(sql: string): number {
   let i = 0
   while (i < sql.length) {
     const ch = sql[i]!
-    const next = sql[i + 1]
-    if (ch === '-' && next === '-') {
-      const nl = sql.indexOf('\n', i)
-      i = nl === -1 ? sql.length : nl + 1
-      continue
-    }
-    if (ch === '/' && next === '*') {
-      const close = sql.indexOf('*/', i + 2)
-      i = close === -1 ? sql.length : close + 2
+    const comment = endOfComment(sql, i)
+    if (comment !== -1) {
+      i = comment
       continue
     }
     if (ch === "'" || ch === '"' || ch === '`') {

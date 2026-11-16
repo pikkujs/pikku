@@ -10,6 +10,8 @@
  * out.
  */
 
+import { endOfComment, endOfQuoted } from './sql-scan.js'
+
 /**
  * Split a SQL script into its top-level statements, semicolons included.
  *
@@ -23,43 +25,17 @@ export function splitStatements(sql: string): string[] {
   let start = 0
   let i = 0
 
-  const closeQuote = (quote: string) => {
-    i++
-    while (i < sql.length) {
-      if (sql[i] === '\\' && quote === "'") {
-        i += 2
-        continue
-      }
-      if (sql[i] === quote) {
-        // A doubled quote is an escaped one, not the end of the literal.
-        if (sql[i + 1] === quote) {
-          i += 2
-          continue
-        }
-        i++
-        return
-      }
-      i++
-    }
-  }
-
   while (i < sql.length) {
     const ch = sql[i]!
 
     if (ch === "'" || ch === '"' || ch === '`') {
-      closeQuote(ch)
+      i = endOfQuoted(sql, i, true)
       continue
     }
 
-    if (ch === '-' && sql[i + 1] === '-') {
-      const end = sql.indexOf('\n', i)
-      i = end === -1 ? sql.length : end + 1
-      continue
-    }
-
-    if (ch === '/' && sql[i + 1] === '*') {
-      const end = sql.indexOf('*/', i + 2)
-      i = end === -1 ? sql.length : end + 2
+    const comment = endOfComment(sql, i)
+    if (comment !== -1) {
+      i = comment
       continue
     }
 

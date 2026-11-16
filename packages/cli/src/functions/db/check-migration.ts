@@ -9,7 +9,7 @@
  */
 import { checkProbeLine } from '@pikku/migrator-sql'
 import type { ColumnCheck, ColumnInfo } from './db-introspector.js'
-import { checkFingerprint } from './check-enums.js'
+import { checkFingerprint, closingQuote } from './check-enums.js'
 
 /** The oldest MySQL that enforces a `CHECK`; before it the clause is parsed and ignored. */
 export const MYSQL_MIN_CHECK_VERSION = '8.0.16'
@@ -140,17 +140,7 @@ export function inlineCheckExpression(
   while (i < definition.length) {
     const c = definition[i]!
     if (c === "'" || c === '"' || c === '`') {
-      i++
-      while (i < definition.length) {
-        if (definition[i] === c) {
-          if (definition[i + 1] === c) {
-            i += 2
-            continue
-          }
-          break
-        }
-        i++
-      }
+      i = closingQuote(definition, i) - 1
     } else if (c === '(') {
       depth++
     } else if (c === ')') {
@@ -174,18 +164,7 @@ export function singleSpaced(expression: string): string {
     const ch = expression[i]!
     if (ch === "'" || ch === '"' || ch === '`') {
       const from = i
-      i++
-      while (i < expression.length) {
-        if (expression[i] === ch) {
-          if (expression[i + 1] === ch) {
-            i += 2
-            continue
-          }
-          i++
-          break
-        }
-        i++
-      }
+      i = closingQuote(expression, i)
       out += expression.slice(from, i)
     } else if (
       (ch === '-' && expression[i + 1] === '-') ||
