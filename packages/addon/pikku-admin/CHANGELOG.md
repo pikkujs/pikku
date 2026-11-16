@@ -1,5 +1,23 @@
 # @pikku/addon-admin
 
+## 0.12.17
+
+### Patch Changes
+
+- ab60937: Add an optional `AuditService.verify()` for tamper evidence, and surface it as an optional `intact` field on `admin:getAudits`. Absent when the sink does not implement `verify`.
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+  - @pikku/better-auth@0.12.66
+
 ## 0.12.16
 
 ### Patch Changes

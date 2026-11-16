@@ -1,3 +1,46 @@
+## 0.12.213
+
+### Patch Changes
+
+- 353bc05: Column constraints in `db/tables.ts` are real. `enum`, `min`, `max`, `minLength` and `maxLength` always reach the generated zod schema, the generated union types and `pikku meta db` / the console schema, and `pattern` reaches zod only. On Postgres and MySQL they also become named inline `CHECK`s on new tables, new columns and existing columns, and the introspectors read checks back on postgres, sqlite and MySQL. Check names are `<table>_<column>_<hash>_<kind>_check`, the hash being of the table and column pair so two tables never collide (MySQL keeps check names schema-wide); a name too long for the engine has its readable front cut and keeps the hash and the ending. The scheme is unreleased, so no deployed names change. MySQL checks are read back as a real MySQL 8.4 stores them (introducers, escapes), a `NOT ENFORCED` check is read as not enforcing, and MariaDB is refused before anything runs against it.
+
+  SQLite gets no generated `CHECK`: it cannot change one without rebuilding the table, so the constraints there are validation only. `pikku db generate` and `pikku db check` print one notice listing each declared constraint with the `CHECK` to add in a hand-written migration, suppressible with `validate.rules["db-sqlite-unenforced-constraints"] = "off"`. A `CHECK` written by hand in a sqlite migration is left alone and still types the column, and the notice leaves out any constraint such a check already enforces.
+
+  Adding, changing or removing a constraint on an existing Postgres or MySQL column is written instead of refused: `ADD`/`DROP CONSTRAINT` on postgres and `ADD CONSTRAINT`/`DROP CHECK` on MySQL 8.0.16+ (older servers, MariaDB and Aurora 2.x are refused up front; Aurora 3.x is accepted), each added check carrying a `-- pikku:check-probe` line that `migrate` runs against the live rows first, through `checkProbeHook` (the MySQL probe is bounded by `max_execution_time`). `migrate` now refuses a pending migration marked `-- pikku:destructive` unless `allowDestructive` is given (`pikku db migrate --allowDestructive`, the standalone bundle's `db migrate --allow-destructive`); `pikku ci` passes it only when its worktree's database is its own (a SQLite file or embedded Postgres inside the worktree) or when `pikku ci --allowDestructive` says so; a worktree that points at a local server does not get it. A generated check the declaration no longer wants is recognised by its name shape (`<...>_<8hex>_<kind>_check`) and dropped even after a hand rename of its table or column, and `db check` reports it as stale; check names are cut by code point to fit the engine. The probe scan also detects `REPLACE`, `CALL`, `COPY ... FROM`, `DO` blocks and `EXPLAIN ANALYZE` of a data change. On bun, `exec` now runs each sqlite statement on its own with a sqlite-specific splitter, because bun:sqlite drops a statement's error whenever anything follows it, which let a failed migration be recorded as applied.
+
+  A declared constraint is enforced at runtime only where a function uses the generated zod (`<Table>InsertZ`, `PatchZ`, `Z`) as its `input`; a Kysely write that skips such a function is guarded only by the DB `CHECK`s on Postgres and MySQL, and on SQLite not at all. Whole-number columns (`integer`, `bigint`, `smallint`, `serial`) are now generated as `z.number().int()`. When a declared `enum` differs from the enum the database holds, the generated union follows the declaration and codegen warns once per column (`PKU488`; on SQLite the advice is to add the `CHECK` by hand, since generate writes none there). A declaration that has both an `enum` and a `pattern`, or a numeric or text `default` its own min/max/length bounds reject, is refused when the file loads; this replaces the database silently winning.
+
+- 9eb082a: Review follow-ups for the plain table declaration: `compileTables` no longer emits `declareOnly` tables, the type check no longer lets `timestamp[]` pass as `timestamp` or `interval` as an integer, a non-boolean `declareOnly` is refused, `pikku db generate` writes nothing when `db/annotations.ts` still exists, and the MIGRATION guide and build skill snippets are corrected.
+- 058b973: `defineKeyPair` declares an asymmetric key pair by name (algorithm, purpose, rotation period, verify grace, scope) from `@pikku/core/keypair`, `#pikku/keypairs` in an app. Both inspector engines record it in `state.keyPairs`; the CLI validates it (allow-list ed25519, x25519, rs256; verify grace of at least one hour and at least the signed lifetime plus cache and skew; rotation at least twice the grace) and writes `pikku-keypairs-meta.gen.json` and a `KeyPairsMap`, so `keys.sign` takes only signing names and `keys.open` only sealing names. `signedFormat: 'domain' | 'jws'` (signing keys only, default `'domain'`, recorded explicitly in meta) is validated and refused on sealing keys; enforcement belongs to the key service. Declarations hold no key material. `SecretService` gains an optional `durable` flag that the typed and scoped wrappers forward. `defineSecret` now accepts `rotationPeriod: 'never'` in both inspectors and its `generate: { size }` option reaches the state, which both inspectors previously dropped.
+- 9a54796: The event hub is publish-only and owned by the runtime. `services.eventHub` publishes; `pikkuSubscribeFunc` returns the topic a client may follow; the runtime attaches sockets and streams to the hub it created. See docs/MIGRATION.md. Open SSE streams get a heartbeat, open subscriptions are re-checked by a sweeper, and `PgEventHubRelay` replaces `PgEventHubService`.
+- 9796787: OTLP and analytics sink registries. Core creates `otlpSinks` and `analyticsSinks` before `createSingletonServices` in `pikku dev`, `pikku serve` and standalone builds; an app registers sinks in plain code with `add(sink, map)`. The tracer is always real (the endpoint only controls the HTTP sink) and spans are skipped while no sink is registered. Removed: the `analyticsService` registration, `AnalyticsSink` with `accepts`, and the exporter-typed tracer, logger and metrics constructors. See docs/MIGRATION.md.
+- 1ba909b: `pikku validate` checks the project layout of every app project: `pikku.config.json` at the top level and only one of it, `db/` and `emails/` beside it rather than inside a `srcDirectories` package, and `#pikku/*` resolving to `<config dir>/.pikku`. Findings (`layout-config-not-at-root`, `layout-config-duplicate`, `layout-db-in-package`, `layout-emails-in-package`, `layout-pikku-import-not-root`) are warnings, and errors under `--strict`. See docs/MIGRATION.md.
+- 0fd6c17: The CLI vault secret client reads over HTTP (`@pikku/fetch`, bearer, `x-pikku-remote-contract`) from a host and token in the file named by `PIKKU_VAULT_CONNECTION_FILE`, re-read once on a 401 or connection error. `PIKKU_VAULT_SOCKET` and `PIKKU_VAULT_TOKEN` are removed. Still read-only. Breaking: see docs/MIGRATION.md.
+- 83e1d1f: `VIRTUAL_USER_VERIFY_KEY` accepts a single key (unchanged) or a JSON list of `{ kid, publicKey }`, so a stage can hold more than one virtual user statement key. `pikkuVirtualUser({ verifyKey })` and `JoseVirtualUserStatementVerifier` take the same union; a statement naming a `kid` is checked against that key only (unknown `kid` rejected), one without a `kid` is tried against each key. New statements carry a `kid` (the RFC 7638 thumbprint, `okpThumbprint` in `@pikku/core/services`). A malformed verify key now stops the app at start-up rather than failing each sign-in. `signVirtualUserStatement` takes an optional precomputed `kid`; `resolveStatementMint` computes it. `rsaThumbprint` is exported too.
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [278e2b6]
+- Updated dependencies [353bc05]
+- Updated dependencies [9eb082a]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+  - @pikku/skills@0.12.77
+  - @pikku/bun-server@0.12.18
+  - @pikku/kysely@0.13.46
+  - @pikku/migrator-sql@0.12.12
+  - @pikku/deploy-standalone@0.12.33
+  - @pikku/inspector@0.12.121
+  - @pikku/inspector-go@0.12.16
+  - @pikku/ws@0.12.12
+  - @pikku/keys@0.0.1
+  - @pikku/better-auth@0.12.66
+
 ## 0.12.212
 
 ### Patch Changes

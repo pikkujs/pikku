@@ -1,6 +1,6 @@
 {
   "name": "@pikku/keys",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -25,7 +25,7 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.158"
+    "@pikku/core": "^0.12.159"
   },
   "devDependencies": {
     "@types/node": "^26.6.5"
