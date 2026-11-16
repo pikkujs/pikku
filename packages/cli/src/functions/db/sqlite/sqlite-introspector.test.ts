@@ -100,3 +100,54 @@ CREATE VIRTUAL TABLE passages_fts USING fts5(body);
     db.close()
   }
 })
+
+test('getColumns reads each single-column CHECK by name', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pikku-sqlite-checks-'))
+  const runtime = await loadSqliteRuntime()
+  const db = runtime.open(join(dir, 'test.db'))
+  try {
+    db.exec(`CREATE TABLE invoice (
+      invoice_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL CONSTRAINT invoice_status_enum_check CHECK ("status" IN ('draft', 'it''s, paid')),
+      qty INTEGER CONSTRAINT invoice_qty_min_check CHECK ("qty" >= 0) CONSTRAINT invoice_qty_max_check CHECK ("qty" <= 9),
+      code TEXT CHECK (length(code) = 4),
+      lo INTEGER,
+      hi INTEGER,
+      note TEXT,
+      CONSTRAINT invoice_note_check CHECK (length(note) < 200),
+      CONSTRAINT invoice_range_check CHECK (lo <= hi)
+    )`)
+    const byName = Object.fromEntries(
+      (await new SqliteIntrospector(db).getColumns('invoice')).map((c) => [
+        c.name,
+        c,
+      ])
+    )
+    assert.deepEqual(byName.status.checks, [
+      {
+        name: 'invoice_status_enum_check',
+        expression: `"status" IN ('draft', 'it''s, paid')`,
+      },
+    ])
+    assert.deepEqual(byName.status.enumValues, ['draft', "it's, paid"])
+    assert.deepEqual(
+      byName.qty.checks.map((c: { name: string }) => c.name),
+      ['invoice_qty_min_check', 'invoice_qty_max_check']
+    )
+    // written without a name
+    assert.deepEqual(byName.code.checks, [
+      { name: '', expression: 'length(code) = 4' },
+    ])
+    // a table-level check naming one column belongs to it
+    assert.deepEqual(byName.note.checks, [
+      { name: 'invoice_note_check', expression: 'length(note) < 200' },
+    ])
+    // one across two columns belongs to neither
+    assert.equal(byName.lo.checks, undefined)
+    assert.equal(byName.hi.checks, undefined)
+    assert.equal(byName.invoice_id.checks, undefined)
+  } finally {
+    db.close()
+    rmSync(dir, { recursive: true, force: true })
+  }
+})

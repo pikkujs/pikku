@@ -31,6 +31,7 @@ pub const ADD_FUNCTIONS: i32 = 0;
 
 // visitRoutes
 pub const CHECK_ADDON_BANS: i32 = 0;
+pub const CHECK_EVENT_HUB_IMPORTS: i32 = 5;
 pub const ADD_AUTH: i32 = 10;
 pub const ADD_SECRET: i32 = 20;
 pub const ADD_CREDENTIAL: i32 = 30;
@@ -39,6 +40,7 @@ pub const ADD_SYSTEM_ROLE: i32 = 50;
 pub const ADD_FEATURE_FLAG: i32 = 60;
 pub const ADD_VIRTUAL_USERS: i32 = 70;
 pub const ADD_VARIABLE: i32 = 80;
+pub const ADD_KEY_PAIR: i32 = 85;
 pub const ADD_HTTP_ROUTE: i32 = 90;
 pub const ADD_HTTP_ROUTES: i32 = 100;
 pub const ADD_SCHEDULE: i32 = 110;

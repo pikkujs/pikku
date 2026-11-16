@@ -1,3 +1,4 @@
+import type { FunctionTelemetry } from './function-telemetry.js'
 import type { MiddlewareMetadata } from '../middleware/middleware.types.js'
 import type { AuditDurability } from '../services/audit-service.js'
 import type {
@@ -52,6 +53,7 @@ export type FunctionRuntimeMeta = {
   liveScopes?: boolean
   /** The feature this function belongs to. Checked for availability only. */
   featureFlag?: string
+  telemetry?: FunctionTelemetry
   expose?: boolean
   /**
    * A sessionless function's own `auth`, as written. `sessionless` carries the
@@ -79,6 +81,13 @@ export type FunctionRuntimeMeta = {
    * Only its source's route runs it, so it is never RPC-callable.
    */
   webhookReceive?: boolean
+  /**
+   * A `pikkuSubscribeFunc`: the body returns the event hub topic the stream is
+   * subscribed to. `topicPattern` is the declared shape of that topic in
+   * template-literal syntax (`order:${string}`); publish refuses topics no
+   * subscribe function could return. Never RPC-callable.
+   */
+  subscribe?: { topicPattern: string }
   /**
    * The body of a `pikkuScenario(...)`. Only ever run by `pikku scenario run`,
    * so it is held back from the app bootstrap and from every deployed unit.

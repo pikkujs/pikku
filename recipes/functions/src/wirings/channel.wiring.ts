@@ -3,13 +3,12 @@ import {
   authenticate,
   onConnect,
   onDisconnect,
-  subscribe,
-  unsubscribe,
 } from '../functions/channel.functions.js'
 import {
   listTodos,
   createTodo,
   completeTodo,
+  subscribe,
 } from '../functions/todos.functions.js'
 
 wireChannel({
@@ -25,9 +24,6 @@ wireChannel({
       },
       subscribe: {
         func: subscribe,
-      },
-      unsubscribe: {
-        func: unsubscribe,
       },
       list: {
         func: listTodos,

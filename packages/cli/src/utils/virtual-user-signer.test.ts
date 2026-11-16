@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test } from 'node:test'
 
-import { LocalVariablesService } from '@pikku/core/services'
+import { LocalVariablesService, okpThumbprint } from '@pikku/core/services'
 
 import {
   devSigningKeyPath,
@@ -70,6 +70,38 @@ describe('signVirtualUserStatement', () => {
     const pem = `-----BEGIN PRIVATE KEY-----\n${signingKey.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----`
     const escaped = pem.replace(/\n/g, '\\n')
     assert.equal(verifyKeyFor(escaped), verifyKeyFor(signingKey))
+  })
+})
+
+describe('the statement kid', () => {
+  test('a precomputed kid goes in the protected header, and only then', () => {
+    const { signingKey } = generateVirtualUserKeyPair()
+    const options = { signingKey, virtualUserId: 'susan', audience: 'a' }
+    const head = (s: string) => decode(s.split('.')[0]!)
+    assert.deepEqual(
+      head(signVirtualUserStatement({ ...options, kid: 'k1' })),
+      {
+        alg: 'EdDSA',
+        typ: 'JWT',
+        kid: 'k1',
+      }
+    )
+    assert.deepEqual(head(signVirtualUserStatement(options)), {
+      alg: 'EdDSA',
+      typ: 'JWT',
+    })
+  })
+
+  test('resolveStatementMint signs with the RFC 7638 thumbprint of the public key', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-vu-'))
+    const stage = generateVirtualUserKeyPair()
+    const mint = await resolveStatementMint(
+      new LocalVariablesService({ VIRTUAL_USER_SIGNING_KEY: stage.signingKey }),
+      { apiUrl: 'https://stage.example.com/api', runtimeDir: dir, what: 'x' }
+    )
+    const { kid } = decode((await mint({ id: 'susan' } as any)).split('.')[0]!)
+    assert.equal(kid, await okpThumbprint(stage.verifyKey))
+    assert.match(kid, /^[A-Za-z0-9_-]{43}$/)
   })
 })
 

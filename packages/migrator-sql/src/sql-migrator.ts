@@ -49,15 +49,82 @@ export class MigrationFailedError extends Error {
   constructor(
     public readonly file: string,
     migrationsDir: string,
-    cause: unknown
+    cause: unknown,
+    public readonly applied: string[] = []
   ) {
     super(
       `[PKU-DB-MIGRATE] ${migrationsDir}/${file}\n\n` +
-        (cause instanceof Error ? cause.message : String(cause)),
+        (cause instanceof Error ? cause.message : String(cause)) +
+        (applied.length > 0
+          ? `\n\nApplied before it failed: ${applied.join(', ')}.`
+          : `\n\nNothing was applied in this run.`),
       { cause }
     )
     this.name = 'MigrationFailedError'
   }
+}
+
+/**
+ * The line `db generate` writes on a migration that rewrites or removes data,
+ * followed by what it does.
+ */
+export const DESTRUCTIVE_MIGRATION_MARKER = '-- pikku:destructive '
+
+/**
+ * What the gate recognises: the marker as written above, and the looser forms a
+ * person typing it by hand produces: indented, any case, no space after `--`,
+ * and no reason at all. A person can write it on any migration that deserves
+ * the same stop.
+ */
+const DESTRUCTIVE_LINE =
+  /^[ \t]*--[ \t]*pikku:destructive(?![\w-])[ \t]*(.*?)[ \t]*$/gim
+
+/**
+ * What each destructive marker line in `sql` says, in order. A bare marker
+ * yields an empty string, so it still counts.
+ */
+export function destructiveReasons(sql: string): string[] {
+  return [...sql.matchAll(DESTRUCTIVE_LINE)].map((m) => m[1]!)
+}
+
+export interface DestructiveMigration {
+  name: string
+  reasons: string[]
+}
+
+/**
+ * A migration marked destructive that a run was not told it may apply. Raised
+ * before anything runs, so a pending list is applied whole or not at all.
+ */
+export class MigrationDestructiveError extends Error {
+  constructor(
+    public readonly migrations: DestructiveMigration[],
+    migrationsDir: string
+  ) {
+    super(
+      `[PKU-DB-DESTRUCTIVE] ${migrationsDir}\n\n` +
+        `These pending migrations are marked destructive, and nothing was applied:\n` +
+        migrations
+          .map((m) => `  ${m.name}: ${m.reasons.join('; ') || 'destructive'}`)
+          .join('\n') +
+        `\n\nRead them, back up the database, and run again allowing destructive migrations.`
+    )
+    this.name = 'MigrationDestructiveError'
+  }
+}
+
+export interface MigrateOptions {
+  /**
+   * Apply migrations marked `-- pikku:destructive`. Off unless a caller says so:
+   * a migration that rewrites a table's rows is the one worth stopping on.
+   */
+  allowDestructive?: boolean
+  /**
+   * Called with each pending migration's name and SQL just before it runs, after
+   * the ones ahead of it have, and refusing it by throwing. Where a migration's
+   * own preconditions are checked against the database as it is by then.
+   */
+  beforeMigration?: (name: string, sql: string) => Promise<void>
 }
 
 export interface MigrateResult {
@@ -166,13 +233,21 @@ const readMigrations = (
 
 export async function migrate(
   executor: MigrationExecutor,
-  migrationsDir: string
+  migrationsDir: string,
+  options: MigrateOptions = {}
 ): Promise<MigrateResult> {
   assertSnakeCaseIdentifiers(readMigrations(migrationsDir))
   await executor.ensureTrackingTable()
   const applied = await executor.getApplied()
   assertNoDrift(applied, migrationsDir)
   const appliedNames = new Set(applied.map((r) => r.name))
+
+  if (!options.allowDestructive) {
+    const destructive = pendingDestructive(migrationsDir, applied)
+    if (destructive.length > 0) {
+      throw new MigrationDestructiveError(destructive, migrationsDir)
+    }
+  }
 
   const result: MigrateResult = { applied: [], skipped: [] }
 
@@ -184,9 +259,10 @@ export async function migrate(
     const raw = readFileSync(join(migrationsDir, name))
     const hash = sha256(raw)
     try {
+      await options.beforeMigration?.(name, raw.toString('utf8'))
       await executor.runMigration(raw.toString('utf8'), name, hash)
     } catch (error) {
-      throw new MigrationFailedError(name, migrationsDir, error)
+      throw new MigrationFailedError(name, migrationsDir, error, result.applied)
     }
     result.applied.push(name)
   }
@@ -220,6 +296,19 @@ export function pendingMigrations(
 ): string[] {
   const appliedNames = new Set(applied.map((row) => row.name))
   return migrationFiles(migrationsDir).filter((name) => !appliedNames.has(name))
+}
+
+/** The pending migrations that carry a `-- pikku:destructive` line, and what they say. */
+export function pendingDestructive(
+  migrationsDir: string,
+  applied: AppliedMigration[]
+): DestructiveMigration[] {
+  return pendingMigrations(migrationsDir, applied).flatMap((name) => {
+    const reasons = destructiveReasons(
+      readFileSync(join(migrationsDir, name), 'utf8')
+    )
+    return reasons.length > 0 ? [{ name, reasons }] : []
+  })
 }
 
 export async function baselineMigrations(

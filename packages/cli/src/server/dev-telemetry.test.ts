@@ -32,13 +32,35 @@ const serviceName = async (
   return traces ? decodeTraces(traces.body).resource : undefined
 }
 
-test('without an endpoint the dev server has no telemetry', () => {
+test('without an endpoint the dev server still traces, into a registry with no HTTP sink', () => {
   const telemetry = createDevTelemetry({
     mode: 'inline',
     env: {},
     rootDir: '/p/shop',
   })
-  assert.equal(telemetry.enabled, false)
+  assert.equal(telemetry.enabled, true)
+  assert.equal(telemetry.otlpSinks.list().length, 0)
+  telemetry.stopMetrics()
+})
+
+test('the service name carries the backend even with no endpoint, so in-process sinks can tell backends apart', () => {
+  const telemetry = createDevTelemetry({
+    mode: 'inline',
+    env: {},
+    rootDir: '/p/shop',
+    backend: 'api',
+  })
+  const seen: string[] = []
+  telemetry.otlpSinks.add({
+    setResource: (resource) => void seen.push(resource.serviceName),
+    exportSpans() {},
+    exportLogs() {},
+    exportMetrics() {},
+    flush: async () => {},
+    close: async () => {},
+  })
+  assert.deepEqual(seen, ['shop.api'])
+  telemetry.stopMetrics()
 })
 
 test('the process that serves sends spans with the project and stage of the environment', async () => {

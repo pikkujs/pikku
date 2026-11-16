@@ -15,7 +15,7 @@ type RecordedEvent = {
  * What the destinations have seen, for a scenario to assert against.
  *
  * `all` is everything the app emitted; `conversions` is what survived the
- * fan-out's `accepts` predicate. Reading both in one call is what makes the
+ * sink event map. Reading both in one call is what makes the
  * predicate testable — the difference between the two lists is the policy.
  *
  * The buffer flushes when the invocation that filled it ends, so a scenario

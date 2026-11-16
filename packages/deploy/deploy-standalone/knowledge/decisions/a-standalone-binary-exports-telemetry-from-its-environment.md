@@ -9,8 +9,9 @@ tags: deploy-standalone
 
 The generated entry calls `createRuntimeTelemetry` from `PIKKU_OTLP_*` before it
 builds the logger, the database and the services, so all three share one tracer.
-With no `PIKKU_OTLP_ENDPOINT` the telemetry is inert and the binary opens no
-connection. The loopback guard stays: a non-loopback endpoint needs
+With no `PIKKU_OTLP_ENDPOINT` the HTTP exporter is not registered and the binary
+opens no connection; the tracer is real and the entry hands `otlpSinks` and
+`analyticsSinks` to the app. Non-serve commands pass `PIKKU_TELEMETRY=0`. The loopback guard stays: a non-loopback endpoint needs
 `PIKKU_OTLP_ALLOW_REMOTE=1` and https, and credentials in the URL are refused. A
 refusal is fatal at boot, because silently dropping telemetry the operator asked
 for is worse than not starting.

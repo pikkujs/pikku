@@ -139,7 +139,6 @@ import {
   connectWebsocket,
   disconnectWebsocket,
   processWebsocketMessage,
-  LambdaEventHubService,
 } from '@pikku/lambda/websocket'
 
 const params = async (event) => {
@@ -166,10 +165,9 @@ your channel's auth rejected.
 is a separate invocation, so nothing survives in memory between `$connect` and
 `$default`.
 
-`LambdaEventHubService` handles cross-connection messaging and takes
-`(logger, event, channelStore, eventHubStore)` — the `event` is needed to derive
-the API Gateway Management endpoint, so it is constructed per invocation, not
-once at cold start. It also needs an `EventHubStore` alongside the channel store.
+There is no Lambda event-hub backend yet, so `services.eventHub` is absent on
+Lambda and a function that publishes must guard for it (`eventHub?.publish`).
+Channel delivery on API Gateway returns with the serverless hub backend.
 
 Two behaviours to design around: **binary payloads throw** (`Binary data is not
 supported on serverless lambdas`), and any `PostToConnection` failure removes

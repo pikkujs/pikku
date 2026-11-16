@@ -5,6 +5,7 @@ import type {
   SyncSqliteDatabase,
   SyncSqliteStatement,
 } from './sqlite-runtime.js'
+import { splitSqliteStatements } from './sqlite-statements.js'
 
 class BunSqliteStatement implements SyncSqliteStatement {
   readonly reader: boolean
@@ -44,43 +45,18 @@ class BunSqliteStatement implements SyncSqliteStatement {
 class BunSqliteDatabase implements SyncSqliteDatabase {
   constructor(private readonly db: Database) {}
 
-  exec(sql: string): void {
-    // bun:sqlite throws "no valid SQL statement" on comment-only/empty input
-    // (e.g. a placeholder dev-seed.sql); node:sqlite silently no-ops. Match node's
-    // tolerance by skipping when nothing executable remains after stripping
-    // comments. The original `sql` is still exec'd verbatim when non-empty.
-    const executable = sql
-      .replace(/--[^\n]*/g, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .trim()
-    if (executable.length === 0) return
-    this.assertModulesExist(executable)
-    this.db.exec(sql)
-  }
-
   /**
-   * bun:sqlite's exec drops a "no such module" error whenever anything — even a
-   * trailing newline — follows the failing statement, so a migration creating a
-   * virtual table over an extension that is not loaded (vec0, say) is recorded
-   * as applied without the table ever existing. node:sqlite reports it. Check
-   * the modules up front and fail the way SQLite itself would.
+   * One statement at a time. bun:sqlite's exec drops a statement's runtime
+   * error (a failed CHECK, a missing module) whenever anything, even a newline
+   * or a comment, follows it, so a migration that fails partway would carry on
+   * and be recorded as applied. node:sqlite reports it; a lone statement with
+   * nothing after it is reported here too. Splitting also covers what bun
+   * rejects outright, a script of nothing but comments, which node:sqlite
+   * runs as a no-op.
    */
-  private assertModulesExist(sql: string): void {
-    const used = [
-      ...sql.matchAll(
-        /\bcreate\s+virtual\s+table\s+(?:if\s+not\s+exists\s+)?\S+?\s+using\s+(\w+)/gi
-      ),
-    ].map(([, module]) => module!)
-    if (used.length === 0) return
-    const known = new Set(
-      (
-        this.db.query('PRAGMA module_list').all() as Array<{ name: string }>
-      ).map((row) => row.name.toLowerCase())
-    )
-    for (const module of used) {
-      if (!known.has(module.toLowerCase())) {
-        throw new Error(`no such module: ${module}`)
-      }
+  exec(sql: string): void {
+    for (const statement of splitSqliteStatements(sql)) {
+      this.db.exec(statement)
     }
   }
 

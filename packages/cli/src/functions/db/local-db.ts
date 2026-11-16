@@ -19,6 +19,9 @@ import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import {
   migrate,
   baselineMigrations,
+  checkProbeHook,
+  mysqlProbeExecutor,
+  postgresProbeExecutor,
   type MigrateResult,
 } from '@pikku/migrator-sql'
 import type { ColumnInfo, DbIntrospector } from './db-introspector.js'
@@ -71,6 +74,17 @@ import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
+import {
+  checkChangeStatements,
+  inlineCheckExpression,
+  mysqlCheckRefusal,
+  mysqlCheckSupport,
+  planConstraints,
+} from './check-migration.js'
+import {
+  sqliteConstraintNotice,
+  declaredConstraints,
+} from './sqlite-constraint-notice.js'
 import { MysqlIntrospector } from './mysql/mysql-introspector.js'
 import {
   createMysqlKysely,
@@ -668,7 +682,15 @@ export interface MigrateAndCodegenOutcome {
   classificationsJsonWritten: boolean
 }
 
+/**
+ * A replay of the migrations onto a throwaway database, to read what they
+ * define. Nothing there to lose, so a destructive one is no reason to stop.
+ */
+const REPLAY = { allowDestructive: true }
+
 export interface MigrateAndCodegenOptions {
+  /** Apply migrations marked `-- pikku:destructive` to the configured database. */
+  allowDestructive?: boolean
   /**
    * Apply the migrations to a throwaway database and introspect that, instead
    * of touching the configured one.
@@ -693,6 +715,10 @@ export async function migrateAndCodegen(
 ): Promise<MigrateAndCodegenOutcome> {
   let migrateResult!: MigrateResult
   let codegenResult!: CodegenResult
+  // A scratch database holds nothing to lose; the configured one does.
+  const applying = {
+    allowDestructive: options.scratch || options.allowDestructive,
+  }
 
   const declaration = await loadTableDeclaration(resolved.rootDir)
 
@@ -713,7 +739,11 @@ export async function migrateAndCodegen(
     try {
       const executor = new SqliteMigrationExecutor(db)
       try {
-        migrateResult = await migrate(executor, resolved.migrationsDir)
+        migrateResult = await migrate(
+          executor,
+          resolved.migrationsDir,
+          applying
+        )
       } catch (error) {
         throw explainMissingSqliteExtension(error, resolved)
       }
@@ -741,7 +771,14 @@ export async function migrateAndCodegen(
       const introspector = new MysqlIntrospector(client)
       migrateResult = await migrate(
         new MysqlMigrationExecutor(client),
-        resolved.migrationsDir
+        resolved.migrationsDir,
+        {
+          ...applying,
+          // The configured database has rows a new check has to hold for.
+          beforeMigration: options.scratch
+            ? undefined
+            : checkProbeHook('mysql', mysqlProbeExecutor(client)),
+        }
       )
       codegenResult = await generateSchemaTypes(introspector, {
         outFile: resolved.schemaFile,
@@ -768,7 +805,12 @@ export async function migrateAndCodegen(
       await introspector.connect()
       try {
         const executor = new PostgresMigrationExecutor(client)
-        migrateResult = await migrate(executor, resolved.migrationsDir)
+        migrateResult = await migrate(executor, resolved.migrationsDir, {
+          ...applying,
+          beforeMigration: options.scratch
+            ? undefined
+            : checkProbeHook('postgres', postgresProbeExecutor(client)),
+        })
         codegenResult = await generateSchemaTypes(introspector, {
           outFile: resolved.schemaFile,
           coercionFile: resolved.coercionFile,
@@ -791,6 +833,7 @@ export async function migrateAndCodegen(
     schemaFile: resolved.schemaFile,
     outFile: resolved.zodFile,
     formats: codegenResult.zodFormats,
+    constraints: codegenResult.zodConstraints,
   })
 
   return {
@@ -1559,7 +1602,7 @@ async function coveredSqliteSchema(
   const db = await openSqlite(context, ':memory:')
   try {
     try {
-      await migrate(new SqliteMigrationExecutor(db), migrationsDir)
+      await migrate(new SqliteMigrationExecutor(db), migrationsDir, REPLAY)
     } catch (error) {
       throw explainMissingSqliteExtension(error, context)
     }
@@ -1605,7 +1648,7 @@ async function coveredMysqlSchema(
   resolved: Pick<ResolvedMysqlDb, 'connectionString'>
 ): Promise<SchemaMap> {
   return withScratchMysqlDatabase(resolved, async (client) => {
-    await migrate(new MysqlMigrationExecutor(client), migrationsDir)
+    await migrate(new MysqlMigrationExecutor(client), migrationsDir, REPLAY)
     return introspectorToMap(new MysqlIntrospector(client))
   })
 }
@@ -1634,7 +1677,7 @@ async function coveredPostgresSchema(
   context: PGliteExtensionContext
 ): Promise<SchemaMap> {
   return withScratchPostgresDatabase(context, async (client) => {
-    await migrate(new PostgresMigrationExecutor(client), migrationsDir)
+    await migrate(new PostgresMigrationExecutor(client), migrationsDir, REPLAY)
     return postgresDatabaseToMap(client)
   })
 }
@@ -1884,7 +1927,11 @@ async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
     case 'sqlite': {
       const db = await openSqlite(resolved, ':memory:')
       try {
-        await migrate(new SqliteMigrationExecutor(db), resolved.migrationsDir)
+        await migrate(
+          new SqliteMigrationExecutor(db),
+          resolved.migrationsDir,
+          REPLAY
+        )
         return names(
           db
             .prepare(`select name from sqlite_master where type = 'index'`)
@@ -1899,7 +1946,8 @@ async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
       return withScratchMysqlDatabase(resolved, async (client) => {
         await migrate(
           new MysqlMigrationExecutor(client),
-          resolved.migrationsDir
+          resolved.migrationsDir,
+          REPLAY
         )
         const { rows } = await client.query(
           `select distinct index_name as name from information_schema.statistics
@@ -1911,7 +1959,8 @@ async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
       return withScratchPostgresDatabase(resolved, async (client) => {
         await migrate(
           new PostgresMigrationExecutor(client),
-          resolved.migrationsDir
+          resolved.migrationsDir,
+          REPLAY
         )
         const { rows } = await client.query(
           `select indexname as name from pg_indexes
@@ -2012,6 +2061,8 @@ export interface DeclaredTablesPlan {
   body: string
   /** Why nothing can be written. When present, `body` is empty. */
   refusals: string[]
+  /** What the migration changes about constraints that exist, and why: a stale check dropped, a changed bound. */
+  notes?: string[]
 }
 
 /**
@@ -2031,7 +2082,8 @@ export interface DeclaredTablesPlan {
  */
 export async function planDeclaredTables(
   resolved: ResolvedDb,
-  otherSources: SchemaSource[] = []
+  otherSources: SchemaSource[] = [],
+  options: { serverVersion?: () => Promise<string> } = {}
 ): Promise<DeclaredTablesPlan | null> {
   const recorded = recordedDeclaredTables(resolved.migrationsDir)
   const declaration = await loadTableDeclaration(resolved.rootDir)
@@ -2045,6 +2097,22 @@ export async function planDeclaredTables(
           'gone, and their classifications went with it. Restore it.',
       ],
     }
+  }
+
+  // Before the declaration is materialized: a server that cannot take a CHECK
+  // (MariaDB) would only answer it with a raw syntax error.
+  if (resolved.dialect === 'mysql') {
+    const mysql = resolved
+    const refusal = mysqlCheckRefusal(
+      mysqlCheckSupport(
+        await (options.serverVersion ?? (() => mysqlServerVersion(mysql)))()
+      ),
+      declaredConstraints(declaration.schema.tables).map(
+        (c) => `${c.where}: ${c.constraint}`
+      ),
+      TABLES_FILE
+    )
+    if (refusal) return { tables: [], body: '', refusals: [refusal] }
   }
 
   const schemaName =
@@ -2157,6 +2225,49 @@ export async function planDeclaredTables(
     }
   }
 
+  // SQLite gets no generated CHECKs, so there is nothing to compare there.
+  const notes: string[] = []
+  for (const table of resolved.dialect === 'sqlite' ? [] : tables) {
+    const actual = coveredTable(covered, table, schemaName)
+    if (!actual) continue
+    const { columns: definitions } = tableDefinitions(desired.sql, table)
+    for (const [column, info] of desired.tables.get(table)!) {
+      const existing = actual.get(column)
+      if (!existing) continue
+      const plan = planConstraints(table, column, info, existing)
+      if (plan.drop.length + plan.add.length === 0) continue
+      notes.push(...plan.reasons.map((r) => `${table}.${column}: ${r}`))
+
+      const added = plan.add.map((check) => ({
+        column,
+        name: check.name,
+        expression: inlineCheckExpression(
+          definitions.get(column) ?? '',
+          check.name
+        ),
+      }))
+      const lost = added.find((check) => !check.expression)
+      if (lost) {
+        refusals.push(
+          `${table}.${column}: ${lost.name} is not written inline on the column, so generate cannot lift its text.`
+        )
+        continue
+      }
+
+      const dialect = resolved.dialect === 'mysql' ? 'mysql' : 'postgres'
+      statements.push(
+        ...checkChangeStatements(
+          dialect,
+          { schema: schemaName, table, qualified: qualify(table) },
+          {
+            drop: plan.drop,
+            add: added.map((a) => ({ ...a, expression: a.expression! })),
+          },
+          quote
+        )
+      )
+    }
+  }
   // An index on a new table came with its `CREATE TABLE` above.
   const newIndexes = shapes.filter(
     ({ shape }) =>
@@ -2182,7 +2293,20 @@ export async function planDeclaredTables(
       ...left.missingColumns.map((c) => `${c.table} still lacks ${c.columns}`),
     ]
   })
-  return { tables, body: rehearsal.length ? '' : body, refusals: rehearsal }
+  return {
+    tables,
+    body: rehearsal.length ? '' : body,
+    refusals: rehearsal,
+    notes,
+  }
+}
+
+/** The `version()` the configured MySQL-protocol server reports. */
+async function mysqlServerVersion(resolved: ResolvedMysqlDb): Promise<string> {
+  return withMysqlClient(resolved, async (client) => {
+    const { rows } = await client.query('select version() as v')
+    return String((rows[0] as { v?: unknown } | undefined)?.v ?? '')
+  })
 }
 
 /**
@@ -2232,6 +2356,23 @@ async function rehearseMigration(
 export interface DeclaredTablesDrift {
   pending: boolean
   refusals: string[]
+  /** Why a pending migration changes constraints that exist (a stale check, a changed bound). */
+  notes: string[]
+}
+
+export async function declaredSqliteConstraintNotice(
+  resolved: ResolvedDb
+): Promise<string | undefined> {
+  if (resolved.dialect !== 'sqlite') return undefined
+  const declaration = await loadTableDeclaration(resolved.rootDir)
+  if (!declaration) return undefined
+  // What the migrations already enforce comes from replaying them, as the
+  // declaration is compared with elsewhere.
+  const covered = await coveredSchema(resolved)
+  return sqliteConstraintNotice(
+    declaration.schema.tables,
+    (table, column) => covered.get(table)?.get(column)?.checks
+  )
 }
 
 export async function computeDeclaredTablesDrift(
@@ -2241,6 +2382,7 @@ export async function computeDeclaredTablesDrift(
   return {
     pending: Boolean(plan?.body),
     refusals: plan?.refusals ?? [],
+    notes: plan?.body ? (plan.notes ?? []) : [],
   }
 }
 
@@ -2741,6 +2883,9 @@ export async function generateMigrations(
   addons: AddonDeclaration[] = [],
   services?: ReadonlySet<string>
 ): Promise<GenerateResult> {
+  // Read and checked first: a retired or unreadable declaration refuses the
+  // whole command, so no source's migration may be written before it does.
+  await loadTableDeclaration(resolved.rootDir)
   const sources = await schemaSources(
     resolved,
     rootDir,

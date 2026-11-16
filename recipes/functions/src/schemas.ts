@@ -101,31 +101,6 @@ export const CreateTodoOutputSchema = z.object({
 
 export const EmptyInputSchema = z.object({})
 
-export const EventTopicSchema = z.enum([
-  'todo-created',
-  'todo-updated',
-  'todo-deleted',
-  'todo-completed',
-])
-
-export const SubscribeInputSchema = z.object({
-  topic: EventTopicSchema.describe('Event topic to subscribe to'),
-})
-
-export const SubscribeOutputSchema = z.object({
-  subscribed: z.boolean(),
-  topic: z.string(),
-})
-
-export const UnsubscribeInputSchema = z.object({
-  topic: EventTopicSchema.describe('Event topic to unsubscribe from'),
-})
-
-export const UnsubscribeOutputSchema = z.object({
-  unsubscribed: z.boolean(),
-  topic: z.string(),
-})
-
 export const ChannelAuthInputSchema = z.object({
   username: z.string(),
   password: z.string(),

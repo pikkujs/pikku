@@ -1,6 +1,6 @@
 {
   "name": "@pikku/core",
-  "version": "0.12.157",
+  "version": "0.12.158",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/pikkujs/pikku.git",
@@ -31,7 +31,8 @@
     "./dist/wirings/workflow/pikku-scenario-service.js",
     "./dist/wirings/workflow/workflow-approval-policy.js",
     "./dist/wirings/workflow/workflow-errors.js",
-    "./dist/wirings/workflow/workflow-run-ownership.js"
+    "./dist/wirings/workflow/workflow-run-ownership.js",
+    "./dist/wirings/keypair/key-errors.js"
   ],
   "types": "./dist/bootstrap-compat/root.d.ts",
   "exports": {
@@ -49,6 +50,7 @@
     "./virtual-user": "./dist/wirings/virtual-user/index.js",
     "./channel/local": "./dist/wirings/channel/local/index.js",
     "./channel/serverless": "./dist/wirings/channel/serverless/index.js",
+    "./internal/event-hub": "./dist/wirings/channel/event-hub/index.js",
     "./http": "./dist/wirings/http/index.js",
     "./mesh": "./dist/mesh.js",
     "./queue": "./dist/wirings/queue/index.js",
@@ -70,6 +72,7 @@
     "./credential": "./dist/wirings/credential/index.js",
     "./scope": "./dist/wirings/scope/index.js",
     "./role": "./dist/wirings/role/index.js",
+    "./keypair": "./dist/wirings/keypair/index.js",
     "./secret": "./dist/wirings/secret/index.js",
     "./variable": "./dist/wirings/variable/index.js",
     "./webhook": "./dist/wirings/webhook/index.js",
@@ -78,6 +81,7 @@
     "./services": "./dist/services/index.js",
     "./trace": "./dist/trace.js",
     "./otlp": "./dist/otlp/index.js",
+    "./otlp/runs": "./dist/otlp/runs/index.js",
     "./flag": "./dist/wirings/flag/index.js",
     "./services/local-meta": "./dist/services/meta-service.js",
     "./services/in-memory-queue": "./dist/wirings/queue/in-memory-queue-service.js",
@@ -126,7 +130,7 @@
   },
   "devDependencies": {
     "@ag-ui/core": "0.0.59",
-    "@pikku/deploy": "^0.12.21",
+    "@pikku/deploy": "^0.12.22",
     "@types/node": "^26.6.5",
     "esbuild": "~0.28.2",
     "tsx": "^4.23.15"

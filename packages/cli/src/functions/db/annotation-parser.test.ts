@@ -180,3 +180,29 @@ test('loadAnnotations carries a column keyId through', () => {
   // authored, and the manifest emitter is the one place the default is applied.
   assert.equal(ann.user!.ssn!.keyId, undefined)
 })
+
+test('loadAnnotations reads constraints, and drops values of the wrong shape', () => {
+  writeSidecar({
+    item: {
+      qty: { min: 0, max: 9 },
+      code: { minLength: 2, maxLength: 4, pattern: '^[a-z]+$' },
+      kind: { enum: ['a', 'b'] },
+      bad: {
+        min: '0',
+        max: null,
+        enum: ['a', 1],
+        pattern: 3,
+        minLength: Infinity,
+      },
+    },
+  })
+  const ann = loadAnnotations(root).item!
+  assert.deepEqual(ann.qty, { min: 0, max: 9 })
+  assert.deepEqual(ann.code, {
+    minLength: 2,
+    maxLength: 4,
+    pattern: '^[a-z]+$',
+  })
+  assert.deepEqual(ann.kind, { enum: ['a', 'b'] })
+  assert.deepEqual(ann.bad, {})
+})

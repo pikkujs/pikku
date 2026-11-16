@@ -171,6 +171,9 @@ than they save:
 - On SQLite, the column's `kind` in `db/tables.ts` is where a `DATETIME`
   becomes a `Date` and a `JSON` column becomes a typed object. Without one they
   are `string` and `unknown` (PKU481). Set it on the column rather than casting.
+  A JSON column needs both: `{ type: 'json', kind: 'json', tsType: '{ ... }' }`.
+  `kind: 'json'` alone still types as `unknown`, and `tsType` is written verbatim
+  into the generated schema, so give an inline type, not a bare imported name.
 - Surface errors inline next to the control that failed. No empty catch.
 - Every user-facing string is a translation key, not a literal. It is one extra
   keystroke now and a rewrite later.

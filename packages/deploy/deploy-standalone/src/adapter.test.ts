@@ -805,11 +805,25 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     assert.match(source, /AsyncLocalStorage as __pikkuAsyncLocalStorage/)
   })
 
-  test('only a serve run exports; commands get an empty environment', () => {
+  test('only a serve run traces; commands get PIKKU_TELEMETRY=0', () => {
     const source = generate(baseContext)
     assert.match(
       source,
-      /createRuntimeTelemetry\(__pikkuCommand\.kind === 'serve' \? process\.env : \{\}/
+      /createRuntimeTelemetry\(__pikkuCommand\.kind === 'serve' \? process\.env : \{ PIKKU_TELEMETRY: '0' \}/
+    )
+  })
+
+  test('the runtime registries are created before the services and win over what the app returns', () => {
+    const source = generate(baseContext)
+    assert.match(source, /otlpSinks: __pikkuTelemetry\.otlpSinks,/)
+    assert.match(source, /analyticsSinks: __pikkuAnalyticsSinks,/)
+    assert.ok(
+      source.indexOf('createAnalyticsSinks()') <
+        source.indexOf('createSingletonServices(')
+    )
+    assert.match(
+      source,
+      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, \.\.\.eventHubServices \}\)/
     )
   })
 
@@ -820,7 +834,7 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     assert.match(
       source,
       /tracer: __pikkuTelemetry\.tracer \} : \{\}\),\n/,
-      'the tracer reaches createSingletonServices only when exporting'
+      'the tracer reaches createSingletonServices unless telemetry is off'
     )
   })
 

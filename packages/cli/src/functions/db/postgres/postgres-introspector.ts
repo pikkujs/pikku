@@ -1,12 +1,16 @@
 import { Pool } from 'pg'
 import type {
   DbIntrospector,
+  ColumnCheck,
   ColumnInfo,
   ForeignKeyInfo,
   EnumInfo,
 } from '../db-introspector.js'
 import { MIGRATION_TRACKING_TABLE } from '@pikku/migrator-sql'
-import { parseCheckEnumValues } from '../check-enums.js'
+import {
+  parseCheckEnumValues,
+  postgresCheckExpression,
+} from '../check-enums.js'
 
 interface PgColumnRow {
   column_name: string
@@ -27,7 +31,14 @@ interface PgCheckRow {
   table_schema: string
   table_name: string
   column_name: string
+  constraint_name: string
   def: string
+}
+
+/** What the single-column `CHECK`s of one column say. */
+interface ColumnChecks {
+  enumValues?: string[]
+  checks: ColumnCheck[]
 }
 
 interface PgAllForeignKeyRow {
@@ -145,9 +156,10 @@ export class PostgresIntrospector implements DbIntrospector {
       [tableName, schema]
     )
 
-    const checkEnums =
-      (await this.getCheckEnums({ schema, name: tableName })).get(table) ??
-      new Map<string, string[]>()
+    const columnChecks =
+      (await this.getColumnChecks({ schema, name: tableName })).get(
+        tableKey(schema, tableName)
+      ) ?? new Map<string, ColumnChecks>()
 
     return result.rows.map((r) => ({
       name: r.column_name,
@@ -157,13 +169,17 @@ export class PostgresIntrospector implements DbIntrospector {
       pk: Boolean(r.is_pk),
       defaultValue: r.column_default,
       generated: r.is_generated === 'ALWAYS',
-      enumValues: checkEnums.get(r.column_name),
+      enumValues: columnChecks.get(r.column_name)?.enumValues,
+      ...(columnChecks.has(r.column_name) && {
+        checks: columnChecks.get(r.column_name)!.checks,
+      }),
     }))
   }
 
   /**
-   * Columns constrained to a value list by a `CHECK (col IN (…))`, keyed like
-   * {@link getAllColumns} then by column name. Postgres has native enums, but
+   * The single-column `CHECK`s, keyed like {@link getAllColumns} then by column
+   * name: each one by name for the diff, and the value list of a `CHECK (col IN
+   * (…))` for codegen. Postgres has native enums, but
    * a CHECK is the other half of how a schema says "one of these" — and the
    * one an app written against SQLite as well ends up using, since SQLite has
    * no enums at all. Left as plain `string`, every caller narrows it by hand.
@@ -174,14 +190,15 @@ export class PostgresIntrospector implements DbIntrospector {
    * `table` limits the sweep to one table; omitted, it covers the schema. Both
    * are one round-trip — see {@link getAllColumns}.
    */
-  private async getCheckEnums(table?: {
+  private async getColumnChecks(table?: {
     schema: string
     name: string
-  }): Promise<Map<string, Map<string, string[]>>> {
+  }): Promise<Map<string, Map<string, ColumnChecks>>> {
     const result = await this.client.query<PgCheckRow>(
       `SELECT n.nspname   AS table_schema,
               cl.relname  AS table_name,
               a.attname   AS column_name,
+              co.conname  AS constraint_name,
               pg_get_constraintdef(co.oid) AS def
        FROM pg_constraint co
        JOIN pg_class cl     ON cl.oid = co.conrelid
@@ -191,21 +208,26 @@ export class PostgresIntrospector implements DbIntrospector {
          AND array_length(co.conkey, 1) = 1
          AND n.nspname NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
          AND n.nspname NOT LIKE 'pg_temp_%'
-         AND ($1::text IS NULL OR (n.nspname = $1 AND cl.relname = $2))`,
+         AND ($1::text IS NULL OR (n.nspname = $1 AND cl.relname = $2))
+       ORDER BY co.conname`,
       [table?.schema ?? null, table?.name ?? null]
     )
 
-    const byTable = new Map<string, Map<string, string[]>>()
+    const byTable = new Map<string, Map<string, ColumnChecks>>()
     for (const r of result.rows) {
-      const values = parseCheckEnumValues(r.def)
-      if (!values) continue
       const key = tableKey(r.table_schema, r.table_name)
       let cols = byTable.get(key)
       if (!cols) {
         cols = new Map()
         byTable.set(key, cols)
       }
-      cols.set(r.column_name, values)
+      const column = cols.get(r.column_name) ?? { checks: [] }
+      column.enumValues ??= parseCheckEnumValues(r.def)
+      column.checks.push({
+        name: r.constraint_name,
+        expression: postgresCheckExpression(r.def),
+      })
+      cols.set(r.column_name, column)
     }
     return byTable
   }
@@ -288,7 +310,7 @@ export class PostgresIntrospector implements DbIntrospector {
        ORDER BY c.table_schema, c.table_name, c.ordinal_position`
     )
 
-    const checkEnums = await this.getCheckEnums()
+    const columnChecks = await this.getColumnChecks()
 
     const byTable = new Map<string, ColumnInfo[]>()
     for (const r of result.rows) {
@@ -307,7 +329,10 @@ export class PostgresIntrospector implements DbIntrospector {
         pk: Boolean(r.is_pk),
         defaultValue: r.column_default,
         generated: r.is_generated === 'ALWAYS',
-        enumValues: checkEnums.get(key)?.get(r.column_name),
+        enumValues: columnChecks.get(key)?.get(r.column_name)?.enumValues,
+        ...(columnChecks.get(key)?.has(r.column_name) && {
+          checks: columnChecks.get(key)!.get(r.column_name)!.checks,
+        }),
       })
     }
     return byTable

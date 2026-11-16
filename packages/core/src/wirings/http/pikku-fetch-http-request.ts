@@ -187,7 +187,16 @@ export class PikkuFetchHTTPRequest<
     let body: any = {}
     const contentType = this.header('content-type') || ''
     try {
-      if (contentType.includes('application/json')) {
+      const encoding = this.header('content-encoding')
+      const encoded = !!encoding && encoding !== 'identity'
+      if (
+        encoded ||
+        contentType.includes('application/octet-stream') ||
+        contentType.includes('application/x-protobuf')
+      ) {
+        const buffer = await this.arrayBuffer()
+        body = { data: buffer }
+      } else if (contentType.includes('application/json')) {
         const text = await this.#readRawText()
         const parsed = text ? JSON.parse(text) : null
         body =
@@ -199,9 +208,6 @@ export class PikkuFetchHTTPRequest<
       } else if (contentType.includes('text/')) {
         const text = await this.#readRawText()
         body = { data: text }
-      } else if (contentType.includes('application/octet-stream')) {
-        const buffer = await this.arrayBuffer()
-        body = { data: buffer }
       } else if (contentType === 'application/x-www-form-urlencoded') {
         const text = await this.#readRawText()
         const params = new URLSearchParams(text)

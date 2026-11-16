@@ -22,6 +22,7 @@ import type { CLIMeta } from '@pikku/core/cli'
 import type { CLICommandMeta } from '@pikku/core/cli'
 import type { NodesMeta } from '@pikku/core/node'
 import type { SecretDefinitions } from '@pikku/core/secret'
+import type { KeyPairDefinitions } from '@pikku/core/keypair'
 import type { CredentialDefinitions } from '@pikku/core/credential'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { SystemRoleDefinitions } from '@pikku/core/role'
@@ -1060,6 +1061,10 @@ export interface InspectorState {
   surfaceUsage: SurfaceUsageCounts
   credentials: {
     definitions: CredentialDefinitions
+    files: Set<string>
+  }
+  keyPairs: {
+    definitions: KeyPairDefinitions
     files: Set<string>
   }
   scopes: {

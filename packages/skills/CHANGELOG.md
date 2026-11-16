@@ -1,5 +1,12 @@
 # @pikku/skills
 
+## 0.12.76
+
+### Patch Changes
+
+- 9ab1468: Better Auth's tables and the runtime's secret columns now carry built-in column annotations, so `pikku db migrate` brands them without a `db/tables.ts` entry: `user.email` is `pii` with `format: 'email'`, `session.token`, `account.access_token`, `refresh_token`, `id_token` and `verification.value` are `secret` with `form: 'plain'`, `account.password` is `secret` with `form: 'hashed'`, `session.ip_address` is `pii`, and the `secrets` and `credentials` ciphertext columns are `secret` with `form: 'plain'`. A project's own annotation on a column replaces the built-in one. See docs/MIGRATION.md for what apps see.
+- 5679af0: Breaking: `db/annotations.ts` is removed. Column annotations (`security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`) are declared only on the columns in `db/tables.ts`; a table the migrations create is declared `declareOnly: true`. `pikku db migrate`, `generate`, `check` and `pikku validate` refuse a project that still has `db/annotations.ts`, pointing at docs/MIGRATION.md. `pikku db annotate`, `.pikku/db/classification-map.gen.d.ts` and `DbClassificationMap` are gone. `db/annotations.gen.json` is still written, now from the declaration alone, and removed when there is no `db/tables.ts`. The PKU910 hint, error messages, docs and skills name the column in `db/tables.ts`.
+
 ## 0.12.75
 
 ### Patch Changes

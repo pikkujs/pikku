@@ -386,6 +386,80 @@ jobs:
         with:
           templates: 'false'
 
+  # The real-engine half of the column-constraint work: check names that must
+  # not collide on a server that keeps them schema-wide, a rename that must not
+  # leave a stale check behind, MySQL's own CHECK text read back. Only a real
+  # server settles these, so they run on every pull request (the Full Suite runs
+  # the same two jobs on main). Each gets a database of its own: the run drops
+  # every table in it.
+  verifiers-db-schema-db:
+    name: Verifiers (db-schema, postgres)
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: build
+    services:
+      postgres:
+        image: mirror.gcr.io/library/postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: pikku_db_schema
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: cd verifiers/db-schema && bun run test:db
+    env:
+      DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_db_schema
+
+  verifiers-db-schema-mysql:
+    name: Verifiers (db-schema, mysql)
+    if: ${{ !github.event.pull_request.draft }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: build
+    services:
+      mysql:
+        image: mirror.gcr.io/library/mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: pikku_db_schema
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+      # Only a real MariaDB settles that it is refused, and refused before
+      # anything is written: the verifier fails, not skips, without it.
+      mariadb:
+        image: mirror.gcr.io/library/mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: pikku_db_schema
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: cd verifiers/db-schema && bun run test:mysql
+    env:
+      MYSQL_URL: mysql://root:password@127.0.0.1:3306/pikku_db_schema
+      MARIADB_URL: mysql://root:password@127.0.0.1:3307/pikku_db_schema
+
   cli-bunx-smoke:
     name: CLI bunx smoke
     runs-on: ubuntu-24.04

@@ -135,11 +135,15 @@ describe('the sqlite db commands', () => {
 
     const second = collector()
     await runDbCommand('migrate', db, second.out)
-    assert.deepEqual(second.lines, ['Already up to date (2 applied previously).'])
+    assert.deepEqual(second.lines, [
+      'Already up to date (2 applied previously).',
+    ])
   })
 
   it('status separates what is applied from what is waiting', async () => {
-    const db = sqliteFixture({ '0001_widgets.sql': migrations['0001_widgets.sql']! })
+    const db = sqliteFixture({
+      '0001_widgets.sql': migrations['0001_widgets.sql']!,
+    })
 
     await runDbCommand('migrate', db)
     writeFileSync(
@@ -154,6 +158,48 @@ describe('the sqlite db commands', () => {
     assert.equal(lines[2], '1 applied, 1 pending.')
   })
 
+  describe('a migration marked destructive', () => {
+    const destructive = {
+      '0001_widgets.sql': 'CREATE TABLE widget (id TEXT PRIMARY KEY);',
+      '0002_rebuild.sql':
+        '-- pikku:destructive rebuilds "widget": rows are copied\nALTER TABLE widget ADD COLUMN label TEXT;',
+    }
+
+    it('is refused before anything runs, and status says which one', async () => {
+      const db = sqliteFixture(destructive)
+      await assert.rejects(
+        () => runDbCommand('migrate', db),
+        /PKU-DB-DESTRUCTIVE[\s\S]*0002_rebuild\.sql/
+      )
+      const { lines, out } = collector()
+      await runDbCommand('status', db, out)
+      assert.deepEqual(lines, [
+        'pending  0001_widgets.sql',
+        'pending  0002_rebuild.sql  DESTRUCTIVE: rebuilds "widget": rows are copied',
+        '0 applied, 2 pending.',
+      ])
+    })
+
+    it('applies when the operator allows it', async () => {
+      const db = sqliteFixture(destructive)
+      const { lines, out } = collector()
+      await runDbCommand('migrate', db, out, { allowDestructive: true })
+      assert.equal(lines.at(-1), 'Applied 2 migration(s).')
+    })
+
+    it('--allow-destructive is the flag that allows it', () => {
+      assert.deepEqual(
+        parse(['db', 'migrate', '--allow-destructive']).command,
+        {
+          kind: 'db',
+          action: 'migrate',
+          allowDestructive: true,
+        }
+      )
+      assert.equal(parse(['db', 'migrate', '--nope']).command.kind, 'exit')
+    })
+  })
+
   it('an edited migration is refused rather than silently re-run', async () => {
     const db = sqliteFixture(migrations)
     await runDbCommand('migrate', db)
@@ -163,10 +209,7 @@ describe('the sqlite db commands', () => {
       'CREATE TABLE widget (id TEXT PRIMARY KEY, tampered TEXT);'
     )
 
-    await assert.rejects(
-      () => runDbCommand('migrate', db),
-      /PKU-DB-DRIFT/
-    )
+    await assert.rejects(() => runDbCommand('migrate', db), /PKU-DB-DRIFT/)
   })
 
   it('backup writes a database a fresh process can open', async () => {

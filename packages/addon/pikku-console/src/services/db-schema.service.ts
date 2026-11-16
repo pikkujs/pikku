@@ -1,3 +1,4 @@
+import type { ColumnConstraints } from '@pikku/core/db'
 import type { MetaService } from '@pikku/core/services'
 
 export type Classification = 'public' | 'private' | 'pii' | 'secret'
@@ -11,6 +12,8 @@ export interface DbColumn {
   foreignKey?: { table: string; column: string }
   enumType?: string
   description?: string
+  /** What the declaration restricts the column to: bounds, lengths, a pattern, an enum. Form hints read these. */
+  constraints?: ColumnConstraints
 }
 
 export interface DbTable {
@@ -53,6 +56,27 @@ function classificationFor(security: string | undefined): Classification {
   return 'private'
 }
 
+const CONSTRAINT_KEYS = [
+  'min',
+  'max',
+  'minLength',
+  'maxLength',
+  'pattern',
+  'enum',
+] as const
+
+/** The constraint fields of an annotation entry, or nothing when it declares none. */
+function constraintsOf(
+  ann: AnnotationEntry | undefined
+): ColumnConstraints | undefined {
+  if (!ann) return undefined
+  const found: Record<string, unknown> = {}
+  for (const key of CONSTRAINT_KEYS) {
+    if (ann[key] !== undefined) found[key] = ann[key]
+  }
+  return Object.keys(found).length ? (found as ColumnConstraints) : undefined
+}
+
 function camelToSnake(s: string): string {
   return s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
 }
@@ -62,7 +86,7 @@ function bareTableName(name: string): string {
   return dot >= 0 ? name.slice(dot + 1) : name
 }
 
-interface AnnotationEntry {
+interface AnnotationEntry extends ColumnConstraints {
   /**
    * The privacy level, named as a column in `db/tables.ts` declares it. The
    * sidecar carries those fields as written, so this is the key that is there.
@@ -148,6 +172,8 @@ export class DbSchemaService {
             classification: classificationFor(ann?.security ?? ann?.visibility),
           }
           if (ann?.description) col.description = ann.description
+          const constraints = constraintsOf(ann)
+          if (constraints) col.constraints = constraints
           if (c.foreignKey) col.foreignKey = c.foreignKey
           return col
         }),

@@ -1,13 +1,10 @@
 import type { IncomingMessage, Server } from 'http'
 import type { Duplex } from 'stream'
 import type { WebSocket, WebSocketServer } from 'ws'
-import { getSingletonServices } from '@pikku/core/state'
 import { logChannels } from '@pikku/core/channel'
 import type { PikkuLocalChannelHandler } from '@pikku/core/channel/local'
-import {
-  LocalEventHubService,
-  runLocalChannel,
-} from '@pikku/core/channel/local'
+import { runLocalChannel } from '@pikku/core/channel/local'
+import { getEventHubDistributor } from '@pikku/core/internal/event-hub'
 import { compileAllSchemas } from '@pikku/core/schema'
 import type { RunHTTPWiringOptions } from '@pikku/core/http'
 import { PikkuFetchHTTPRequest } from '@pikku/core/http'
@@ -81,25 +78,16 @@ export const pikkuWebsocketHandler = ({
     compileAllSchemas(logger)
   }
 
-  let eventHub: LocalEventHubService
-  try {
-    const singletonServices = getSingletonServices()
-    eventHub =
-      singletonServices.eventHub instanceof LocalEventHubService
-        ? singletonServices.eventHub
-        : new LocalEventHubService()
-  } catch {
-    eventHub = new LocalEventHubService()
-  }
-
   wss.on(
     'connection',
     (ws: WebSocket, channelHandler: PikkuLocalChannelHandler) => {
-      Promise.resolve(eventHub.onChannelOpened(channelHandler)).catch(
-        (error: unknown) => {
-          logger.error(`Error registering websocket channel: ${error}`)
-        }
-      )
+      // Attached to the process's event hub so a subscribe function can
+      // subscribe this socket; the hub is the host's, never one made here.
+      const distributor = getEventHubDistributor()
+      const backend = distributor?.deliveryFor('local')
+      if (distributor && backend) {
+        distributor.attach(channelHandler, backend, undefined)
+      }
 
       channelHandler.registerOnSend((data) => {
         if (isSerializable(data)) {
@@ -148,10 +136,8 @@ export const pikkuWebsocketHandler = ({
       })
 
       ws.on('close', () => {
-        Promise.all([
-          eventHub.onChannelClosed(channelHandler.channelId),
-          channelHandler.close(),
-        ]).catch((error: unknown) => {
+        distributor?.detach(channelHandler.channelId)
+        Promise.resolve(channelHandler.close()).catch((error: unknown) => {
           logger.error(`Error closing websocket channel: ${error}`)
         })
       })

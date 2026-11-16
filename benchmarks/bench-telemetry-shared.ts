@@ -4,6 +4,7 @@ import {
   OtlpHttpExporter,
   OtlpLogger,
   OtlpTracer,
+  type OtlpSinkBase,
   asContextStorage,
   createRuntimeTelemetry,
   startProcessMetrics,
@@ -14,9 +15,10 @@ import { noopLogger } from './bench-shared.js'
 /**
  * L0 no telemetry (the harness baseline). L1 spans into an exporter that discards. L2 L1 plus one OtlpLogger record per request,
  * also discarded. L3 the real thing: `createRuntimeTelemetry` from env (protobuf encoding, HTTP POST to a loopback sink, process
- * metrics). The exporter has no gzip and the runtime has no sampler, so there is no L4 (see telemetry-cost.md).
+ * metrics). LE is the real tracer and logger from `createRuntimeTelemetry` with an empty sink registry (no endpoint). The exporter has
+ * no gzip and the runtime has no sampler, so there is no L4 (see telemetry-cost.md).
  */
-export const LEVELS = ['L0', 'L1', 'L2', 'L3'] as const
+export const LEVELS = ['L0', 'L1', 'L2', 'L3', 'LE'] as const
 export type Level = (typeof LEVELS)[number]
 
 export type StressOptions = {
@@ -59,8 +61,7 @@ const discardingExporter = (discarded: Telemetry['discarded']) =>
     exportMetrics: () => {},
     flush: async () => {},
     close: async () => {},
-    stats: { dropped: { spans: 0, logs: 0, metrics: 0 }, attributesDropped: 0 },
-  }) as unknown as OtlpHttpExporter
+  }) satisfies OtlpSinkBase
 
 const padded = (length: number, seed: string) =>
   seed.repeat(Math.ceil(length / seed.length)).slice(0, length)
@@ -136,7 +137,7 @@ export const buildTelemetry = (
     return none
   }
   const storage = asContextStorage(new AsyncLocalStorage())
-  let exporter: OtlpHttpExporter
+  let exporter: OtlpSinkBase
   let tracer: OtlpTracer
   let logger: any
   let stopMetrics = () => {}
@@ -174,11 +175,25 @@ export const buildTelemetry = (
         }
       )
       tracer = runtime.tracer as OtlpTracer
-      exporter = (tracer as unknown as { exporter: OtlpHttpExporter }).exporter
+      exporter = runtime.otlpSinks.list()[0]!
       logger = runtime.logger
       stopMetrics = () => runtime.stopMetrics()
       close = () => runtime.close()
     }
+  } else if (level === 'LE') {
+    const runtime = createRuntimeTelemetry(
+      {},
+      {
+        logger: noopLogger,
+        serviceName: 'telemetry-bench',
+        contextStorage: storage,
+      }
+    )
+    tracer = runtime.tracer as OtlpTracer
+    exporter = discardingExporter(discarded)
+    logger = runtime.logger
+    stopMetrics = () => runtime.stopMetrics()
+    close = () => runtime.close()
   } else {
     exporter = discardingExporter(discarded)
     tracer = new OtlpTracer(exporter, { contextStorage: storage })
@@ -195,7 +210,7 @@ export const buildTelemetry = (
     : tracer
   return {
     services: { logger: shapedLogger(logger, stress), tracer: effective },
-    exporter: level === 'L3' ? exporter : undefined,
+    exporter: level === 'L3' ? (exporter as OtlpHttpExporter) : undefined,
     tracer,
     discarded,
     stopMetrics,

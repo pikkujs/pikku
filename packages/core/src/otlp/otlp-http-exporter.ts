@@ -1,5 +1,6 @@
 import type { Logger } from '../services/logger.js'
 import { nowUnixNano, type FinishedSpan } from '../tracer.js'
+import type { OtlpSinkBase } from './otlp-sink.js'
 import { AttributeTypes } from './attribute-types.js'
 import { encodeLogs, encodeMetrics, encodeTraces } from './otlp-encode.js'
 import type {
@@ -102,7 +103,7 @@ const sleep = (ms: number) => {
  *
  * knowledge: decisions/internals/otlp-exporter-is-protobuf-only-and-never-throws.md
  */
-export class OtlpHttpExporter {
+export class OtlpHttpExporter implements OtlpSinkBase {
   private readonly spans = newState<EncodableSpan>()
   private readonly logs = newState<OtlpLogRecord>()
   private readonly metrics = newState<OtlpMetricPoint>()

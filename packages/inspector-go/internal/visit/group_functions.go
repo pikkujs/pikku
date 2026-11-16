@@ -30,7 +30,7 @@ var pikkuFuncPattern = regexp.MustCompile(`(?i)pikku.*func`)
 
 func isFunctionHelper(name string) bool {
 	_, isScenarioStep := scenarioStepKinds[name]
-	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || isScenarioStep
+	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || name == "pikkuSubscribeFunc" || isScenarioStep
 }
 
 func isWorkflowWrapper(name string) bool {
@@ -69,6 +69,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 	scenarioStepKind, isScenarioStep := scenarioStepKinds[wrapper]
 	isScenario := wrapper == "pikkuScenario"
 	isWebhookReceive := wrapper == "pikkuWebhookReceive"
+	isSubscribe := wrapper == "pikkuSubscribeFunc"
 	if !strings.HasPrefix(wrapper, "pikku") {
 		return
 	}
@@ -154,6 +155,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 				m.Audit = &AuditMeta{Durability: d}
 			}
 		}
+		m.Telemetry = readTelemetry(firstArg)
 		m.Readonly = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "readonly").Truthy())
 		m.Deploy = tsutil.GetPropertyValue(firstArg, "deploy").AsString()
 		m.ApprovalRequired = tsutil.OrNil(tsutil.GetPropertyValue(firstArg, "approvalRequired").Truthy())
@@ -473,7 +475,9 @@ func (s *Context) addFunctions(node *ast.Node) {
 		s.checkClassification(name, handler, wrapper != "pikkuFunc")
 	}
 
-	sessionless := wrapper != "pikkuFunc"
+	// A subscribe function authorises like pikkuFunc: it wants a session until a
+	// route wires it auth: false (a public topic).
+	sessionless := wrapper != "pikkuFunc" && !isSubscribe
 	if isWorkflowWrapper(wrapper) {
 		// A workflow is a function, so unset auth wants a session. Only an explicit
 		// `auth: false` opens it.
@@ -498,6 +502,13 @@ func (s *Context) addFunctions(node *ast.Node) {
 	}
 	m.ScenarioStep = tsutil.OrNil(isScenarioStep)
 	m.WebhookReceive = tsutil.OrNil(isWebhookReceive)
+	if isSubscribe {
+		pattern, ok := s.subscribeTopicPattern(node, pikkuFuncId)
+		if !ok {
+			return
+		}
+		m.Subscribe = &state.SubscribeMeta{TopicPattern: pattern}
+	}
 	m.Scenario = tsutil.OrNil(isScenario)
 	m.MCP = tsutil.OrNil(mcpEnabled)
 	if scenarioStepKind != "" && scenarioStepKind != "virtualUser" {
@@ -572,7 +583,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		wrapper: wrapper, pikkuFuncId: pikkuFuncId, name: name,
 		exportedName: fn.exportedName, explicitName: fn.explicitName,
 		sourceFile: sourceFile, expose: expose, remote: m.Remote != nil && *m.Remote,
-		mcpEnabled: mcpEnabled, notRpc: isScenarioStep || isWebhookReceive, versioned: version != 0,
+		mcpEnabled: mcpEnabled, notRpc: isScenarioStep || isWebhookReceive || isSubscribe, versioned: version != 0,
 	})
 }
 
@@ -829,4 +840,34 @@ func (s *Context) localFnOf(expr, handler *ast.Node) (*ast.Node, bool) {
 
 func isFunctionExprNode(n *ast.Node) bool {
 	return ast.IsArrowFunction(n) || ast.IsFunctionExpression(n) || ast.IsClassExpression(n)
+}
+
+func readTelemetry(config *ast.Node) *TelemetryMeta {
+	p := tsutil.FindPropertyAssignment(config, "telemetry")
+	if p == nil {
+		return nil
+	}
+	telemetry := tsutil.UnwrapAs(p.Initializer())
+	if !ast.IsObjectLiteralExpression(telemetry) {
+		return nil
+	}
+	sp := tsutil.FindPropertyAssignment(telemetry, "spans")
+	if sp == nil {
+		return nil
+	}
+	spans := tsutil.UnwrapAs(sp.Initializer())
+	if ast.IsStringLiteral(spans) || ast.IsNoSubstitutionTemplateLiteral(spans) {
+		switch spans.Text() {
+		case "off", "on", "always":
+			return &TelemetryMeta{Spans: spans.Text()}
+		}
+		return nil
+	}
+	if ast.IsObjectLiteralExpression(spans) && len(spans.Properties()) == 1 {
+		sample := tsutil.GetPropertyValue(spans, "sample")
+		if sample.Num != nil && *sample.Num >= 0 && *sample.Num <= 1 {
+			return &TelemetryMeta{Spans: map[string]float64{"sample": *sample.Num}}
+		}
+	}
+	return nil
 }

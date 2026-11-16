@@ -509,8 +509,8 @@ if (!BUN_AVAILABLE) {
 
       // Cross-transport broadcast: an HTTP request publishes to a topic, and a
       // WebSocket client subscribed to that topic must receive it. This only
-      // works if the function-side and bun-server-side event hubs are the SAME
-      // instance — i.e. PikkuBunServer received the injected eventHub.
+      // works if the function-side publisher and the bun-server sockets share ONE
+      // hub — the distributor the host installed before the services.
       await check(
         'runtime: WS broadcast — HTTP publish reaches subscribed socket',
         async () => {
@@ -547,7 +547,7 @@ if (!BUN_AVAILABLE) {
               }
             })
 
-            // subscribe requires a session on this channel
+            // the subscribe function requires a session on this channel
             ws.send(
               JSON.stringify({
                 action: 'auth',
@@ -556,9 +556,9 @@ if (!BUN_AVAILABLE) {
               })
             )
             await sleep(300)
-            ws.send(
-              JSON.stringify({ action: 'subscribe', topic: 'todo-created' })
-            )
+            // the subscribe function (recipes/functions) picks the topic:
+            // `created` -> `todo-created`, which createTodo publishes to
+            ws.send(JSON.stringify({ action: 'subscribe', topic: 'created' }))
             await sleep(300)
 
             const res = await fetch(`http://${clientHost}:${port}/todos`, {

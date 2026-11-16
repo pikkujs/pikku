@@ -35,6 +35,7 @@ pub mod check_classification;
 pub mod check_disabled;
 pub mod check_indirect;
 pub mod group_addon_bans;
+pub mod group_subscribe;
 pub mod group_approval_description;
 pub mod group_analytics;
 pub mod group_define_contributors;
@@ -242,6 +243,7 @@ pub fn register_groups(r: &mut Registry) {
     check_disabled::register(r);
     check_indirect::register(r);
     group_addon_bans::register(r);
+    group_subscribe::register(r);
     group_wire_addon::register(r);
     group_wire_remote_addon::register(r);
     group_setup_core::register(r);

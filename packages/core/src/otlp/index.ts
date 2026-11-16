@@ -20,3 +20,10 @@ export type {
   OtlpMetricPoint,
   OtlpResource,
 } from './otlp-types.js'
+export { OtlpSinkRegistry, createOtlpSinks, fanOutOtlp } from './otlp-sink.js'
+export type {
+  OpenSpan,
+  OtlpFanOut,
+  OtlpSink,
+  OtlpSinkBase,
+} from './otlp-sink.js'

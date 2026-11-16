@@ -17,7 +17,7 @@ import type { PikkuSchema } from './pikku-schema.types.js'
  */
 export const analyticsSchema: PikkuSchema = {
   name: 'analytics',
-  ownedBy: ['analyticsService'],
+  ownedBy: ['analyticsSinks'],
   tables: {
     pikkuAnalyticsEvents: {
       columns: {

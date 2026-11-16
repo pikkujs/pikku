@@ -2,7 +2,7 @@ import { LogLevel, type Logger } from '../services/logger.js'
 import type { TraceContext } from '../trace.js'
 import { nowUnixNano, SPAN_LIMITS } from '../tracer.js'
 import type { SpanAttributeValue } from '../tracer.js'
-import type { OtlpHttpExporter } from './otlp-http-exporter.js'
+import type { OtlpSinkBase } from './otlp-sink.js'
 import type { OtlpSeverity } from './otlp-types.js'
 
 export interface OtlpLoggerOptions {
@@ -12,6 +12,14 @@ export interface OtlpLoggerOptions {
   currentContext?: () => TraceContext | undefined
   /** Export an object's fields as log attributes (`PIKKU_OTLP_LOG_FIELDS=1`). Default off: only the message leaves. */
   fields?: boolean
+  /**
+   * The attributes of the span `context` belongs to. A record written inside a function's span carries that span's
+   * {@link CONTEXT_ATTRIBUTES} (the function, its version, the wire, and the user and organisation when the span has them), so the
+   * read side can group and filter log lines the way it does spans, without `fields` being on.
+   */
+  contextAttributes?: (
+    context: TraceContext
+  ) => Readonly<Record<string, SpanAttributeValue>> | undefined
   /** A trace id every record carries (what `scope` sets). */
   traceId?: string
 }
@@ -26,6 +34,18 @@ const SEVERITY: Record<LogLevel, OtlpSeverity> = {
 }
 
 const BODY_LENGTH = 4096
+
+/** The span attributes a log record inherits from the span it is written in: the span's own names, so one column serves both. */
+export const CONTEXT_ATTRIBUTES = [
+  'pikku.function.id',
+  'pikku.function.version',
+  'pikku.wire.type',
+  'pikku.wire.id',
+  'pikku.user.id',
+  'pikku.org.id',
+  'pikku.impersonated',
+  'pikku.impersonator.id',
+] as const
 
 const clip = (text: string, max: number) =>
   text.length > max ? `${text.slice(0, max - 1)}…` : text
@@ -175,7 +195,7 @@ const toRecord = (
 
 /**
  * A `Logger` that writes through `inner` unchanged and also forwards each record
- * at or above `minLevel` to an {@link OtlpHttpExporter}. Forwarding is
+ * at or above `minLevel` to an {@link OtlpSinkBase}. Forwarding is
  * enqueue-only and cannot throw into the caller.
  */
 export class OtlpLogger implements Logger {
@@ -183,7 +203,7 @@ export class OtlpLogger implements Logger {
 
   constructor(
     private readonly inner: Logger,
-    private readonly exporter: OtlpHttpExporter,
+    private readonly exporter: OtlpSinkBase,
     private readonly options: OtlpLoggerOptions = {}
   ) {
     this.minLevel = options.minLevel ?? LogLevel.info
@@ -202,6 +222,21 @@ export class OtlpLogger implements Logger {
         meta,
         this.options.fields === true
       )
+      // A field of the record never sets what the span's context owns: with
+      // `fields` on, app code could otherwise forge an identity. The span's value
+      // wins, and with none the attribute stays absent.
+      for (const key of CONTEXT_ATTRIBUTES) delete attributes[key]
+      // Only when the record is of the span's own trace: a `scope(traceId)` for another trace is not inside this span.
+      const span =
+        context && (!this.options.traceId || context.traceId === traceId)
+          ? this.options.contextAttributes?.(context)
+          : undefined
+      if (span) {
+        for (const key of CONTEXT_ATTRIBUTES) {
+          const value = span[key]
+          if (value !== undefined) attributes[key] = value
+        }
+      }
       this.exporter.exportLogs([
         {
           timeUnixNano,

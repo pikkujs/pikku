@@ -6,7 +6,7 @@ import type {
 } from '../db-introspector.js'
 import { MIGRATION_TRACKING_TABLE } from '@pikku/migrator-sql'
 import type { SyncSqliteDatabase } from '@pikku/migrator-sql/sqlite'
-import { parseCheckEnumsFromDdl } from '../check-enums.js'
+import { parseCheckEnumsFromDdl, parseSqliteChecks } from '../check-enums.js'
 
 const SKIP_TABLES = new Set(['sqlite_sequence', MIGRATION_TRACKING_TABLE])
 
@@ -81,33 +81,44 @@ export class SqliteIntrospector implements DbIntrospector {
     const rows = this.db
       .prepare(`PRAGMA table_xinfo(${escaped})`)
       .all() as unknown as SqliteColumnRow[]
-    const enumsByColumn = this.parseCheckEnums(table)
-    return rows
-      .filter((c) => c.hidden !== 1)
-      .map((c) => ({
-        name: c.name,
-        type: c.type,
-        notNull: Boolean(c.notnull),
-        pk: c.pk > 0,
-        defaultValue: c.dflt_value != null ? String(c.dflt_value) : null,
-        generated: c.hidden === 2 || c.hidden === 3,
-        enumValues: enumsByColumn.get(c.name),
-      }))
+    const ddl = this.tableDdl(table)
+    const enumsByColumn = ddl ? parseCheckEnumsFromDdl(ddl) : new Map()
+    const visible = rows.filter((c) => c.hidden !== 1)
+    const checksByColumn = ddl
+      ? parseSqliteChecks(
+          ddl,
+          visible.map((c) => c.name)
+        )
+      : new Map()
+    return visible.map((c) => ({
+      name: c.name,
+      type: c.type,
+      notNull: Boolean(c.notnull),
+      pk: c.pk > 0,
+      defaultValue: c.dflt_value != null ? String(c.dflt_value) : null,
+      generated: c.hidden === 2 || c.hidden === 3,
+      enumValues: enumsByColumn.get(c.name),
+      ...(checksByColumn.has(c.name) && {
+        checks: checksByColumn.get(c.name),
+      }),
+    }))
   }
 
   /**
-   * SQLite has no native enums, but a `CHECK (col IN ('a','b',…))` constraint is
-   * an enum by another name. Read back the table's stored `CREATE TABLE` DDL —
-   * which SQLite keeps verbatim, comments included — and map each constrained
-   * column to its allowed values so codegen can type it as a union.
+   * The table's stored `CREATE TABLE` statement, which SQLite keeps verbatim,
+   * comments included. It is the only place its `CHECK` constraints live: there
+   * are no native enums, but a `CHECK (col IN ('a','b',…))` is an enum by
+   * another name, so each constrained column is read back with its allowed
+   * values for codegen to type as a union, and every single-column check is
+   * kept by name for the diff.
    */
-  private parseCheckEnums(table: string): Map<string, string[]> {
+  private tableDdl(table: string): string | null {
     const row = this.db
       .prepare(
         `SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?`
       )
       .get(table) as { sql: string | null } | undefined
-    return row?.sql ? parseCheckEnumsFromDdl(row.sql) : new Map()
+    return row?.sql ?? null
   }
 
   async getForeignKeys(table: string): Promise<ForeignKeyInfo[]> {

@@ -15,6 +15,7 @@ export const CiInput = z.object({
   migrationsApplied: z.boolean().optional(),
   secretsSet: z.boolean().optional(),
   skipDeployChecks: z.boolean().optional(),
+  allowDestructive: z.boolean().optional(),
 })
 export type CiInput = z.infer<typeof CiInput>
 
@@ -22,6 +23,8 @@ export const CiRun = z.object({
   dir: z.string(),
   /** Set when `dir` is a throwaway worktree: nothing there has been installed. */
   inWorktree: z.boolean(),
+  /** `db migrate` may apply destructive migrations: set only for a database known to be disposable, or by the caller. */
+  allowDestructive: z.boolean(),
   provider: z.string().optional(),
   deploy: z.boolean(),
   runTests: z.boolean(),

@@ -57,6 +57,10 @@ export class TypedSecretService<
     private credentialsMeta: Record<string, CredentialMeta>
   ) {}
 
+  get durable(): boolean | undefined {
+    return this.secrets.durable
+  }
+
   async getSecret<K extends keyof TMap & string>(
     key: K
   ): Promise<SecretResult<TMap[K]>>

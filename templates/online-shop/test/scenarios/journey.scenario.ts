@@ -151,9 +151,6 @@ export const shopperBuysAnItemInTheBrowser = pikkuScenario<
       {
         route: '/orders/status',
         action: 'subscribeToOrder',
-        // And release it. `LiveFeed` does the same on unmount — leaving the hub
-        // holding a subscription for a channel that has gone.
-        unsubscribeAction: 'unsubscribeFromOrder',
       },
       { virtualUser: virtualUsers.visitor }
     )

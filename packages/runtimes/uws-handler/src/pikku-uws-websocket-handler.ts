@@ -6,7 +6,7 @@ import { compileAllSchemas } from '@pikku/core/schema'
 
 import { uwsToRequest } from './uws-request-convertor.js'
 import type { PikkuuWSHandlerOptions } from './pikku-uws-http-handler.js'
-import { UWSEventHubService } from './uws-event-hub-service.js'
+import { getEventHubDistributor } from '@pikku/core/internal/event-hub'
 import { PikkuFetchHTTPRequest, PikkuFetchHTTPResponse } from '@pikku/core/http'
 
 const isSerializable = (data: any): boolean => {
@@ -41,8 +41,6 @@ export const pikkuWebsocketHandler = ({
   if (loadSchemas && logger) {
     compileAllSchemas(logger)
   }
-
-  const eventHub = new UWSEventHubService()
 
   const decoder = new TextDecoder('utf-8')
 
@@ -107,10 +105,14 @@ export const pikkuWebsocketHandler = ({
       channelHandler.registerOnClose(() => {
         ws.close()
       })
-      Promise.all([
-        eventHub.registerSocket(channelHandler.channelId, ws),
-        channelHandler.open(),
-      ]).catch((error: unknown) => {
+      // Attached to the process's event hub, so a function's publish reaches
+      // this socket once a subscribe function has subscribed it.
+      const distributor = getEventHubDistributor()
+      const backend = distributor?.deliveryFor('local')
+      if (distributor && backend) {
+        distributor.attach(channelHandler, backend, undefined)
+      }
+      Promise.resolve(channelHandler.open()).catch((error: unknown) => {
         logger?.error(`Error opening websocket channel: ${error}`)
       })
     },
@@ -132,10 +134,8 @@ export const pikkuWebsocketHandler = ({
     },
     close: (ws) => {
       const { channelHandler } = ws.getUserData()
-      Promise.all([
-        eventHub.onChannelClosed(channelHandler.channelId),
-        channelHandler.close(),
-      ]).catch((error: unknown) => {
+      getEventHubDistributor()?.detach(channelHandler.channelId)
+      Promise.resolve(channelHandler.close()).catch((error: unknown) => {
         logger?.error(`Error closing websocket channel: ${error}`)
       })
     },

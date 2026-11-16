@@ -387,6 +387,7 @@ jobs:
             scopes,
             tracing,
             otlp,
+            telemetry-sinks,
             feature-flags,
             product-hooks,
             product-hooks-none,
@@ -610,12 +611,27 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+      # Only a real MariaDB settles that it is refused, and refused before
+      # anything is written: the verifier fails, not skips, without it.
+      mariadb:
+        image: mirror.gcr.io/library/mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: pikku_db_schema
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "healthcheck.sh --connect --innodb_initialized"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: cd verifiers/db-schema && bun run test:mysql
     env:
       MYSQL_URL: mysql://root:password@127.0.0.1:3306/pikku_db_schema
+      MARIADB_URL: mysql://root:password@127.0.0.1:3307/pikku_db_schema
 
   verifier-coverage:
     name: Verifier Coverage

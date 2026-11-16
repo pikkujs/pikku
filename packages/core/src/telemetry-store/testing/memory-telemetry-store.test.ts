@@ -16,8 +16,11 @@ const readOnly: TelemetryStore = {
   failures: (s, q) => backing.failures(s, q),
   metrics: (s, q) => backing.metrics(s, q),
   metricsSummary: (s, q) => backing.metricsSummary(s, q),
-  trace: (s, id) => backing.trace(s, id),
+  trace: (s, id, q) => backing.trace(s, id, q),
   queueJobs: (s, q) => backing.queueJobs(s, q),
+  functionMetrics: (s, q) => backing.functionMetrics(s, q),
+  wireTypes: (s, q) => backing.wireTypes(s, q),
+  wireRuns: (s, q) => backing.wireRuns(s, q),
   tail: (s, c, q) => backing.tail(s, c, q),
 }
 conformance(readOnly, {

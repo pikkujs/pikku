@@ -40,7 +40,7 @@ class PikkuWebSocketRoute<Channel extends keyof ChannelsMap, Route extends keyof
  * const ws = new WebSocket('ws://localhost:3000')
  * const pikkuWS = new PikkuWebSocket<'events'>(ws)
  */
-export class PikkuWebSocket<Channel extends keyof ChannelsMap, EventHubTopics extends Record<string, any> = {}> extends CorePikkuWebsocket {
+export class PikkuWebSocket<Channel extends keyof ChannelsMap> extends CorePikkuWebsocket {
     /**
      * Send a message to a specific route and method.
      * Validates the input data type.
@@ -69,20 +69,6 @@ export class PikkuWebSocket<Channel extends keyof ChannelsMap, EventHubTopics ex
 
     public send(data: ChannelDefaultHandlerOf<Channel>['input']) {
         super.send(data)
-    }
-
-    /**
-     * Subscribe to a topic from the EventHub system with strong typing.
-     */
-    public subscribeToEventHub<Topic extends keyof EventHubTopics>(
-        topic: Topic,
-        callback: (data: EventHubTopics[Topic]) => void
-    ) {
-        super.subscribe((data) => {
-            if (data.topic === topic) {
-                callback(data as EventHubTopics[Topic])
-            }
-        })
     }
 }
   `
