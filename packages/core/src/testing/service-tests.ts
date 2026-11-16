@@ -10,6 +10,10 @@ import type { CredentialService } from '../services/credential-service.js'
 import type { AgentRunService } from '../wirings/agent/agent.types.js'
 import type { SessionStore } from '../services/session-store.js'
 import type { LeaseService } from '../services/lease-service.js'
+import type {
+  KeyStoreHarness,
+  KeyStoreTestOptions,
+} from './service-tests/key-store-tests.js'
 import type { WorkflowFencingHarness } from './service-tests/workflow-fencing-tests.js'
 
 /**
@@ -42,6 +46,9 @@ export interface ServiceTestConfig {
     }) => Promise<CredentialService & { rotateKEK?(): Promise<number> }>
     sessionStore?: () => Promise<SessionStore>
     leaseService?: () => Promise<LeaseService>
+    /** A key ledger: each call returns one empty, isolated ledger (see {@link KeyStoreHarness}). */
+    keyStore?: () => Promise<KeyStoreHarness>
+    keyStoreOptions?: KeyStoreTestOptions
     /** A workflow service that fences each step write to the claim that made it. */
     workflowFencing?: () => Promise<WorkflowFencingHarness>
     /** A workflow service to run saga compensation and graph `recover` against, driven through a queue. */
@@ -61,6 +68,7 @@ import { defineCredentialServiceTests } from './service-tests/credential-service
 import { defineAgentRunServiceTests } from './service-tests/agent-run-service-tests.js'
 import { defineSessionStoreTests } from './service-tests/session-store-tests.js'
 import { defineLeaseServiceTests } from './service-tests/lease-service-tests.js'
+import { defineKeyStoreTests } from './service-tests/key-store-tests.js'
 import { defineWorkflowFencingTests } from './service-tests/workflow-fencing-tests.js'
 import {
   defineWorkflowCompensationQueuedTests,
@@ -119,6 +127,9 @@ export function defineServiceTests(config: ServiceTestConfig): void {
   }
   if (services.leaseService) {
     defineLeaseServiceTests(name, services.leaseService)
+  }
+  if (services.keyStore) {
+    defineKeyStoreTests(name, services.keyStore, services.keyStoreOptions)
   }
   if (services.workflowFencing) {
     defineWorkflowFencingTests(name, services.workflowFencing)

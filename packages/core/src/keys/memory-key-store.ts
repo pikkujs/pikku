@@ -164,6 +164,7 @@ export class MemoryKeyStore implements KeyStore {
 
   async firstActivate(rec: KeyRecord, _ctx?: StoreContext) {
     return this.mutate(() => {
+      if (this.records.has(rec.kid)) throw new Error('KeyStore: kid exists')
       if (
         this.slotRecords(rec.name, rec.scopeKey).some(
           (r) => r.status === 'active'
