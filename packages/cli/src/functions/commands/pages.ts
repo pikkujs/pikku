@@ -20,6 +20,7 @@ import {
 } from './pages.schemas.js'
 import {
   compareShot,
+  defaultCompareDir,
   gitStamp,
   loadSiteCapture,
   overThreshold,
@@ -325,16 +326,7 @@ export const pagesCompare = pikkuSessionlessFunc({
     const fill = (path: string) =>
       path.replace(/\$(\w+)/g, (whole, name) => builtinParams[name] ?? whole)
 
-    const dir = resolve(
-      out ??
-        resolve(
-          config.rootDir,
-          config.outDir,
-          'pages',
-          'compare',
-          basename(target)
-        )
-    )
+    const dir = resolve(out ?? defaultCompareDir(root, target))
     mkdirSync(dir, { recursive: true })
     // relative when under the working directory, absolute otherwise
     const rel = (file: string) => {
