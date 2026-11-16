@@ -1,6 +1,50 @@
-import { isAbsolute, join, relative } from 'node:path'
+import { lstatSync, readlinkSync, realpathSync } from 'node:fs'
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from 'node:path'
 import type { ResolvedDb } from '../db/local-db.js'
 import type { CiRun, CiStage } from './schemas.js'
+
+/**
+ * `path` with every symlink in it resolved, as far as it exists: a file that is
+ * not there yet is judged by where its directory really is. A path as written
+ * (`..`, a committed link, a linked directory) says nothing about where a file
+ * lands.
+ */
+const realPath = (path: string, depth = 0): string => {
+  const absolute = resolve(path)
+  let existing = absolute
+  const rest: string[] = []
+  const exists = (p: string) => {
+    try {
+      lstatSync(p)
+      return true
+    } catch {
+      return false
+    }
+  }
+  while (!exists(existing)) {
+    const parent = dirname(existing)
+    if (parent === existing) return absolute
+    rest.unshift(basename(existing))
+    existing = parent
+  }
+  try {
+    return join(realpathSync(existing), ...rest)
+  } catch {
+    // A link whose target is not there (yet): follow it by hand.
+    if (depth > 20) return absolute
+    return join(
+      realPath(resolve(dirname(existing), readlinkSync(existing)), depth + 1),
+      ...rest
+    )
+  }
+}
 
 /**
  * Whether the database a run would migrate belongs to the worktree: a SQLite
@@ -13,8 +57,9 @@ export const worktreeOwnsDatabase = (
   resolved: ResolvedDb | null,
   dir: string
 ): boolean => {
+  const root = realPath(dir)
   const inside = (path: string) => {
-    const rel = relative(dir, path)
+    const rel = relative(root, realPath(path))
     return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)
   }
   if (!resolved) return false
