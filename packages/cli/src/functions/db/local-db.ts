@@ -20,6 +20,7 @@ import {
   migrate,
   baselineMigrations,
   checkProbeHook,
+  checkProbeLine,
   DESTRUCTIVE_MIGRATION_MARKER,
   mysqlProbeExecutor,
   postgresProbeExecutor,
@@ -79,6 +80,7 @@ import { createPGliteKysely } from './postgres/pglite-kysely.js'
 import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
 import {
   checkChangeStatements,
+  checkProbeSql,
   inlineCheckExpression,
   mysqlCheckRefusal,
   mysqlCheckSupport,
@@ -1648,10 +1650,29 @@ function collectSqliteColumnIndexes(
 
 async function coveredMysqlSchema(
   migrationsDir: string,
-  resolved: Pick<ResolvedMysqlDb, 'connectionString'>
+  resolved: Pick<ResolvedMysqlDb, 'connectionString'>,
+  refuseDanglingKeys = false
 ): Promise<SchemaMap> {
   return withScratchMysqlDatabase(resolved, async (client) => {
     await migrate(new MysqlMigrationExecutor(client), migrationsDir, REPLAY)
+    if (refuseDanglingKeys) {
+      // The migrator turns FOREIGN_KEY_CHECKS off, which lets a table that other
+      // tables point at be dropped and leaves their keys pointing at nothing.
+      const { rows } = await client.query(
+        `SELECT table_name AS child, referenced_table_name AS parent
+         FROM information_schema.key_column_usage
+         WHERE table_schema = DATABASE() AND referenced_table_name IS NOT NULL
+           AND referenced_table_name NOT IN (
+             SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE())`
+      )
+      const [first] = rows as { child: string; parent: string }[]
+      if (first) {
+        throw new Error(
+          `${first.child} still has a foreign key to ${first.parent}, which this drops. ` +
+            `Drop or change the table that points at it first, in the same declaration or by hand`
+        )
+      }
+    }
     return introspectorToMap(new MysqlIntrospector(client))
   })
 }
@@ -1659,7 +1680,8 @@ async function coveredMysqlSchema(
 /** The schema the migrations alone define, on whichever dialect `resolved` is. */
 async function coveredSchema(
   resolved: ResolvedDb,
-  columnIndexes?: Map<string, string[]>
+  columnIndexes?: Map<string, string[]>,
+  refuseDanglingKeys = false
 ): Promise<SchemaMap> {
   switch (resolved.dialect) {
     case 'sqlite':
@@ -1669,7 +1691,11 @@ async function coveredSchema(
         columnIndexes
       )
     case 'mysql':
-      return coveredMysqlSchema(resolved.migrationsDir, resolved)
+      return coveredMysqlSchema(
+        resolved.migrationsDir,
+        resolved,
+        refuseDanglingKeys
+      )
     case 'postgres':
       return coveredPostgresSchema(resolved.migrationsDir, resolved)
   }
@@ -2314,6 +2340,7 @@ export async function planDeclaredTables(
   }
 
   // Dropped last: what the additions above need is still there when they run.
+  const droppedIndexes = new Set<string>()
   const drops = destructive.flatMap((change) => {
     const qualified = qualify(change.table)
     return change.kind === 'dropTable'
@@ -2328,7 +2355,8 @@ export async function planDeclaredTables(
             change.column!,
             change.what,
             columnIndexes,
-            quote
+            quote,
+            droppedIndexes
           ).join('\n'),
         ]
   })
@@ -2367,16 +2395,33 @@ export async function planDeclaredTables(
       const dialect = resolved.dialect === 'mysql' ? 'mysql' : 'postgres'
       const where = { schema: schemaName, table, qualified: qualify(table) }
       const add = added.map((a) => ({ ...a, expression: a.expression! }))
-      if (renamed.pending.some((r) => r.table === table && r.to === column)) {
-        beforeRename.set(
-          `${table}.${column}`,
-          checkChangeStatements(
+      const rename = renamed.pending.find(
+        (r) => r.table === table && r.to === column
+      )
+      if (rename) {
+        // The old bound goes in this file and the new one in the next, so rows
+        // that break the new one would leave the column unbound. Ask them now,
+        // under the old name, and a bound they break is refused before the old
+        // one is gone.
+        const probes = add.map((a) =>
+          checkProbeLine({
+            ...(schemaName ? { schema: schemaName } : {}),
+            table,
+            sql: checkProbeSql(
+              where.qualified,
+              a.expression.split(quote(column)).join(quote(rename.from))
+            ),
+          })
+        )
+        beforeRename.set(`${table}.${column}`, [
+          ...probes,
+          ...checkChangeStatements(
             dialect,
             where,
             { drop: plan.drop, add: [] },
             quote
-          )
-        )
+          ),
+        ])
         statements.push(
           ...checkChangeStatements(dialect, where, { drop: [], add }, quote)
         )
@@ -2421,17 +2466,24 @@ export async function planDeclaredTables(
   }
 
   const dropped = destructive.filter((d) => d.kind === 'dropTable')
-  const rehearsal = await rehearseMigration(resolved, bodies, (after) => {
-    const left = diffSchemas(desired.tables, after, schemaName)
-    return [
-      ...comparable(after),
-      ...dropped
-        .filter((d) => coveredTable(after, d.table, schemaName))
-        .map((d) => `${d.table} is still there`),
-      ...left.missingTables.map((t) => `${t} is still missing`),
-      ...left.missingColumns.map((c) => `${c.table} still lacks ${c.columns}`),
-    ]
-  })
+  const rehearsal = await rehearseMigration(
+    resolved,
+    bodies,
+    (after) => {
+      const left = diffSchemas(desired.tables, after, schemaName)
+      return [
+        ...comparable(after),
+        ...dropped
+          .filter((d) => coveredTable(after, d.table, schemaName))
+          .map((d) => `${d.table} is still there`),
+        ...left.missingTables.map((t) => `${t} is still missing`),
+        ...left.missingColumns.map(
+          (c) => `${c.table} still lacks ${c.columns}`
+        ),
+      ]
+    },
+    dropped.length > 0
+  )
   if (rehearsal.length > 0) {
     return { tables, bodies: [], refusals: rehearsal, destructive, notes }
   }
@@ -2459,7 +2511,8 @@ async function mysqlServerVersion(resolved: ResolvedMysqlDb): Promise<string> {
 async function rehearseMigration(
   resolved: ResolvedDb,
   bodies: string[],
-  check: (after: SchemaMap) => string[]
+  check: (after: SchemaMap) => string[],
+  refuseDanglingKeys = false
 ): Promise<string[]> {
   const dir = mkdtempSync(join(tmpdir(), 'pikku-rehearsal-'))
   try {
@@ -2475,10 +2528,11 @@ async function rehearseMigration(
     }
     let after: SchemaMap
     try {
-      after = await coveredSchema({
-        ...resolved,
-        migrationsDir: dir,
-      } as ResolvedDb)
+      after = await coveredSchema(
+        { ...resolved, migrationsDir: dir } as ResolvedDb,
+        undefined,
+        refuseDanglingKeys
+      )
     } catch (error: any) {
       return [
         `The migration for ${TABLES_FILE} does not apply on top of the existing ones: ${error.message}. ` +
@@ -2945,10 +2999,14 @@ function dropColumnStatements(
   column: string,
   reason: string,
   columnIndexes: Map<string, string[]>,
-  quote: (name: string) => string
+  quote: (name: string) => string,
+  droppedIndexes: Set<string> = new Set()
 ): string[] {
-  const indexes =
+  // An index over two dropped columns goes once: the second DROP INDEX would fail.
+  const indexes = (
     dialect === 'sqlite' ? (columnIndexes.get(`${table}.${column}`) ?? []) : []
+  ).filter((index) => !droppedIndexes.has(index))
+  for (const index of indexes) droppedIndexes.add(index)
   return [
     `${DESTRUCTIVE_MIGRATION_MARKER}${reason}`,
     ...indexes.map((index) => `DROP INDEX ${quote(index)};`),
@@ -2973,6 +3031,7 @@ function orphanedColumnStatements(
   quote: (name: string) => string
 ): string[] {
   const statements: string[] = []
+  const droppedIndexes = new Set<string>()
   for (const column of columns) {
     const note =
       `-- ${table}.${column.name} is NOT NULL with no default, and its source no longer\n` +
@@ -2998,7 +3057,8 @@ function orphanedColumnStatements(
           column.name,
           `DROP COLUMN ${table}.${column.name}: its data is lost`,
           columnIndexes,
-          quote
+          quote,
+          droppedIndexes
         ).join('\n')
     )
   }

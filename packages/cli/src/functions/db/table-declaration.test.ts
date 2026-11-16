@@ -26,6 +26,7 @@ import {
   MigrationDestructiveError,
   destructiveReasons,
 } from '@pikku/migrator-sql'
+import { probesIn } from '@pikku/migrator-sql'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { readMigrationProvenance } from './migration-provenance.js'
 import {
@@ -631,6 +632,25 @@ describe('destructive changes on sqlite', () => {
       ),
       ['id', 'title']
     )
+  })
+
+  test('an index over two dropped columns is dropped once', async () => {
+    const note = (columns: string, rest = '') =>
+      `note: { columns: { id: { type: 'key', primaryKey: true }, ${columns} }${rest} }`
+    const resolved = await start(
+      note(
+        `a: { type: 'text' }, b: { type: 'text' },`,
+        `, indexes: [{ columns: ['a', 'b'] }]`
+      )
+    )
+    declare(note(''))
+    const { written, refusals } = await generate(resolved, {
+      allowDestructive: true,
+    })
+    assert.deepEqual(refusals, [])
+    const sql = readFileSync(written[0]!.file, 'utf8')
+    assert.equal(sql.match(/DROP INDEX/g)?.length, 1)
+    await migrateAndCodegen(resolved, { allowDestructive: true })
   })
 
   test('a column sqlite cannot drop is refused even when approved', async () => {
@@ -1445,6 +1465,23 @@ describe('renamedFrom', () => {
       assert.doesNotMatch(files[0]!, /ADD CONSTRAINT/i)
       assert.match(files[1]!, /ADD CONSTRAINT "item_state_\w+_enum_check"/i)
       assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+
+    test('the rename file asks the rows about the new bound, under the old name', async () => {
+      declare(STATUS('status'))
+      const resolved = postgresProject()
+      await generate(resolved)
+
+      declare(STATUS('state', `renamedFrom: 'status'`))
+      const { written } = await generate(resolved)
+      const [rename, additions] = written.map((w) =>
+        readFileSync(w.file, 'utf8')
+      )
+      const probe = probesIn(rename!)
+      assert.equal(probe.length, 1)
+      assert.match(probe[0]!.sql, /"status"/)
+      assert.doesNotMatch(probe[0]!.sql, /"state"/)
+      assert.equal(probesIn(additions!).length, 1)
     })
   })
 })
