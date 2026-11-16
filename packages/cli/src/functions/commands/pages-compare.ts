@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import jpeg from 'jpeg-js'
 import pngjs from 'pngjs'
@@ -201,10 +201,15 @@ export function readReference(dir: string): ReferenceShot[] {
   return shots
 }
 
-/** `index` is `/`; any other id is `/<id>`, with the capture script's `__` read back as `/`. A map entry wins. */
+/** `index` and `home` are `/`; any other id is `/<id>`, with the capture script's `__` read back as `/`. A map entry wins. */
 export function routeFor(id: string, map: Record<string, string> = {}): string {
   if (map[id] !== undefined) return map[id]!
-  return id === 'index' ? '/' : `/${id.replace(/__/g, '/')}`
+  return id === 'index' || id === 'home' ? '/' : `/${id.replace(/__/g, '/')}`
+}
+
+/** Where `pages compare` writes by default: under the workspace, where an agent may read it (not `.pikku/`). */
+export function defaultCompareDir(workspaceRoot: string, app: string): string {
+  return join(workspaceRoot, 'artifacts', 'tmp', 'compare', basename(app))
 }
 
 /** Does a concrete path match one of the app's route paths (`$param` one segment, a bare `$` the rest)? */

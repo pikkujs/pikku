@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import {
+  defaultCompareDir,
   discoverPages,
   findWorkspaceRoot,
   readReference,
@@ -270,15 +271,42 @@ export async function checkPageGate({
       why: `no page file touched${base ? ` since ${base}` : ' in HEAD'}`,
     }
 
-  const reportPath = (app: string) =>
-    join(configDir, '.pikku', 'pages', 'compare', basename(app), 'report.json')
-  const readReport = (app: string): Report | null => {
-    try {
-      return JSON.parse(readFileSync(reportPath(app), 'utf8'))
-    } catch {
-      return null
+  // where pages compare writes (artifacts/tmp/compare/<app>), and where it
+  // wrote before (.pikku/pages/compare/<app>); the newest report wins
+  const reportPaths = (app: string) => [
+    ...new Set([
+      join(defaultCompareDir(workspaceRoot, app), 'report.json'),
+      join(defaultCompareDir(top, app), 'report.json'),
+      join(
+        configDir,
+        '.pikku',
+        'pages',
+        'compare',
+        basename(app),
+        'report.json'
+      ),
+    ]),
+  ]
+  const latestReport = (
+    app: string
+  ): { path: string; report: Report } | null => {
+    let best: { path: string; report: Report } | null = null
+    for (const path of reportPaths(app)) {
+      try {
+        const report: Report = JSON.parse(readFileSync(path, 'utf8'))
+        if (
+          !best ||
+          (report.generatedAt ?? '') > (best.report.generatedAt ?? '')
+        )
+          best = { path, report }
+      } catch {}
     }
+    return best
   }
+  const reportPath = (app: string) =>
+    latestReport(app)?.path ?? reportPaths(app)[0]!
+  const readReport = (app: string): Report | null =>
+    latestReport(app)?.report ?? null
   // the site the app's report was made against, else the first
   const siteFor = (app: string): Site => {
     const ref = readReport(app)?.reference

@@ -5,6 +5,7 @@ export {
 } from '@pikku/code-edit/routes'
 export { findWorkspaceRoot } from '@pikku/code-edit/workspace'
 export {
+  defaultCompareDir,
   readReference,
   routeExists,
   routeFor,

@@ -135,6 +135,8 @@ describe('pages compare', () => {
   test('maps reference ids to routes and reports a page with no route as missing', () => {
     const routes = ['/', '/about', '/events/$slug', '/docs/$']
     assert.equal(routeFor('index'), '/')
+    assert.equal(routeFor('home'), '/')
+    assert.equal(routeFor('home', { home: '/start' }), '/start')
     assert.equal(routeFor('about'), '/about')
     assert.equal(routeFor('blog__post'), '/blog/post')
     assert.equal(routeFor('about-us', { 'about-us': '/about' }), '/about')

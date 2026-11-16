@@ -94,9 +94,13 @@ const row = (
   sections: null,
 })
 
-const report = (dir: string, body: Record<string, unknown>) =>
+const report = (
+  dir: string,
+  body: Record<string, unknown>,
+  where = join('artifacts', 'tmp', 'compare', 'app')
+) =>
   write(
-    join(dir, '.pikku', 'pages', 'compare', 'app', 'report.json'),
+    join(dir, where, 'report.json'),
     JSON.stringify({
       reference: 'artifacts/references/example.com',
       gitSha: HEAD,
@@ -207,7 +211,32 @@ describe('the page gate on changes done', () => {
     assert.ok(message.indexOf('about @390') < message.indexOf('about @1440'))
     assert.match(
       message,
-      /70% of pixels differ, height 2400 px vs 3000 px in the original\. Diff: \.pikku\/pages\/compare\/app\/about-390\.diff\.png/
+      /70% of pixels differ, height 2400 px vs 3000 px in the original\. Diff: artifacts\/tmp\/compare\/app\/about-390\.diff\.png/
+    )
+  })
+
+  test('still reads a report in the old .pikku location; the newest report wins', async () => {
+    const dir = project()
+    const old = join('.pikku', 'pages', 'compare', 'app')
+    report(dir, { rows: allAbout }, old)
+    assert.strictEqual(
+      (await checkPageGate({ git: fakeGit(dir, ABOUT), cwd: dir, env: {} }))
+        .kind,
+      'pass'
+    )
+    report(dir, {
+      generatedAt: '2026-11-16T11:00:00.000Z',
+      rows: [row('about', 1440, 80), row('about', 390, 30)],
+    })
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match(
+      (outcome as { message: string }).message,
+      /80% of pixels differ/
     )
   })
 
