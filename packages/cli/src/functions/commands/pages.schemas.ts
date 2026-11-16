@@ -59,6 +59,8 @@ export const PagesCompareRow = z.object({
   changedPercent: z.number().nullable(),
   referenceHeight: z.number().nullable(),
   ourHeight: z.number().nullable(),
+  referenceImageWidth: z.number().optional(),
+  ourImageWidth: z.number().optional(),
   heightDiff: z.number().nullable(),
   httpStatus: z.number().nullable(),
   diff: z.string().nullable(),

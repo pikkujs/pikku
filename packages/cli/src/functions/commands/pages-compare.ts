@@ -264,6 +264,9 @@ export interface CompareRow {
   changedPercent: number | null
   referenceHeight: number | null
   ourHeight: number | null
+  /** Image widths, when they differ from `width`: the page is wider than the viewport (it overflows). */
+  referenceImageWidth?: number
+  ourImageWidth?: number
   heightDiff: number | null
   httpStatus: number | null
   diff: string | null
@@ -298,11 +301,24 @@ export function compareShot(
   ref: ReferenceShot,
   ours: Uint8Array,
   opts?: { maxWidth?: number; tolerance?: number }
-): { diff: ImageDiff; referenceHeight: number; ourHeight: number } {
+): {
+  diff: ImageDiff
+  referenceHeight: number
+  ourHeight: number
+  referenceImageWidth: number
+  ourImageWidth: number
+} {
   const a = decodeImage(readFileSync(ref.file))
   const b = decodeImage(ours)
   const diff = diffImages(a, b, opts)
-  // heights in the reference's pixels, which are CSS pixels at its width
-  const ourHeight = Math.round((b.height * a.width) / b.width)
-  return { diff, referenceHeight: a.height, ourHeight }
+  // Both are full-page screenshots at a device scale of 1, so their pixel
+  // heights are CSS pixels; not rescaled, since an image wider than its
+  // viewport is a page that overflows sideways, not a different scale.
+  return {
+    diff,
+    referenceHeight: a.height,
+    ourHeight: b.height,
+    referenceImageWidth: a.width,
+    ourImageWidth: b.width,
+  }
 }

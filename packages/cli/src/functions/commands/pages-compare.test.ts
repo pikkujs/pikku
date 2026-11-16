@@ -84,11 +84,15 @@ describe('pages compare', () => {
     )
     const [shot] = readReference(dir)
     const ours = encodePng(page(200, 400, undefined, 40))
-    const { diff, referenceHeight, ourHeight } = compareShot(shot!, ours)
+    const { diff, referenceHeight, ourHeight, ourImageWidth } = compareShot(
+      shot!,
+      ours
+    )
     assert.equal(diff.width, 100)
     assert.equal(diff.changedPercent, 0)
     assert.equal(referenceHeight, 200)
-    assert.equal(ourHeight, 200)
+    assert.equal(ourHeight, 400) // pixel heights, as taken
+    assert.equal(ourImageWidth, 200)
   })
 
   test('a much taller page counts the part the reference lacks as changed, and does not crash', () => {
