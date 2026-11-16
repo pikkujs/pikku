@@ -835,7 +835,14 @@ wireCLI({
         generate: pikkuCLICommand({
           func: dbGenerate,
           description:
-            'Write the SQL migrations for everything that declares tables: db/tables.ts, Better Auth, the Pikku runtime and addons. Refuses a drop, a rename or a changed column',
+            'Write the SQL migrations for everything that declares tables: db/tables.ts, Better Auth, the Pikku runtime and addons. A drop or a rename is written only with --allowDestructive; a changed column type or constraint is refused',
+          options: {
+            allowDestructive: {
+              description:
+                'Write the drops and renames db/tables.ts asks for, each marked `-- pikku:destructive` so `db migrate` still stops on it',
+              default: false,
+            },
+          },
         }),
         check: pikkuCLICommand({
           func: dbCheck,
