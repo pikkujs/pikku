@@ -166,4 +166,31 @@ describe('PikkuBunServer request body read path', () => {
     }
     assert.ok(native >= 1, 'the Bun server never used the native body read')
   })
+
+  test('a configured maxBodySize refuses a larger body with 413', async () => {
+    const limited = new PikkuBunServer(
+      { port: 0, hostname: 'localhost' },
+      noopLogger,
+      { maxBodySize: 16 }
+    )
+    await limited.init()
+    await limited.start()
+    try {
+      const url = `http://localhost:${limited.port}/echo`
+      const small = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ a: 1 }),
+      })
+      assert.equal(small.status, 200)
+      const large = await fetch(url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ a: 'x'.repeat(64) }),
+      })
+      assert.equal(large.status, 413)
+    } finally {
+      await limited.stop()
+    }
+  })
 })
