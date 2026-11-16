@@ -1,14 +1,13 @@
-import type { MetaService } from '@pikku/core/services'
-import type { ChannelMeta as CoreChannelMeta } from '@pikku/core/channel'
-import type { WorkflowsMeta } from '@pikku/core/workflow'
-import type { FeaturesMeta } from '@pikku/core/scenario'
-import type { ResolvedVirtualUser } from '@pikku/core/services'
-import type { SystemRoleDefinitionsMeta } from '@pikku/core/role'
-import type { ScopeDefinitionsMeta } from '@pikku/core/scope'
-import type { FeatureFlagDefinitionsMeta } from '@pikku/core/flag'
-import type { AnalyticsEventsMeta } from '@pikku/core/analytics'
-import type { OutgoingWebhooksMeta } from '@pikku/core/webhook'
-import { filterListByAddon, filterRecordByAddon } from '../lib/addon-scope.js'
+import type { MetaService } from './index.js'
+import type { ChannelMeta as CoreChannelMeta } from '../wirings/channel/index.js'
+import type { WorkflowsMeta } from '../wirings/workflow/index.js'
+import type { FeaturesMeta } from '../wirings/workflow/pikku-scenario-service.js'
+import type { ResolvedVirtualUser } from './index.js'
+import type { SystemRoleDefinitionsMeta } from '../wirings/role/index.js'
+import type { ScopeDefinitionsMeta } from '../wirings/scope/index.js'
+import type { FeatureFlagDefinitionsMeta } from '../wirings/flag/index.js'
+import type { AnalyticsEventsMeta } from '../analytics/index.js'
+import type { OutgoingWebhooksMeta } from '../wirings/webhook/index.js'
 import type {
   FunctionsMeta,
   AgentsMeta,
@@ -27,8 +26,35 @@ import type {
   GroupMeta,
   PermissionDefinitionMeta,
   EmailsMeta,
-} from '@pikku/core/services'
-import type { GatewaysMeta } from '@pikku/core/gateway'
+} from './index.js'
+import type { GatewaysMeta } from '../wirings/gateway/index.js'
+
+const belongsToAddon = (
+  name: string | undefined,
+  addon: string | undefined
+): boolean => {
+  if (!addon) return true
+  if (!name) return false
+  const index = name.indexOf(':')
+  return index > 0 && name.slice(0, index) === addon
+}
+
+const filterListByAddon = <T>(
+  items: T[],
+  addon: string | undefined,
+  nameOf: (item: T) => string | undefined
+): T[] =>
+  addon ? items.filter((item) => belongsToAddon(nameOf(item), addon)) : items
+
+const filterRecordByAddon = <T>(
+  record: Record<string, T>,
+  addon: string | undefined
+): Record<string, T> =>
+  addon
+    ? Object.fromEntries(
+        Object.entries(record).filter(([key]) => belongsToAddon(key, addon))
+      )
+    : record
 
 export type {
   FunctionsMeta,

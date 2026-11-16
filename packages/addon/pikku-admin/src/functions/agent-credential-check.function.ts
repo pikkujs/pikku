@@ -16,17 +16,14 @@ export const agentCredentialCheck = pikkuFunc<
   description:
     'Checks which OAuth credentials an agent needs and whether the authenticated user has connected them.',
   expose: true,
-  scopes: ['pikku:console:credentials:read'],
-  func: async (
-    { credentialService, wiringService },
-    { agentName },
-    { session }
-  ) => {
+  scopes: ['admin:credentials:read'],
+  func: async ({ credentialService }, { agentName }, { session }) => {
     // Scope to the caller's own session — never accept an arbitrary userId from
     // input, which would let a caller probe another user's connected credentials.
     const userId = session?.userId
-    const allMeta = await wiringService.readAllMeta()
-    const agentMeta = allMeta.agentsMeta?.[agentName]
+    // Read the agent from the running app's own state, not from `.pikku` files
+    // on disk, so this works in a deployed stage.
+    const agentMeta = pikkuState(null, 'agent', 'agentsMeta')?.[agentName]
     if (!agentMeta?.tools?.length) {
       return { requirements: [], allConnected: true }
     }
