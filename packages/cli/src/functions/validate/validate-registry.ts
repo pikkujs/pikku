@@ -20,6 +20,7 @@ import { runPikkuBarrelChecks } from './pikku-barrel-checks.js'
 import { runScaffoldDuplicateChecks } from './scaffold-duplicate-checks.js'
 import { runSharedProjectChecks } from './shared-checks.js'
 import { runProjectChecks } from './project-checks.js'
+import { runProjectLayoutChecks } from './project-layout-checks.js'
 import { runTypeIdentityChecks } from './type-identity-checks.js'
 import { runWorkspaceExportsChecks } from './workspace-exports-checks.js'
 import type { ValidateFinding as Finding } from './virtual-user-checks.js'
@@ -65,6 +66,8 @@ export type ProjectChecksHook = (request: {
 }) => Promise<Finding[]>
 
 export type ValidateOptions = {
+  /** Release mode: the project-layout findings are errors, not warnings. */
+  strict?: boolean
   skipTypecheck?: boolean
   skipDeployChecks?: boolean
   migrationsBase?: string
@@ -181,6 +184,17 @@ export const CHECKS: ValidateCheck[] = [
       existsSync(join(dir, 'pikku.config.json')) &&
       !existsSync(join(dir, ADDON_MARKER)),
     run: async ({ dir }) => (await runSharedProjectChecks(dir)).findings,
+  },
+  {
+    id: 'project-layout',
+    subject: 'project layout',
+    // Every app project: one pikku.config.json at the top level, db/ and
+    // emails/ beside it, and #pikku/* resolving to <config dir>/.pikku.
+    applies: async ({ dir }) =>
+      existsSync(join(dir, 'pikku.config.json')) &&
+      !existsSync(join(dir, ADDON_MARKER)),
+    run: async ({ dir }, options) =>
+      runProjectLayoutChecks(dir, { strict: options.strict }),
   },
   {
     id: 'project-checks',

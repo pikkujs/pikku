@@ -79,6 +79,7 @@ describe('validation planning', () => {
         'oxlint-setup:.',
         'pikku-barrel:.',
         'project-checks:.',
+        'project-layout:.',
         'scaffold-duplicates:.',
         'workspace-exports:.',
       ])
@@ -133,6 +134,7 @@ describe('validation planning', () => {
         'pikku-barrel:p/one',
         'pikku-barrel:p/two',
         'project-checks:.',
+        'project-layout:.',
         'scaffold-duplicates:.',
         'workspace-exports:.',
       ])
