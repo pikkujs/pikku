@@ -354,6 +354,10 @@ export const changesCommands = defineCLICommands({
         description: 'What was done, for whoever reads the thread later',
       },
       authorName: { description: 'Who did it, e.g. claude-code' },
+      waive: {
+        description:
+          'Finish a change that touched pages without a passing `pikku ui pages compare`, for a page that cannot match the original. The reason (at least 10 characters) goes in the done note',
+      },
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),
