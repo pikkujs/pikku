@@ -7,7 +7,6 @@ description: Who may read secrets, runs and artifacts through the console, and w
 # Decisions
 
 <!-- pikku:knowledge-index -->
-- [Agent credential status is read for the caller's own session user only](an-agent-credential-check-reads-only-the-callers-own-session.md) — agentCredentialCheck takes the user id from the session and never from input, so a caller cannot probe another user's connected credentials
 - [Agent run grades are readable by the run's owner or the admin root, and a hidden run reads as not found](console-agent-run-scores-hides-runs-the-caller-cannot-see.md) — get-agent-run-scores declares no scopes; it checks the admin root or canAccessThread in the body and throws NotFound for both a missing run and a run the caller may not see
 - [Thread run listings filter other owners' runs out instead of refusing, and the admin root sees all](console-agent-thread-runs-are-filtered-not-refused.md) — get-agent-thread-runs returns every run to the admin root and filters the rest by canAccessThread, so an empty list never confirms that another owner's thread exists
 - [Console functions are each gated by one declared pikku:console scope, with no role check in the body](console-functions-are-gated-by-one-declared-scope.md) — Most console functions declare exactly one pikku:console:* scope in scopes and check no role in the body; ping and get-agent-run-scores declare no scopes at all
