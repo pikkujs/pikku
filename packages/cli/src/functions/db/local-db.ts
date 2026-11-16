@@ -20,6 +20,7 @@ import {
   migrate,
   baselineMigrations,
   checkProbeHook,
+  DESTRUCTIVE_MIGRATION_MARKER,
   mysqlProbeExecutor,
   postgresProbeExecutor,
   type MigrateResult,
@@ -2791,7 +2792,8 @@ function addColumnStatements(
  *
  * PostgreSQL and MySQL relax it — the column and what it holds stay, only the
  * constraint goes. SQLite cannot change a column's constraints, so it is
- * dropped, indexes first (SQLite refuses to drop a column an index still names).
+ * dropped, indexes first (SQLite refuses to drop a column an index still names),
+ * and the statement is marked destructive: what the column held is lost.
  */
 function orphanedColumnStatements(
   dialect: ResolvedDb['dialect'],
@@ -2821,6 +2823,7 @@ function orphanedColumnStatements(
     const indexes = columnIndexes.get(`${table}.${column.name}`) ?? []
     statements.push(
       note +
+        `${DESTRUCTIVE_MIGRATION_MARKER}${table}.${column.name} is dropped: its data is lost\n` +
         [
           ...indexes.map((index) => `DROP INDEX ${quote(index)};`),
           `ALTER TABLE ${qualified} DROP COLUMN ${quote(column.name)};`,

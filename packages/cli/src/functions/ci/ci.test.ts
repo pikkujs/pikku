@@ -8,6 +8,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -19,6 +20,7 @@ import {
   worktreeOwnsDatabase,
 } from './stages.js'
 import { resolveDb } from '../db/local-db.js'
+import { worktreeOwnsConfiguredDatabase } from './ownership.js'
 import { CiStage } from './schemas.js'
 import { assertCloudflareDeployReady } from './deploy-guard.js'
 import {
@@ -153,6 +155,86 @@ describe('ciStageCommand', () => {
         false
       )
       assert.equal(worktreeOwnsDatabase(resolved({}), dir), false)
+    })
+
+    describe('links and paths that leave the tree', () => {
+      let outside: string
+      beforeEach(() => {
+        outside = realpathSync(mkdtempSync(join(tmpdir(), 'pikku-ci-outside-')))
+        writeFileSync(join(outside, 'shared.db'), '')
+      })
+      afterEach(() => rmSync(outside, { recursive: true, force: true }))
+
+      test('a committed symlink to a file outside the tree is not its own', () => {
+        symlinkSync(join(outside, 'shared.db'), join(dir, 'dev.db'))
+        assert.equal(
+          worktreeOwnsDatabase(resolved({ sqliteDb: 'dev.db' }), dir),
+          false
+        )
+      })
+
+      test('a symlink to a file outside the tree that is not there yet is not its own', () => {
+        symlinkSync(join(outside, 'not-yet.db'), join(dir, 'dev.db'))
+        assert.equal(
+          worktreeOwnsDatabase(resolved({ sqliteDb: 'dev.db' }), dir),
+          false
+        )
+      })
+
+      test('a file reached through a symlinked directory that leaves the tree is not its own', () => {
+        symlinkSync(outside, join(dir, 'data'))
+        assert.equal(
+          worktreeOwnsDatabase(resolved({ sqliteDb: 'data/shared.db' }), dir),
+          false
+        )
+        assert.equal(
+          worktreeOwnsDatabase(resolved({ sqliteDb: 'data/new.db' }), dir),
+          false,
+          'a file that does not exist yet is judged by where its directory really is'
+        )
+      })
+
+      test('a `..` that climbs out of the tree, written through a directory, is not its own', () => {
+        mkdirSync(join(dir, 'a'), { recursive: true })
+        assert.equal(
+          worktreeOwnsDatabase(
+            resolved({
+              sqliteDb: `a/../../${outside.split('/').pop()}/shared.db`,
+            }),
+            dir
+          ),
+          false
+        )
+      })
+
+      test('a symlink that stays inside the tree, and a worktree reached through a link, are its own', () => {
+        mkdirSync(join(dir, 'real'), { recursive: true })
+        symlinkSync(join(dir, 'real'), join(dir, 'alias'))
+        assert.equal(
+          worktreeOwnsDatabase(resolved({ sqliteDb: 'alias/dev.db' }), dir),
+          true
+        )
+        const viaLink = join(outside, 'tree-link')
+        symlinkSync(dir, viaLink)
+        assert.equal(
+          worktreeOwnsDatabase(
+            resolveDb({ sqliteDb: 'dev.db' }, viaLink, join(viaLink, '.pikku')),
+            dir
+          ),
+          true
+        )
+      })
+
+      test('a relative database path is judged where it lands, not as written', () => {
+        assert.equal(
+          worktreeOwnsDatabase(resolved({ sqliteDb: './sub/../dev.db' }), dir),
+          true
+        )
+        assert.equal(
+          worktreeOwnsDatabase(resolved({ sqliteDb: 'sub/../../x.db' }), dir),
+          false
+        )
+      })
     })
   })
 
@@ -399,5 +481,104 @@ describe('worktree', () => {
     } finally {
       rmSync(parent, { recursive: true, force: true })
     }
+  })
+})
+
+describe('worktreeOwnsConfiguredDatabase', () => {
+  const logger: any = { info() {}, warn() {}, error() {}, debug() {} }
+  const project = (config: string) => {
+    mkdirSync(join(dir, 'src'), { recursive: true })
+    writeFileSync(join(dir, 'src', 'config.ts'), config)
+    return { rootDir: dir, srcDirectories: ['src'] } as any
+  }
+  const withEnv = async (
+    env: Record<string, string | undefined>,
+    fn: () => Promise<void>
+  ) => {
+    const before = {
+      CI: process.env.CI,
+      DATABASE_URL: process.env.DATABASE_URL,
+    }
+    for (const [k, v] of Object.entries(env)) {
+      if (v === undefined) delete process.env[k]
+      else process.env[k] = v
+    }
+    try {
+      await fn()
+    } finally {
+      for (const [k, v] of Object.entries(before)) {
+        if (v === undefined) delete process.env[k]
+        else process.env[k] = v
+      }
+    }
+  }
+
+  test('a config that branches on CI is read as the child will see it (CI=1)', async () => {
+    const config = project(
+      `export const createConfig = async () =>
+         process.env.CI ? { postgresUrl: 'postgres://127.0.0.1:5432/mine' } : { sqliteDb: 'dev.db' }\n`
+    )
+    await withEnv({ CI: undefined }, async () => {
+      assert.equal(
+        await worktreeOwnsConfiguredDatabase(
+          config,
+          logger,
+          dir,
+          join(dir, '.pikku')
+        ),
+        false,
+        'the child runs with CI=1, which points at a server'
+      )
+    })
+  })
+
+  test('a config that branches on DATABASE_URL is read without it, as the child runs', async () => {
+    const config = project(
+      `export const createConfig = async () =>
+         process.env.DATABASE_URL ? { postgresUrl: process.env.DATABASE_URL } : { sqliteDb: 'dev.db' }\n`
+    )
+    await withEnv(
+      { DATABASE_URL: 'postgres://127.0.0.1:5432/mine', CI: undefined },
+      async () => {
+        assert.equal(
+          await worktreeOwnsConfiguredDatabase(
+            config,
+            logger,
+            dir,
+            join(dir, '.pikku')
+          ),
+          true
+        )
+      }
+    )
+  })
+
+  test('the environment of the parent is put back afterwards', async () => {
+    const config = project(
+      `export const createConfig = async () => ({ sqliteDb: 'dev.db' })\n`
+    )
+    await withEnv({ CI: undefined, DATABASE_URL: 'keep-me' }, async () => {
+      await worktreeOwnsConfiguredDatabase(
+        config,
+        logger,
+        dir,
+        join(dir, '.pikku')
+      )
+      assert.equal(process.env.CI, undefined)
+      assert.equal(process.env.DATABASE_URL, 'keep-me')
+    })
+  })
+
+  test('a config that cannot be loaded is not known to be disposable', async () => {
+    const config = project(`throw new Error('boom')\n`)
+    assert.equal(
+      await worktreeOwnsConfiguredDatabase(
+        config,
+        logger,
+        dir,
+        join(dir, '.pikku')
+      ),
+      false
+    )
   })
 })

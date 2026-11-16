@@ -34,7 +34,11 @@ import {
   createKysely,
 } from './local-db.js'
 import type { ColumnInfo } from './db-introspector.js'
-import { MigrationDriftError } from '@pikku/migrator-sql'
+import {
+  MigrationDriftError,
+  MigrationDestructiveError,
+  destructiveReasons,
+} from '@pikku/migrator-sql'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 
 let root: string
@@ -1484,9 +1488,19 @@ CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
     body,
     /DROP INDEX todos_issuer_title_uidx;\nALTER TABLE todos DROP COLUMN issuer;/
   )
+  assert.deepEqual(
+    destructiveReasons(body).length,
+    1,
+    'the drop loses data, so migrate must stop on it'
+  )
+  await assert.rejects(
+    migrateAndCodegen(resolved),
+    (e: Error) => e instanceof MigrationDestructiveError
+  )
 
-  // And it applies: the column is gone and an insert that never names it works.
-  await migrateAndCodegen(resolved)
+  // And it applies once allowed: the column is gone and an insert that never
+  // names it works.
+  await migrateAndCodegen(resolved, { allowDestructive: true })
   const drift = await driftOf(resolved)
   assert.equal(drift.inSync, true)
 })
@@ -1536,8 +1550,9 @@ test('a partially covered source creates a referenced table before the one refer
     'baskets is created before the table referencing it'
   )
 
-  // The proof the order is right is that it applies.
-  await migrateAndCodegen(resolved)
+  // The proof the order is right is that it applies. The source's `todos` no
+  // longer declares `title`, so the migration also drops it, and says so.
+  await migrateAndCodegen(resolved, { allowDestructive: true })
   assert.equal((await driftOf(resolved)).inSync, true)
 })
 
