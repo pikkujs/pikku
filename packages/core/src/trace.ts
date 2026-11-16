@@ -47,6 +47,33 @@ export const createTrace = (traceId?: string): TraceContext => ({
 })
 
 /**
+ * A new trace whose ids are drawn when one is first read, then stable. Own
+ * enumerable accessors, so a spread or `Object.assign` behaves like a plain
+ * {@link TraceContext}.
+ *
+ * knowledge: decisions/internals/an-http-trace-draws-its-ids-when-first-read.md
+ */
+const createLazyTrace = (): TraceContext => {
+  let traceId: string | undefined
+  let spanId: string | undefined
+  return {
+    get traceId() {
+      return (traceId ??= randomHex(16))
+    },
+    set traceId(value: string) {
+      traceId = value
+    },
+    get spanId() {
+      return (spanId ??= randomHex(8))
+    },
+    set spanId(value: string) {
+      spanId = value
+    },
+    sampled: true,
+  }
+}
+
+/**
  * Reads a W3C `traceparent` header. Returns `undefined` for anything malformed,
  * an all-zero id, version `ff`, or a version `00` header with extra fields.
  */
@@ -106,7 +133,7 @@ export const resolveHTTPTrace = (
     const inbound = parseTraceparent(header)
     if (inbound) return { ...inbound, spanId: randomHex(8) }
   }
-  return createTrace()
+  return createLazyTrace()
 }
 
 /**
