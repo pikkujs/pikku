@@ -34,4 +34,9 @@ Subpath exports cover the individual wiring types — `@pikku/core/http`,
 
 ## Docs
 
+The key service for `defineKeyPair` declarations is opt-in and lives behind
+its own subpaths, so an app that never imports them bundles none of it:
+`@pikku/core/keys` (WebCrypto only; runs on Node, Bun and Workers) and
+`@pikku/core/keys/file` (Node-only `FileKeyStore` and `FileCustody`).
+
 https://pikku.dev/docs
