@@ -34,6 +34,10 @@ const fakeBrowser = (visited: string[], released: string[]) => ({
           return { status: () => (url.endsWith('/missing') ? 404 : 200) }
         },
         waitForSelector: async () => {},
+        viewportSize: () => ({ width: 1280, height: 800 }),
+        setViewportSize: async (size: { width: number; height: number }) => {
+          visited.push(`viewport ${size.width}x${size.height}`)
+        },
         screenshot: async () => new Uint8Array([1, 2]),
       }),
     }),
@@ -76,6 +80,35 @@ describe('screenshotPages', () => {
       ]
     )
     assert.deepEqual(released, ['context', 'browser'])
+  })
+
+  test('sets the width and hands each loaded page to inspect before its screenshot', async () => {
+    const visited: string[] = []
+    const { session, close } = await openPageSession('http://localhost:7104', {
+      config,
+      connectBrowser: async () => fakeBrowser(visited, []),
+    })
+    const shots = await screenshotPages({
+      session,
+      paths: ['/', '/about'],
+      width: 390,
+      inspect: async () => {
+        visited.push('inspect')
+        return { h: 1 }
+      },
+    })
+    await close()
+    assert.deepEqual(visited, [
+      'viewport 390x800',
+      'http://localhost:7104/',
+      'inspect',
+      'http://localhost:7104/about',
+      'inspect',
+    ])
+    assert.deepEqual(
+      shots.map((shot) => shot.inspected),
+      [{ h: 1 }, { h: 1 }]
+    )
   })
 
   test('names a file after its path', () => {
