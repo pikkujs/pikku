@@ -1338,7 +1338,7 @@ wireCLI({
         },
         strict: {
           description:
-            'Release mode: asI18nStub calls and English written outside JSX are errors, not warnings, and with --codegen, codegen runs with --strict-meta',
+            'Release mode: asI18nStub calls, English written outside JSX and project-layout findings are errors, not warnings, and with --codegen, codegen runs with --strict-meta',
           default: false,
         },
         skipTypecheck: {

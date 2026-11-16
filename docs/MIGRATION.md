@@ -406,6 +406,22 @@ To find the affected functions, run `pikku all` and look for `PKU563`.
 
 A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now disables it, the same way `disabled: true` already did.
 
+### `pikku validate --strict` fails on a project in the wrong layout
+
+`pikku validate` now checks every app project's layout. Each finding is a warning, and an error under `--strict`:
+
+| Finding                        | Reported when                                                                                                                                                                        |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `layout-config-not-at-root`    | `pikku.config.json` is inside a package (a directory with its own `package.json`) below a workspace root, and that workspace holds no other project                                  |
+| `layout-config-duplicate`      | another file named exactly `pikku.config.json` is below the config (addons, `node_modules` and dot-directories such as `.pikku` are skipped)                                         |
+| `layout-db-in-package`         | a package listed in `srcDirectories` has a `db/` and there is none at `<rootDir>/db`                                                                                                 |
+| `layout-emails-in-package`     | a package listed in `srcDirectories` has an `emails/` and there is none at `emailTemplatesDir` (default `emails/` beside the config), or `emailTemplatesDir` points into the package |
+| `layout-pikku-import-not-root` | a `#pikku/*` entry in a package's `tsconfig.json` `paths` or `package.json` `imports` points at a `.pikku` other than the one beside `pikku.config.json`                             |
+
+The layout they enforce: `pikku.config.json`, `db/` and `emails/` at the project top level, generated output in `<config dir>/.pikku`, and the code in the packages `srcDirectories` lists, whatever those packages are called. To fix a project that moved them into its functions package, move them back to the top level, rewrite the config's paths relative to it, and point `#pikku/*` at `<top level>/.pikku` (for example `"#pikku/*": ["../../.pikku/*/index.ts"]` in `packages/functions/tsconfig.json`).
+
+To find the affected projects, run `pikku validate` and look for findings whose id starts with `layout-`.
+
 ### `pikku meta context` prints a short map
 
 `pikku meta context` now prints a short plain-text map of the project, one line per function. Anything reading its output should add `--json` or `--full`, which still print the `meta-context.v1` document unchanged.
