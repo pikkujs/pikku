@@ -9,6 +9,8 @@
 //       no flag: every page answers 200, has its content in the server-rendered HTML, its links resolve (no browser, quick)
 //       --page id: also open that page in the browser at 390/1440/1920 and report horizontal overflow, broken pictures, script errors
 //       --all: the same for every page, 4 at a time (slow: run it in the background, output to a file); prints only problems
+// <out-dir>/<reference-dir> is the project's reference artifact: artifacts/references/<site> (site = the original's host name).
+// To compare your pages with it use `pikku ui pages compare --reference artifacts/references/<site> --baseUrl <url>`.
 // Needs a Chromium and playwright-core: PIKKU_CHROMIUM = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
 // module (default: `playwright-core` resolved from the current directory). Browser profile, tmp and downloads stay under <out-dir>/.browser.
 // Tiles and pixel scores use ImageMagick (`convert`, `compare`) when it is installed.
@@ -290,5 +292,5 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
     const only = rest.includes('--page') ? rest[rest.indexOf('--page') + 1] : null, all = rest.includes('--all')
     if (only || all) await audit(rest[0], rest[1], only, all); else await check(rest[0], rest[1])
   }
-  else console.log('usage: pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | shot <out-dir> <url> [--width 1440] | compare <reference-dir> <clone-dir> [--page id] [--width 1440] | check <base-url> <reference-dir> [--page id | --all]')
+  else console.log('usage (out-dir/reference-dir: artifacts/references/<site>): pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | shot <out-dir> <url> [--width 1440] | compare <reference-dir> <clone-dir> [--page id] [--width 1440] | check <base-url> <reference-dir> [--page id | --all]')
 }
