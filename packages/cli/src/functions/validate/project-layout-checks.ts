@@ -166,9 +166,7 @@ const readTsconfigPaths = async (
   let current: string | undefined = file
   while (current && !seen.has(current) && existsSync(current)) {
     seen.add(current)
-    const tsconfig = await readJsonSafe<TsconfigJson>(current).catch(
-      () => null
-    )
+    const tsconfig = await readJsonSafe<TsconfigJson>(current).catch(() => null)
     const options = tsconfig?.compilerOptions
     if (!paths && options?.paths) {
       paths = { value: options.paths, dir: dirname(current) }
@@ -213,7 +211,7 @@ export async function pikkuMappingsOf(
   const tsconfigFile = governingTsconfig(pkg, configDir)
   const tsconfig = tsconfigFile && (await readTsconfigPaths(tsconfigFile))
   if (tsconfig && tsconfigFile) {
-    const name = relative(pkg, tsconfigFile) || 'tsconfig.json'
+    const name = relative(configDir, tsconfigFile)
     for (const [key, value] of Object.entries(tsconfig.paths)) {
       if (!key.startsWith('#pikku')) continue
       for (const target of stringTargets(value)) {
@@ -370,7 +368,7 @@ export async function runProjectLayoutChecks(
     const tsconfigFile =
       governingTsconfig(pkg, configDir) ?? join(pkg, 'tsconfig.json')
     const toOut = relative(dirname(tsconfigFile), outDir)
-    const target = toOut.startsWith('.') ? toOut : `./${toOut}`
+    const target = toOut.startsWith('..') ? toOut : `./${toOut}`
     findings.push({
       id: LAYOUT_PIKKU_IMPORT_NOT_ROOT,
       severity,
