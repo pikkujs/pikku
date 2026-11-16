@@ -98,6 +98,7 @@ import {
 } from './mysql/mysql-client.js'
 import { PostgresIntrospector } from './postgres/postgres-introspector.js'
 import type { UserConfigShape } from '../commands/db-shared.js'
+import { snakeCase } from './snake-case.js'
 
 // ─── Resolved DB descriptors ─────────────────────────────────────────────────
 
@@ -1406,9 +1407,6 @@ async function applyAuthSchema(
         : 'user',
   }
 }
-
-const snakeCase = (name: string): string =>
-  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 
 /** A runtime schema left out because nothing in the project creates what it needs. */
 export interface SkippedRuntimeSchema {

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
 import type { AnnotationMap, ColAnnotation } from '../db/annotation-parser.js'
+import { snakeCase } from '../db/snake-case.js'
 
 /**
  * One thing `pikku meta` knows, in the shape every short listing shares:
@@ -235,9 +236,6 @@ export const parseDbSchema = (source: string): DbTable[] => {
     ),
   }))
 }
-
-const snakeCase = (name: string): string =>
-  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 
 /**
  * The bounds a column declares, in a line an agent can read. An enum is left

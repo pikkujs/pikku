@@ -28,6 +28,7 @@ import type {
   ExamplesListResult,
   ExamplesShowResult,
 } from './schemas.js'
+import { snakeCase as snakeTable } from '../db/snake-case.js'
 
 export interface ExampleProject {
   rootDir: string
@@ -101,11 +102,6 @@ export function runExamplesShow(
       lines: note.lines.map(applyRename),
     })),
   }
-}
-
-/** `ProductsComment` → `products_comment`, the name its migration has to declare. */
-function snakeTable(pascal: string): string {
-  return pascal.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 }
 
 /**

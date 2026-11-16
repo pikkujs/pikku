@@ -12,6 +12,7 @@ import { loadFreshUserModule } from '../commands/load-user-project.js'
 import type { ColumnInfo } from './db-introspector.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import { ZOD_FORMATS } from './zod-codegen.js'
+import { snakeCase } from './snake-case.js'
 
 /** Where a project declares its own tables, relative to its root. */
 export const TABLES_FILE = 'db/tables.ts'
@@ -27,9 +28,6 @@ export const retiredAnnotationsMessage = `${RETIRED_ANNOTATIONS_FILE} is no long
 
 /** The export of {@link TABLES_FILE} that holds the declaration. */
 const TABLES_EXPORT = 'tables'
-
-const snakeCase = (name: string): string =>
-  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 
 /** A loaded `db/tables.ts`. */
 export interface LoadedDeclaration {

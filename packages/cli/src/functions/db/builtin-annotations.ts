@@ -7,6 +7,7 @@ import {
 } from './annotation-parser.js'
 import { annotationOf } from './table-declaration.js'
 import { readMigrationProvenance } from './migration-provenance.js'
+import { snakeCase } from './snake-case.js'
 
 /** The label `db generate` gives the migration Better Auth's tables come from. */
 const BETTER_AUTH_SOURCE = 'better-auth'
@@ -89,9 +90,6 @@ const runtimeAnnotations = (): TableAnnotations => {
   }
   return annotations
 }
-
-const snakeCase = (name: string): string =>
-  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
 
 /**
  * Put the built-in annotations of the framework's own tables under a
