@@ -11,6 +11,7 @@ import {
 import { runTypeIdentityChecks } from './type-identity-checks.js'
 import { runOxlintRun, runOxlintSetupChecks } from './oxlint-checks.js'
 import { runDeployReadinessChecks } from './deploy-readiness-checks.js'
+import { pikkuMappingsOf } from './project-layout-checks.js'
 import { migrationCreatesTable } from './shared-checks.js'
 import {
   RETIRED_ANNOTATIONS_FILE,
@@ -827,21 +828,28 @@ export async function runProjectChecks(
       // Both patterns are required, and both are load-bearing: the `.js`-suffixed
       // key resolves a deep generated file, the bare wildcard resolves a leaf
       // name at that leaf's index. Node picks the longer suffix, so declaring
-      // only one silently loses half the surface.
+      // only one silently loses half the surface. Below the config they are
+      // tsconfig `paths` (an `imports` target cannot leave the package); where
+      // they point is the layout check's business.
+      const pikkuKeys = new Set(
+        (await pikkuMappingsOf(fnDir, root)).map((m) => m.key)
+      )
       const PIKKU_IMPORTS =
-        'Add to "imports": { "#pikku/*.js": "./.pikku/*.ts", "#pikku/*": "./.pikku/*/index.ts" }'
-      if (!fnPkg.imports?.['#pikku/*.js']) {
+        fnDir === root
+          ? 'Add to "imports": { "#pikku/*.js": "./.pikku/*.ts", "#pikku/*": "./.pikku/*/index.ts" }'
+          : 'Add to "compilerOptions.paths" in the tsconfig.json beside pikku.config.json: { "#pikku/*.js": ["./.pikku/*.ts"], "#pikku/*": ["./.pikku/*/index.ts"] }'
+      if (!pikkuKeys.has('#pikku/*.js')) {
         e(
           'functions-pkg-missing-pikku-import',
-          'packages/functions/package.json is missing "#pikku/*.js" in "imports" — wiring files that import e.g. "#pikku/pikku-fetch.gen.js" fail at runtime with "Cannot find module"',
+          'packages/functions maps no "#pikku/*.js" (tsconfig paths or package.json imports) — wiring files that import e.g. "#pikku/pikku-fetch.gen.js" fail at runtime with "Cannot find module"',
           fnPkgPath,
           PIKKU_IMPORTS
         )
       }
-      if (!fnPkg.imports?.['#pikku/*']) {
+      if (!pikkuKeys.has('#pikku/*')) {
         e(
           'functions-pkg-missing-pikku-wildcard-import',
-          'packages/functions/package.json is missing "#pikku/*" in "imports" — files that import a leaf such as "#pikku/function" fail at runtime with "Cannot find module"',
+          'packages/functions maps no "#pikku/*" (tsconfig paths or package.json imports) — files that import a leaf such as "#pikku/function" fail at runtime with "Cannot find module"',
           fnPkgPath,
           PIKKU_IMPORTS
         )

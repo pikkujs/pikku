@@ -410,11 +410,26 @@ A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now di
 | `layout-config-duplicate`      | another file named exactly `pikku.config.json` is below the config (addons, `node_modules` and dot-directories such as `.pikku` are skipped)                                         |
 | `layout-db-in-package`         | a package listed in `srcDirectories` has a `db/` and there is none at `<rootDir>/db`                                                                                                 |
 | `layout-emails-in-package`     | a package listed in `srcDirectories` has an `emails/` and there is none at `emailTemplatesDir` (default `emails/` beside the config), or `emailTemplatesDir` points into the package |
-| `layout-pikku-import-not-root` | a `#pikku/*` entry in a package's `tsconfig.json` `paths` or `package.json` `imports` points at a `.pikku` other than the one beside `pikku.config.json`                             |
+| `layout-pikku-import-not-root` | a `#pikku/*` entry in the `paths` of the tsconfig that governs a package (its own or the nearest one above it) or in its `package.json` `imports` points at a `.pikku` other than the one beside `pikku.config.json` |
 
 The layout they enforce: `pikku.config.json`, `db/` and `emails/` at the project top level, generated output in `<config dir>/.pikku`, and the code in the packages `srcDirectories` lists, whatever those packages are called. To fix a project that moved them into its functions package, move them back to the top level, rewrite the config's paths relative to it, and point `#pikku/*` at `<top level>/.pikku` (for example `"#pikku/*": ["../../.pikku/*/index.ts"]` in `packages/functions/tsconfig.json`).
 
 To find the affected projects, run `pikku validate` and look for findings whose id starts with `layout-`.
+
+#### A functions package below the config maps `#pikku/*` with tsconfig paths
+
+With `pikku.config.json` at the workspace root and the code in `packages/functions`, the generated output is `<root>/.pikku`, and `package.json` `imports` cannot reach it: Node refuses an `imports` target outside the package (`../../.pikku/*`). Map it with `compilerOptions.paths` in the tsconfig that governs the package instead (the root `tsconfig.json` when the package has none of its own). tsc, bun, tsx and the esbuild deploy bundler all resolve it:
+
+```json
+"paths": {
+  "#pikku/*.js": ["./.pikku/*.ts"],
+  "#pikku/*": ["./.pikku/*/index.ts"]
+}
+```
+
+Then delete the `#pikku` entries from `packages/functions/package.json` `imports`, delete any committed `packages/functions/.pikku` symlink, and change relative imports through it (`'../.pikku/secrets/pikku-secrets.gen.js'`) to `'#pikku/secrets/pikku-secrets.gen.js'`.
+
+`layout-pikku-import-not-root` now reads the governing tsconfig and flags a package-level `./.pikku` mapping, which is what the symlink workaround declared. The Studio Cloud checks `functions-pkg-missing-pikku-import` and `functions-pkg-missing-pikku-wildcard-import` now accept the two keys from tsconfig `paths` as well as from `imports`. To find affected projects, run `pikku validate` and look for `layout-pikku-import-not-root` on a package below the config.
 
 ### `pikku meta context` prints a short map
 
