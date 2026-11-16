@@ -5,7 +5,7 @@ import type {
   CoreUserSession,
 } from '@pikku/core/types'
 import type { MetaService } from '@pikku/core/services'
-import type { WiringService } from '../src/services/wiring.service.js'
+import type { WiringService } from '@pikku/core/services/wiring-service'
 import type { AddonService } from '../src/services/addon.service.js'
 import type { AddonReadinessService } from '../src/services/addon-readiness.service.js'
 import type { CodeEditService } from '@pikku/code-edit'

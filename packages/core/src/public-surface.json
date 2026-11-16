@@ -578,6 +578,11 @@
     "TemporaryFileInstance",
     "TemporaryFileService"
   ],
+  "./services/wiring-service": [
+    "NotFoundError",
+    "WiringService",
+    "filterAllMetaByAddon"
+  ],
   "./services/file-scenario-run-store": [
     "FileScenarioRunStore",
     "scenarioArtifactContentType",
