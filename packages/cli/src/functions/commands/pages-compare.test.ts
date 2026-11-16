@@ -14,6 +14,7 @@ import {
   readReference,
   routeExists,
   routeFor,
+  fontName,
   styleDiff,
   toHex,
   worstFirst,
@@ -373,7 +374,7 @@ describe('gitStamp', () => {
     )
     assert.ok(
       texts.includes(
-        'primary button/link: original 16px 700 #ffffff center on #a3132f; yours 16px 700 #ffffff center on #ffffff'
+        'primary button/link: original 16px 700 #ffffff on #a3132f; yours 16px 700 #ffffff on #ffffff'
       )
     )
     assert.ok(
@@ -384,5 +385,33 @@ describe('gitStamp', () => {
       )
     )
     assert.deepEqual(styleDiff(ref, ref), [])
+  })
+
+  test('a phone-zoomed reference is compared in screen pixels, and web-font names are one font', () => {
+    assert.equal(fontName('playfair-display-v2'), 'playfair display')
+    assert.equal(fontName('Playfair Display'), 'playfair display')
+    const h1 = (size: number, family: string) => ({
+      h1: { size, weight: 700, color: '#a3132f', align: 'center', family },
+    })
+    // Wix lays its phone page out at 320 and the phone zooms it 1.22x: 20px there is 24.4px on screen
+    const ref: StyleSummary = {
+      scale: 1.21875,
+      contentWidth: 280,
+      elements: h1(20, 'playfair-display-v2'),
+    }
+    assert.deepEqual(
+      styleDiff(ref, {
+        contentWidth: 341,
+        elements: h1(24, 'Playfair Display'),
+      }),
+      []
+    )
+    assert.deepEqual(
+      styleDiff(ref, {
+        contentWidth: 341,
+        elements: h1(32, 'Playfair Display'),
+      }).map((d) => d.text),
+      ['h1: original 24.4px 700 #a3132f center; yours 32px 700 #a3132f center']
+    )
   })
 })
