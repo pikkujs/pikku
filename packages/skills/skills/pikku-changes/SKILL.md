@@ -248,3 +248,10 @@ Branch and commit default to the checkout you are in — run it there, never typ
 the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
+
+In a project with a reference (`artifacts/references/<site>/`), a change that touched pages is done
+only when `pikku ui pages compare --reference artifacts/references/<site> --page <ids>`, run after
+your last commit, has every touched page at every width within the threshold; otherwise `done`
+refuses and says which pages, by how much, and the command. Open the `<id>-<width>.diff.png` it
+names (original | red where pixels differ | yours), fix, commit, compare again. A page that cannot
+match: `done ... --waive "<why it cannot match>"`, and the reason goes in the done note.

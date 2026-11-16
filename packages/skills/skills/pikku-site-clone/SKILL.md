@@ -65,13 +65,19 @@ text it is on, and which pictures run edge to edge. That is the layout; the tile
 ## 4. Compare after every page
 
 ```bash
-pikku ui pages compare --reference $REF --baseUrl http://localhost:<port> --page <page>   # every width in $REF
+pikku ui pages compare --reference $REF --page <page>   # every width in $REF; starts the app's dev server if it is not up
 ```
 
 It photographs your page at each width the reference has, writes `<page>-<width>.diff.png` (original | changed pixels in
 red | yours) and `report.json` under `<outDir>/pages/compare/<app>/` (or `--out`), and prints the changed-pixel share, both page heights and
 the biggest section differences, worst first. A reference page your app has no route for is reported MISSING (when your
 paths differ from the original's, put `{ "<page>": "/your/path" }` in `$REF/map.json`). Leave out `--page` to compare every page.
+Read the diff image, not only the number: left is the original, the middle is red where pixels differ, right is yours; a
+red band from some height down means your page is shorter or longer from there. A page change is done only when this
+passes: `pikku changes done` refuses a change that touched pages until a compare made after your last commit covers each
+touched page at every width within 40% changed pixels (`pagesCompare.threshold` in pikku.config.json), and prints what to
+run. Commit, compare, then `done`. For a page that cannot match (live data, a third-party embed, content you must not copy),
+`pikku changes done ... --waive "<why it cannot match>"`; the reason goes on the change.
 For a quick look at one width while you build, the script still works:
 
 ```bash
