@@ -22,7 +22,6 @@ import type { BrandWorkspace } from '@pikku/code-edit/brand'
 import type { DesignService } from '../src/services/design.service.js'
 import type { I18nService } from '@pikku/code-edit/i18n'
 import type { KnowledgeService } from '../src/services/knowledge.service.js'
-import type { SecretAdminService } from '../src/services/secret-admin.service.js'
 import type { ScenarioRunStore } from '@pikku/core/scenario'
 import type { BetterAuthInstance } from '@pikku/better-auth'
 
@@ -33,11 +32,6 @@ export interface UserSession extends CoreUserSession {}
 export interface SingletonServices extends CoreSingletonServices<Config> {
   metaService: MetaService
   wiringService: WiringService
-  /**
-   * Secret administration. The console's own surface for it — the addon holds
-   * the `SecretService` so no console function has to.
-   */
-  secretAdminService: SecretAdminService
   addonService: AddonService
   addonReadinessService: AddonReadinessService
   codeEditService: CodeEditService | null

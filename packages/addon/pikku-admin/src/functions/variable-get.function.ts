@@ -7,7 +7,7 @@ export const variableGet = pikkuFunc<
   title: 'Get Variable',
   description: 'Gets the current value of a variable.',
   expose: true,
-  scopes: ['pikku:console:variables:read'],
+  scopes: ['admin:variables:read'],
   func: async ({ variables }, { variableId }) => {
     if (!(await variables.has(variableId))) {
       return { exists: false, value: null }

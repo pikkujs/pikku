@@ -1,12 +1,13 @@
 import type { SecretService } from '@pikku/core/services'
 
 /**
- * Secret administration for the console.
+ * Secret administration for the admin functions.
  *
  * The secret id arrives as user input, so no static declaration can cover it —
- * administering arbitrary secrets is the job. Holding the `SecretService` here
- * keeps it out of the services a function receives, and makes the plaintext
- * disclosure a single greppable `.reveal()` rather than one per function.
+ * administering arbitrary secrets is the job. `services.ts` wraps the host's
+ * `SecretService` in this class, because the function runner strips `secrets`
+ * from the services a function receives. That makes the plaintext disclosure a single greppable `.reveal()` rather
+ * than one per function.
  */
 export class SecretAdminService {
   constructor(private secrets: SecretService) {}

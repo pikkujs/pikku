@@ -20,5 +20,12 @@ Lines 8-10 record a second property: nothing here touches a filesystem or a proj
 root. That is what lets this addon run in a deployed serverless unit, which the
 comment contrasts with `@pikku/addon-console`.
 
+`secrets`, `variables` and the optional `metaService` are forwarded the same way, for the
+secret, variable and installed-addon functions. The one exception is `secretAdminService`:
+a thin wrapper over the host's `secrets`, built in `services.ts` because the function
+runner withholds `secrets` from functions (see
+[admin secret plaintext](admin-secret-plaintext-is-revealed-in-one-place.md)). It holds no
+store and no sink, so it does not break the rule against an addon-owned audit sink or scope service.
+
 **What this rules out:** an addon-owned audit sink or scope service, and a
 filesystem dependency in these singleton services.

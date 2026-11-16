@@ -21,12 +21,12 @@ for (const [name, reader] of readers) {
     )
   })
 
-  test(`${name} refuses a console user without the secrets scope`, () => {
+  test(`${name} refuses a user without the secrets scope`, () => {
     assert.throws(
       () =>
         verifyScopes(reader.scopes, {
           userId: 'alice',
-          scopes: ['pikku:console:wirings:read'],
+          scopes: ['admin:users:list'],
         }),
       MissingScopeError
     )
@@ -36,14 +36,14 @@ for (const [name, reader] of readers) {
     assert.doesNotThrow(() =>
       verifyScopes(reader.scopes, {
         userId: 'root',
-        scopes: ['pikku:console:secrets:read'],
+        scopes: ['admin:secrets:read'],
       })
     )
   })
 
-  test(`${name} admits a holder of the console root`, () => {
+  test(`${name} admits a holder of the admin root`, () => {
     assert.doesNotThrow(() =>
-      verifyScopes(reader.scopes, { userId: 'root', scopes: ['pikku:console'] })
+      verifyScopes(reader.scopes, { userId: 'root', scopes: ['admin'] })
     )
   })
 }
@@ -55,12 +55,12 @@ test('secretSet refuses a caller with no session', () => {
   )
 })
 
-test('secretSet refuses a console user without the secrets scope', () => {
+test('secretSet refuses a user without the secrets scope', () => {
   assert.throws(
     () =>
       verifyScopes(secretSet.scopes, {
         userId: 'alice',
-        scopes: ['pikku:console:wirings:read'],
+        scopes: ['admin:users:list'],
       }),
     MissingScopeError
   )
@@ -72,7 +72,7 @@ test('secretSet refuses a holder of only the secrets read scope', () => {
     () =>
       verifyScopes(secretSet.scopes, {
         userId: 'alice',
-        scopes: ['pikku:console:secrets:read'],
+        scopes: ['admin:secrets:read'],
       }),
     MissingScopeError
   )
@@ -82,16 +82,16 @@ test('secretSet admits a holder of the secrets write scope', () => {
   assert.doesNotThrow(() =>
     verifyScopes(secretSet.scopes, {
       userId: 'root',
-      scopes: ['pikku:console:secrets:write'],
+      scopes: ['admin:secrets:write'],
     })
   )
 })
 
-test('secretSet admits a holder of the console root', () => {
+test('secretSet admits a holder of the admin root', () => {
   assert.doesNotThrow(() =>
     verifyScopes(secretSet.scopes, {
       userId: 'root',
-      scopes: ['pikku:console'],
+      scopes: ['admin'],
     })
   )
 })

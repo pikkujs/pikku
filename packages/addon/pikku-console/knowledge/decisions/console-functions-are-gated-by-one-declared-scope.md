@@ -31,7 +31,6 @@ entry is cited by line.
 - `get-addon-meta.function.ts:12` — `pikku:console:addons:read`
 - `get-all-meta.function.ts:11` — `pikku:console:wirings:read`
 - `get-file-diagnostics.function.ts:14` — `pikku:console:files:read`
-- `get-installed-addons.function.ts:36` — `pikku:console:addons:read`
 - `get-openapi-detail.function.ts:26` — `pikku:console:addons:read`
 - `get-surface.function.ts:10` — `pikku:console:wirings:read`
 - `get-webhook-delivery.function.ts:12` — `pikku:console:wirings:read`

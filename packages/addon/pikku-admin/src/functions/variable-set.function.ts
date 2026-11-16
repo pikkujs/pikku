@@ -7,7 +7,7 @@ export const variableSet = pikkuFunc<
   title: 'Set Variable',
   description: 'Sets the value of a variable.',
   expose: true,
-  scopes: ['pikku:console:variables:write'],
+  scopes: ['admin:variables:write'],
   func: async ({ variables }, { variableId, value }) => {
     await variables.set(variableId, value)
     return { success: true }

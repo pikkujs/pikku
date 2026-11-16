@@ -95,6 +95,31 @@ export const ADMIN_SCOPE_TREE = {
           password: { description: "Set a user's password" },
         },
       },
+      secrets: {
+        description: "The application's secrets",
+        scopes: {
+          read: {
+            description: 'Read secret values and check whether one is set',
+          },
+          write: { description: 'Set and overwrite secret values' },
+        },
+      },
+      variables: {
+        description: "The application's variables",
+        scopes: {
+          read: { description: 'Read variable values' },
+          write: { description: 'Set and overwrite variable values' },
+        },
+      },
+      addons: {
+        description: 'Addons wired into the application',
+        scopes: {
+          read: {
+            description:
+              'See which addons are wired and how each is configured',
+          },
+        },
+      },
       scopes: {
         description: 'Authorization management',
         scopes: {

@@ -67,8 +67,8 @@ addon's own `wireScope` tree. The `admin:scopes:*` gates on the scope-admin
 functions come from a different tree — those functions now live in
 `@pikku/addon-admin`, which declares its own. The generated secret and variable
 brokers live in the app's own scaffold rather than the addon, so the addon
-boundary never covered them; they carry `pikku:console:secrets:*` and
-`pikku:console:variables:*` themselves.
+boundary never covered them; they carry `admin:secrets:*` and
+`admin:variables:*` themselves, now that the functions live in `@pikku/addon-admin`.
 
 **What this rules out:** treating the host's `addGlobalPermission` as the only
 gate in front of an operation that installs code or reads another principal's

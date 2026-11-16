@@ -6,7 +6,6 @@ import type { CodeEditService } from '@pikku/code-edit'
 import { StateDiffService } from './services/state-diff.service.js'
 import { DbSchemaService } from './services/db-schema.service.js'
 import { KnowledgeService } from './services/knowledge.service.js'
-import { SecretAdminService } from './services/secret-admin.service.js'
 import { I18nService } from '@pikku/code-edit/i18n'
 import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
 import { WorkspaceFilesService } from '@pikku/code-edit/files'
@@ -49,7 +48,6 @@ export const createSingletonServices = pikkuAddonServices(
       (await variables.get('PIKKUSTUDIO_API_URL')) ?? 'https://api.pikkustudio.app'
 
     const wiringService = new WiringService(metaService)
-    const secretAdminService = new SecretAdminService(secrets)
     const addonService = new AddonService(cloudApiUrl)
     await addonService.init()
     const addonReadinessService = new AddonReadinessService(secrets, variables)
@@ -119,7 +117,6 @@ export const createSingletonServices = pikkuAddonServices(
       variables,
       metaService,
       wiringService,
-      secretAdminService,
       addonService,
       addonReadinessService,
       workflowService,

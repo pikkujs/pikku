@@ -1,13 +1,13 @@
 ---
 type: question
-title: Should getMyAccess stay without a declared scope when every other console function declares one?
+title: Should getMyAccess stay without a declared scope when most admin functions declare one?
 description: getMyAccess is exposed with no scopes and no permissions, returns empty values for a session without a user, and its gate is only the session requirement of pikkuFunc
-tags: console, scopes, sessions, auth
+tags: admin, scopes, sessions, auth
 ---
 
-# Should getMyAccess stay without a declared scope when every other console function declares one?
+# Should getMyAccess stay without a declared scope when most admin functions declare one?
 
-`getMyAccess` in `packages/addon/pikku-console/src/functions/get-my-access.function.ts` is a `pikkuFunc`
+`getMyAccess` in `packages/addon/pikku-admin/src/functions/get-my-access.function.ts` is a `pikkuFunc`
 with `expose: true` (lines 3-10). It declares no `scopes` and no `permissions`. Its body returns
 `session?.userId ?? ''` and `session?.scopes ?? []` (lines 11-15). The description says it returns the
 caller's own user id and scopes "so a UI can decide what to render" (line 9).
@@ -17,10 +17,10 @@ there is no session (`packages/core/src/function/function-runner.ts:395-403`). P
 caller gets their own values back. The `?.` and the fallbacks suggest the body expects a session that has
 no `userId` or `scopes`, which a session still can be.
 
-Most console functions state their access rule as one `pikku:console:*` scope (see
-[console functions are each gated by one declared scope](../decisions/console-functions-are-gated-by-one-declared-scope.md)).
-That note records that ping and get-agent-run-scores declare none. This function is not in its list.
+Most admin functions state their access rule as one `admin:*` scope. The ping probe declares none, on purpose (see
+[the ping probe has no scopes](../decisions/the-ping-probe-has-no-scopes-so-any-answer-but-404-means-wired.md)).
+This function moved here from `@pikku/addon-console` with the same gate.
 
-Question: is it intended that any signed-in session may call this, including a session that holds no console
+Question: is it intended that any signed-in session may call this, including a session that holds no admin
 scope at all, or should it declare a scope? The code returns only the caller's own session data, so the open
-point is whether a caller with no console access should be able to reach the function.
+point is whether a caller with no admin access should be able to reach the function.
