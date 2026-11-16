@@ -8,7 +8,7 @@ import {
   generateKeyPairSync,
   hkdfSync,
 } from 'node:crypto'
-import { seal, SEALED_BOX_ALGORITHM } from '@pikku/keys'
+import { seal, SEALED_BOX_ALGORITHM } from '@pikku/core/keys'
 
 const serializeSealedValue = (sealed: unknown) => JSON.stringify(sealed)
 
@@ -77,7 +77,7 @@ function openAsCloudWould(
   ]).toString('utf8')
 }
 
-describe('cloud-cli sealing via @pikku/keys, opened by an independent node:crypto recipient', () => {
+describe('cloud-cli sealing via @pikku/core/keys, opened by an independent node:crypto recipient', () => {
   test('a sealed value opens with the recipient private key', async () => {
     const { publicKey, privateKey } = x25519Keypair()
     const sealed = await seal(

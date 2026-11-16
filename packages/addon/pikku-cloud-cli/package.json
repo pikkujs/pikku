@@ -51,8 +51,7 @@
     "@pikku/addon-changes-cli": "^0.12.2"
   },
   "dependencies": {
-    "@pikku/fetch": "^0.12.16",
-    "@pikku/keys": "workspace:*"
+    "@pikku/fetch": "^0.12.16"
   },
   "devDependencies": {
     "@pikku/addon-changes-cli": "workspace:*",

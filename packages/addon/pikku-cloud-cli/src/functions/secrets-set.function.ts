@@ -5,7 +5,7 @@ import { getCloudRPC } from '../lib/http.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { promptSecret } from '../lib/prompt.js'
 import { resolveStage } from '../lib/stage.js'
-import { seal } from '@pikku/keys'
+import { seal } from '@pikku/core/keys'
 
 export const CloudSecretsSetInput = z.object({
   name: z.string(),
