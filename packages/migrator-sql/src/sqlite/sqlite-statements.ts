@@ -9,6 +9,8 @@
  * for that one.
  */
 
+import { endOfComment, endOfQuoted } from '../sql-scan.js'
+
 const isWordChar = (ch: string | undefined) =>
   ch !== undefined && /[A-Za-z0-9_$\u0080-\uffff]/.test(ch)
 
@@ -50,16 +52,10 @@ export function splitSqliteStatements(sql: string): string[] {
 
   while (i < sql.length) {
     const ch = sql[i]!
-    const next = sql[i + 1]
 
-    if (ch === '-' && next === '-') {
-      const nl = sql.indexOf('\n', i)
-      i = nl === -1 ? sql.length : nl + 1
-      continue
-    }
-    if (ch === '/' && next === '*') {
-      const close = sql.indexOf('*/', i + 2)
-      i = close === -1 ? sql.length : close + 2
+    const comment = endOfComment(sql, i)
+    if (comment !== -1) {
+      i = comment
       continue
     }
     if (/\s/.test(ch)) {
@@ -69,19 +65,12 @@ export function splitSqliteStatements(sql: string): string[] {
 
     if (ch === "'" || ch === '"' || ch === '`' || ch === '[') {
       const from = i
-      const closer = ch === '[' ? ']' : ch
-      i++
-      while (i < sql.length) {
-        if (sql[i] === closer) {
-          // A doubled quote is an escaped one; `[x]` has no escape.
-          if (closer !== ']' && sql[i + 1] === closer) {
-            i += 2
-            continue
-          }
-          i++
-          break
-        }
-        i++
+      if (ch === '[') {
+        // `[x]` has no escape.
+        const close = sql.indexOf(']', i + 1)
+        i = close === -1 ? sql.length : close + 1
+      } else {
+        i = endOfQuoted(sql, i)
       }
       token(from, i)
       previous = ch
