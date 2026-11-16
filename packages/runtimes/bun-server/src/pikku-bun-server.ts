@@ -284,6 +284,7 @@ export class PikkuBunServer {
           // native body read is safe here (and only here).
           const pikkuReq = new PikkuFetchHTTPRequest(req, {
             trustedFraming: true,
+            maxBodySize: options.maxBodySize,
           })
           const pikkuRes = new PikkuFetchHTTPResponse()
           const channelHandler = await runLocalChannel({
@@ -340,6 +341,7 @@ export class PikkuBunServer {
         // native body read is safe here (and only here).
         const pikkuReq = new PikkuFetchHTTPRequest(req, {
           trustedFraming: true,
+          maxBodySize: options.maxBodySize,
         })
         const pikkuRes = new PikkuFetchHTTPResponse()
         await fetchData(pikkuReq, pikkuRes, {
