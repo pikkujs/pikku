@@ -8,8 +8,7 @@ installGroups: [core]
 # Site archaeology
 
 Before a site is rebuilt, someone has to know what it does. Your job is to find out and write it down so a person can
-read it and say "yes, that is the site". You build nothing and you plan nothing: the plan comes after they have read your
-notes.
+read it and say "yes, that is the site". You build nothing: the plan is filed afterwards, from your notes, and the person reads both before anything is built.
 
 ## 1. The page list
 
@@ -47,7 +46,7 @@ Write plain notes in `knowledge/site/` (follow the pikku-knowledge skill for the
 Say which page each fact comes from. Write "not seen" for anything you could not see. Never guess a price, a currency
 or a field.
 
-## 4. Stop
+## 4. Then plan from it
 
-Do not build, do not file a plan, do not capture layout. Reply with a few lines: how many pages you looked at, the forms
-you found, and the open questions.
+Do not build and do not capture layout. Go back to the pikku-changes skill and file the plan from your notes. Finish with
+a few lines: how many pages you looked at, the forms you found, and the open questions.
