@@ -1,6 +1,9 @@
-import { importSpkiVerifyKey } from '@pikku/core/hmac'
-import { okpThumbprint, rsaThumbprint } from '@pikku/core/services'
-import type { KeyAlgorithm } from '@pikku/core/keypair'
+import { importSpkiVerifyKey } from '../utils/hmac.js'
+import {
+  okpThumbprint,
+  rsaThumbprint,
+} from '../services/virtual-user-verify-keys.js'
+import type { KeyAlgorithm } from '../wirings/keypair/index.js'
 import { fromBase64, toBase64 } from './base64.js'
 
 const subtle = (): SubtleCrypto => {

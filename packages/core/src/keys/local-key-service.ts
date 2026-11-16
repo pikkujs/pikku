@@ -1,4 +1,4 @@
-import { verifySpkiSignature } from '@pikku/core/hmac'
+import { verifySpkiSignature } from '../utils/hmac.js'
 import {
   DomainPolicyError,
   KeyCustodyLostError,
@@ -21,16 +21,16 @@ import {
   type PrivateKeyWrapper,
   type PublicKeyInfo,
   type ReconcileSummary,
-} from '@pikku/core/keypair'
+} from '../wirings/keypair/index.js'
 import {
   holdLease,
   LeaseTakenError,
-  LocalSecretService,
   type LeaseService,
-  type Logger,
-  type SecretService,
-} from '@pikku/core/services'
-import { parseDurationString } from '@pikku/core/utils'
+} from '../services/lease-service.js'
+import { LocalSecretService } from '../services/local-secrets.js'
+import type { Logger } from '../services/logger.js'
+import type { SecretService } from '../services/secret-service.js'
+import { parseDurationString } from '../utils.js'
 import {
   generateKeyPair,
   importSigningKey,
@@ -64,7 +64,7 @@ const MAX_PUBLISH_ATTEMPTS = 8
 export interface LocalKeyServiceOptions {
   /** The declarations: the generated `KeyPairsMeta` record, or the same objects as a list. */
   definitions: KeyPairDefinitionsMeta | CoreKeyPair[]
-  /** The ledger. `FileKeyStore` (from `@pikku/keys/file`), `MemoryKeyStore`, or the Kysely store. */
+  /** The ledger. `FileKeyStore` (from `@pikku/core/keys/file`), `MemoryKeyStore`, or the Kysely store. */
   store: KeyStore
   /** Needed for custody `secret`. Must be durable (see `secretsDurable`). */
   secrets?: SecretService
@@ -76,7 +76,7 @@ export interface LocalKeyServiceOptions {
   secretsDurable?: boolean
   /** Test only: allows custody `secret` on an in-memory secret service, losing every private half on restart. */
   allowEphemeralSecretCustody?: boolean
-  /** Custody `file`: `new FileCustody(dir)` from `@pikku/keys/file`. */
+  /** Custody `file`: `new FileCustody(dir)` from `@pikku/core/keys/file`. */
   fileCustody?: KeyFileCustody
   /** Custody `wrapped`. */
   wrapper?: PrivateKeyWrapper

@@ -73,6 +73,8 @@
     "./scope": "./dist/wirings/scope/index.js",
     "./role": "./dist/wirings/role/index.js",
     "./keypair": "./dist/wirings/keypair/index.js",
+    "./keys": "./dist/keys/index.js",
+    "./keys/file": "./dist/keys/file/index.js",
     "./secret": "./dist/wirings/secret/index.js",
     "./variable": "./dist/wirings/variable/index.js",
     "./webhook": "./dist/wirings/webhook/index.js",

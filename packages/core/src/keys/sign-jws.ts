@@ -1,4 +1,4 @@
-import { DomainPolicyError, type KeySigner } from '@pikku/core/keypair'
+import { DomainPolicyError, type KeySigner } from '../wirings/keypair/index.js'
 import { toBase64Url, utf8 } from './base64.js'
 
 /**

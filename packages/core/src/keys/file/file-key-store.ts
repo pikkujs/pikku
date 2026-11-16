@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import type { KeyRecord } from '@pikku/core/keypair'
+import type { KeyRecord } from '../../wirings/keypair/index.js'
 import { MemoryKeyStore } from '../memory-key-store.js'
 import { writeFileAtomic } from './atomic-write.js'
 

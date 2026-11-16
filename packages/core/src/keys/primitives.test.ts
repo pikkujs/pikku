@@ -13,7 +13,7 @@ import {
 } from 'node:crypto'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { DomainPolicyError } from '@pikku/core/keypair'
+import { DomainPolicyError } from '../wirings/keypair/index.js'
 import {
   fromBase64,
   fromCanonicalBase64Url,
@@ -30,7 +30,7 @@ import {
   publicJwk,
   signBytes,
 } from './algorithms.js'
-import { verifySpkiSignature } from '@pikku/core/hmac'
+import { verifySpkiSignature } from '../utils/hmac.js'
 import { importSealingKey, open, parseSealedValue, seal } from './sealed-box.js'
 
 const rfc7638 = (jwk: Record<string, string>) => {

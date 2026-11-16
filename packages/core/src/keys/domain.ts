@@ -1,4 +1,4 @@
-import { DomainPolicyError } from '@pikku/core/keypair'
+import { DomainPolicyError } from '../wirings/keypair/index.js'
 import { utf8 } from './base64.js'
 
 /** A domain is a non-empty string without NUL, so `domain || 0x00 || data` is unambiguous. */

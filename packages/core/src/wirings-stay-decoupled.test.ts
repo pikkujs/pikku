@@ -55,8 +55,8 @@ const FOUNDATION_ALLOWED: Record<string, string[]> = {
   function: ['addon', 'credential', 'flag', 'rpc'],
 }
 
-/** Code layered on top of the wires: dev tooling and test helpers. */
-const ABOVE_WIRINGS = new Set(['dev', 'testing', 'test-utils.ts'])
+/** Code layered on top of the wires: dev tooling, test helpers and the opt-in key service. */
+const ABOVE_WIRINGS = new Set(['dev', 'keys', 'testing', 'test-utils.ts'])
 
 /**
  * Area cycles that exist today and are known to go through a leaf module.

@@ -1,6 +1,6 @@
 /**
  * Where custody `file` keeps a private half. Implemented by `FileCustody` in
- * `@pikku/keys/file`; the root entry only names the shape, so it never imports
+ * `@pikku/core/keys/file`; the root entry only names the shape, so it never imports
  * `node:fs`.
  */
 export interface KeyFileCustody {

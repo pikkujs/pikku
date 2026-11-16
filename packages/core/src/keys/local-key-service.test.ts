@@ -10,14 +10,12 @@ import {
   type KeyPublisher,
   type KeyRecord,
   type PublicKeyInfo,
-} from '@pikku/core/keypair'
-import {
-  LocalSecretService,
-  ScopedSecretService,
-  TypedSecretService,
-  type SecretService,
-} from '@pikku/core/services'
-import { createSecretValue } from '@pikku/core/classification'
+} from '../wirings/keypair/index.js'
+import { LocalSecretService } from '../services/local-secrets.js'
+import { ScopedSecretService } from '../services/scoped-secret-service.js'
+import { TypedSecretService } from '../services/typed-secret-service.js'
+import type { SecretService } from '../services/secret-service.js'
+import { createSecretValue } from '../classification/index.js'
 import {
   createLocalKeyService,
   type LocalKeyServiceOptions,
