@@ -35,3 +35,46 @@ export const PagesScreenshotOutput = z.object({
   ),
   skipped: z.array(z.object({ path: z.string(), params: z.array(z.string()) })),
 })
+
+export const PagesCompareInput = z.object({
+  reference: z.string(),
+  baseUrl: z.string(),
+  app: z.string().optional(),
+  out: z.string().optional(),
+  widths: z.string().optional(),
+  page: z.string().optional(),
+  map: z.string().optional(),
+  threshold: z.number().optional(),
+  params: z.string().optional(),
+  as: z.string().optional(),
+  environment: z.string().optional(),
+  backend: z.string().optional(),
+})
+const SectionDiff = z.object({ match: z.number(), notes: z.array(z.string()) })
+export const PagesCompareRow = z.object({
+  id: z.string(),
+  width: z.number(),
+  path: z.string(),
+  status: z.enum(['compared', 'missing', 'error']),
+  changedPercent: z.number().nullable(),
+  referenceHeight: z.number().nullable(),
+  ourHeight: z.number().nullable(),
+  heightDiff: z.number().nullable(),
+  httpStatus: z.number().nullable(),
+  diff: z.string().nullable(),
+  ours: z.string().nullable(),
+  sections: SectionDiff.nullable(),
+  error: z.string().optional(),
+})
+export const PagesCompareOutput = z.object({
+  app: z.string(),
+  baseUrl: z.string(),
+  reference: z.string(),
+  dir: z.string(),
+  report: z.string(),
+  widths: z.array(z.number()),
+  threshold: z.number().nullable(),
+  sectionsNote: z.string().nullable(),
+  rows: z.array(PagesCompareRow),
+  failed: z.array(z.string()),
+})

@@ -9,31 +9,54 @@ export interface PageScreenshot {
   httpStatus: number | null
   issues: PageIssues
   error?: string
+  /** What `inspect` returned for this page, when it was given. */
+  inspected?: unknown
 }
 
 export interface ScreenshotPagesOptions {
   paths: string[]
   session: VirtualUserSession
   fullPage?: boolean
+  /** Viewport width to photograph at (the height stays the session's). */
+  width?: number
+  /**
+   * Runs on the loaded page before its screenshot: to let it settle, or to
+   * read something off it. Its result comes back as `inspected`.
+   */
+  inspect?: (page: VirtualUserSession['page']) => Promise<unknown>
 }
 
 export async function screenshotPages({
   paths,
   session,
   fullPage = true,
+  width,
+  inspect,
 }: ScreenshotPagesOptions): Promise<PageScreenshot[]> {
   const shots: PageScreenshot[] = []
+  if (width) {
+    const size = session.page.viewportSize()
+    await session.page.setViewportSize({ width, height: size?.height ?? 900 })
+  }
   for (const path of paths) {
     session.resetIssues()
     const url = session.url(path)
     try {
       const httpStatus = await session.gotoApp(path)
+      const inspected = inspect ? await inspect(session.page) : undefined
       const png = await session.page.screenshot({
         fullPage,
         animations: 'disabled',
         style: '[data-pikku-cursor]{display:none!important}',
       })
-      shots.push({ path, url, png, httpStatus, issues: session.takeIssues() })
+      shots.push({
+        path,
+        url,
+        png,
+        httpStatus,
+        issues: session.takeIssues(),
+        ...(inspect ? { inspected } : {}),
+      })
     } catch (err) {
       shots.push({
         path,

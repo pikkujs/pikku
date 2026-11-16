@@ -46,7 +46,7 @@ async function pages(root) {
 }
 
 // ---------------------------------------------------------------- in-page extraction (runs in the browser)
-function extractInPage() {
+export function extractInPage() {
   const W = document.documentElement.scrollWidth, H = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)
   const vis = (el) => { const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false; const r = el.getBoundingClientRect(); return r.width > 4 && r.height > 4 }
   const box = (r) => ({ x: (r.left + scrollX) / W, y: (r.top + scrollY) / H, w: r.width / W, h: r.height / H })
@@ -116,7 +116,7 @@ async function launch(out) {
  * "Ready" for a screenshot is not the network going quiet (a Wix page never stops asking). It is: the page has loaded,
  * the fonts are in, the lazy pictures have loaded and decoded, and the page has stopped changing height. Each wait has a cap.
  */
-async function settle(page) {
+export async function settle(page) {
   await page.evaluate(async () => {
     const cap = (p, ms) => Promise.race([p, new Promise((r) => setTimeout(r, ms))])
     await cap(document.fonts.ready, 5000)
