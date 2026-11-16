@@ -384,12 +384,14 @@
     "validateAndBuildKeyPairDefinitionsMeta"
   ],
   "./keys": [
+    "JWS_ALG",
     "LocalKeyService",
     "MemoryKeyStore",
-    "SEALED_BOX_ALGORITHM",
+    "SEALED_ALG",
+    "SEALED_ENC",
     "createLocalKeyService",
     "prefixWithDomain",
-    "seal",
+    "sealedKid",
     "signJws"
   ],
   "./keys/file": ["FileCustody", "FileKeyStore"],

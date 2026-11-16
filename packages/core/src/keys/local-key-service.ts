@@ -1,4 +1,3 @@
-import { verifySpkiSignature } from '../utils/hmac.js'
 import {
   DomainPolicyError,
   KeyCustodyLostError,
@@ -32,27 +31,15 @@ import type { Logger } from '../services/logger.js'
 import type { SecretService } from '../services/secret-service.js'
 import { parseDurationString } from '../utils.js'
 import {
-  generateKeyPair,
-  importSigningKey,
-  importVerifyKey,
-  JWS_ALG,
-  pkcs8Bytes,
-  publicJwk,
-  signBytes,
-} from './algorithms.js'
-import {
   fromCanonicalBase64Url,
-  sha256Hex,
+  pkcs8Bytes,
   toBase64Url,
   utf8,
 } from './base64.js'
+import { JWS_ALG, type KeyCrypto, type KeyHandle } from './crypto.js'
 import type { KeyFileCustody } from './custody.js'
 import { assertDomain, prefixWithDomain } from './domain.js'
-import {
-  importSealingKey,
-  open as openSealed,
-  parseSealedValue,
-} from './sealed-box.js'
+import { sealedKid } from './sealed.js'
 
 const DEFAULT_STATUS_TTL_MS = 30_000
 const MIN_STATUS_TTL_MS = 1_000
@@ -62,6 +49,8 @@ const KID_NEGATIVE_CACHE_MS = 30_000
 const MAX_PUBLISH_ATTEMPTS = 8
 
 export interface LocalKeyServiceOptions {
+  /** The cryptography: required, and core ships none. `@pikku/jose/keys` is the reference provider. */
+  crypto: KeyCrypto
   /** The declarations: the generated `KeyPairsMeta` record, or the same objects as a list. */
   definitions: KeyPairDefinitionsMeta | CoreKeyPair[]
   /** The ledger. `FileKeyStore` (from `@pikku/core/keys/file`), `MemoryKeyStore`, or the Kysely store. */
@@ -138,8 +127,9 @@ export class LocalKeyService implements KeyService {
   private readonly publishDelayMs: number
   private readonly strict: Set<string>
   private readonly views = new Map<string, View>()
-  private readonly signCache = new Map<string, CryptoKey>()
-  private readonly verifyCache = new Map<string, CryptoKey>()
+  private readonly signCache = new Map<string, KeyHandle>()
+  private readonly verifyCache = new Map<string, KeyHandle>()
+  private readonly crypto: KeyCrypto
   private readonly integrity = new Map<
     string,
     { at: number; error?: KeyCustodyLostError }
@@ -163,7 +153,17 @@ export class LocalKeyService implements KeyService {
   private readonly nowMs: () => number
 
   constructor(options: LocalKeyServiceOptions) {
+    if (
+      !options?.crypto ||
+      typeof options.crypto.generate !== 'function' ||
+      typeof options.crypto.sign !== 'function'
+    ) {
+      throw new Error(
+        "LocalKeyService needs a `crypto` provider (a KeyCrypto, for example createJoseKeyCrypto() from '@pikku/jose/keys'); @pikku/core/keys ships no cryptography of its own."
+      )
+    }
     this.options = options
+    this.crypto = options.crypto
     this.store = options.store
     this.nowMs = options.now ?? Date.now
     this.statusTtlMs = Math.max(
@@ -398,8 +398,9 @@ export class LocalKeyService implements KeyService {
 
   // -------------------------------------------------------------------- custody
 
-  private async secretId(name: string, kid: string) {
-    return `KEY_${name.toUpperCase().replace(/-/g, '_')}_${(await sha256Hex(kid)).slice(0, 16)}`
+  private secretId(name: string, kid: string): string {
+    // A kid is already a SHA-256 thumbprint, so its leading characters name it without a hash of our own.
+    return `KEY_${name.toUpperCase().replace(/-/g, '_')}_${kid.replace(/[^A-Za-z0-9]/g, 'x').slice(0, 16)}`
   }
 
   private async placePrivate(
@@ -523,21 +524,29 @@ export class LocalKeyService implements KeyService {
     this.integrity.set(key, { at: this.nowMs() })
   }
 
-  private async signingKey(rec: KeyRecord): Promise<CryptoKey> {
+  private async signingKey(rec: KeyRecord): Promise<KeyHandle> {
     const cached = this.signCache.get(rec.kid)
     if (cached) return cached
     const pkcs8 = await this.readPrivate(rec)
-    const key = await importSigningKey(pkcs8, rec.algorithm as Signing)
+    const key = await this.crypto.importKey(
+      rec.algorithm as Signing,
+      'private',
+      pkcs8
+    )
     this.signCache.set(rec.kid, key)
     return key
   }
 
   private async verifyKey(
     rec: Pick<KeyRecord, 'kid' | 'publicKey' | 'algorithm'>
-  ): Promise<CryptoKey> {
+  ): Promise<KeyHandle> {
     const cached = this.verifyCache.get(rec.kid)
     if (cached) return cached
-    const key = await importVerifyKey(rec.publicKey!, rec.algorithm as Signing)
+    const key = await this.crypto.importKey(
+      rec.algorithm as Signing,
+      'public',
+      rec.publicKey!
+    )
     this.verifyCache.set(rec.kid, key)
     return key
   }
@@ -597,12 +606,57 @@ export class LocalKeyService implements KeyService {
       )
     }
     const key = await this.signingKey(rec)
-    const signature = await signBytes(
-      key,
-      decl.algorithm as Signing,
-      this.signedBytes(domain, data)
-    )
-    return toBase64Url(signature)
+    return this.signature(decl, key, kid, this.signedBytes(domain, data))
+  }
+
+  /** The `alg` and `kid` every signature of a version carries. They are written here, never taken from a caller. */
+  private headerFor(decl: Decl, kid: string) {
+    return { alg: JWS_ALG[decl.algorithm as Signing], kid }
+  }
+
+  /**
+   * The base64url signature of `bytes`. A `jws` name signs the `head.body`
+   * input it is given, so `input.signature` is a standard compact JWS; a
+   * `domain` name signs the domain-prefixed bytes as the payload of a compact
+   * JWS with a header of exactly `{ alg, kid }`. Either way the provider's
+   * output is checked to be what was asked for before it is trusted.
+   */
+  private async signature(
+    decl: Decl,
+    key: KeyHandle,
+    kid: string,
+    bytes: Uint8Array
+  ): Promise<string> {
+    const alg = decl.algorithm as Signing
+    let header: Record<string, unknown>
+    let payload: Uint8Array
+    let signingInput: string
+    if (decl.signedFormat === 'jws') {
+      signingInput = new TextDecoder().decode(bytes)
+      const parts = signingInput.split('.')
+      const head =
+        parts.length === 2 ? fromCanonicalBase64Url(parts[0]!) : undefined
+      const body =
+        parts.length === 2 ? fromCanonicalBase64Url(parts[1]!) : undefined
+      if (!head || !body) {
+        throw new DomainPolicyError(
+          `Key pair '${decl.name}' is signedFormat 'jws': sign the 'header.payload' signing input (use signJws).`
+        )
+      }
+      header = JSON.parse(new TextDecoder().decode(head))
+      payload = body
+    } else {
+      header = this.headerFor(decl, kid)
+      payload = bytes
+      signingInput = `${toBase64Url(utf8(JSON.stringify(header)))}.${toBase64Url(bytes)}`
+    }
+    const compact = await this.crypto.sign(alg, key, header, payload)
+    if (!compact.startsWith(`${signingInput}.`)) {
+      throw new Error(
+        'The crypto provider signed something other than what was asked.'
+      )
+    }
+    return compact.slice(signingInput.length + 1)
   }
 
   async sign(
@@ -645,17 +699,14 @@ export class LocalKeyService implements KeyService {
     } else {
       candidates = view.records
     }
-    const sig = fromCanonicalBase64Url(signature)
-    if (!sig) return false
+    if (!fromCanonicalBase64Url(signature)) return false
     const bytes = this.signedBytes(domain, data)
     for (const rec of candidates) {
       if (rec.status === 'pending' || !rec.publicKey) continue
       if (!this.accepted(rec, now, opts?.historical === true)) continue
       try {
         const key = await this.verifyKey(rec)
-        if (
-          await verifySpkiSignature(key, decl.algorithm as Signing, sig, bytes)
-        ) {
+        if (await this.signatureHolds(decl, key, rec.kid, bytes, signature)) {
           return true
         }
       } catch {
@@ -663,6 +714,27 @@ export class LocalKeyService implements KeyService {
       }
     }
     return false
+  }
+
+  /** Whether `signature` is `bytes` signed by version `kid`: the rebuilt compact JWS verifies, and names this `alg` and `kid`. */
+  private async signatureHolds(
+    decl: Decl,
+    key: KeyHandle,
+    kid: string,
+    bytes: Uint8Array,
+    signature: string
+  ): Promise<boolean> {
+    const alg = decl.algorithm as Signing
+    const signingInput =
+      decl.signedFormat === 'jws'
+        ? new TextDecoder().decode(bytes)
+        : `${toBase64Url(utf8(JSON.stringify(this.headerFor(decl, kid))))}.${toBase64Url(bytes)}`
+    const header = await this.crypto.verify(
+      alg,
+      key,
+      `${signingInput}.${signature}`
+    )
+    return header?.alg === JWS_ALG[alg] && header.kid === kid
   }
 
   /** M4: an unknown kid costs at most one store read per name per 30 s, then a 30 s negative cache. */
@@ -691,24 +763,24 @@ export class LocalKeyService implements KeyService {
   async open(name: string, sealed: string, opts?: KeyOptions): Promise<string> {
     const decl = this.decl(name, 'sealing')
     const scopeKey = this.scopeOf(decl, opts)
-    const envelope = parseSealedValue(sealed)
+    const kid = sealedKid(sealed)
     await this.ensureIntegrity(decl, scopeKey)
     const view = await this.view(name, scopeKey, this.strict.has(name))
-    const rec = view.records.find((r) => r.kid === envelope.kid)
+    const rec = view.records.find((r) => r.kid === kid)
     if (!rec) {
-      throw new KeyUnavailableError(`'${name}' holds no key ${envelope.kid}.`)
+      throw new KeyUnavailableError(`'${name}' holds no key ${kid}.`)
     }
     if (rec.status === 'retired') {
-      throw new KeyRetiredError(`Key ${envelope.kid} of '${name}' is retired.`)
+      throw new KeyRetiredError(`Key ${kid} of '${name}' is retired.`)
     }
     if (!this.accepted(rec, this.nowMs(), false, true)) {
       throw new KeyUnavailableError(
-        `Key ${envelope.kid} of '${name}' is not open for use yet.`
+        `Key ${kid} of '${name}' is not open for use yet.`
       )
     }
     const pkcs8 = await this.readPrivate(rec)
-    const key = await importSealingKey(pkcs8Bytes(pkcs8))
-    return openSealed(key, rec.publicKey!, envelope)
+    const key = await this.crypto.importKey(decl.algorithm, 'private', pkcs8)
+    return this.crypto.open(key, rec.publicKey!, rec.kid, sealed)
   }
 
   // ------------------------------------------------------------------ public set
@@ -743,7 +815,7 @@ export class LocalKeyService implements KeyService {
     return {
       keys: await Promise.all(
         keys.map(async (k) => ({
-          ...(await publicJwk(await this.verifyKey(k), alg)),
+          ...(await this.crypto.jwk(alg, await this.verifyKey(k))),
           kid: k.kid,
           alg: JWS_ALG[alg],
           use: 'sig',
@@ -758,12 +830,16 @@ export class LocalKeyService implements KeyService {
   private async mint(decl: Decl, scopeKey: string): Promise<KeyRecord> {
     const existing = await this.store.list(decl.name, scopeKey)
     const version = existing.reduce((max, r) => Math.max(max, r.version), 0) + 1
-    const pair = await generateKeyPair(decl.algorithm)
+    const material = await this.crypto.generate(decl.algorithm)
+    const pair = {
+      ...material,
+      kid: await this.crypto.thumbprint(decl.algorithm, material.publicKey),
+    }
     const now = iso(this.nowMs())
     const custody = decl.custody
     const privateRef =
       custody === 'secret'
-        ? await this.secretId(decl.name, pair.kid)
+        ? this.secretId(decl.name, pair.kid)
         : custody === 'file'
           ? this.options.fileCustody!.refFor(decl.name, scopeKey, pair.kid)
           : null
@@ -818,18 +894,32 @@ export class LocalKeyService implements KeyService {
     const fresh = (await this.store.get(row.kid)) ?? row
     const pkcs8 = await this.readPrivate(fresh)
     if (decl.purpose !== 'signing') {
-      await importSealingKey(pkcs8Bytes(pkcs8))
+      const half = await this.crypto.importKey(decl.algorithm, 'private', pkcs8)
+      const probe = 'pikku-key-placement-probe'
+      const sealed = await this.crypto.seal(publicKey, row.kid, probe)
+      if (
+        (await this.crypto.open(half, publicKey, row.kid, sealed)) !== probe
+      ) {
+        throw new KeyCustodyLostError(
+          `The placed half of '${decl.name}' does not match its public key.`
+        )
+      }
       return
     }
     const alg = decl.algorithm as Signing
-    const probe = utf8('pikku-key-placement-probe')
-    const signature = await signBytes(
-      await importSigningKey(pkcs8, alg),
-      alg,
-      probe
-    )
-    const verifier = await importVerifyKey(publicKey, alg)
-    if (!(await verifySpkiSignature(verifier, alg, signature, probe))) {
+    const payload = utf8('pikku-key-placement-probe')
+    const probe =
+      decl.signedFormat === 'jws'
+        ? utf8(
+            `${toBase64Url(utf8(JSON.stringify(this.headerFor(decl, row.kid))))}.${toBase64Url(payload)}`
+          )
+        : payload
+    const signer = await this.crypto.importKey(alg, 'private', pkcs8)
+    const signature = await this.signature(decl, signer, row.kid, probe)
+    const verifier = await this.crypto.importKey(alg, 'public', publicKey)
+    if (
+      !(await this.signatureHolds(decl, verifier, row.kid, probe, signature))
+    ) {
       throw new KeyCustodyLostError(
         `The placed half of '${decl.name}' does not match its public key.`
       )

@@ -12,7 +12,15 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { CoreKeyPair } from '../../wirings/keypair/index.js'
-import { createLocalKeyService } from '../local-key-service.js'
+import {
+  createLocalKeyService as create,
+  type LocalKeyServiceOptions,
+} from '../local-key-service.js'
+import { testCrypto } from '../test-crypto.test.js'
+
+const createLocalKeyService = (
+  options: Omit<LocalKeyServiceOptions, 'crypto'>
+) => create({ crypto: testCrypto, ...options })
 import { FileCustody, FileKeyStore } from './index.js'
 
 const DEF: CoreKeyPair = {

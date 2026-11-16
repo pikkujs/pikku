@@ -111,6 +111,29 @@ describe('@pikku/core/keys is reachable only through its own subpaths', () => {
     )
   })
 
+  test('@pikku/core/keys has zero dependencies: its bundle imports nothing external, not jose and not a node: module', async () => {
+    const result = await build({
+      entryPoints: [sourceOf(pkg.exports['./keys']!)],
+      bundle: true,
+      write: false,
+      metafile: true,
+      platform: 'neutral',
+      format: 'esm',
+      logLevel: 'silent',
+      packages: 'external',
+      external: ['node:*'],
+    })
+    const external = Object.values(result.metafile.outputs).flatMap((output) =>
+      output.imports.filter((i) => i.external).map((i) => i.path)
+    )
+    assert.deepEqual(external, [])
+    assert.equal(
+      pkg.exports['./keys']!.includes('jose'),
+      false,
+      'the jose provider is its own package'
+    )
+  })
+
   test('the bundle check sees keys when it is asked for', async () => {
     // Guards the checks above: a bundler that never resolved anything would
     // find no keys module under any entry.

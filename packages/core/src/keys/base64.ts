@@ -31,9 +31,10 @@ export const fromCanonicalBase64Url = (
   }
 }
 
-export const sha256Hex = async (value: string): Promise<string> => {
-  const digest = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', utf8(value) as BufferSource)
+/** PKCS8 as base64 DER or as a PEM, to its DER bytes. */
+export const pkcs8Bytes = (value: string): Uint8Array =>
+  base64ToBytes(
+    value.trim().startsWith('-----BEGIN')
+      ? value.replace(/-----[A-Z ]+-----/g, '').replace(/\s+/g, '')
+      : value.trim()
   )
-  return Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join('')
-}
