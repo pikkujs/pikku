@@ -100,6 +100,9 @@
       "virtual-user-schedule": [
         "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
         "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ],
+      "key": [
+        "create table \"pikku_key\" (\"kid\" text primary key, \"name\" text not null, \"scope_key\" text not null, \"version\" integer not null, \"algorithm\" text not null, \"purpose\" text not null, \"public_key\" text, \"status\" text not null, \"created_at\" text not null, \"activated_at\" text, \"published_at\" text, \"verify_until\" text, \"retired_at\" text, \"custody\" text not null, \"private_ref\" text, \"private_wrapped\" text, \"metadata\" text, \"rev\" integer default 0 not null, \"active_slot\" integer, \"pending_slot\" integer, constraint \"pikku_key_name_scope_key_version_key\" unique (\"name\", \"scope_key\", \"version\"), constraint \"pikku_key_active_slot_key\" unique (\"name\", \"scope_key\", \"active_slot\"), constraint \"pikku_key_pending_slot_key\" unique (\"name\", \"scope_key\", \"pending_slot\"))"
       ]
     },
     "app": {
@@ -202,6 +205,9 @@
       "virtual-user-schedule": [
         "create table \"app\".\"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
         "create index \"idx_virtual_user_schedule_due\" on \"app\".\"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ],
+      "key": [
+        "create table \"app\".\"pikku_key\" (\"kid\" text primary key, \"name\" text not null, \"scope_key\" text not null, \"version\" integer not null, \"algorithm\" text not null, \"purpose\" text not null, \"public_key\" text, \"status\" text not null, \"created_at\" text not null, \"activated_at\" text, \"published_at\" text, \"verify_until\" text, \"retired_at\" text, \"custody\" text not null, \"private_ref\" text, \"private_wrapped\" text, \"metadata\" text, \"rev\" integer default 0 not null, \"active_slot\" integer, \"pending_slot\" integer, constraint \"pikku_key_name_scope_key_version_key\" unique (\"name\", \"scope_key\", \"version\"), constraint \"pikku_key_active_slot_key\" unique (\"name\", \"scope_key\", \"active_slot\"), constraint \"pikku_key_pending_slot_key\" unique (\"name\", \"scope_key\", \"pending_slot\"))"
       ]
     },
     "users": {
@@ -304,6 +310,9 @@
       "virtual-user-schedule": [
         "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
         "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ],
+      "key": [
+        "create table \"pikku_key\" (\"kid\" text primary key, \"name\" text not null, \"scope_key\" text not null, \"version\" integer not null, \"algorithm\" text not null, \"purpose\" text not null, \"public_key\" text, \"status\" text not null, \"created_at\" text not null, \"activated_at\" text, \"published_at\" text, \"verify_until\" text, \"retired_at\" text, \"custody\" text not null, \"private_ref\" text, \"private_wrapped\" text, \"metadata\" text, \"rev\" integer default 0 not null, \"active_slot\" integer, \"pending_slot\" integer, constraint \"pikku_key_name_scope_key_version_key\" unique (\"name\", \"scope_key\", \"version\"), constraint \"pikku_key_active_slot_key\" unique (\"name\", \"scope_key\", \"active_slot\"), constraint \"pikku_key_pending_slot_key\" unique (\"name\", \"scope_key\", \"pending_slot\"))"
       ]
     }
   },
@@ -408,6 +417,9 @@
       "virtual-user-schedule": [
         "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
         "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ],
+      "key": [
+        "create table \"pikku_key\" (\"kid\" text primary key, \"name\" text not null, \"scope_key\" text not null, \"version\" integer not null, \"algorithm\" text not null, \"purpose\" text not null, \"public_key\" text, \"status\" text not null, \"created_at\" text not null, \"activated_at\" text, \"published_at\" text, \"verify_until\" text, \"retired_at\" text, \"custody\" text not null, \"private_ref\" text, \"private_wrapped\" text, \"metadata\" jsonb, \"rev\" integer default 0 not null, \"active_slot\" integer, \"pending_slot\" integer, constraint \"pikku_key_name_scope_key_version_key\" unique (\"name\", \"scope_key\", \"version\"), constraint \"pikku_key_active_slot_key\" unique (\"name\", \"scope_key\", \"active_slot\"), constraint \"pikku_key_pending_slot_key\" unique (\"name\", \"scope_key\", \"pending_slot\"))"
       ]
     },
     "app": {
@@ -510,6 +522,9 @@
       "virtual-user-schedule": [
         "create table \"app\".\"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
         "create index \"idx_virtual_user_schedule_due\" on \"app\".\"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ],
+      "key": [
+        "create table \"app\".\"pikku_key\" (\"kid\" text primary key, \"name\" text not null, \"scope_key\" text not null, \"version\" integer not null, \"algorithm\" text not null, \"purpose\" text not null, \"public_key\" text, \"status\" text not null, \"created_at\" text not null, \"activated_at\" text, \"published_at\" text, \"verify_until\" text, \"retired_at\" text, \"custody\" text not null, \"private_ref\" text, \"private_wrapped\" text, \"metadata\" jsonb, \"rev\" integer default 0 not null, \"active_slot\" integer, \"pending_slot\" integer, constraint \"pikku_key_name_scope_key_version_key\" unique (\"name\", \"scope_key\", \"version\"), constraint \"pikku_key_active_slot_key\" unique (\"name\", \"scope_key\", \"active_slot\"), constraint \"pikku_key_pending_slot_key\" unique (\"name\", \"scope_key\", \"pending_slot\"))"
       ]
     },
     "users": {
@@ -612,6 +627,9 @@
       "virtual-user-schedule": [
         "create table \"virtual_user_schedule\" (\"virtual_user_id\" varchar(255) primary key, \"enabled\" integer default 0 not null, \"disposition\" varchar(50) not null, \"goals\" text default '[]' not null, \"budget\" text, \"min_interval_ms\" bigint not null, \"max_interval_ms\" bigint not null, \"next_run_at\" timestamp not null, \"last_run_id\" varchar(36), \"last_run_at\" timestamp)",
         "create index \"idx_virtual_user_schedule_due\" on \"virtual_user_schedule\" (\"enabled\", \"next_run_at\")"
+      ],
+      "key": [
+        "create table \"pikku_key\" (\"kid\" text primary key, \"name\" text not null, \"scope_key\" text not null, \"version\" integer not null, \"algorithm\" text not null, \"purpose\" text not null, \"public_key\" text, \"status\" text not null, \"created_at\" text not null, \"activated_at\" text, \"published_at\" text, \"verify_until\" text, \"retired_at\" text, \"custody\" text not null, \"private_ref\" text, \"private_wrapped\" text, \"metadata\" jsonb, \"rev\" integer default 0 not null, \"active_slot\" integer, \"pending_slot\" integer, constraint \"pikku_key_name_scope_key_version_key\" unique (\"name\", \"scope_key\", \"version\"), constraint \"pikku_key_active_slot_key\" unique (\"name\", \"scope_key\", \"active_slot\"), constraint \"pikku_key_pending_slot_key\" unique (\"name\", \"scope_key\", \"pending_slot\"))"
       ]
     }
   },
@@ -716,6 +734,9 @@
       "virtual-user-schedule": [
         "create table `virtual_user_schedule` (`virtual_user_id` varchar(255) primary key, `enabled` integer default 0 not null, `disposition` varchar(50) not null, `goals` longtext default ('[]') not null, `budget` longtext, `min_interval_ms` bigint not null, `max_interval_ms` bigint not null, `next_run_at` timestamp not null, `last_run_id` varchar(36), `last_run_at` timestamp)",
         "create index `idx_virtual_user_schedule_due` on `virtual_user_schedule` (`enabled`, `next_run_at`)"
+      ],
+      "key": [
+        "create table `pikku_key` (`kid` varchar(255) primary key, `name` varchar(255) not null, `scope_key` varchar(255) not null, `version` integer not null, `algorithm` longtext not null, `purpose` longtext not null, `public_key` longtext, `status` longtext not null, `created_at` longtext not null, `activated_at` longtext, `published_at` longtext, `verify_until` longtext, `retired_at` longtext, `custody` longtext not null, `private_ref` longtext, `private_wrapped` longtext, `metadata` json, `rev` integer default 0 not null, `active_slot` integer, `pending_slot` integer, constraint `pikku_key_name_scope_key_version_key` unique (`name`, `scope_key`, `version`), constraint `pikku_key_active_slot_key` unique (`name`, `scope_key`, `active_slot`), constraint `pikku_key_pending_slot_key` unique (`name`, `scope_key`, `pending_slot`))"
       ]
     },
     "app": {
@@ -818,6 +839,9 @@
       "virtual-user-schedule": [
         "create table `app`.`virtual_user_schedule` (`virtual_user_id` varchar(255) primary key, `enabled` integer default 0 not null, `disposition` varchar(50) not null, `goals` longtext default ('[]') not null, `budget` longtext, `min_interval_ms` bigint not null, `max_interval_ms` bigint not null, `next_run_at` timestamp not null, `last_run_id` varchar(36), `last_run_at` timestamp)",
         "create index `idx_virtual_user_schedule_due` on `app`.`virtual_user_schedule` (`enabled`, `next_run_at`)"
+      ],
+      "key": [
+        "create table `app`.`pikku_key` (`kid` varchar(255) primary key, `name` varchar(255) not null, `scope_key` varchar(255) not null, `version` integer not null, `algorithm` longtext not null, `purpose` longtext not null, `public_key` longtext, `status` longtext not null, `created_at` longtext not null, `activated_at` longtext, `published_at` longtext, `verify_until` longtext, `retired_at` longtext, `custody` longtext not null, `private_ref` longtext, `private_wrapped` longtext, `metadata` json, `rev` integer default 0 not null, `active_slot` integer, `pending_slot` integer, constraint `pikku_key_name_scope_key_version_key` unique (`name`, `scope_key`, `version`), constraint `pikku_key_active_slot_key` unique (`name`, `scope_key`, `active_slot`), constraint `pikku_key_pending_slot_key` unique (`name`, `scope_key`, `pending_slot`))"
       ]
     },
     "users": {
@@ -920,6 +944,9 @@
       "virtual-user-schedule": [
         "create table `virtual_user_schedule` (`virtual_user_id` varchar(255) primary key, `enabled` integer default 0 not null, `disposition` varchar(50) not null, `goals` longtext default ('[]') not null, `budget` longtext, `min_interval_ms` bigint not null, `max_interval_ms` bigint not null, `next_run_at` timestamp not null, `last_run_id` varchar(36), `last_run_at` timestamp)",
         "create index `idx_virtual_user_schedule_due` on `virtual_user_schedule` (`enabled`, `next_run_at`)"
+      ],
+      "key": [
+        "create table `pikku_key` (`kid` varchar(255) primary key, `name` varchar(255) not null, `scope_key` varchar(255) not null, `version` integer not null, `algorithm` longtext not null, `purpose` longtext not null, `public_key` longtext, `status` longtext not null, `created_at` longtext not null, `activated_at` longtext, `published_at` longtext, `verify_until` longtext, `retired_at` longtext, `custody` longtext not null, `private_ref` longtext, `private_wrapped` longtext, `metadata` json, `rev` integer default 0 not null, `active_slot` integer, `pending_slot` integer, constraint `pikku_key_name_scope_key_version_key` unique (`name`, `scope_key`, `version`), constraint `pikku_key_active_slot_key` unique (`name`, `scope_key`, `active_slot`), constraint `pikku_key_pending_slot_key` unique (`name`, `scope_key`, `pending_slot`))"
       ]
     }
   }

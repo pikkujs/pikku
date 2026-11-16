@@ -23,6 +23,8 @@ export interface KyselySecretServiceConfig {
 }
 
 export class KyselySecretService implements SecretService {
+  /** Secrets are rows in the database: they outlive a restart and every instance sees them. */
+  readonly durable = true
   private initialized = false
   private kekSalts = new Map<number, string>()
   private keks = new Map<number, CryptoKey>()

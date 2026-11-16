@@ -301,6 +301,34 @@ export interface PikkuLeaseTable {
   expiresAt: number
 }
 
+/** One key version in the ledger `KyselyKeyStore` keeps. Timestamps are ISO 8601 text. */
+export interface PikkuKeyTable {
+  kid: string
+  name: string
+  scopeKey: string
+  version: number
+  algorithm: string
+  purpose: string
+  publicKey: string | null
+  status: string
+  createdAt: string
+  activatedAt: string | null
+  publishedAt: string | null
+  verifyUntil: string | null
+  retiredAt: string | null
+  custody: string
+  privateRef: string | null
+  privateWrapped: string | null
+  /** JSON: `jsonb` on Postgres, text elsewhere. Written as a string, read through `parseJson`. */
+  metadata: string | null
+  /** Compare-and-set token for `updateCustody`. */
+  rev: number
+  /** 1 while `active`, null otherwise; one per (name, scopeKey). */
+  activeSlot: number | null
+  /** 1 while `pending`, null otherwise; one per (name, scopeKey). */
+  pendingSlot: number | null
+}
+
 /** One subject's short-circuit, in either direction, over a flag's rollout. */
 export interface PikkuFeatureFlagOverridesTable {
   flag: string
@@ -500,6 +528,7 @@ export interface KyselyPikkuDB {
   pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
   pikkuTriggerSource: PikkuTriggerSourceTable
   pikkuLease: PikkuLeaseTable
+  pikkuKey: PikkuKeyTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable
   workflowRuns: WorkflowRunsTable
