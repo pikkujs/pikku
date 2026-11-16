@@ -643,7 +643,25 @@ export class LocalKeyService implements KeyService {
           `Key pair '${decl.name}' is signedFormat 'jws': sign the 'header.payload' signing input (use signJws).`
         )
       }
-      header = JSON.parse(new TextDecoder().decode(head))
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(new TextDecoder().decode(head))
+      } catch {
+        parsed = undefined
+      }
+      const expected = this.headerFor(decl, kid)
+      const given = parsed as { alg?: unknown; kid?: unknown } | undefined
+      if (
+        !given ||
+        typeof given !== 'object' ||
+        given.alg !== expected.alg ||
+        given.kid !== expected.kid
+      ) {
+        throw new DomainPolicyError(
+          `Key pair '${decl.name}' is signedFormat 'jws': the header must name this key's own alg and kid (use signJws).`
+        )
+      }
+      header = given as Record<string, unknown>
       payload = body
     } else {
       header = this.headerFor(decl, kid)
