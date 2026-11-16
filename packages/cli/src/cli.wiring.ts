@@ -131,6 +131,8 @@ import { pikkuThemeApply, pikkuThemeList } from './functions/commands/theme.js'
 import {
   pagesList,
   pagesScreenshot,
+  pagesCompare,
+  renderPagesCompare,
   renderPagesList,
   renderPagesScreenshot,
 } from './functions/commands/pages.js'
@@ -1603,6 +1605,72 @@ wireCLI({
                 viewport: {
                   description: 'Capture the viewport only, not the whole page',
                   type: 'boolean',
+                },
+              },
+            }),
+            compare: pikkuCLICommand({
+              func: pagesCompare,
+              render: renderPagesCompare,
+              description:
+                "Compare one frontend's pages with reference screenshots at each width: a diff image, the changed-pixel share, page heights and section differences per page, worst first",
+              options: {
+                reference: {
+                  description:
+                    'Folder of reference screenshots named <id>-<width>.jpg or .png (a pikku-site-clone capture, e.g. artifacts/references/<site>)',
+                  type: 'string',
+                },
+                baseUrl: {
+                  description:
+                    'Where the frontend is served, e.g. http://localhost:7104',
+                  type: 'string',
+                },
+                app: {
+                  description: 'The frontend, when there is more than one',
+                  type: 'string',
+                },
+                out: {
+                  description:
+                    'Directory for the diff images and report.json. Defaults to <outDir>/pages/compare/<app>',
+                  type: 'string',
+                },
+                widths: {
+                  description:
+                    'Widths to compare, as 1440,390. Defaults to the widths in the reference file names',
+                  type: 'string',
+                },
+                page: {
+                  description: 'Only these reference ids, as index,about',
+                  type: 'string',
+                },
+                map: {
+                  description:
+                    'JSON file mapping a reference id to our route path, { "about-us": "/about" }. Defaults to map.json in the reference folder; otherwise index is / and <id> is /<id>',
+                  type: 'string',
+                },
+                threshold: {
+                  description:
+                    'Exit non-zero when a page changes more than this percent of its pixels, or is missing',
+                  type: 'number',
+                },
+                params: {
+                  description:
+                    'Values for route params in mapped paths, as name=value,name=value',
+                  type: 'string',
+                },
+                as: {
+                  description:
+                    'Sign in as this virtual user first, the way scenario virtual users do',
+                  type: 'string',
+                },
+                environment: {
+                  description:
+                    'Environment in pikku.config.json whose backend --as signs in against. Defaults to local',
+                  type: 'string',
+                },
+                backend: {
+                  description:
+                    "Which of the environment's backends --as signs in to. Optional when it has only one",
+                  type: 'string',
                 },
               },
             }),
