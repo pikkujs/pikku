@@ -9,6 +9,7 @@ import {
 } from '@pikku/cli/addon-support'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { planRefusal } from '../lib/plan-gate.js'
+import { refuseUntilPagesCompared } from '../lib/page-gate.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import { dim, safe } from '@pikku/cli/addon-support'
 import type { CompleteChangeOutput } from '../lib/types.js'
@@ -20,6 +21,7 @@ export const ChangesDoneInput = z.object({
   headCommit: z.string().optional(),
   note: z.string().optional(),
   authorName: z.string().optional(),
+  waive: z.string().optional(),
 })
 
 export const ChangesDoneOutput = z.object({
@@ -57,6 +59,19 @@ export const ChangesDone = pikkuSessionlessFunc({
       headCommit ??= await headSha().catch(() => undefined)
     }
 
+    // A change that touched pages of a site rebuilt from a reference is done
+    // only when `pikku ui pages compare` passes at HEAD (or is waived).
+    let note = input.note
+    if (await isGitRepo()) {
+      const ref = input.changeId.trim()
+      const gate = await refuseUntilPagesCompared({
+        git: (args) => git(args),
+        waive: input.waive,
+        label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
+      })
+      if (gate.note) note = note ? `${note}\n\n${gate.note}` : gate.note
+    }
+
     const { rpc, projectId } = await changesContext(input.apiUrl)
     if (headCommit)
       headCommit = await checkCommit(
@@ -69,7 +84,7 @@ export const ChangesDone = pikkuSessionlessFunc({
       ...changeRef(projectId, input.changeId),
       branch,
       headCommit,
-      note: input.note,
+      note,
       authorName: input.authorName ?? 'pikku-cli',
     })
   },
