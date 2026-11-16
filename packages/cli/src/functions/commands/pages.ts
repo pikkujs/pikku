@@ -20,6 +20,7 @@ import {
 } from './pages.schemas.js'
 import {
   compareShot,
+  gitStamp,
   loadSiteCapture,
   overThreshold,
   readReference,
@@ -183,7 +184,7 @@ export const pagesScreenshot = pikkuSessionlessFunc({
 
     const dir = resolve(
       out ??
-        join(
+        resolve(
           config.rootDir,
           config.outDir,
           'pages',
@@ -322,7 +323,7 @@ export const pagesCompare = pikkuSessionlessFunc({
 
     const dir = resolve(
       out ??
-        join(
+        resolve(
           config.rootDir,
           config.outDir,
           'pages',
@@ -468,6 +469,9 @@ export const pagesCompare = pikkuSessionlessFunc({
       }
     }
 
+    // Which commit these pages were photographed at, so a later check (the
+    // page gate on `pikku changes done`) can tell a fresh report from a stale one.
+    const stamp = await gitStamp(resolve(root, target))
     const sorted = worstFirst(rows)
     const failed = overThreshold(sorted, threshold).map(
       (row) => `${row.id}@${row.width}`
@@ -480,6 +484,8 @@ export const pagesCompare = pikkuSessionlessFunc({
       report: rel(join(dir, 'report.json')),
       widths: [...new Set(shots.map((shot) => shot.width))],
       threshold: threshold ?? null,
+      ...stamp,
+      generatedAt: new Date().toISOString(),
       sectionsNote,
       rows: sorted,
       failed,

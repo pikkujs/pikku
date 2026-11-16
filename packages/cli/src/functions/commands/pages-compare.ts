@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import jpeg from 'jpeg-js'
 import pngjs from 'pngjs'
+import { git } from '../../utils/git.js'
 
 const { PNG } = pngjs
 
@@ -320,5 +321,23 @@ export function compareShot(
     ourHeight: b.height,
     referenceImageWidth: a.width,
     ourImageWidth: b.width,
+  }
+}
+
+/**
+ * The commit a compare ran at and whether the frontend had uncommitted changes
+ * (untracked files count): the pages photographed are HEAD only when it did
+ * not. Both null outside a git checkout.
+ */
+export async function gitStamp(
+  appDir: string,
+  run: (args: string[], cwd: string) => Promise<string> = git
+): Promise<{ gitSha: string | null; dirty: boolean | null }> {
+  try {
+    const gitSha = (await run(['rev-parse', 'HEAD'], appDir)).trim()
+    const status = await run(['status', '--porcelain', '--', '.'], appDir)
+    return { gitSha, dirty: status.trim().length > 0 }
+  } catch {
+    return { gitSha: null, dirty: null }
   }
 }

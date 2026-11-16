@@ -9,6 +9,7 @@ import {
   decodeImage,
   diffImages,
   encodePng,
+  gitStamp,
   overThreshold,
   readReference,
   routeExists,
@@ -155,5 +156,35 @@ describe('pages compare', () => {
       ['gone', 'b']
     )
     assert.deepEqual(overThreshold(rows), [])
+  })
+})
+
+describe('gitStamp', () => {
+  test('records HEAD and whether the frontend has uncommitted changes', async () => {
+    const calls: string[] = []
+    const run = async (args: string[]) => {
+      calls.push(args.join(' '))
+      return args[0] === 'rev-parse' ? 'abc123\n' : ' M src/routes/index.tsx\n'
+    }
+    assert.deepEqual(await gitStamp('/app', run), {
+      gitSha: 'abc123',
+      dirty: true,
+    })
+    assert.deepEqual(calls, ['rev-parse HEAD', 'status --porcelain -- .'])
+    assert.deepEqual(
+      await gitStamp('/app', async (args) =>
+        args[0] === 'rev-parse' ? 'abc123' : ''
+      ),
+      { gitSha: 'abc123', dirty: false }
+    )
+  })
+
+  test('is null outside a git checkout', async () => {
+    assert.deepEqual(
+      await gitStamp('/app', async () => {
+        throw new Error('not a git repository')
+      }),
+      { gitSha: null, dirty: null }
+    )
   })
 })
