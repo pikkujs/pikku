@@ -313,15 +313,27 @@ function columnChanges(desired: ColumnInfo, actual: ColumnInfo): string[] {
   return changes
 }
 
+/** A change a migration makes that loses data or breaks what runs against it. */
+export interface DestructiveChange {
+  kind: 'dropColumn' | 'dropTable' | 'renameColumn'
+  table: string
+  /** The column dropped, or the one renamed (its old name). */
+  column?: string
+  /** What a person approves, one line: `DROP COLUMN note.legacy_flag: its data is lost`. */
+  what: string
+}
+
 /**
- * Why a declared table cannot be brought into line by adding to it, if it can't.
+ * What stops a declared table being brought into line by adding to it, and what
+ * can be done with approval.
  *
- * Everything here is either destructive or a guess. Dropping loses data; a
- * column that is gone beside one that appeared may be a rename or two unrelated
- * edits, and the wrong call loses data as well; changing a type or a constraint
- * can fail on existing rows, or rewrite them. Nothing here can tell, so these go
- * back to a person. `migrationsDir` is named because this is the one moment the
- * command hands the decision back, and that person needs to know where to act.
+ * A column that is gone loses its data when dropped, so it is returned as a
+ * destructive change for a person to approve rather than refused outright; a
+ * rename (see `renamedFrom`) was applied to `actual` by the caller before this
+ * runs. Changing a type or a constraint can fail on existing rows, or rewrite
+ * them, and nothing here can tell which, so those stay refusals.
+ * `migrationsDir` is named because this is the one moment the command hands the
+ * decision back, and that person needs to know where to act.
  */
 export function refuseTableChanges(
   table: string,
@@ -329,22 +341,24 @@ export function refuseTableChanges(
   actual: Map<string, ColumnInfo>,
   migrationsDir: string,
   rootDir: string
-): string[] {
+): { refusals: string[]; destructive: DestructiveChange[] } {
   const refusals: string[] = []
+  const destructive: DestructiveChange[] = []
   const where = relative(rootDir, migrationsDir)
   const added = [...desired.keys()].filter((c) => !actual.has(c))
   const gone = [...actual.keys()].filter((c) => !desired.has(c))
 
   for (const column of gone) {
-    const rename =
+    const moved =
       added.length > 0
-        ? ` It may be a rename to ${added.join(' or ')}, which generate cannot tell from a drop and an add.`
+        ? ` (if it moved to ${added.join(' or ')}, declare that column with renamedFrom: '${column}' instead)`
         : ''
-    refusals.push(
-      `${table}.${column} is in the migrations but not in ${TABLES_FILE}.${rename} ` +
-        `generate never drops or renames. Put the column back, or, if the data really is ` +
-        `to go or move, a person writes that migration in ${where} and generate will then agree with it.`
-    )
+    destructive.push({
+      kind: 'dropColumn',
+      table,
+      column,
+      what: `DROP COLUMN ${table}.${column}: its data is lost${moved}`,
+    })
   }
 
   for (const [name, column] of desired) {
@@ -366,12 +380,13 @@ export function refuseTableChanges(
     const changes = columnChanges(column, existing)
     if (changes.length > 0) {
       refusals.push(
-        `${table}.${name} differs from the migrations: ${changes.join('; ')}. generate only adds. ` +
-          `Change ${TABLES_FILE} to match, or a person writes that change in ${where}.`
+        `${table}.${name} differs from the migrations: ${changes.join('; ')}. generate does not change ` +
+          `an existing column's type or constraints. Change ${TABLES_FILE} to match, or a person writes ` +
+          `that change in ${where}.`
       )
     }
   }
-  return refusals
+  return { refusals, destructive }
 }
 
 /**
