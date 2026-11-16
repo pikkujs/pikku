@@ -9,6 +9,7 @@ export const flagClearOverride = pikkuFunc<
   title: 'Clear a Feature Flag Override',
   description:
     'Returns one subject to the flag it would otherwise resolve to. Not the same as overriding it to false, which keeps the subject pinned off through a later rollout.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:manage'],
   func: async ({ featureFlags }, { name, subject }) => {

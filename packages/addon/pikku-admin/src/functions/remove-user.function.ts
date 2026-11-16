@@ -6,6 +6,7 @@ export const removeUser = pikkuFunc({
   title: 'Remove User',
   description:
     'Permanently deletes a user along with their sessions and linked accounts. Cannot be undone.',
+  tags: ['admin:users'],
   expose: true,
   scopes: ['admin:users:remove'],
   input: UserRef,

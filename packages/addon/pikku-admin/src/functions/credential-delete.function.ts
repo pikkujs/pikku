@@ -6,6 +6,7 @@ export const credentialDelete = pikkuFunc<
 >({
   title: 'Delete Credential',
   description: 'Deletes a credential, optionally scoped to a user.',
+  tags: ['admin:credentials'],
   expose: true,
   scopes: ['admin:credentials:manage'],
   func: async ({ credentialService }, { name, userId }) => {

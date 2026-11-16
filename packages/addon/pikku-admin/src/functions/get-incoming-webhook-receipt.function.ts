@@ -8,6 +8,7 @@ export const getIncomingWebhookReceipt = pikkuFunc<
   title: 'Get Incoming Webhook Receipt',
   description:
     'Returns a single received webhook event, or null when the app wires no incoming webhook service or keeps no receipt with this id.',
+  tags: ['admin:webhooks'],
   expose: true,
   scopes: ['admin:webhooks:read'],
   func: async ({ incomingWebhookService }, { receiptId }) => {

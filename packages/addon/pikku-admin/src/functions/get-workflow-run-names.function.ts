@@ -6,6 +6,7 @@ export const getWorkflowRunNames = pikkuFunc<AddonFilter | null, string[]>({
   title: 'Get Workflow Run Names',
   description:
     "Returns an array of distinct workflow names that have at least one run in the Postgres workflow database via workflowRunService.getDistinctWorkflowNames(). With `addon`, only that add-on's workflows.",
+  tags: ['admin:workflows'],
   expose: true,
   scopes: ['admin:workflows:read'],
   func: async ({ workflowRunService }, input) => {

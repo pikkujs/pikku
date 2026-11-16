@@ -6,6 +6,7 @@ export const secretGet = pikkuFunc<
 >({
   title: 'Get Secret',
   description: 'Gets the current value of a secret.',
+  tags: ['admin:secrets'],
   expose: true,
   scopes: ['admin:secrets:read'],
   func: async ({ secretAdminService }, { secretId }) => {

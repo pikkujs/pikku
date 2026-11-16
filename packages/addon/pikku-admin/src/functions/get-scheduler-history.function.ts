@@ -15,6 +15,7 @@ export const getSchedulerHistory = pikkuFunc<
   title: 'Get Scheduler History',
   description:
     'Returns each scheduled task with its last run, next run and recent runs (newest first). Empty when the app keeps no scheduler run history.',
+  tags: ['admin:runtime'],
   expose: true,
   scopes: ['admin:schedules:read'],
   func: async ({ schedulerService }) => {

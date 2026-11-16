@@ -9,6 +9,7 @@ export const flagOverrides = pikkuFunc<
   title: 'List a Feature Flag’s Overrides',
   description:
     'Lists every organization and user pinned on or off for one flag, ahead of its rollout.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:read'],
   func: async ({ featureFlags }, { name }) => {

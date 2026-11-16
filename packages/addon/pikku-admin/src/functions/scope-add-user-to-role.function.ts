@@ -7,6 +7,7 @@ export const scopeAddUserToRole = pikkuFunc<
   title: 'Grant Role',
   description:
     'Grants a role to a user. Takes effect on their next request, with no re-login — unless mapSession sets scopes itself, which is authoritative, and then this grant never applies.',
+  tags: ['admin:scopes'],
   expose: true,
   scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { userId, role }, { session }) => {

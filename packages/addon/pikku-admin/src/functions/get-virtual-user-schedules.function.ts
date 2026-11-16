@@ -18,6 +18,7 @@ export const getVirtualUserSchedules = pikkuFunc<void, any[]>({
   title: 'Get Virtual User Schedules',
   description:
     'Returns the recorded virtual user cadences: which virtual users are enabled, how often they run, and when each is next due.',
+  tags: ['admin:virtual-users'],
   expose: true,
   scopes: ['admin:virtualUsers:read'],
   func: async ({ virtualUserScheduleStore }) => {

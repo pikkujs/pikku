@@ -27,6 +27,7 @@ export const getAuditFilters = pikkuFunc<null, GetAuditFiltersOutput>({
   title: 'Get Audit Filters',
   description:
     'Returns the distinct users and event types present in the audit trail, for populating the audit screen filters.',
+  tags: ['admin:audit'],
   expose: true,
   scopes: ['admin:audit:read'],
   func: async ({ audit, auth, logger }) => {

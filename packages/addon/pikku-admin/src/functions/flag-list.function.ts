@@ -13,6 +13,7 @@ export const flagList = pikkuFunc<
   title: 'List Feature Flags',
   description:
     'Lists every declared feature flag with its rollout, whether it is still declared in code, and whether the backing store holds a row for it.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:read'],
   func: async ({ featureFlags }) => {

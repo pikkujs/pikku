@@ -6,6 +6,7 @@ export const scopeDeleteRole = pikkuFunc<
 >({
   title: 'Delete Role',
   description: 'Deletes a role, revoking it from every user who holds it.',
+  tags: ['admin:scopes'],
   expose: true,
   scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { name }) => {

@@ -5,6 +5,7 @@ export const flagSync = pikkuFunc<null, { synced: number }>({
   title: 'Create Rows for Declared Feature Flags',
   description:
     'Registers every flag the running app declares that the store has never heard of. An unbacked flag resolves as available for everyone, so this is how a dark launch is actually held dark.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:manage'],
   func: async ({ featureFlags }) => {

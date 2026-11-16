@@ -7,6 +7,7 @@ export const scopeRemoveUserFromRole = pikkuFunc<
   title: 'Revoke Role',
   description:
     'Revokes a role from a user. Takes effect on their next request, with no re-login — unless mapSession sets scopes itself, which is authoritative, and then this revoke never applies.',
+  tags: ['admin:scopes'],
   expose: true,
   scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { userId, role }) => {

@@ -7,6 +7,7 @@ export const deleteWorkflowRun = pikkuFunc<
   title: 'Delete Workflow Run',
   description:
     'Deletes a workflow run and all its associated steps and history.',
+  tags: ['admin:workflows'],
   expose: true,
   scopes: ['admin:workflows:manage'],
   func: async ({ workflowRunService }, input) => {

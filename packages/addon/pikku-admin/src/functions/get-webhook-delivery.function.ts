@@ -8,6 +8,7 @@ export const getWebhookDelivery = pikkuFunc<
   title: 'Get Webhook Delivery',
   description:
     'Returns a single webhook delivery with its full attempt history, or null when the app wires no webhook service.',
+  tags: ['admin:webhooks'],
   expose: true,
   scopes: ['admin:webhooks:deliveries'],
   func: async ({ webhookService }, { deliveryId }) => {

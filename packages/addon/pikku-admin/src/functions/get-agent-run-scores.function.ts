@@ -9,6 +9,7 @@ export const getAgentRunScores = pikkuFunc<{ runId: string }, any[]>({
   title: 'Get Agent Run Scores',
   description:
     'Returns every grade recorded against one AI agent run, newest first. A run accumulates one row per scorer, and a re-grade appends rather than replaces — so a run may carry the same scorer more than once. A caller without the admin scope may only read the grades of runs its own session owns.',
+  tags: ['admin:agents'],
   expose: true,
   func: async ({ agentRunState }, input, { session }) => {
     const run = await agentRunState.getRun(input.runId)

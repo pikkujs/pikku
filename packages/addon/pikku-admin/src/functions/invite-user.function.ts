@@ -23,6 +23,7 @@ export const inviteUser = pikkuFunc({
   title: 'Invite User',
   description:
     'Invites someone by email: creates the account without a password when there is none, mails a sign-in link, then grants `role` if one is given. Calling it again for the same email sends a new link. Requires the magicLink plugin with sign-up disabled; granting a role also requires admin:scopes:manage.',
+  tags: ['admin:users'],
   expose: true,
   // The same scope as createUser and sendSignInLink, the two halves this
   // function runs; the role grant is checked inside, only when asked for.

@@ -8,6 +8,7 @@ export const triggerSourceForget = pikkuFunc<
   title: 'Forget an Orphaned Trigger Source',
   description:
     'Drops the record of a source whose code is gone without a teardown. Its provider registration has to be removed by hand.',
+  tags: ['admin:triggers'],
   expose: true,
   scopes: ['admin:triggers:manage'],
   func: async ({ triggerSourceStore }, { name }) => {

@@ -6,6 +6,7 @@ export const variableGet = pikkuFunc<
 >({
   title: 'Get Variable',
   description: 'Gets the current value of a variable.',
+  tags: ['admin:variables'],
   expose: true,
   scopes: ['admin:variables:read'],
   func: async ({ variables }, { variableId }) => {

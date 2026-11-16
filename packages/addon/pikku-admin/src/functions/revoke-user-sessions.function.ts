@@ -6,6 +6,7 @@ export const revokeUserSessions = pikkuFunc({
   title: 'Revoke User Sessions',
   description:
     'Signs a user out of every device by deleting all of their sessions. They keep their account and can sign in again.',
+  tags: ['admin:users'],
   expose: true,
   scopes: ['admin:users:sessions'],
   input: UserRef,

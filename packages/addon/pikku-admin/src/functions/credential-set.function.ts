@@ -6,6 +6,7 @@ export const credentialSet = pikkuFunc<
 >({
   title: 'Set Credential',
   description: 'Stores a credential value, optionally scoped to a user.',
+  tags: ['admin:credentials'],
   expose: true,
   scopes: ['admin:credentials:manage'],
   func: async ({ credentialService }, { name, value, userId }) => {

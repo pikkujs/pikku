@@ -6,6 +6,7 @@ export const variableSet = pikkuFunc<
 >({
   title: 'Set Variable',
   description: 'Sets the value of a variable.',
+  tags: ['admin:variables'],
   expose: true,
   scopes: ['admin:variables:write'],
   func: async ({ variables }, { variableId, value }) => {

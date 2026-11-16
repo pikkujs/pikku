@@ -6,6 +6,7 @@ export const setUserPassword = pikkuFunc({
   title: "Set User's Password",
   description:
     'Sets a user password out of band, for when they cannot complete a reset themselves. Enforces the configured length bounds, and gives a user who only ever signed in socially a credential account.',
+  tags: ['admin:users'],
   expose: true,
   scopes: ['admin:users:password'],
   input: SetUserPasswordInput,

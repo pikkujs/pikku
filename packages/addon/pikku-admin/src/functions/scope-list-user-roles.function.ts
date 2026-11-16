@@ -7,6 +7,7 @@ export const scopeListUserRoles = pikkuFunc<
   title: 'List User Roles',
   description:
     'Lists the roles a user holds, the scopes granted to them directly, and the full set those resolve to.',
+  tags: ['admin:scopes'],
   expose: true,
   scopes: ['admin:scopes:read'],
   func: async ({ scopeService }, { userId }) => {

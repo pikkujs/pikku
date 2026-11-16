@@ -4,6 +4,7 @@ import type { Role } from '@pikku/core/services'
 export const scopeListRoles = pikkuFunc<null, { roles: Role[] }>({
   title: 'List Roles',
   description: 'Lists every role and the scopes it grants.',
+  tags: ['admin:scopes'],
   expose: true,
   scopes: ['admin:scopes:read'],
   func: async ({ scopeService }) => {

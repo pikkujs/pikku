@@ -5,6 +5,7 @@ export const flagPrune = pikkuFunc<null, { pruned: string[] }>({
   title: 'Prune Undeclared Feature Flags',
   description:
     'Removes the flags whose declaration has gone from code, and every override on them. Reports what it deleted, which is never assumed from what was stale a moment earlier.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:manage'],
   func: async ({ featureFlags }) => {

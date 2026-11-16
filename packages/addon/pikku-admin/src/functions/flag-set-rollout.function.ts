@@ -8,6 +8,7 @@ export const flagSetRollout = pikkuFunc<
   title: 'Set a Feature Flag Rollout',
   description:
     'Admits a percentage of subjects to a flag, or null to drop the constraint. A subject stays in or out across requests — the bucket is hashed from the flag and the subject, never sampled.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:manage'],
   func: async ({ featureFlags }, { name, percent }, { session }) => {

@@ -11,6 +11,7 @@ export const triggerSourceDisable = pikkuFunc<
   title: 'Turn Off a Trigger Source',
   description:
     'Stops a trigger source receiving at once, then removes it from its provider.',
+  tags: ['admin:triggers'],
   expose: true,
   scopes: ['admin:triggers:manage'],
   func: async (_services, input) => ({

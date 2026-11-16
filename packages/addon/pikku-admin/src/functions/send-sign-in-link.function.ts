@@ -6,6 +6,7 @@ export const sendSignInLink = pikkuFunc({
   title: 'Send Sign-In Link',
   description:
     'Mails a user a magic link they can sign in with. With magicLink({ disableSignUp: true }) a link only admits an email that already has a user row, which makes this the invitation for an account created without a password. Requires the magicLink plugin.',
+  tags: ['admin:users'],
   expose: true,
   // `admin:users:create` rather than a scope of its own: the link is the second
   // half of provisioning an account out of band, and it is strictly weaker than

@@ -7,6 +7,7 @@ export const credentialStatus = pikkuFunc<
   title: 'Credential Status',
   description:
     'Checks which of the given credential names are configured. Optionally scoped to a user.',
+  tags: ['admin:credentials'],
   expose: true,
   scopes: ['admin:credentials:read'],
   func: async ({ credentialService }, { names, userId }) => {

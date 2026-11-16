@@ -18,6 +18,7 @@ export const getAgentThreads = pikkuFunc<
   title: 'Get Agent Threads',
   description:
     "Returns a list of AI agent threads from the database. Accepts optional filters: agentName, resourceId, limit, and offset for pagination. With `addon`, only threads of that add-on's agents. A caller without the admin scope sees only the threads its own session owns.",
+  tags: ['admin:agents'],
   expose: true,
   scopes: ['admin:agents:read'],
   func: async ({ agentRunService }, input, { session }) => {

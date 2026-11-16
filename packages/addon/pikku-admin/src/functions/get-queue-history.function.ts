@@ -18,6 +18,7 @@ export const getQueueHistory = pikkuFunc<
   title: 'Get Queue History',
   description:
     'Returns each queue with its live job counts (waiting, active, delayed, completed, failed) and recent jobs, newest first. Empty when the queue service cannot be inspected.',
+  tags: ['admin:runtime'],
   expose: true,
   scopes: ['admin:queues:read'],
   func: async ({ queueService }, input) => {

@@ -9,6 +9,7 @@ export const triggerSourceList = pikkuFunc<
   title: 'List Trigger Sources',
   description:
     'Every trigger source the store knows, whether it is enabled, and what the last enable or disable reported.',
+  tags: ['admin:triggers'],
   expose: true,
   scopes: ['admin:triggers:read'],
   func: async ({ triggerSourceStore }) => ({
