@@ -9,6 +9,7 @@ export const flagSetOverride = pikkuFunc<
   title: 'Override a Feature Flag',
   description:
     'Forces a flag on or off for one organization or user, ahead of the rollout. This is how "off for everyone except these three" stays one row rather than a fan-out.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:manage'],
   func: async ({ featureFlags }, { name, subject, enabled }, { session }) => {

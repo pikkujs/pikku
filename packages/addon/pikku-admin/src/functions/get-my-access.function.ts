@@ -7,6 +7,7 @@ export const getMyAccess = pikkuFunc<
   title: 'Get My Access',
   description:
     "Returns the caller's own user id and the scopes their session carries, so a UI can decide what to render.",
+  tags: ['admin:scopes'],
   expose: true,
   func: async (_services, _data, { session }) => {
     return {

@@ -11,6 +11,7 @@ export const triggerSourceReconcile = pikkuFunc<
   title: 'Set Up Declared Trigger Sources',
   description:
     'Registers every trigger source the running app declares with its provider, repairing any that drifted. Run after a deployment goes live.',
+  tags: ['admin:triggers'],
   expose: true,
   scopes: ['admin:triggers:manage'],
   func: async (_services, input) => ({

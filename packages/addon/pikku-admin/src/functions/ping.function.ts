@@ -21,6 +21,7 @@ export const ping = pikkuFunc<null, { pong: true }>({
   title: 'Ping',
   description:
     'Health check for the Pikku Admin addon. The console UI probes it to tell "addon not installed" apart from a real failure.',
+  tags: ['admin:runtime'],
   expose: true,
   func: async () => {
     return { pong: true }

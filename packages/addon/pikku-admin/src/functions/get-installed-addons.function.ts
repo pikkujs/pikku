@@ -32,6 +32,7 @@ async function readPackageIcon(
 export const getInstalledAddons = pikkuFunc<null, InstalledAddon[]>({
   title: 'Get Installed Addons',
   description: 'Returns locally wired addons from pikkuState',
+  tags: ['admin:runtime'],
   expose: true,
   scopes: ['admin:addons:read'],
   func: async ({ metaService }) => {

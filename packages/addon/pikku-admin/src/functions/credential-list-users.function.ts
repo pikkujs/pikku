@@ -19,6 +19,7 @@ export const credentialListUsers = pikkuFunc<
   title: 'List Credential Users',
   description:
     'Lists all users together with the credentials each of them has configured.',
+  tags: ['admin:credentials'],
   expose: true,
   scopes: ['admin:credentials:read'],
   func: async ({ credentialService }) => {

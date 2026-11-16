@@ -15,6 +15,7 @@ export const listIncomingWebhookReceipts = pikkuFunc<
   title: 'List Incoming Webhook Receipts',
   description:
     'Lists received webhook events (most recent first), optionally for one source. Empty when the app wires no incoming webhook service or keeps no receipts.',
+  tags: ['admin:webhooks'],
   expose: true,
   scopes: ['admin:webhooks:read'],
   func: async ({ incomingWebhookService }, input) => {

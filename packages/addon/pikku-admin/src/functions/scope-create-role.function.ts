@@ -6,6 +6,7 @@ export const scopeCreateRole = pikkuFunc<
 >({
   title: 'Create Role',
   description: 'Creates a role granting the given scopes.',
+  tags: ['admin:scopes'],
   expose: true,
   scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { name, description, scopes }) => {

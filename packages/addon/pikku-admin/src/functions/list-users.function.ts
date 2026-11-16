@@ -62,6 +62,7 @@ export const listUsers = pikkuFunc({
   title: 'List Users',
   description:
     'Lists and searches the user directory, read through the auth adapter so it works on any database better-auth supports. Newest first, paged with `limit` and `offset`.',
+  tags: ['admin:users'],
   expose: true,
   scopes: ['admin:users:list'],
   input: ListUsersInput,

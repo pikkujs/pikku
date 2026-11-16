@@ -3,6 +3,7 @@ import { pikkuFunc } from '#pikku/addon/function'
 export const secretHas = pikkuFunc<{ secretId: string }, { exists: boolean }>({
   title: 'Has Secret',
   description: 'Checks whether a secret exists without reading its value.',
+  tags: ['admin:secrets'],
   expose: true,
   scopes: ['admin:secrets:read'],
   func: async ({ secretAdminService }, { secretId }) => {

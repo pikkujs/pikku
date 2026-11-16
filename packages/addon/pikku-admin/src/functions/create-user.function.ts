@@ -6,6 +6,7 @@ export const createUser = pikkuFunc({
   title: 'Create User',
   description:
     'Creates a user directly, for provisioning an account out of band rather than through your sign-up flow. Enforces the configured password bounds and rejects a duplicate email.',
+  tags: ['admin:users'],
   expose: true,
   scopes: ['admin:users:create'],
   input: CreateUserInput,

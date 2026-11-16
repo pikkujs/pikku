@@ -47,6 +47,7 @@ export const getAudits = pikkuFunc<GetAuditsInput, GetAuditsOutput>({
   title: 'Get Audits',
   description:
     'Returns a page of the audit trail, newest first, optionally filtered by user, event type, and time range. Reports readable: false when the configured audit sink is write-only, and intact when the sink can verify its own trail.',
+  tags: ['admin:audit'],
   expose: true,
   scopes: ['admin:audit:read'],
   func: async ({ audit, auth, logger }, input) => {

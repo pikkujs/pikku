@@ -17,6 +17,7 @@ export const getScorers = pikkuFunc<void, ScorerListEntry[]>({
   title: 'Get Scorers',
   description:
     'Returns every declared AI scorer with the lane it grades on, the fraction of live runs it samples, and the agents that named it.',
+  tags: ['admin:agents'],
   expose: true,
   func: async () => {
     const scorersMeta = pikkuState(null, 'agent', 'scorersMeta') ?? {}

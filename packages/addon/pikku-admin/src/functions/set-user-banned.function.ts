@@ -6,6 +6,7 @@ export const setUserBanned = pikkuFunc({
   title: 'Ban or Unban User',
   description:
     'Bans a user — revoking their sessions and blocking sign-in — or lifts an existing ban. An expiry lets the ban lapse on its own; without one it holds until it is lifted. Requires better-auth wired with the `pikkuBan()` plugin.',
+  tags: ['admin:users'],
   expose: true,
   scopes: ['admin:users:ban'],
   input: SetUserBannedInput,

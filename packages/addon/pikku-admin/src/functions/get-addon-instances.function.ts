@@ -27,6 +27,7 @@ export const getAddonInstances = pikkuFunc<
   title: 'Get Addon Instances',
   description:
     'Returns the wired instances of an addon package and their per-instance overrides.',
+  tags: ['admin:runtime'],
   expose: true,
   scopes: ['admin:addons:read'],
   func: async (_services, { packageName }) => {

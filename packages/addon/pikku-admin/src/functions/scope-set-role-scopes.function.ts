@@ -7,6 +7,7 @@ export const scopeSetRoleScopes = pikkuFunc<
   title: 'Set Role Scopes',
   description:
     'Replaces the scopes a role grants. Users holding it see the change on their next request — unless mapSession sets scopes itself, which is authoritative, and then the change never reaches them.',
+  tags: ['admin:scopes'],
   expose: true,
   scopes: ['admin:scopes:manage'],
   func: async ({ scopeService }, { name, scopes }) => {

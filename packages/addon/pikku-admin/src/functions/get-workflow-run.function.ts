@@ -7,6 +7,7 @@ export const getWorkflowRun = pikkuFunc<
   title: 'Get Workflow Run',
   description:
     'Given a runId, fetches a single workflow run from workflowRunService and also fetches all its steps, returning the run object merged with a steps array. Returns null if workflowRunService is not configured or the run is not found.',
+  tags: ['admin:workflows'],
   expose: true,
   scopes: ['admin:workflows:read'],
   func: async ({ workflowRunService }, input) => {

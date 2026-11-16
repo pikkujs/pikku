@@ -15,6 +15,7 @@ export const agentCredentialCheck = pikkuFunc<
   title: 'Agent Credential Check',
   description:
     'Checks which OAuth credentials an agent needs and whether the authenticated user has connected them.',
+  tags: ['admin:agents'],
   expose: true,
   scopes: ['admin:credentials:read'],
   func: async ({ credentialService }, { agentName }, { session }) => {

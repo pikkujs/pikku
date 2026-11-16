@@ -8,6 +8,7 @@ export const flagSetEnabled = pikkuFunc<
   title: 'Switch a Feature Flag',
   description:
     'Turns a feature off for everyone, or back on. Takes effect within the source cache TTL, without a deploy.',
+  tags: ['admin:flags'],
   expose: true,
   scopes: ['admin:flags:manage'],
   func: async ({ featureFlags }, { name, enabled, note }, { session }) => {

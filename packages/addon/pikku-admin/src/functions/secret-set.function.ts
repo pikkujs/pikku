@@ -6,6 +6,7 @@ export const secretSet = pikkuFunc<
 >({
   title: 'Set Secret',
   description: 'Sets the value of a secret.',
+  tags: ['admin:secrets'],
   expose: true,
   scopes: ['admin:secrets:write'],
   func: async ({ secretAdminService }, { secretId, value }) => {
