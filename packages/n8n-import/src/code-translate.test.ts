@@ -125,25 +125,44 @@ test('a `.import(` method call is not mistaken for an ES import', () => {
   assert.equal(t.translatable, true)
 })
 
+// Stub standing in for the injected `@pikku/inspector-go` parser.
+const stubHasSyntaxError = (source: string) =>
+  source.includes('<!--') || /\b0\d+\b/.test(source)
+
 test('an octal literal (valid JS, invalid TS) bails to a stub', () => {
   const t = translateCodeNode(
     codeNode({
       jsCode: 'const chatId = 00000000;\nreturn [{ json: { chatId } }]',
-    })
+    }),
+    stubHasSyntaxError
   )
   assert.equal(t.translatable, false)
   assert.equal(!t.translatable && /TypeScript/.test(t.reason), true)
 })
 
-test('an embedded HTML comment (invalid TS syntax) bails to a stub', () => {
-  const t = translateCodeNode(
-    codeNode({
-      jsCode:
-        'const a = 1;\n<!-- Modify the HTML -->\nreturn [{ json: { a } }]',
-    })
-  )
+test('an injected syntax check bails a body it rejects to a stub', () => {
+  const node = codeNode({
+    jsCode: 'const a = 1;\n<!-- Modify the HTML -->\nreturn [{ json: { a } }]',
+  })
+  const t = translateCodeNode(node, stubHasSyntaxError)
   assert.equal(t.translatable, false)
   assert.equal(!t.translatable && /TypeScript/.test(t.reason), true)
+})
+
+test('the syntax check is skipped when none is injected', () => {
+  const t = translateCodeNode(
+    codeNode({ jsCode: 'const a = 1;\n<!-- x -->\nreturn [{ json: { a } }]' })
+  )
+  assert.equal(t.translatable, true)
+})
+
+test('the injected check receives the body wrapped in its emitted function', () => {
+  let seen = ''
+  translateCodeNode(codeNode({ jsCode: 'return items' }), (src) => {
+    seen = src
+    return false
+  })
+  assert.equal(seen, 'async function __n8n(){\nreturn items\n}')
 })
 
 test('a body with only undefined n8n identifiers stays translatable (semantic, not syntactic)', () => {

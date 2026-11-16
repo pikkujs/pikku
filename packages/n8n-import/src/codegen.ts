@@ -12,11 +12,7 @@ import {
   type RefPart,
 } from './expressions.js'
 import { toPascalCase } from './naming.js'
-import {
-  translateCodeNode,
-  codeRefKey,
-  type CodeTranslation,
-} from './code-translate.js'
+import { codeRefKey, type CodeTranslation } from './code-translate.js'
 import { setAssignments } from './set-translate.js'
 import { collectionName } from './rag-map.js'
 import { normalizeBranch } from './branch.js'
@@ -764,7 +760,7 @@ function emitGraphFile(
       if (input.includes('template(')) anyTemplate = true
     }
     if (node.role === 'code') {
-      const tr = translateCodeNode(node)
+      const tr = codeTranslation(node)
       const codeInput = tr.translatable ? emitCodeInput(tr, ctx) : null
       if (codeInput) parts.push(`      input: ${codeInput},`)
     }
@@ -917,6 +913,13 @@ function emitHttpToolFunction(node: ParsedNode, spec: HttpToolSpec): string {
     `})`,
     ``,
   ].join('\n')
+}
+
+/** The translation `parseN8n` recorded on a `code` node. */
+function codeTranslation(node: ParsedNode): CodeTranslation {
+  if (!node.translation)
+    throw new Error(`Code node "${node.name}" was not analysed by parseN8n`)
+  return node.translation
 }
 
 function emitCodeStub(node: ParsedNode): string {
@@ -1646,7 +1649,7 @@ export function generateWorkflowFromN8n(
         emitIntegrationStub(node)
       emittedStubRpc.add(node.rpcName)
     } else if (node.role === 'code') {
-      const translation = translateCodeNode(node)
+      const translation = codeTranslation(node)
       files[`${dir}/functions/${node.rpcName}.function.ts`] =
         translation.translatable
           ? emitCodeFunction(node, translation)

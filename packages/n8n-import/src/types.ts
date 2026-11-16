@@ -1,3 +1,4 @@
+import type { CodeTranslation } from './code-translate.js'
 /**
  * n8n export types (the subset we read) and the normalized intermediate
  * representation the codegen consumes.
@@ -133,6 +134,8 @@ export interface ParsedNode {
    * through the same translation path as a Code node instead of `editFields`.
    */
   computedSetSource?: string
+  /** Set by `parseN8n` on every `code` node: whether it lowers to a real function. */
+  translation?: CodeTranslation
   /**
    * Set on a `retrieval` node (a vector store spliced onto the main flow to feed
    * a chainRetrievalQa agent): the raw n8n expression for the question text,

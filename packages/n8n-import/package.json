@@ -8,7 +8,7 @@
   },
   "description": "n8n workflow importer for Pikku — converts n8n exports into Pikku workflow graphs, agents and stub functions",
   "author": "yasser.fadl@gmail.com",
-  "license": "AGPL-3.0-only",
+  "license": "MIT",
   "module": "dist/index.js",
   "main": "dist/index.js",
   "type": "module",
@@ -30,7 +30,6 @@
   ],
   "dependencies": {
     "@pikku/openapi-parser": "^0.12.26",
-    "@pikku/inspector-go": "^0.12.13",
     "to-json-schema": "^0.2.5"
   },
   "devDependencies": {
