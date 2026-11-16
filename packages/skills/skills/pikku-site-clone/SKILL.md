@@ -19,12 +19,16 @@ route at the end). Screenshot copies and tiles need ImageMagick (`convert`).
 
 ```bash
 SC=<this skill's folder>/scripts/site_capture.mjs
+REF=artifacts/references/<site>        # <site> = the original's host name, e.g. www.the-site.example
 ```
+
+The reference is an artifact of the project: it lives in `artifacts/references/<site>/` at the project root, and every
+command below reads it from there.
 
 ## 1. The page list
 
 ```bash
-node $SC pages https://the-site.example > reference/pages.txt
+mkdir -p $REF && node $SC pages https://the-site.example > $REF/pages.txt
 ```
 
 It reads robots.txt and the sitemap (and the sitemaps it points to), then adds every same-site link it finds by following
@@ -33,10 +37,10 @@ links. That list is your to-do list: a page not on it is a page you will miss.
 ## 2. Capture the original, once, before you build
 
 ```bash
-node $SC capture reference --tiles @reference/pages.txt        # 1440, 390 and 1920 wide by default; slow (a minute or two per page): run it in the background
+node $SC capture $REF --tiles @$REF/pages.txt        # 1440, 390 and 1920 wide by default; slow (a minute or two per page): run it in the background
 ```
 
-For every page this writes into `reference/`: `<page>.html` (as served), `<page>.json` (title, description, menu in order,
+For every page this writes into `$REF/`: `<page>.html` (as served), `<page>.json` (title, description, menu in order,
 headings with computed sizes, text, colours by use, fonts by use, CSS breakpoints), `<page>-<width>.layout.json` (the
 layout, see `references/layout.md`), `<page>-<width>.jpg` (the full-page screenshot) and `small/<page>-<width>-<n>.jpg`
 (the screenshot cut into tiles about 1024 px tall and 768 px wide, 390 for the phone: about 1000 image tokens each or
@@ -61,8 +65,18 @@ text it is on, and which pictures run edge to edge. That is the layout; the tile
 ## 4. Compare after every page
 
 ```bash
+pikku ui pages compare --reference $REF --baseUrl http://localhost:<port> --page <page>   # every width in $REF
+```
+
+It photographs your page at each width the reference has, writes `<page>-<width>.diff.png` (original | changed pixels in
+red | yours) and `report.json` under `<outDir>/pages/compare/<app>/` (or `--out`), and prints the changed-pixel share, both page heights and
+the biggest section differences, worst first. A reference page your app has no route for is reported MISSING (when your
+paths differ from the original's, put `{ "<page>": "/your/path" }` in `$REF/map.json`). Leave out `--page` to compare every page.
+For a quick look at one width while you build, the script still works:
+
+```bash
 node $SC shot mine http://localhost:<port>/<path> --width 1440      # one page, one width: a screenshot and tiles, in seconds
-node $SC compare reference mine --page <page> --width 1440          # section-by-section differences and a match score
+node $SC compare $REF mine --page <page> --width 1440          # section-by-section differences and a match score
 ```
 
 `compare` lines up the original's sections with yours from the top of the page and says, in words, where they differ:
@@ -71,14 +85,14 @@ yours lacks or has extra, and how much taller or shorter your page is. The `matc
 go away. Fix the biggest differences first; they are almost always the layout (columns, picture size and side), not the colours.
 Run `shot` at 390 and 1920 too (`--width 390`) before you move on: the phone layout is its own layout.
 
-Then look at the tiles to see what the numbers mean: open the original's `reference/small/<page>-1440-0.jpg` and yours
+Then look at the tiles to see what the numbers mean: open the original's `$REF/small/<page>-1440-0.jpg` and yours
 `mine/small/<page>-1440-0.jpg` with your file reader. Looking costs tokens: at most 4 tiles per check, only the page you just
 built, and about 40 tile reads in the whole job; use `compare` for everything else.
 
 The site check has two parts. The quick one (no browser) runs on every page of the original's list:
 
 ```bash
-node $SC check http://localhost:<port> reference
+node $SC check http://localhost:<port> $REF
 ```
 
 it reports pages that do not answer 200, pages with almost no text in the server-rendered HTML (blank, or filled in by script), and
@@ -86,8 +100,8 @@ links that lead nowhere. The browser one opens a page at 390, 1440 and 1920 px a
 broken pictures and script errors, and prints only problems:
 
 ```bash
-node $SC check http://localhost:<port> reference --page <page>          # one page, a few seconds
-node $SC check http://localhost:<port> reference --all > check.txt &    # every page, 4 at a time: run it in the background, read check.txt later
+node $SC check http://localhost:<port> $REF --page <page>          # one page, a few seconds
+node $SC check http://localhost:<port> $REF --all > check.txt &    # every page, 4 at a time: run it in the background, read check.txt later
 ```
 
 ## If there is no browser
