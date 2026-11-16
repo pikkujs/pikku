@@ -435,9 +435,9 @@ function stateWithWiredAddons(): InspectorState {
       wireAddonDeclarations: new Map([
         ['slack', { package: '@addon/slack' }],
         [
-          'console',
+          'admin',
           {
-            package: '@pikku/addon-console',
+            package: '@pikku/addon-admin',
             globalSecrets: 'administers secrets an operator names at runtime',
             globalCredentials: 'links credentials an operator names at runtime',
           },
@@ -467,8 +467,8 @@ describe('analyzeDeployment - unscoped addon secrets', () => {
 
     assert.deepEqual(manifest.unscopedSecretAddons, [
       {
-        namespace: 'console',
-        package: '@pikku/addon-console',
+        namespace: 'admin',
+        package: '@pikku/addon-admin',
         reason: 'administers secrets an operator names at runtime',
       },
     ])
@@ -481,8 +481,8 @@ describe('analyzeDeployment - unscoped addon secrets', () => {
 
     assert.deepEqual(manifest.unscopedCredentialAddons, [
       {
-        namespace: 'console',
-        package: '@pikku/addon-console',
+        namespace: 'admin',
+        package: '@pikku/addon-admin',
         reason: 'links credentials an operator names at runtime',
       },
     ])
@@ -534,7 +534,7 @@ describe('analyzeDeployment - unscoped addon secrets', () => {
     })
 
     assert.ok(
-      !manifest.grantedSecretAddons.some((a) => a.namespace === 'console'),
+      !manifest.grantedSecretAddons.some((a) => a.namespace === 'admin'),
       'globalSecrets already reports it, and it grants no named set'
     )
   })
