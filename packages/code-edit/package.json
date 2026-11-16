@@ -8,7 +8,7 @@
   },
   "description": "Surgical edits to developer-owned Pikku source — locates a pikku call with the TypeScript AST, then splices the original text so formatting and comments survive",
   "author": "yasser.fadl@gmail.com",
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "type": "module",
   "module": "dist/index.js",
   "main": "dist/index.js",

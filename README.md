@@ -188,7 +188,9 @@ Upgrading from an earlier 0.12 release? See [docs/MIGRATION.md](docs/MIGRATION.m
 
 ## Contributing
 
-We welcome contributions! The repository is a [bun](https://bun.sh/) workspace (bun 1.4, Node.js 24 or later):
+**We are not accepting code pull requests for now.** The best way to help is a detailed issue: ask your AI assistant to write it with what you saw, what you expected, steps to reproduce, the relevant code or logs, and your suggested fix. We will pick it up and fix it ourselves. A contributor licence agreement will be introduced later.
+
+The repository is a [bun](https://bun.sh/) workspace (bun 1.4, Node.js 24 or later):
 
 ```bash
 bun install
@@ -200,7 +202,6 @@ See our [Contributing Guide](docs/CONTRIBUTING.md) for details on:
 
 - Setting up the development environment
 - Running tests and type checking
-- Submitting pull requests
 - Creating runtime adapters
 
 ## Community
@@ -215,14 +216,16 @@ Thanks to [all contributors](https://github.com/pikkujs/pikku/graphs/contributor
 
 ## License
 
-Pikku uses a dual licensing approach:
+- **MIT**: the framework and everything that ends up in your app: `@pikku/core`, the runtimes, the services, the clients, `@pikku/react`, `@pikku/vite`, the addons (`@pikku/addon-*`) except the ones listed below, `@pikku/skills` and every other package not listed below.
+- **AGPL-3.0-only**: the tools that build your app: the CLI (`@pikku/cli`), the inspectors (`@pikku/inspector`, `@pikku/inspector-go` and the Rust inspector) and Pikku Studio. Packages and addons that depend on the CLI or the inspectors are AGPL too: `@pikku/addon-console`, `@pikku/code-edit`, `@pikku/n8n-import`, `@pikku/addon-changes-cli` and `@pikku/addon-cloud-cli`. Not every addon is MIT: check the package's LICENSE.
 
-- **Core packages** (`@pikku/core`, `@pikku/*` runtimes, services, etc.) - MIT License
-- **Inspector and CLI** (`@pikku/inspector`, `@pikku/cli`) - Business Source License 1.1 (converts to MIT after 4 years)
+Each package ships its own LICENSE file, which governs it. [LICENSE](LICENSE) is the map.
 
-See [LICENSE](LICENSE) for full details. The BSL restriction only prohibits offering commercial visual development tools for Pikku. Free and open source alternatives are welcome!
+**Output of the CLI.** _[LAWYER: draft wording, not yet reviewed]_ The code, types and files the CLI generates into your project are not covered by the AGPL. You can license them however you like.
 
-Contributors: By submitting a pull request, you agree to our [CLA](CLA.md).
+**Other licensing.** If the AGPL-3.0 does not work for you, other licensing is available: contact [CONTACT EMAIL]. See [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md).
+
+**Contributing.** We are not accepting code pull requests for now. Please open a detailed issue instead (see [CONTRIBUTING](docs/CONTRIBUTING.md)). A contributor licence agreement ([draft](CLA.md)) will be introduced later.
 
 ---
 

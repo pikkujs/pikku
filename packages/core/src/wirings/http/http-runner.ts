@@ -24,7 +24,11 @@ import type {
 } from '../../middleware/middleware.types.js'
 import { NotFoundError } from '../../errors/errors.js'
 import { createWeakUID, isSerializable } from '../../utils.js'
-import { resolveHTTPTrace, type TraceContext } from '../../trace.js'
+import {
+  isValidTraceId,
+  resolveHTTPTrace,
+  type TraceContext,
+} from '../../trace.js'
 import {
   getSingletonServices,
   getCreateWireServices,
@@ -334,7 +338,13 @@ const executeRoute = async (
   }
 
   const wire: PikkuRawWire = {
-    traceId: trace.traceId,
+    get traceId() {
+      return trace.traceId
+    },
+    set traceId(value: string | undefined) {
+      // An invalid id is ignored and the current one kept.
+      if (isValidTraceId(value)) trace.traceId = value
+    },
     trace,
     http,
     channel,

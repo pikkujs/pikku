@@ -22,10 +22,17 @@ import {
   resolveDb,
   type ResolvedDb,
 } from './local-db.js'
+import {
+  MigrationDestructiveError,
+  destructiveReasons,
+} from '@pikku/migrator-sql'
+import { probesIn } from '@pikku/migrator-sql'
+import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { readMigrationProvenance } from './migration-provenance.js'
 import {
   loadTableDeclaration,
   recordedDeclaredTables,
+  tableRenames,
   TABLES_FILE,
 } from './table-declaration.js'
 import { databaseContext } from './db-context.js'
@@ -67,14 +74,18 @@ const migrations = (dialect: string) =>
     : []
 
 /** A run, keeping only what the declaration wrote: Pikku's own tables come too. */
-const generate = async (resolved: ResolvedDb) => {
+const generate = async (
+  resolved: ResolvedDb,
+  options: { allowDestructive?: boolean } = {}
+) => {
   const result = await generateMigrations(
     resolved,
     root,
     ['src'],
     logger,
     [],
-    new Set()
+    new Set(),
+    options
   )
   return {
     ...result,
@@ -180,35 +191,6 @@ describe('declared tables on sqlite', () => {
     const { written } = await generate(resolved)
     assert.match(readFileSync(written[0]!.file, 'utf8'), /create index/)
     assert.deepEqual((await generate(resolved)).written, [])
-  })
-
-  test('refuses a dropped column, and says it may be a rename', async () => {
-    declare(ITEM)
-    const resolved = sqliteProject()
-    await generate(resolved)
-    const before = migrations('sqlite')
-
-    declare(`item: { columns: {
-      id: { type: 'key', primaryKey: true },
-      title: { type: 'text' },
-    } }`)
-    const { written, refusals } = await generate(resolved)
-    assert.deepEqual(written, [])
-    assert.equal(refusals.length, 1)
-    assert.match(refusals[0]!, /item\.name is in the migrations/)
-    assert.match(refusals[0]!, /rename to title/)
-    assert.deepEqual(migrations('sqlite'), before)
-  })
-
-  test('refuses a table that left the declaration', async () => {
-    declare(ITEM, `box: { columns: { id: { type: 'key', primaryKey: true } } }`)
-    const resolved = sqliteProject()
-    await generate(resolved)
-
-    declare(ITEM)
-    const { written, refusals } = await generate(resolved)
-    assert.deepEqual(written, [])
-    assert.match(refusals[0]!, /box was declared and no longer is/)
   })
 
   test('accepts the same table once a person has dropped it', async () => {
@@ -548,8 +530,246 @@ describe('declareOnly tables', () => {
   })
 })
 
+const USER_COLUMNS = (extra: string) =>
+  `note: { columns: { id: { type: 'key', primaryKey: true }, title: { type: 'text', required: true }, ${extra} } }`
+
+const sqliteRows = async (resolved: ResolvedDb, query: string) => {
+  if (resolved.dialect !== 'sqlite') throw new Error('expected sqlite')
+  const db = (await loadSqliteRuntime()).open(resolved.dbFile)
+  try {
+    return db.prepare(query).all() as Record<string, unknown>[]
+  } finally {
+    db.close()
+  }
+}
+
+const sqliteRun = async (resolved: ResolvedDb, statement: string) => {
+  if (resolved.dialect !== 'sqlite') throw new Error('expected sqlite')
+  const db = (await loadSqliteRuntime()).open(resolved.dbFile)
+  try {
+    db.prepare(statement).run()
+  } finally {
+    db.close()
+  }
+}
+
+describe('destructive changes on sqlite', () => {
+  const start = async (...tables: string[]) => {
+    declare(...tables)
+    const resolved = sqliteProject()
+    await generate(resolved)
+    await migrateAndCodegen(resolved)
+    return resolved
+  }
+
+  test('a dropped column is listed and nothing is written without approval', async () => {
+    const resolved = await start(USER_COLUMNS(`legacy_flag: { type: 'text' },`))
+    const before = migrations('sqlite')
+
+    declare(USER_COLUMNS(''))
+    const { written, refusals, destructive } = await generate(resolved)
+    assert.deepEqual(written, [])
+    assert.deepEqual(refusals, [])
+    assert.deepEqual(
+      destructive.map((d) => d.what),
+      ['DROP COLUMN note.legacy_flag: its data is lost']
+    )
+    assert.deepEqual(migrations('sqlite'), before)
+    const drift = await computeDeclaredTablesDrift(resolved)
+    assert.equal(drift.pending, true)
+    assert.deepEqual(drift.destructive, [
+      'DROP COLUMN note.legacy_flag: its data is lost',
+    ])
+  })
+
+  test('approved, it is written marked, migrate stops on it, and rows survive', async () => {
+    const resolved = await start(USER_COLUMNS(`legacy_flag: { type: 'text' },`))
+    await sqliteRun(
+      resolved,
+      `INSERT INTO note (id, title, legacy_flag) VALUES ('1', 'keep me', 'x')`
+    )
+
+    declare(USER_COLUMNS(''))
+    const { written, refusals } = await generate(resolved, {
+      allowDestructive: true,
+    })
+    assert.deepEqual(refusals, [])
+    assert.equal(written.length, 1)
+    const sql = readFileSync(written[0]!.file, 'utf8')
+    assert.deepEqual(destructiveReasons(sql), [
+      'DROP COLUMN note.legacy_flag: its data is lost',
+    ])
+
+    await assert.rejects(
+      migrateAndCodegen(resolved),
+      (e: Error) => e instanceof MigrationDestructiveError
+    )
+    await migrateAndCodegen(resolved, { allowDestructive: true })
+    assert.deepEqual(await sqliteRows(resolved, 'SELECT id, title FROM note'), [
+      { id: '1', title: 'keep me' },
+    ])
+    assert.equal((await generate(resolved)).written.length, 0)
+    assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+  })
+
+  test('a column an index names is dropped with the index', async () => {
+    const resolved = await start(
+      USER_COLUMNS(`code: { type: 'text', index: true },`)
+    )
+    declare(USER_COLUMNS(''))
+    const { written, refusals } = await generate(resolved, {
+      allowDestructive: true,
+    })
+    assert.deepEqual(refusals, [])
+    assert.match(
+      readFileSync(written[0]!.file, 'utf8'),
+      /DROP INDEX "[^"]+";\nALTER TABLE "note" DROP COLUMN "code";/
+    )
+    await migrateAndCodegen(resolved, { allowDestructive: true })
+    assert.deepEqual(
+      await sqliteRows(resolved, `PRAGMA table_info('note')`).then((r) =>
+        r.map((c) => c.name)
+      ),
+      ['id', 'title']
+    )
+  })
+
+  test('an index over two dropped columns is dropped once', async () => {
+    const note = (columns: string, rest = '') =>
+      `note: { columns: { id: { type: 'key', primaryKey: true }, ${columns} }${rest} }`
+    const resolved = await start(
+      note(
+        `a: { type: 'text' }, b: { type: 'text' },`,
+        `, indexes: [{ columns: ['a', 'b'] }]`
+      )
+    )
+    declare(note(''))
+    const { written, refusals } = await generate(resolved, {
+      allowDestructive: true,
+    })
+    assert.deepEqual(refusals, [])
+    const sql = readFileSync(written[0]!.file, 'utf8')
+    assert.equal(sql.match(/DROP INDEX/g)?.length, 1)
+    await migrateAndCodegen(resolved, { allowDestructive: true })
+  })
+
+  test('a column sqlite cannot drop is refused even when approved', async () => {
+    const resolved = await start(
+      USER_COLUMNS(`code: { type: 'text', unique: true },`)
+    )
+    const before = migrations('sqlite')
+    declare(USER_COLUMNS(''))
+    const { written, refusals } = await generate(resolved, {
+      allowDestructive: true,
+    })
+    assert.deepEqual(written, [])
+    assert.match(refusals[0]!, /does not apply on top of the existing ones/)
+    assert.deepEqual(migrations('sqlite'), before)
+  })
+
+  test('a table that left the declaration is dropped only when approved', async () => {
+    const resolved = await start(
+      USER_COLUMNS(''),
+      `tag: { columns: { id: { type: 'key', primaryKey: true } } }`
+    )
+    declare(USER_COLUMNS(''))
+    const listed = await generate(resolved)
+    assert.deepEqual(listed.written, [])
+    assert.deepEqual(
+      listed.destructive.map((d) => d.what),
+      ['DROP TABLE tag: its rows are lost']
+    )
+
+    const { written, refusals } = await generate(resolved, {
+      allowDestructive: true,
+    })
+    assert.deepEqual(refusals, [])
+    const sql = readFileSync(written[0]!.file, 'utf8')
+    assert.match(
+      sql,
+      /-- pikku:destructive DROP TABLE tag[^\n]*\nDROP TABLE "tag";/
+    )
+    assert.doesNotMatch(sql, /cascade/i)
+    await assert.rejects(
+      migrateAndCodegen(resolved),
+      (e: Error) => e instanceof MigrationDestructiveError
+    )
+    await migrateAndCodegen(resolved, { allowDestructive: true })
+    assert.deepEqual(
+      await sqliteRows(
+        resolved,
+        `SELECT name FROM sqlite_master WHERE name = 'tag'`
+      ),
+      []
+    )
+  })
+
+  test('a table the declaration never named is never dropped', async () => {
+    handWritten('sqlite', 'CREATE TABLE legacy (id INTEGER PRIMARY KEY);')
+    declare(USER_COLUMNS(''))
+    const resolved = sqliteProject()
+    const result = await generate(resolved, { allowDestructive: true })
+    assert.deepEqual(result.destructive, [])
+    assert.ok(
+      !result.written.some((w) => /DROP/.test(readFileSync(w.file, 'utf8')))
+    )
+  })
+
+  test('a type change and NOT NULL on an existing column stay refused', async () => {
+    const resolved = await start(USER_COLUMNS(`qty: { type: 'integer' },`))
+    declare(USER_COLUMNS(`qty: { type: 'text' },`))
+    const type = await generate(resolved, { allowDestructive: true })
+    assert.deepEqual(type.written, [])
+    assert.match(
+      type.refusals[0]!,
+      /note\.qty differs from the migrations: type is/
+    )
+
+    declare(USER_COLUMNS(`qty: { type: 'integer', required: true },`))
+    const required = await generate(resolved, { allowDestructive: true })
+    assert.deepEqual(required.written, [])
+    assert.match(required.refusals[0]!, /it became NOT NULL/)
+  })
+
+  test('additions and drops go in separate files, additions first', async () => {
+    const resolved = await start(USER_COLUMNS(`legacy_flag: { type: 'text' },`))
+    declare(USER_COLUMNS(`fresh: { type: 'text' },`))
+    const { written } = await generate(resolved, { allowDestructive: true })
+    assert.equal(written.length, 2)
+    const [additive, drop] = written.map((w) => readFileSync(w.file, 'utf8'))
+    assert.deepEqual(destructiveReasons(additive!), [])
+    assert.match(additive!, /ADD COLUMN "fresh"/)
+    assert.equal(destructiveReasons(drop!).length, 1)
+    assert.ok(written[0]!.file < written[1]!.file)
+  })
+})
+
+describe('destructive changes on postgres', () => {
+  test('a table another table points at cannot be dropped, and the refusal says so', async () => {
+    declare(`parent: { columns: { id: { type: 'key', primaryKey: true } } }`)
+    const resolved = postgresProject()
+    await generate(resolved)
+    writeFileSync(
+      join(migrationDir('postgres'), '0099-child.sql'),
+      'CREATE TABLE child (id text PRIMARY KEY, parent_id text REFERENCES parent (id));\n'
+    )
+    declare(ITEM)
+    const before = migrations('postgres')
+    const { written, refusals } = await generate(resolved, {
+      allowDestructive: true,
+    })
+    assert.deepEqual(
+      written.filter((w) => /DROP/.test(readFileSync(w.file, 'utf8'))),
+      []
+    )
+    assert.match(refusals[0]!, /does not apply on top of the existing ones/)
+    assert.match(refusals[0]!, /a person writes that step/)
+    assert.equal(migrations('postgres').length, before.length)
+  })
+})
+
 describe('declared tables on postgres', () => {
-  test('writes, adds a column and refuses a drop', async () => {
+  test('writes, adds a column and drops it once approved', async () => {
     declare(ITEM)
     const resolved = postgresProject()
     const first = await generate(resolved)
@@ -571,7 +791,16 @@ describe('declared tables on postgres', () => {
     declare(ITEM)
     const third = await generate(resolved)
     assert.deepEqual(third.written, [])
-    assert.match(third.refusals[0]!, /item\.qty is in the migrations/)
+    assert.deepEqual(
+      third.destructive.map((d) => d.what),
+      ['DROP COLUMN item.qty: its data is lost']
+    )
+    const approved = await generate(resolved, { allowDestructive: true })
+    assert.deepEqual(approved.refusals, [])
+    assert.match(
+      readFileSync(approved.written[0]!.file, 'utf8'),
+      /-- pikku:destructive DROP COLUMN item\.qty[^\n]*\nALTER TABLE "item" DROP COLUMN "qty";/
+    )
   })
 
   test('adds a table-level constraint with its column', async () => {
@@ -1016,7 +1245,7 @@ describe('a MySQL-protocol server that cannot take a CHECK', () => {
     const plan = await planDeclaredTables(resolved(), [], {
       serverVersion: async () => '11.4.2-MariaDB-ubu2404',
     })
-    assert.deepEqual(plan!.body, '')
+    assert.deepEqual(plan!.bodies, [])
     assert.equal(plan!.refusals.length, 1)
     assert.match(plan!.refusals[0]!, /MariaDB is not supported/)
     assert.match(plan!.refusals[0]!, /item\.qty: min 0/)
@@ -1039,5 +1268,220 @@ describe('a MySQL-protocol server that cannot take a CHECK', () => {
         serverVersion: async () => '11.4.2-MariaDB',
       })
     )
+  })
+})
+
+describe('renamedFrom', () => {
+  const columns = (entries: Record<string, Record<string, unknown>>) => ({
+    columns: entries,
+  })
+
+  test('is read as physical names, one rename per column', () => {
+    assert.deepEqual(
+      tableRenames(
+        'userNote',
+        columns({
+          id: { type: 'key', primaryKey: true },
+          fullName: { type: 'text', renamedFrom: 'name' },
+        })
+      ),
+      {
+        renames: [{ table: 'user_note', from: 'name', to: 'full_name' }],
+        problems: [],
+      }
+    )
+  })
+
+  test('is refused where the old name could still be in play', () => {
+    const problems = (
+      renamedFrom: unknown,
+      extra: Record<string, unknown> = {},
+      table = {}
+    ) =>
+      tableRenames('note', {
+        ...columns({
+          id: { type: 'key', primaryKey: true },
+          title: { type: 'text', renamedFrom, ...extra },
+          other: { type: 'text' },
+        }),
+        ...table,
+      }).problems.join(' | ')
+    assert.match(problems(''), /must be the column's old name/)
+    assert.match(problems('title'), /the column's own name/)
+    assert.match(problems('other'), /still declares a column of that name/)
+    assert.match(
+      problems('old', { index: true }),
+      /part of a key, an index or a reference/
+    )
+    assert.match(problems('old', { unique: true }), /part of a key/)
+    assert.match(
+      problems('old', {}, { indexes: [{ columns: ['title'] }] }),
+      /part of a key/
+    )
+    assert.match(
+      problems('old', {}, { unique: [['id', 'title']] }),
+      /part of a key/
+    )
+    assert.equal(problems('old'), '')
+  })
+
+  test('two columns cannot both come from the same one', () => {
+    assert.match(
+      tableRenames(
+        'note',
+        columns({
+          a: { type: 'text', renamedFrom: 'old' },
+          b: { type: 'text', renamedFrom: 'old' },
+        })
+      ).problems.join(),
+      /renames 'old' to two columns/
+    )
+  })
+
+  test('a declareOnly table cannot carry it', async () => {
+    declare(
+      `note: { declareOnly: true, columns: { id: { type: 'key', primaryKey: true }, b: { type: 'text', renamedFrom: 'a' } } }`
+    )
+    await assert.rejects(
+      loadTableDeclaration(root),
+      /declareOnly, so nothing generated renames/
+    )
+  })
+
+  describe('on sqlite', () => {
+    const start = async (...tables: string[]) => {
+      declare(...tables)
+      const resolved = sqliteProject()
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+      return resolved
+    }
+
+    test('renames the column, keeps the rows, and asks nobody', async () => {
+      const resolved = await start(USER_COLUMNS(`label: { type: 'text' },`))
+      await sqliteRun(
+        resolved,
+        `INSERT INTO note (id, title, label) VALUES ('1', 't', 'keep me')`
+      )
+
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'label' },`))
+      const { written, refusals, destructive } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      assert.deepEqual(destructive, [])
+      assert.equal(written.length, 1)
+      const sql = readFileSync(written[0]!.file, 'utf8')
+      assert.match(
+        sql,
+        /ALTER TABLE "note" RENAME COLUMN "label" TO "caption";/
+      )
+      assert.doesNotMatch(sql, /DROP|pikku:destructive|ADD COLUMN/)
+
+      await migrateAndCodegen(resolved)
+      assert.deepEqual(
+        await sqliteRows(resolved, 'SELECT id, caption FROM note'),
+        [{ id: '1', caption: 'keep me' }]
+      )
+    })
+
+    test('once applied, it says to delete renamedFrom and writes nothing more', async () => {
+      const resolved = await start(USER_COLUMNS(`label: { type: 'text' },`))
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'label' },`))
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+
+      const again = await generate(resolved)
+      assert.deepEqual(again.written, [])
+      assert.deepEqual(again.refusals, [])
+      assert.deepEqual(again.destructive, [])
+      assert.match(
+        again.notes.join(),
+        /already renamed from 'label'.*delete renamedFrom/
+      )
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+
+    test('a rename and an addition go in separate files, the rename first', async () => {
+      const resolved = await start(USER_COLUMNS(`label: { type: 'text' },`))
+      declare(
+        USER_COLUMNS(
+          `caption: { type: 'text', renamedFrom: 'label' }, extra: { type: 'text' },`
+        )
+      )
+      const { written } = await generate(resolved)
+      const files = written.map((w) => readFileSync(w.file, 'utf8'))
+      assert.equal(files.length, 2)
+      assert.match(files[0]!, /RENAME COLUMN/)
+      assert.match(files[1]!, /ADD COLUMN "extra"/)
+      await migrateAndCodegen(resolved)
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+
+    test('a column that is in both names is refused', async () => {
+      const resolved = await start(
+        USER_COLUMNS(`label: { type: 'text' }, caption: { type: 'text' },`)
+      )
+      const before = migrations('sqlite')
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'label' },`))
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(written, [])
+      assert.match(refusals.join(), /have both columns/)
+      assert.deepEqual(migrations('sqlite'), before)
+    })
+
+    test('a name that matches nothing is a new column, and says so', async () => {
+      const resolved = await start(USER_COLUMNS(''))
+      declare(USER_COLUMNS(`caption: { type: 'text', renamedFrom: 'typo' },`))
+      const { written, notes } = await generate(resolved)
+      assert.match(
+        readFileSync(written[0]!.file, 'utf8'),
+        /ADD COLUMN "caption"/
+      )
+      assert.match(
+        notes.join(),
+        /no column of that name exists, so it is a new column/
+      )
+    })
+  })
+
+  describe('on postgres', () => {
+    const STATUS = (name: string, extra = '') =>
+      item(`${name}: { type: 'text', enum: ['draft', 'sent'], ${extra} },`)
+
+    test('the old checks leave in the rename file, the new ones come in the next', async () => {
+      declare(STATUS('status'))
+      const resolved = postgresProject()
+      await generate(resolved)
+
+      declare(STATUS('state', `renamedFrom: 'status'`))
+      const { written, refusals, destructive } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      assert.deepEqual(destructive, [])
+      const files = written.map((w) => readFileSync(w.file, 'utf8'))
+      assert.equal(files.length, 2)
+      assert.match(
+        files[0]!,
+        /DROP CONSTRAINT[^\n]*item_status_\w+_enum_check[^]*RENAME COLUMN "status" TO "state"/i
+      )
+      assert.doesNotMatch(files[0]!, /ADD CONSTRAINT/i)
+      assert.match(files[1]!, /ADD CONSTRAINT "item_state_\w+_enum_check"/i)
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+
+    test('the rename file asks the rows about the new bound, under the old name', async () => {
+      declare(STATUS('status'))
+      const resolved = postgresProject()
+      await generate(resolved)
+
+      declare(STATUS('state', `renamedFrom: 'status'`))
+      const { written } = await generate(resolved)
+      const [rename, additions] = written.map((w) =>
+        readFileSync(w.file, 'utf8')
+      )
+      const probe = probesIn(rename!)
+      assert.equal(probe.length, 1)
+      assert.match(probe[0]!.sql, /"status"/)
+      assert.doesNotMatch(probe[0]!.sql, /"state"/)
+      assert.equal(probesIn(additions!).length, 1)
+    })
   })
 })

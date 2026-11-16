@@ -1,4 +1,9 @@
 import { outgoingTraceparent } from '../../trace.js'
+import {
+  inAgentRunSpan,
+  inModelCallSpan,
+  recordAgentRunId,
+} from './agent-span.js'
 import type {
   AgentInput,
   AgentOutput,
@@ -110,7 +115,18 @@ function extractStructuredAssistantOutput(object: unknown): {
  * for a scope or permission failure or a thread owned by someone else; AIProviderNotConfiguredError
  * when no `agentRunner` service is set.
  */
-export async function runAgent(
+export function runAgent(
+  agentName: string,
+  input: AgentInput,
+  params: RunAgentParams,
+  agentSessionMap?: Map<string, string>
+): Promise<AgentOutput> {
+  return inAgentRunSpan({ agentName }, params, (scoped) =>
+    runAgentInSpan(agentName, input, scoped, agentSessionMap)
+  )
+}
+
+async function runAgentInSpan(
   agentName: string,
   input: AgentInput,
   params: RunAgentParams,
@@ -162,6 +178,7 @@ export async function runAgent(
       createdAt: new Date(),
       updatedAt: new Date(),
     })
+    recordAgentRunId(params, runId)
     return {
       runId,
       text: '',
@@ -211,6 +228,7 @@ export async function runAgent(
     createdAt: new Date(),
     updatedAt: new Date(),
   })
+  recordAgentRunId(params, runId)
 
   // knowledge: decisions/internals/a-non-streaming-agent-run-registers-with-airunstate-too.md
   const interruptHandle = registerInterruptibleRun(runId)
@@ -238,7 +256,9 @@ export async function runAgent(
         if (stopped) break
       }
 
-      const stepResult = await agentRunner.run(runnerParams)
+      const stepResult = await inModelCallSpan(params, runnerParams.model, () =>
+        agentRunner.run(runnerParams)
+      )
       lastStepResult = stepResult
 
       totalUsage.inputTokens += stepResult.usage.inputTokens
@@ -464,169 +484,175 @@ export async function resumeAgentSync(
 
   await assertAgentAuthorized(agent, params, packageName)
 
-  const { storage } = resolveMemoryServices(agent, singletonServices)
-  const memoryConfig = agent.memory
-  const agentRunner = await resolveAgentRunner(singletonServices, params)
-
-  const approvedIds = new Set(
-    approvals.filter((a) => a.approved).map((a) => a.toolCallId)
-  )
-  const rejectedIds = new Set(
-    approvals.filter((a) => !a.approved).map((a) => a.toolCallId)
-  )
-
-  const savedPendingApprovals = [...(run.pendingApprovals ?? [])]
-
-  const pendingIds = new Set(savedPendingApprovals.map((p) => p.toolCallId))
-  const foreignIds = approvals
-    .map((a) => a.toolCallId)
-    .filter((toolCallId) => !pendingIds.has(toolCallId))
-  if (foreignIds.length > 0) {
-    throw new Error(
-      `No pending approval for toolCallId ${foreignIds.join(', ')} on run ${runId}`
-    )
-  }
-
-  const answeredIds = new Set(approvals.map((a) => a.toolCallId))
-  await refuseExpiredApprovals(
-    agentRunState,
-    runId,
-    savedPendingApprovals.filter((p) => answeredIds.has(p.toolCallId))
-  )
-
-  // The read above is not a claim — concurrent resumes all see the same pending
-  // list. `resolveApproval` is the claim, and only the caller it returns true
-  // for may run the tool.
-  const claimedIds = new Set<string>()
-  for (const { toolCallId, approved } of approvals) {
-    const claimed = await agentRunState.resolveApproval({
-      runId,
-      toolCallId,
-      status: approved ? 'approved' : 'denied',
-    })
-    if (claimed) {
-      claimedIds.add(toolCallId)
-    }
-  }
-
-  if (approvals.length > 0 && claimedIds.size === 0) {
-    throw new Error(
-      `Approvals for run ${runId} were already resolved by another caller`
-    )
-  }
-
-  const { tools } = await buildToolDefs(
+  return inAgentRunSpan(
+    { agentName: run.agentName, runId },
     params,
-    new Map<string, string>(),
-    run.resourceId,
-    resolvedName,
-    packageName,
-    undefined,
-    agent.agentMiddleware ?? []
-  )
+    async (params) => {
+      const { storage } = resolveMemoryServices(agent, singletonServices)
+      const memoryConfig = agent.memory
+      const agentRunner = await resolveAgentRunner(singletonServices, params)
 
-  const toolCallMessages: {
-    toolCallId: string
-    toolName: string
-    args: any
-    result: string
-    error?: string
-  }[] = []
+      const approvedIds = new Set(
+        approvals.filter((a) => a.approved).map((a) => a.toolCallId)
+      )
+      const rejectedIds = new Set(
+        approvals.filter((a) => !a.approved).map((a) => a.toolCallId)
+      )
 
-  for (const pending of savedPendingApprovals) {
-    if (pending.type !== 'tool-call') continue
+      const savedPendingApprovals = [...(run.pendingApprovals ?? [])]
 
-    const toolCallId = pending.toolCallId
-    if (!claimedIds.has(toolCallId)) continue
-
-    let resultStr: string
-    let toolError: string | undefined
-
-    if (rejectedIds.has(toolCallId)) {
-      resultStr = deniedToolResult()
-    } else if (approvedIds.has(toolCallId)) {
-      const matchingTool = tools.find((t) => t.name === pending.toolName)
-      if (!matchingTool) {
+      const pendingIds = new Set(savedPendingApprovals.map((p) => p.toolCallId))
+      const foreignIds = approvals
+        .map((a) => a.toolCallId)
+        .filter((toolCallId) => !pendingIds.has(toolCallId))
+      if (foreignIds.length > 0) {
         throw new Error(
-          `Tool "${pending.toolName}" not found in agent definition`
+          `No pending approval for toolCallId ${foreignIds.join(', ')} on run ${runId}`
         )
       }
-      const rawArgs =
-        typeof pending.args === 'string'
-          ? JSON.parse(pending.args)
-          : pending.args
-      const toolArgs = stripNulls(rawArgs) ?? {}
-      try {
-        const toolResult = await matchingTool.execute(toolArgs)
-        resultStr =
-          typeof toolResult === 'string'
-            ? toolResult
-            : JSON.stringify(toolResult)
-      } catch (err: any) {
-        if (err?.payload?.error === 'missing_credential') {
-          resultStr = JSON.stringify(err.payload)
-        } else {
-          toolError = err instanceof Error ? err.message : String(err)
-          resultStr = `Error: ${toolError}`
+
+      const answeredIds = new Set(approvals.map((a) => a.toolCallId))
+      await refuseExpiredApprovals(
+        agentRunState,
+        runId,
+        savedPendingApprovals.filter((p) => answeredIds.has(p.toolCallId))
+      )
+
+      // The read above is not a claim — concurrent resumes all see the same pending
+      // list. `resolveApproval` is the claim, and only the caller it returns true
+      // for may run the tool.
+      const claimedIds = new Set<string>()
+      for (const { toolCallId, approved } of approvals) {
+        const claimed = await agentRunState.resolveApproval({
+          runId,
+          toolCallId,
+          status: approved ? 'approved' : 'denied',
+        })
+        if (claimed) {
+          claimedIds.add(toolCallId)
         }
       }
-    } else {
-      continue
-    }
 
-    toolCallMessages.push({
-      toolCallId,
-      toolName: pending.toolName,
-      args:
-        typeof pending.args === 'string'
-          ? JSON.parse(pending.args)
-          : pending.args,
-      result: resultStr,
-      ...(toolError ? { error: toolError } : {}),
-    })
-  }
+      if (approvals.length > 0 && claimedIds.size === 0) {
+        throw new Error(
+          `Approvals for run ${runId} were already resolved by another caller`
+        )
+      }
 
-  if (storage && toolCallMessages.length > 0) {
-    await storage.saveMessages(run.threadId, [
-      {
-        id: randomUUID(),
-        role: 'tool',
-        toolResults: toolCallMessages.map((tc) => ({
-          id: tc.toolCallId,
-          name: tc.toolName,
-          result: tc.result,
-        })),
-        createdAt: new Date(),
-      },
-    ])
-  }
+      const { tools } = await buildToolDefs(
+        params,
+        new Map<string, string>(),
+        run.resourceId,
+        resolvedName,
+        packageName,
+        undefined,
+        agent.agentMiddleware ?? []
+      )
 
-  await agentRunState.updateRun(runId, { status: 'running' })
+      const toolCallMessages: {
+        toolCallId: string
+        toolName: string
+        args: any
+        result: string
+        error?: string
+      }[] = []
 
-  return continueAfterToolResultSync(
-    run,
-    agent,
-    packageName,
-    resolvedName,
-    storage,
-    memoryConfig,
-    agentRunner,
-    params,
-    agentRunState,
-    // The approved tools were executed here, before the model was re-entered,
-    // so they belong to the run's step record — otherwise a tool that failed
-    // after approval leaves no trace on the run at all.
-    toolCallMessages.length > 0
-      ? {
-          usage: { inputTokens: 0, outputTokens: 0 },
-          toolCalls: toolCallMessages.map((tc) => ({
-            name: tc.toolName,
-            args: (tc.args ?? {}) as Record<string, unknown>,
-            result: tc.result,
-            ...(tc.error ? { error: tc.error } : {}),
-          })),
+      for (const pending of savedPendingApprovals) {
+        if (pending.type !== 'tool-call') continue
+
+        const toolCallId = pending.toolCallId
+        if (!claimedIds.has(toolCallId)) continue
+
+        let resultStr: string
+        let toolError: string | undefined
+
+        if (rejectedIds.has(toolCallId)) {
+          resultStr = deniedToolResult()
+        } else if (approvedIds.has(toolCallId)) {
+          const matchingTool = tools.find((t) => t.name === pending.toolName)
+          if (!matchingTool) {
+            throw new Error(
+              `Tool "${pending.toolName}" not found in agent definition`
+            )
+          }
+          const rawArgs =
+            typeof pending.args === 'string'
+              ? JSON.parse(pending.args)
+              : pending.args
+          const toolArgs = stripNulls(rawArgs) ?? {}
+          try {
+            const toolResult = await matchingTool.execute(toolArgs)
+            resultStr =
+              typeof toolResult === 'string'
+                ? toolResult
+                : JSON.stringify(toolResult)
+          } catch (err: any) {
+            if (err?.payload?.error === 'missing_credential') {
+              resultStr = JSON.stringify(err.payload)
+            } else {
+              toolError = err instanceof Error ? err.message : String(err)
+              resultStr = `Error: ${toolError}`
+            }
+          }
+        } else {
+          continue
         }
-      : undefined
+
+        toolCallMessages.push({
+          toolCallId,
+          toolName: pending.toolName,
+          args:
+            typeof pending.args === 'string'
+              ? JSON.parse(pending.args)
+              : pending.args,
+          result: resultStr,
+          ...(toolError ? { error: toolError } : {}),
+        })
+      }
+
+      if (storage && toolCallMessages.length > 0) {
+        await storage.saveMessages(run.threadId, [
+          {
+            id: randomUUID(),
+            role: 'tool',
+            toolResults: toolCallMessages.map((tc) => ({
+              id: tc.toolCallId,
+              name: tc.toolName,
+              result: tc.result,
+            })),
+            createdAt: new Date(),
+          },
+        ])
+      }
+
+      await agentRunState.updateRun(runId, { status: 'running' })
+
+      return continueAfterToolResultSync(
+        run,
+        agent,
+        packageName,
+        resolvedName,
+        storage,
+        memoryConfig,
+        agentRunner,
+        params,
+        agentRunState,
+        // The approved tools were executed here, before the model was re-entered,
+        // so they belong to the run's step record — otherwise a tool that failed
+        // after approval leaves no trace on the run at all.
+        toolCallMessages.length > 0
+          ? {
+              usage: { inputTokens: 0, outputTokens: 0 },
+              toolCalls: toolCallMessages.map((tc) => ({
+                name: tc.toolName,
+                args: (tc.args ?? {}) as Record<string, unknown>,
+                result: tc.result,
+                ...(tc.error ? { error: tc.error } : {}),
+              })),
+            }
+          : undefined
+      )
+    }
   )
 }
 
@@ -737,7 +763,9 @@ async function continueAfterToolResultSync(
     let lastStepResult: AgentStepResult | null = null
 
     for (let step = 0; step < maxSteps; step++) {
-      const stepResult = await agentRunner.run(runnerParams)
+      const stepResult = await inModelCallSpan(params, runnerParams.model, () =>
+        agentRunner.run(runnerParams)
+      )
       lastStepResult = stepResult
 
       totalUsage.inputTokens += stepResult.usage.inputTokens

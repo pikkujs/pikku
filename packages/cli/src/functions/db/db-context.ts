@@ -69,7 +69,7 @@ export async function databaseContext(config: {
     workflow: [
       `Declare or change tables, and their annotations, in ${TABLES_FILE} with defineTables from @pikku/core/db.`,
       'A table marked `declareOnly: true` is one something else creates: it is typed and annotated from the declaration, and generate writes no SQL for it.',
-      '`pikku db generate` writes the SQL. It only adds tables, columns and indexes, and refuses anything else with the reason.',
+      '`pikku db generate` writes the SQL. It adds tables, columns and indexes. Dropping a column or a table is written only with `--allowDestructive`, and each such statement is marked so `db migrate` asks again. Changing the type or constraints of a column that exists is refused with the reason.',
       '`pikku db migrate` applies it and regenerates the types.',
     ],
   }

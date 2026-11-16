@@ -14,9 +14,7 @@ const PIKKU_SERVER = 'http://localhost:4002'
 /** Paths that belong to pikku rather than to the client-side router. */
 const API_PATHS = ['/todos', '/analytics', '/_pikku']
 
-const generated = fileURLToPath(
-  new URL('../functions/.pikku/', import.meta.url)
-)
+const generated = fileURLToPath(new URL('.pikku/', import.meta.url))
 
 /** The exposed SDK of the `app` backend, imported as `@sdk/app/<file>`. */
 const sdk = fileURLToPath(new URL('.pikku/sdk/app/exposed/', import.meta.url))

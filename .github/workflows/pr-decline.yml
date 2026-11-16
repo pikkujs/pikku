@@ -1,0 +1,102 @@
+name: PR decline
+
+# Replies once to pull requests from outside contributors: we are not accepting
+# code pull requests for now (the contributor licence agreement is not in force
+# yet), and an issue is the way to help. It replaces CLA enforcement until the
+# CLA is ready; see .github/workflows/cla.yml (disabled).
+#
+# SAFETY of `pull_request_target`: it is used so that the job gets a token that
+# can comment on pull requests from forks. That is safe only because this
+# workflow NEVER checks out, builds, installs or runs anything from the pull
+# request: it has no `actions/checkout` step and runs one action pinned to a
+# commit SHA. The only PR data it reads is the author login, the author
+# association and the PR number from the event payload, and it never puts PR
+# text (title, body, branch name) into a script or a shell. Do not add a
+# checkout, a `run:` step, or any step that uses PR-controlled values.
+#
+# Who is skipped: the owner and bots below, plus anyone GitHub reports as an
+# OWNER, MEMBER or COLLABORATOR of the repository, or who has write access.
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  decline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reply to outside pull requests
+        # actions/github-script v8.0.0
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+        with:
+          script: |
+            const ALLOWLIST = [
+              'yasserf',
+              'dependabot[bot]',
+              'github-actions[bot]',
+              'changeset-bot[bot]',
+              'claude',
+              'Claude',
+            ].map((l) => l.toLowerCase())
+            const TRUSTED_ASSOCIATIONS = ['OWNER', 'MEMBER', 'COLLABORATOR']
+            const MARKER = '<!-- pr-decline-bot -->'
+            const LABEL = 'not-accepting-prs'
+            const MESSAGE = [
+              MARKER,
+              'Thanks for wanting to help! We are not accepting pull requests right now, while we finish our contributor agreement, and we do not have the capacity to review outside code.',
+              '',
+              'What helps most is an issue. Ask your AI assistant to write it with as much detail as possible: what you saw, what you expected, steps to reproduce, the relevant code or logs, and your suggested fix. We will pick it up and fix it ourselves.',
+            ].join('\n')
+
+            const pr = context.payload.pull_request
+            const login = pr.user.login
+            const { owner, repo } = context.repo
+            const issue_number = pr.number
+
+            if (ALLOWLIST.includes(login.toLowerCase())) {
+              core.info(`${login} is on the allowlist; nothing to do.`)
+              return
+            }
+            if (TRUSTED_ASSOCIATIONS.includes(pr.author_association)) {
+              core.info(`${login} is ${pr.author_association}; nothing to do.`)
+              return
+            }
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({ owner, repo, username: login })
+              if (['admin', 'maintain', 'write'].includes(data.permission)) {
+                core.info(`${login} has ${data.permission} access; nothing to do.`)
+                return
+              }
+            } catch (err) {
+              core.info(`Could not read ${login}'s permission (${err.status}); treating as outside.`)
+            }
+
+            // One comment per pull request, even across reopens.
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 })
+            if (comments.some((c) => c.body && c.body.includes(MARKER))) {
+              core.info('Already replied; not commenting again.')
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: MESSAGE })
+            }
+
+            try {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name: LABEL })
+              } catch (err) {
+                if (err.status !== 404) throw err
+                await github.rest.issues.createLabel({
+                  owner,
+                  repo,
+                  name: LABEL,
+                  color: 'd4c5f9',
+                  description: 'Outside pull request: we are not accepting pull requests for now',
+                })
+              }
+              await github.rest.issues.addLabels({ owner, repo, issue_number, labels: [LABEL] })
+            } catch (err) {
+              core.warning(`Could not apply the ${LABEL} label (${err.status}); skipping it.`)
+            }

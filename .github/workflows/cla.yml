@@ -1,0 +1,64 @@
+# ============================================================================
+# DISABLED. The CLA is a draft and is NOT in force (see CLA.md). While it is
+# drafted we do not accept outside pull requests at all: .github/workflows/
+# pr-decline.yml replies to them instead. This workflow is kept ready: the
+# `cla-signatures` branch already holds an empty signatures/cla.json. To turn it
+# on, remove `if: false` below, fill in the CLA placeholders after legal review,
+# and remove or narrow pr-decline.yml.
+# ============================================================================
+name: CLA Assistant
+
+# Contributor License Agreement check. The text is CLA.md. Signatures are stored in
+# signatures/cla.json on the dedicated `cla-signatures` branch of THIS repository
+# (no third-party service). The action needs no secret beyond GITHUB_TOKEN while the
+# store is in the same repo; PERSONAL_ACCESS_TOKEN is only for a remote repository.
+#
+# SAFETY of `pull_request_target`: it is used because a pull request from a fork
+# gets a read-only GITHUB_TOKEN under `pull_request`, and this job must write the
+# signature file and the status. That is safe only because this workflow NEVER
+# checks out, builds, installs or runs anything from the pull request: it has no
+# `actions/checkout` step and runs one action pinned to a commit SHA. The only PR
+# data it reads is commit author names and ids through the GitHub API, and the
+# comment text through the event payload. Do not add a checkout, a `run:` step, or
+# any step that uses PR-controlled values (title, branch name, body) in a script.
+#
+# Signature comments are read from `issue_comment`, which always runs the workflow
+# from the default branch, so a pull request cannot change what is run.
+#
+# Commits are matched by their author (falling back to the committer), not by
+# `Co-Authored-By:` trailers, so Claude/Anthropic co-author trailers never count as
+# contributors. The action itself skips the github-actions bot account.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+# Least privilege, as listed in the action's README. `contents: write` is needed to
+# commit the signatures file to the cla-signatures branch.
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  CLAAssistant:
+    # Disabled: see the note at the top of this file.
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - name: CLA Assistant
+        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
+        # contributor-assistant/github-action v2.6.1
+        uses: contributor-assistant/github-action@ca4a40a7d1004f18d9960b404b97e5f30a505a08
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-document: https://github.com/pikkujs/pikku/blob/main/CLA.md
+          path-to-signatures: signatures/cla.json
+          # Must exist and must NOT be protected: the action pushes to it directly.
+          branch: cla-signatures
+          # Exact names; the action's `bot*` wildcard would not match `dependabot[bot]`.
+          allowlist: yasserf,dependabot[bot],github-actions[bot],changeset-bot[bot],claude,Claude

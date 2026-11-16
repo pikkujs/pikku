@@ -8,6 +8,7 @@ Version numbers in brackets are the release of the named package that shipped th
 
 ## Contents
 
+- [Licence change: CLI and inspectors are AGPL-3.0-only](#licence-change-cli-and-inspectors-are-agpl-30-only)
 - [0.13.0 changes](#0130-changes)
 - [How to upgrade](#how-to-upgrade)
 - [`@pikku/core`](#pikkucore)
@@ -17,6 +18,17 @@ Version numbers in brackets are the release of the named package that shipped th
 - [`@pikku/better-auth`](#pikkubetter-auth)
 - [Frontend and removed packages](#frontend-and-removed-packages)
 - [Database changes](#database-changes)
+
+## Licence change: CLI and inspectors are AGPL-3.0-only
+
+`@pikku/cli`, `@pikku/inspector` and `@pikku/inspector-go` (and the unpublished Rust inspector) move from the Business Source License 1.1 to **AGPL-3.0-only**. The packages that depend on or import them move from MIT to **AGPL-3.0-only** as well: `@pikku/addon-console`, `@pikku/code-edit`, and the unpublished `@pikku/addon-changes-cli` and `@pikku/addon-cloud-cli`. Every other package (`@pikku/core`, the runtimes, services, clients, the other addons and skills) stays **MIT**.
+
+- **What changes for you:** usually nothing. You run the CLI to build your app; your app depends on the MIT packages. The AGPL matters if you modify the CLI or the inspectors and distribute them, or let others use a modified version over a network: then you must share your changes under the AGPL. The old BUSL ban on commercial visual Pikku tools is gone.
+- **Generated code:** _[LAWYER: draft, not yet reviewed]_ the code, types and files the CLI generates into your project are not meant to be covered by the AGPL. See [LICENSE](../LICENSE).
+- **Older versions:** releases published before this change keep the BUSL-1.1 terms they were published under, including `@pikku/console`.
+- **If the AGPL does not work for you:** other licensing is available. See [LICENSE-COMMERCIAL.md](../LICENSE-COMMERCIAL.md).
+- **The console addon:** `@pikku/addon-console` (and `@pikku/code-edit`, which it uses) is now AGPL-3.0-only. With `scaffold.console` on, it is wired into your app by codegen. `pikku ci` removes it from deployed bundles; if you build and ship your app another way with `scaffold.console` on, you ship AGPL code. Turn `scaffold.console` off for production builds.
+- **How to find affected code:** if you vendor or fork `packages/cli`, `packages/inspector`, `packages/inspector-go`, `packages/inspector-rust` or one of the AGPL packages above, those copies are now AGPL-3.0-only. Run `bun run check:licenses` in a fork: it fails when an MIT package depends on or imports an AGPL one.
 
 ## 0.13.0 changes
 
@@ -56,6 +68,12 @@ Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, befor
 **Behaviour change:** with no `PIKKU_OTLP_ENDPOINT` the tracer is now real, not inert. The endpoint only decides whether the HTTP exporter is registered. `PIKKU_TELEMETRY=0` still turns it all off. Callers that passed `{}` as the environment to `createRuntimeTelemetry` and want it off must pass `{ PIKKU_TELEMETRY: '0' }`.
 
 **Find the code:** search for `analyticsService`, `AnalyticsSink` and `accepts`.
+
+### `pikku db generate` writes drops and renames
+
+A column or a table that left `db/tables.ts` used to be refused. It is now written as `DROP COLUMN` / `DROP TABLE` behind a `-- pikku:destructive` line, once a person approves: `generate` asks on a terminal, and elsewhere refuses until `pikku db generate --allowDestructive` is given. `pikku db migrate` stops on the marked file until it is given `--allowDestructive` too. Only a table a previous `generate` recorded is dropped. A drop the engine will not do (a column a `UNIQUE` key holds on sqlite, a table another table references) is still refused, with the engine's reason; there is no `CASCADE`.
+
+To keep a column's rows through a rename, declare the column under the new name with `renamedFrom: 'old_name'`; `generate` writes `RENAME COLUMN` and needs no approval. Delete `renamedFrom` once the migration is applied. A table rename is not supported: it is a drop and a create. Changing an existing column's type or making it `NOT NULL` is still refused.
 
 ### Better Auth's tables and the runtime's secret columns come annotated
 
@@ -405,6 +423,37 @@ To fix it, use the function or mark it `disabled: true | 'reason'`, which leaves
 To find the affected functions, run `pikku all` and look for `PKU563`.
 
 A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now disables it, the same way `disabled: true` already did.
+
+### `pikku validate --strict` fails on a project in the wrong layout
+
+`pikku validate` now checks every app project's layout. Each finding is a warning, and an error under `--strict`:
+
+| Finding                        | Reported when                                                                                                                                                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout-config-not-at-root`    | `pikku.config.json` is inside a package (a directory with its own `package.json`) below a workspace root, and that workspace holds no other project                                                                  |
+| `layout-config-duplicate`      | another file named exactly `pikku.config.json` is below the config (addons, `node_modules` and dot-directories such as `.pikku` are skipped)                                                                         |
+| `layout-db-in-package`         | a package listed in `srcDirectories` has a `db/` and there is none at `<rootDir>/db`                                                                                                                                 |
+| `layout-emails-in-package`     | a package listed in `srcDirectories` has an `emails/` and there is none at `emailTemplatesDir` (default `emails/` beside the config), or `emailTemplatesDir` points into the package                                 |
+| `layout-pikku-import-not-root` | a `#pikku/*` entry in the `paths` of the tsconfig that governs a package (its own or the nearest one above it) or in its `package.json` `imports` points at a `.pikku` other than the one beside `pikku.config.json` |
+
+The layout they enforce: `pikku.config.json`, `db/` and `emails/` at the project top level, generated output in `<config dir>/.pikku`, and the code in the packages `srcDirectories` lists, whatever those packages are called. To fix a project that moved them into its functions package, move them back to the top level, rewrite the config's paths relative to it, and point `#pikku/*` at `<top level>/.pikku` (for example `"#pikku/*": ["../../.pikku/*/index.ts"]` in `packages/functions/tsconfig.json`).
+
+To find the affected projects, run `pikku validate` and look for findings whose id starts with `layout-`.
+
+#### A functions package below the config maps `#pikku/*` with tsconfig paths
+
+With `pikku.config.json` at the workspace root and the code in `packages/functions`, the generated output is `<root>/.pikku`, and `package.json` `imports` cannot reach it: Node refuses an `imports` target outside the package (`../../.pikku/*`). Map it with `compilerOptions.paths` in the tsconfig that governs the package instead (the root `tsconfig.json` when the package has none of its own). tsc, bun, tsx and the esbuild deploy bundler all resolve it:
+
+```json
+"paths": {
+  "#pikku/*.js": ["./.pikku/*.ts"],
+  "#pikku/*": ["./.pikku/*/index.ts"]
+}
+```
+
+Then delete the `#pikku` entries from `packages/functions/package.json` `imports`, delete any committed `packages/functions/.pikku` symlink, and change relative imports through it (`'../.pikku/secrets/pikku-secrets.gen.js'`) to `'#pikku/secrets/pikku-secrets.gen.js'`.
+
+`layout-pikku-import-not-root` now reads the governing tsconfig and flags a package-level `./.pikku` mapping, which is what the symlink workaround declared. The Studio Cloud checks `functions-pkg-missing-pikku-import` and `functions-pkg-missing-pikku-wildcard-import` now accept the two keys from tsconfig `paths` as well as from `imports`. To find affected projects, run `pikku validate` and look for `layout-pikku-import-not-root` on a package below the config.
 
 ### `pikku meta context` prints a short map
 

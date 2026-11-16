@@ -105,10 +105,61 @@ describe('declared tables on mysql', { skip: !SERVER_URL }, () => {
     assert.deepEqual((await generate()).written, [])
   })
 
-  test('refuses a dropped column', async () => {
+  test('lists a dropped column and writes nothing without approval', async () => {
     declare(ITEM)
-    const { written, refusals } = await generate()
+    const { written, refusals, destructive } = await generate()
     assert.deepEqual(written, [])
-    assert.match(refusals[0]!, /item\.code is in the migrations/)
+    assert.deepEqual(refusals, [])
+    assert.match(destructive[0]!.what, /DROP COLUMN item\.code/)
+  })
+
+  const KEEP = `item: { columns: { ${ITEM_COLUMNS} code: { type: 'string(32)' } }, unique: [{ columns: ['code'], name: 'item_code_unique' }] }`
+  const PARENT = `parent: { columns: { id: { type: 'key', primaryKey: true } } }`
+  const CHILD = `child: { columns: { id: { type: 'key', primaryKey: true }, parentId: { type: 'key', references: 'parent.id' } } }`
+  const SHEET = (column: string) =>
+    `sheet: { columns: { id: { type: 'key', primaryKey: true }, ${column} } }`
+
+  const generateApproved = () =>
+    generateMigrations(
+      resolved,
+      root,
+      ['src'],
+      { error: (message) => assert.fail(message) },
+      [],
+      new Set(),
+      { allowDestructive: true }
+    )
+
+  test('refuses to drop a table another table still points at', async () => {
+    declare(`${KEEP}, ${PARENT}, ${CHILD}`)
+    assert.deepEqual((await generate()).refusals, [])
+
+    // The migrator runs with FOREIGN_KEY_CHECKS off, which would let it through.
+    declare(`${KEEP}, ${CHILD}`)
+    const approved = await generateApproved()
+    assert.deepEqual(approved.written, [])
+    assert.match(
+      approved.refusals.join(),
+      /child still has a foreign key to parent/
+    )
+  })
+
+  test('a rename that tightens an enum asks the rows before the old bound goes', async () => {
+    declare(
+      `${KEEP}, ${PARENT}, ${CHILD}, ${SHEET(`status: { type: 'text', enum: ['draft', 'sent'] }`)}`
+    )
+    assert.deepEqual((await generate()).refusals, [])
+
+    declare(
+      `${KEEP}, ${PARENT}, ${CHILD}, ${SHEET(`state: { type: 'text', enum: ['draft'], renamedFrom: 'status' }`)}`
+    )
+    const { written, refusals } = await generate()
+    assert.deepEqual(refusals, [])
+    const probes = readFileSync(written[0]!.file, 'utf8')
+      .split('\n')
+      .filter((line) => line.includes('pikku:check-probe'))
+    assert.equal(probes.length, 1)
+    assert.match(probes[0]!, /`status`/)
+    assert.doesNotMatch(probes[0]!, /`state`/)
   })
 })

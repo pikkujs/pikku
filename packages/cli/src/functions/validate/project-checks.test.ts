@@ -699,6 +699,67 @@ describe('project checks', () => {
   })
 
   describe('packages/functions/package.json', () => {
+    const FN_DEPS = {
+      '@pikku/cloudflare': '^0.12.20',
+      '@pikku/schema-cfworker': '^0.12.0',
+      '@pikku/kysely': '^0.12.0',
+      '@pikku/addon-console': '^0.12.0',
+      '@pikku/better-auth': '^0.12.0',
+      zod: '^4',
+    }
+    const PIKKU_FINDINGS = [
+      'functions-pkg-missing-pikku-import',
+      'functions-pkg-missing-pikku-wildcard-import',
+    ]
+
+    test('#pikku/* mapped by the root tsconfig paths, no imports → no finding', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          dependencies: FN_DEPS,
+        })
+        await writeJson(join(tmp, 'tsconfig.json'), {
+          compilerOptions: {
+            paths: {
+              '#pikku/*.js': ['./.pikku/*.ts'],
+              '#pikku/*': ['./.pikku/*/index.ts'],
+            },
+          },
+        })
+        const result = await runValidate(tmp)
+        assert.deepStrictEqual(
+          result.findings.filter((f) => PIKKU_FINDINGS.includes(f.id)),
+          []
+        )
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
+    test('#pikku/* mapped nowhere → both errors, pointing at tsconfig paths', async () => {
+      const tmp = await makeTmp()
+      try {
+        await makeValidProject(tmp)
+        await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
+          type: 'module',
+          dependencies: FN_DEPS,
+        })
+        const result = await runValidate(tmp)
+        const found = result.findings.filter((f) =>
+          PIKKU_FINDINGS.includes(f.id)
+        )
+        assert.deepStrictEqual(found.map((f) => f.id).sort(), PIKKU_FINDINGS)
+        for (const f of found) {
+          assert.strictEqual(f.severity, 'error')
+          assert.match(f.fixHint, /compilerOptions\.paths/)
+        }
+      } finally {
+        await rm(tmp, { recursive: true, force: true })
+      }
+    })
+
     test('missing type: "module" → warn (ok=true)', async () => {
       const tmp = await makeTmp()
       try {

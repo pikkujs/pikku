@@ -1,11 +1,11 @@
 ---
 type: decision
-title: An app declares its tables in db/tables.ts and generate only ever adds
-description: db/tables.ts is a plain TablesDeclaration from @pikku/core/db with annotations on the columns, materialised on a throwaway database and diffed against the migrations; only additions are written, everything else is refused, declareOnly tables get types and no SQL, and the -- pikku:tables marker tells a removal from a table never declared
+title: An app declares its tables in db/tables.ts and generate adds, renames on request, and drops only with approval
+description: db/tables.ts is a plain TablesDeclaration from @pikku/core/db with annotations on the columns, materialised on a throwaway database and diffed against the migrations; additions are written, renamedFrom renames a column and keeps its rows, drops are written marked pikku:destructive only once approved, a changed type or constraint is refused, declareOnly tables get types and no SQL, and the -- pikku:tables marker tells a removal from a table never declared
 tags: cli, db, migrations, safety
 ---
 
-# An app declares its tables in db/tables.ts and generate only ever adds
+# An app declares its tables in db/tables.ts and generate adds, renames on request, and drops only with approval
 
 `db/tables.ts` exports `tables`, a `TablesDeclaration` written with `defineTables`
 from `@pikku/core/db`. Its presence is the opt-in. It is the same plain declaration
@@ -29,10 +29,11 @@ requirement, and its type comes from the migrations.
 declaration to a throwaway database, reads the result back, and diffs that against
 what the migrations build. Other schema sources are a package's published schema,
 so a column they stopped writing is dropped on their behalf. This one is the
-project's data, and a missing column may be a slip, so it writes additions only.
-Everything else comes back in `GenerateResult.refusals` and writes nothing.
-Refusals are returned, not thrown, so migrations already written for other sources
-are still reported.
+project's data, and a missing column may be a slip, so a drop is never written
+unprompted: see "Drops and renames" below. What generate will not change (a type, a
+constraint, a new primary key, a new NOT NULL column without a default) comes back in
+`GenerateResult.refusals` and writes nothing. Refusals are returned, not thrown, so
+migrations already written for other sources are still reported.
 
 A passing migration is rehearsed on a copy of the migrations and diffed again, which
 catches what no comparison can see, such as sqlite rejecting a `UNIQUE` column on
@@ -65,8 +66,37 @@ because nothing reads it and its classifications would otherwise stop applying
 silently. A table only the migrations create carries its annotations through
 `declareOnly`.
 
-**What this rules out:** generate dropping or renaming anything, builder statements
+**What this rules out:** generate dropping anything unapproved, builder statements
 in `db/tables.ts`, and a second way of declaring tables beside `TablesDeclaration`.
+
+## Drops and renames
+
+`refuseTableChanges` returns the changes that need a person next to the refusals: a
+column gone from the declaration is a `DestructiveChange`, as is a recorded table that
+left it (`-- pikku:tables` is what makes it a drop and not a hand-written table).
+`planDeclaredTables` rehearses the whole migration first, so what is offered for
+approval is what would be written, then returns it without bodies unless
+`allowDestructive`. `db generate` asks on a TTY (`confirmDestructive`, using
+`askYesNo` from `addon-grants.ts`); with no terminal it refuses and names
+`--allowDestructive`. Each drop starts with `-- pikku:destructive <what>`, written by
+`generate` (not only by hand), so `migrate` stops on it independently of the generate
+approval. Drops are never `CASCADE`, and there is no foreign-key introspection: a
+drop the engine refuses (sqlite on a column a `UNIQUE` key holds; a table another
+table references) fails the rehearsal and is returned as a refusal with the engine's
+words. Table rename is not supported: it is a drop and a create.
+
+`renamedFrom` on a column (physical old name, `tableRenames` validates it) is applied to
+the covered schema before anything is compared (`applyRenames`), so a rename is not
+seen as a drop plus an add, and it is not destructive: it keeps the rows and needs no
+approval. A rename refused on a column in a key, index or reference, because those
+keep the old name in their own. Once applied, the new name is in the migrations and
+the old is not, and `generate` says to delete `renamedFrom`.
+
+One file per kind of change, in this order: renames, additions, drops. A renamed
+column's generated checks are dropped in the rename file before the `RENAME COLUMN`
+and the new checks are added in the additions file, because MySQL 8.4 refuses
+`RENAME COLUMN` while a `CHECK` uses the column (error 3959, proven on a real server
+by `verifiers/db-schema`), and the migrator's probes run before the file they sit in.
 
 ## Constraints on existing columns
 

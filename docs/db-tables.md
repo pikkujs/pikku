@@ -165,8 +165,9 @@ hash or the kind.
   (a SQLite file or embedded Postgres inside the worktree), or when you pass
   `pikku ci --allowDestructive`; a worktree whose committed config points at a
   local server does not get it, and never your own tree. The line may be bare, indented, in any case, or written
-  `--pikku:destructive`. Nothing in `db generate` writes this line yet: for
-  now it is written by hand, on a migration you want the same stop for.
+  `--pikku:destructive`. `db generate` writes it above every `DROP COLUMN` and
+  `DROP TABLE` it produces, and you can write it by hand on any migration you
+  want the same stop for.
 - `-- pikku:check-probe {json}`, above each added check: `schema`, `table` and
   the `SELECT` that returns a row only if one breaks the check. `migrate` can be
   given a `beforeMigration` hook, and `checkProbeHook` is the one that runs
@@ -220,29 +221,67 @@ A field that is not one of these is an error, as is an invalid annotation value:
 ## What `pikku db generate` does
 
 It applies the declaration to a throwaway database, compares the result with what
-the existing migrations build, and writes the next migration with what is missing:
+the existing migrations build, and writes what is missing, one file per kind of
+change, in the order they can apply: renames, then additions, then drops.
 
-| Change                                   | Result                                                |
-| ---------------------------------------- | ----------------------------------------------------- |
-| New table                                | `CREATE TABLE`, with its indexes                      |
-| New nullable column                      | `ALTER TABLE ... ADD COLUMN`, keeping its constraints |
-| New column with default                  | `ALTER TABLE ... ADD COLUMN`, keeping its constraints |
-| New index                                | `CREATE INDEX`                                        |
-| Table already migrated                   | Adopted, not created again                            |
-| Column or table removed                  | Refused                                               |
-| Rename                                   | Refused, and named as a possible rename               |
-| Type, `NOT NULL`, default or key changed | Refused                                               |
-| New `NOT NULL` column without a default  | Refused                                               |
-| New primary key column                   | Refused                                               |
+| Change                                   | Result                                                       |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| New table                                | `CREATE TABLE`, with its indexes                             |
+| New nullable column                      | `ALTER TABLE ... ADD COLUMN`, keeping its constraints        |
+| New column with default                  | `ALTER TABLE ... ADD COLUMN`, keeping its constraints        |
+| New index                                | `CREATE INDEX`                                               |
+| Table already migrated                   | Adopted, not created again                                   |
+| Column with `renamedFrom`                | `ALTER TABLE ... RENAME COLUMN`, rows kept (see below)       |
+| Column removed                           | `DROP COLUMN`, marked `-- pikku:destructive`, needs approval |
+| Table removed (one `generate` declared)  | `DROP TABLE`, marked `-- pikku:destructive`, needs approval  |
+| Type, `NOT NULL`, default or key changed | Refused: a person writes that migration                      |
+| New `NOT NULL` column without a default  | Refused                                                      |
+| New primary key column                   | Refused                                                      |
+| A table renamed                          | Not supported: it is a drop and a create, and needs approval |
 
-A refusal writes nothing and the command exits non-zero with the reason. Taking
-data away is a person's decision: they write that migration by hand, and generate
-then agrees with it. The migrations of other sources (Better Auth, the Pikku
-runtime, addons) are still written.
+A refusal writes nothing and the command exits non-zero with the reason. The
+migrations of other sources (Better Auth, the Pikku runtime, addons) are still
+written.
 
-Before writing, the migration is rehearsed on a copy of the existing ones and
-compared again. That catches what the engine itself rejects, such as a `UNIQUE`
-column added to an existing sqlite table.
+### Drops need approval
+
+A drop loses data, so `generate` lists each one and writes nothing for it until a
+person approves. On a terminal it asks (`Write these migrations? [y/N]`); anywhere
+else it refuses and says to run `pikku db generate --allowDestructive`. Each drop
+is written in its own file, behind a `-- pikku:destructive` line, so
+`pikku db migrate` stops on it again until it is given `--allowDestructive`: the
+data is only lost when both are said.
+
+- Only a table a previous `generate` recorded (`-- pikku:tables`) is ever
+  dropped. A hand-written table that the declaration never named is left alone.
+- Drops are never `CASCADE`. A column or table the engine will not drop (a column
+  a `UNIQUE` key holds on sqlite, a table another table has a foreign key to) is
+  refused with the engine's own reason, because the rehearsal applies the drop
+  first. Pikku does not read foreign keys to order drops: drop the dependent
+  table in one run and the table it pointed at in the next, or write that
+  migration by hand.
+- On sqlite the indexes of a dropped column are dropped first.
+- A column that has moved is not a drop: see `renamedFrom` below.
+
+### Renaming a column
+
+Declare the column under its new name with `renamedFrom` set to the old one, and
+`generate` writes `RENAME COLUMN`, so the rows stay:
+
+```ts
+caption: { type: 'text', renamedFrom: 'label' },
+```
+
+Delete `renamedFrom` once the migration is applied; until then `generate` says
+`already renamed from 'label': delete renamedFrom`, and writes nothing more.
+It is refused where the old name could still be in play: on a column that is
+part of a key, an index or a reference, when another column still has the old
+name, and on a `declareOnly` table. If the migrations hold both names, `generate`
+cannot tell which to keep and refuses. A name that matches no column is treated
+as a new column, and the note says so. A renamed column's generated checks
+(Postgres and MySQL) are dropped before the rename and re-added under the new
+column's name in the next file, because MySQL refuses to rename a column a
+`CHECK` still names.
 
 `pikku db check` and `pikku db migrate` stop when the declaration is ahead of the
 migrations.
@@ -309,6 +348,8 @@ columns. See [DB column annotations](./db-column-annotations.md) and
   declaration. It goes back to being hand-written, and nothing is dropped.
 
 Each of these writes nothing, so a person writes that migration by hand.
+Changing a column's type, or making an existing column `NOT NULL`, is refused
+with that advice rather than guessed at.
 
 ## Moving an existing app over
 

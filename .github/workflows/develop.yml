@@ -28,6 +28,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      - name: Check licences (LICENSE files match, MIT never reaches AGPL)
+        run: node scripts/check-licenses.mjs
       - name: Check published deps for workspace protocol
         run: node scripts/check-no-workspace-protocol.mjs
       - name: Check no publish-time CLI rebuild

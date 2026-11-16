@@ -6,8 +6,8 @@
     "module": "node18",
     "skipLibCheck": true,
     "paths": {
-      "#pikku/*.js": ["../functions/.pikku/*.ts"],
-      "#pikku/*": ["../functions/.pikku/*/index.ts", "../functions/.pikku/*"]
+      "#pikku/*.js": ["./.pikku/*.ts"],
+      "#pikku/*": ["./.pikku/*/index.ts", "./.pikku/*"]
     }
   },
   "include": ["src/", ".pikku/*", "client/mcp.ts", "client/mcp-server.test.ts"],

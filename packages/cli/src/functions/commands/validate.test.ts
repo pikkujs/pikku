@@ -101,7 +101,7 @@ async function makeValidWorkspace(root: string) {
   await mkdir(join(root, 'packages', 'functions', '.pikku', 'middleware'), {
     recursive: true,
   })
-  await mkdir(join(root, 'packages', 'functions', 'db', 'migrations'), {
+  await mkdir(join(root, 'db', 'migrations'), {
     recursive: true,
   })
   await mkdir(join(root, 'packages', 'functions', 'tests'), {

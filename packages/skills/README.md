@@ -3,7 +3,7 @@
 The Pikku agent skills — the instruction set coding agents read to build, wire and
 deploy Pikku projects. **MIT licensed**, deliberately: the format and the skills are
 the open core, so any harness can adopt them without taking on the Pikku CLI's
-Business Source License.
+AGPL-3.0 licence.
 
 Each directory under `skills/` is one skill: a `SKILL.md` with YAML frontmatter
 (`name`, `description`, optional `installGroups`) plus any `references/` it needs.

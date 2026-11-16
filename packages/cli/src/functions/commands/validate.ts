@@ -27,6 +27,7 @@ export const validate = pikkuSessionlessFunc({
     { rpc }
   ) => {
     const report = await runProjectValidate(process.cwd(), {
+      strict,
       skipTypecheck,
       skipDeployChecks,
       migrationsBase,

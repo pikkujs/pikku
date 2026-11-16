@@ -186,3 +186,72 @@ describe('outgoingTraceparent', () => {
     assert.equal(outgoingTraceparent({}), undefined)
   })
 })
+
+describe('the lazy HTTP trace', () => {
+  const countDraws = (run: () => void) => {
+    const real = globalThis.crypto.getRandomValues.bind(globalThis.crypto)
+    let draws = 0
+    ;(globalThis.crypto as any).getRandomValues = (array: Uint8Array) => {
+      draws++
+      return real(array)
+    }
+    try {
+      run()
+    } finally {
+      ;(globalThis.crypto as any).getRandomValues = real
+    }
+    return draws
+  }
+
+  test('resolving a new trace draws nothing until an id is read', () => {
+    const { logger } = createLogger()
+    let trace: ReturnType<typeof resolveHTTPTrace> | undefined
+    assert.equal(
+      countDraws(() => {
+        trace = resolveHTTPTrace(() => undefined, logger, {})
+      }),
+      0
+    )
+    assert.equal(
+      countDraws(() => {
+        assert.match(trace!.traceId, /^[0-9a-f]{32}$/)
+        assert.equal(trace!.traceId, trace!.traceId)
+        assert.match(trace!.spanId, /^[0-9a-f]{16}$/)
+      }),
+      2
+    )
+    assert.equal(trace!.sampled, true)
+  })
+
+  test('the ids are own enumerable properties, so a copy carries them', () => {
+    const { logger } = createLogger()
+    const trace = resolveHTTPTrace(() => undefined, logger, {})
+    const copy = { ...trace }
+    assert.equal(copy.traceId, trace.traceId)
+    assert.equal(copy.spanId, trace.spanId)
+    assert.deepEqual(Object.keys(trace).sort(), [
+      'sampled',
+      'spanId',
+      'traceId',
+    ])
+  })
+
+  test('adoptTraceparent replaces the ids of a lazy trace in place', () => {
+    const { logger } = createLogger()
+    const trace = resolveHTTPTrace(() => undefined, logger, {})
+    const wire: any = { traceId: undefined, trace }
+    adoptTraceparent(wire, HEADER)
+    assert.equal(wire.trace, trace)
+    assert.equal(trace.traceId, TRACE_ID)
+    assert.equal(trace.parentSpanId, PARENT)
+  })
+
+  test('createTrace stays eager for every other wire', () => {
+    assert.equal(
+      countDraws(() => {
+        createTrace()
+      }),
+      2
+    )
+  })
+})

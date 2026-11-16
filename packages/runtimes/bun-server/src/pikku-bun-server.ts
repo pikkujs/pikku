@@ -280,7 +280,12 @@ export class PikkuBunServer {
 
       fetch: async (req, server) => {
         if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
-          const pikkuReq = new PikkuFetchHTTPRequest(req)
+          // Bun's parser enforces body framing before this handler runs, so the
+          // native body read is safe here (and only here).
+          const pikkuReq = new PikkuFetchHTTPRequest(req, {
+            trustedFraming: true,
+            maxBodySize: options.maxBodySize,
+          })
           const pikkuRes = new PikkuFetchHTTPResponse()
           const channelHandler = await runLocalChannel({
             channelId: crypto.randomUUID(),
@@ -332,7 +337,12 @@ export class PikkuBunServer {
           return staticResponse
         }
 
-        const pikkuReq = new PikkuFetchHTTPRequest(req)
+        // Bun's parser enforces body framing before this handler runs, so the
+        // native body read is safe here (and only here).
+        const pikkuReq = new PikkuFetchHTTPRequest(req, {
+          trustedFraming: true,
+          maxBodySize: options.maxBodySize,
+        })
         const pikkuRes = new PikkuFetchHTTPResponse()
         await fetchData(pikkuReq, pikkuRes, {
           respondWith404: true,
