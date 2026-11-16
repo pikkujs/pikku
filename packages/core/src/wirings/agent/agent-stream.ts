@@ -11,6 +11,12 @@ import type {
   AgentMemoryConfig,
 } from './agent.types.js'
 import { outgoingTraceparent } from '../../trace.js'
+import {
+  inAgentRunSpan,
+  inModelCallSpan,
+  recordAgentRunFailure,
+  recordAgentRunId,
+} from './agent-span.js'
 import { finalizeAgentRun, lastUserMessageText } from './agent-finalize.js'
 import { pikkuState, getSingletonServices } from '../../pikku-state.js'
 import { applyInputMiddleware, describeApprovals } from './agent-turn.js'
@@ -370,6 +376,8 @@ const createWorkingMemoryOnlyChannel = (
   ).channel as AgentStreamChannel
 
 type StepLoopParams = {
+  /** The run's params: their trace is the run span the model calls hang off. */
+  params: RunAgentParams
   agent: CoreAgent
   runnerParams: AgentRunnerParams
   maxSteps: number
@@ -397,6 +405,7 @@ async function runStreamStepLoop(
     channel,
     agentMiddlewares,
   } = params
+  const runParams = params.params
 
   const singletonServices = getSingletonServices()
 
@@ -418,7 +427,11 @@ async function runStreamStepLoop(
 
     await channel.send({ type: 'step-start', stepNumber: step })
 
-    const stepResult = await agentRunner.stream(runnerParams, streamChannel)
+    const stepResult = await inModelCallSpan(
+      runParams,
+      runnerParams.model,
+      () => agentRunner.stream(runnerParams, streamChannel)
+    )
 
     for (const mw of agentMiddlewares) {
       if (mw.afterStep) {
@@ -728,7 +741,33 @@ function handleCredentialRequests(
  * @returns The full text of the streamed reply.
  * @throws As `runAgent` does, before the stream starts.
  */
-export async function streamAgent(
+export function streamAgent(
+  agentName: string,
+  input: {
+    message: string
+    threadId: string
+    resourceId: string
+    model?: string
+    temperature?: number
+  },
+  channel: AgentStreamChannel,
+  params: RunAgentParams,
+  agentSessionMap?: Map<string, string>,
+  options?: StreamAgentOptions
+): Promise<string> {
+  return inAgentRunSpan({ agentName }, params, (scoped) =>
+    streamAgentInSpan(
+      agentName,
+      input,
+      channel,
+      scoped,
+      agentSessionMap,
+      options
+    )
+  )
+}
+
+async function streamAgentInSpan(
   agentName: string,
   input: {
     message: string
@@ -785,7 +824,7 @@ export async function streamAgent(
   }
 
   if (missingRpcs.length > 0) {
-    await agentRunState.createRun({
+    const suspendedRunId = await agentRunState.createRun({
       agentName,
       threadId,
       resourceId: normalizedInput.resourceId,
@@ -796,6 +835,7 @@ export async function streamAgent(
       createdAt: new Date(),
       updatedAt: new Date(),
     })
+    recordAgentRunId(params, suspendedRunId)
     await channel.send({
       type: 'suspended',
       reason: 'rpc-missing',
@@ -856,6 +896,7 @@ export async function streamAgent(
     createdAt: new Date(),
     updatedAt: new Date(),
   })
+  recordAgentRunId(params, runId)
   options?.onRunCreated?.(runId)
 
   // Registered before the first model call and released in `finally`, so the
@@ -964,6 +1005,7 @@ export async function streamAgent(
 
   try {
     const loopResult = await runStreamStepLoop({
+      params,
       agent,
       runnerParams,
       maxSteps,
@@ -1037,6 +1079,7 @@ export async function streamAgent(
       return persistingChannel.fullText
     }
 
+    recordAgentRunFailure(params, err)
     for (const mw of agentMiddlewares) {
       if (mw.onError) {
         try {
@@ -1176,247 +1219,266 @@ export async function resumeAgent(
 
   await assertAgentAuthorized(agent, params, packageName)
 
-  await refuseExpiredApprovals(agentRunState, run.runId, [pending])
+  return inAgentRunSpan(
+    { agentName: run.agentName, runId: input.runId },
+    params,
+    async (params) => {
+      await refuseExpiredApprovals(agentRunState, run.runId, [pending])
 
-  const agentRunner = await resolveAgentRunner(singletonServices, params)
+      const agentRunner = await resolveAgentRunner(singletonServices, params)
 
-  // The read above is not a claim — concurrent resumes all see the same pending
-  // approval. `resolveApproval` is the claim, and the loser must not go on to
-  // run the tool a second time.
-  const claimed = await agentRunState.resolveApproval({
-    runId: input.runId,
-    toolCallId: input.toolCallId,
-    status: input.approved ? 'approved' : 'denied',
-  })
-  if (!claimed) {
-    throw new Error(
-      `Approval for toolCallId ${input.toolCallId} was already resolved by another caller`
-    )
-  }
+      // The read above is not a claim — concurrent resumes all see the same pending
+      // approval. `resolveApproval` is the claim, and the loser must not go on to
+      // run the tool a second time.
+      const claimed = await agentRunState.resolveApproval({
+        runId: input.runId,
+        toolCallId: input.toolCallId,
+        status: input.approved ? 'approved' : 'denied',
+      })
+      if (!claimed) {
+        throw new Error(
+          `Approval for toolCallId ${input.toolCallId} was already resolved by another caller`
+        )
+      }
 
-  const { storage } = resolveMemoryServices(agent, singletonServices)
-  const memoryConfig = agent.memory
+      const { storage } = resolveMemoryServices(agent, singletonServices)
+      const memoryConfig = agent.memory
 
-  if (!input.approved) {
-    if (pending.type === 'agent-call') {
-      await agentRunState.updateRun(pending.agentRunId, { status: 'failed' })
-    }
+      if (!input.approved) {
+        if (pending.type === 'agent-call') {
+          await agentRunState.updateRun(pending.agentRunId, {
+            status: 'failed',
+          })
+        }
 
-    const denialResult = deniedToolResult()
+        const denialResult = deniedToolResult()
 
-    if (storage) {
-      await storage.saveMessages(run.threadId, [
-        {
-          id: randomUUID(),
-          role: 'tool',
-          toolResults: [
+        if (storage) {
+          await storage.saveMessages(run.threadId, [
             {
-              id: input.toolCallId,
-              name:
-                pending.type === 'tool-call' ||
-                pending.type === 'credential-request'
-                  ? pending.toolName
-                  : pending.agentName,
-              result: denialResult,
+              id: randomUUID(),
+              role: 'tool',
+              toolResults: [
+                {
+                  id: input.toolCallId,
+                  name:
+                    pending.type === 'tool-call' ||
+                    pending.type === 'credential-request'
+                      ? pending.toolName
+                      : pending.agentName,
+                  result: denialResult,
+                },
+              ],
+              createdAt: new Date(),
             },
-          ],
-          createdAt: new Date(),
-        },
-      ])
-    }
+          ])
+        }
 
-    await channel.send({
-      type: 'tool-result',
-      toolCallId: input.toolCallId,
-      toolName:
-        pending.type === 'tool-call' || pending.type === 'credential-request'
-          ? pending.toolName
-          : pending.agentName,
-      result: denialResult,
-    })
+        await channel.send({
+          type: 'tool-result',
+          toolCallId: input.toolCallId,
+          toolName:
+            pending.type === 'tool-call' ||
+            pending.type === 'credential-request'
+              ? pending.toolName
+              : pending.agentName,
+          result: denialResult,
+        })
 
-    const updatedRun = await agentRunState.getRun(run.runId)
-    const remaining = updatedRun?.pendingApprovals ?? []
+        const updatedRun = await agentRunState.getRun(run.runId)
+        const remaining = updatedRun?.pendingApprovals ?? []
 
-    if (remaining.length > 0) {
-      await channel.send({ type: 'done' })
-      await channel.close()
-      return
-    }
+        if (remaining.length > 0) {
+          await channel.send({ type: 'done' })
+          await channel.close()
+          return
+        }
 
-    await agentRunState.updateRun(run.runId, { status: 'running' })
+        await agentRunState.updateRun(run.runId, { status: 'running' })
 
-    await continueAfterToolResult(
-      run,
-      agent,
-      packageName,
-      resolvedName,
-      storage,
-      memoryConfig,
-      agentRunner,
-      channel,
-      params,
-      agentRunState,
-      options
-    )
-    return
-  }
+        await continueAfterToolResult(
+          run,
+          agent,
+          packageName,
+          resolvedName,
+          storage,
+          memoryConfig,
+          agentRunner,
+          channel,
+          params,
+          agentRunState,
+          options
+        )
+        return
+      }
 
-  if (pending.type === 'agent-call') {
-    const subRun = await agentRunState.getRun(pending.agentRunId)
-    if (!subRun) {
-      throw new Error(`Sub-agent run not found: ${pending.agentRunId}`)
-    }
-    const subPending =
-      subRun.pendingApprovals?.find((p) => p.toolCallId === input.toolCallId) ??
-      subRun.pendingApprovals?.[0]
-    if (!subPending) {
-      throw new Error(
-        `No pending approval on sub-agent run ${pending.agentRunId}`
-      )
-    }
+      if (pending.type === 'agent-call') {
+        const subRun = await agentRunState.getRun(pending.agentRunId)
+        if (!subRun) {
+          throw new Error(`Sub-agent run not found: ${pending.agentRunId}`)
+        }
+        const subPending =
+          subRun.pendingApprovals?.find(
+            (p) => p.toolCallId === input.toolCallId
+          ) ?? subRun.pendingApprovals?.[0]
+        if (!subPending) {
+          throw new Error(
+            `No pending approval on sub-agent run ${pending.agentRunId}`
+          )
+        }
 
-    const subChannel = createScopedChannel(channel, subRun.agentName, 'resume')
-    await channel.send({
-      type: 'agent-call',
-      agentName: subRun.agentName,
-      session: 'resume',
-      input: null,
-    })
+        const subChannel = createScopedChannel(
+          channel,
+          subRun.agentName,
+          'resume'
+        )
+        await channel.send({
+          type: 'agent-call',
+          agentName: subRun.agentName,
+          session: 'resume',
+          input: null,
+        })
 
-    try {
-      await resumeAgent(
-        {
-          runId: pending.agentRunId,
-          toolCallId: subPending.toolCallId,
-          approved: true,
-        },
-        subChannel,
+        try {
+          await resumeAgent(
+            {
+              runId: pending.agentRunId,
+              toolCallId: subPending.toolCallId,
+              approved: true,
+            },
+            subChannel,
+            params,
+            options
+          )
+        } catch (err) {
+          if (err instanceof GoneError) {
+            await expireRun(agentRunState, run.runId)
+          }
+          throw err
+        }
+
+        await channel.send({
+          type: 'agent-result',
+          agentName: subRun.agentName,
+          session: 'resume',
+          result: null,
+        })
+
+        if (storage) {
+          await storage.saveMessages(run.threadId, [
+            {
+              id: randomUUID(),
+              role: 'tool',
+              toolResults: [
+                {
+                  id: input.toolCallId,
+                  name: pending.agentName,
+                  result: 'Sub-agent completed successfully',
+                },
+              ],
+              createdAt: new Date(),
+            },
+          ])
+        }
+      } else {
+        const streamContext: StreamContext = {
+          channel,
+          options: { ...options, requiresToolApproval: false },
+        }
+        const agentMiddlewaresForResume: PikkuAgentMiddlewareHooks[] =
+          agent.agentMiddleware ?? []
+        const { tools } = await buildToolDefs(
+          params,
+          new Map<string, string>(),
+          run.resourceId,
+          resolvedName,
+          packageName,
+          streamContext,
+          agentMiddlewaresForResume
+        )
+
+        const matchingTool = tools.find((t) => t.name === pending.toolName)
+        if (!matchingTool) {
+          throw new Error(
+            `Tool "${pending.toolName}" not found in agent definition`
+          )
+        }
+
+        const toolArgs =
+          typeof pending.args === 'string'
+            ? JSON.parse(pending.args)
+            : pending.args
+
+        let toolResult: unknown
+        let toolError: string | undefined
+        try {
+          toolResult = await matchingTool.execute(toolArgs)
+        } catch (execErr: any) {
+          if (execErr?.payload?.error === 'missing_credential') {
+            toolResult = execErr.payload
+            toolError = 'missing_credential'
+          } else {
+            toolError =
+              execErr instanceof Error ? execErr.message : String(execErr)
+            toolResult = `Error: ${toolError}`
+          }
+        }
+
+        const resultStr =
+          typeof toolResult === 'string'
+            ? toolResult
+            : JSON.stringify(toolResult)
+        if (storage) {
+          await storage.saveMessages(run.threadId, [
+            {
+              id: randomUUID(),
+              role: 'tool',
+              toolResults: [
+                {
+                  id: input.toolCallId,
+                  name: pending.toolName,
+                  result: resultStr,
+                },
+              ],
+              createdAt: new Date(),
+            },
+          ])
+        }
+
+        await channel.send({
+          type: 'tool-result',
+          toolCallId: input.toolCallId,
+          toolName: pending.toolName,
+          result: toolResult,
+          ...(toolError ? { error: toolError } : {}),
+        })
+      }
+
+      const updatedRun = await agentRunState.getRun(run.runId)
+      const remaining = updatedRun?.pendingApprovals ?? []
+
+      if (remaining.length > 0) {
+        await channel.send({ type: 'done' })
+        await channel.close()
+        return
+      }
+
+      await agentRunState.updateRun(run.runId, { status: 'running' })
+
+      await continueAfterToolResult(
+        run,
+        agent,
+        packageName,
+        resolvedName,
+        storage,
+        memoryConfig,
+        agentRunner,
+        channel,
         params,
+        agentRunState,
         options
       )
-    } catch (err) {
-      if (err instanceof GoneError) {
-        await expireRun(agentRunState, run.runId)
-      }
-      throw err
     }
-
-    await channel.send({
-      type: 'agent-result',
-      agentName: subRun.agentName,
-      session: 'resume',
-      result: null,
-    })
-
-    if (storage) {
-      await storage.saveMessages(run.threadId, [
-        {
-          id: randomUUID(),
-          role: 'tool',
-          toolResults: [
-            {
-              id: input.toolCallId,
-              name: pending.agentName,
-              result: 'Sub-agent completed successfully',
-            },
-          ],
-          createdAt: new Date(),
-        },
-      ])
-    }
-  } else {
-    const streamContext: StreamContext = {
-      channel,
-      options: { ...options, requiresToolApproval: false },
-    }
-    const agentMiddlewaresForResume: PikkuAgentMiddlewareHooks[] =
-      agent.agentMiddleware ?? []
-    const { tools } = await buildToolDefs(
-      params,
-      new Map<string, string>(),
-      run.resourceId,
-      resolvedName,
-      packageName,
-      streamContext,
-      agentMiddlewaresForResume
-    )
-
-    const matchingTool = tools.find((t) => t.name === pending.toolName)
-    if (!matchingTool) {
-      throw new Error(
-        `Tool "${pending.toolName}" not found in agent definition`
-      )
-    }
-
-    const toolArgs =
-      typeof pending.args === 'string' ? JSON.parse(pending.args) : pending.args
-
-    let toolResult: unknown
-    let toolError: string | undefined
-    try {
-      toolResult = await matchingTool.execute(toolArgs)
-    } catch (execErr: any) {
-      if (execErr?.payload?.error === 'missing_credential') {
-        toolResult = execErr.payload
-        toolError = 'missing_credential'
-      } else {
-        toolError = execErr instanceof Error ? execErr.message : String(execErr)
-        toolResult = `Error: ${toolError}`
-      }
-    }
-
-    const resultStr =
-      typeof toolResult === 'string' ? toolResult : JSON.stringify(toolResult)
-    if (storage) {
-      await storage.saveMessages(run.threadId, [
-        {
-          id: randomUUID(),
-          role: 'tool',
-          toolResults: [
-            {
-              id: input.toolCallId,
-              name: pending.toolName,
-              result: resultStr,
-            },
-          ],
-          createdAt: new Date(),
-        },
-      ])
-    }
-
-    await channel.send({
-      type: 'tool-result',
-      toolCallId: input.toolCallId,
-      toolName: pending.toolName,
-      result: toolResult,
-      ...(toolError ? { error: toolError } : {}),
-    })
-  }
-
-  const updatedRun = await agentRunState.getRun(run.runId)
-  const remaining = updatedRun?.pendingApprovals ?? []
-
-  if (remaining.length > 0) {
-    await channel.send({ type: 'done' })
-    await channel.close()
-    return
-  }
-
-  await agentRunState.updateRun(run.runId, { status: 'running' })
-
-  await continueAfterToolResult(
-    run,
-    agent,
-    packageName,
-    resolvedName,
-    storage,
-    memoryConfig,
-    agentRunner,
-    channel,
-    params,
-    agentRunState,
-    options
   )
 }
 
@@ -1598,6 +1660,7 @@ async function continueAfterToolResult(
 
   try {
     const loopResult = await runStreamStepLoop({
+      params,
       agent,
       runnerParams,
       maxSteps,
@@ -1665,6 +1728,7 @@ async function continueAfterToolResult(
       return
     }
 
+    recordAgentRunFailure(params, err)
     for (const mw of agentMiddlewares) {
       if (mw.onError) {
         try {

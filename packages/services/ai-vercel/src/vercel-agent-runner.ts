@@ -223,6 +223,26 @@ function stripNulls(obj: any): any {
   return result
 }
 
+/**
+ * What an LLM proxy reports for the call, in US dollars: LiteLLM sets
+ * `x-litellm-response-cost` on the response. Absent for a provider that does
+ * not say, and then nothing is recorded: a cost is read, never estimated.
+ */
+export function readResponseCost(headers: unknown): number | undefined {
+  if (!headers || typeof headers !== 'object') return undefined
+  const entries = Object.entries(headers as Record<string, unknown>)
+  const raw = entries.find(
+    ([name]) => name.toLowerCase() === 'x-litellm-response-cost'
+  )?.[1]
+  const cost = typeof raw === 'string' ? Number(raw) : raw
+  return typeof cost === 'number' && Number.isFinite(cost) && cost >= 0
+    ? cost
+    : undefined
+}
+
+const costOf = (cost: number | undefined) =>
+  cost === undefined ? {} : { cost }
+
 function extractStructuredText(output: unknown): string {
   if (!output || typeof output !== 'object') return ''
   const text = (output as Record<string, unknown>).text
@@ -585,6 +605,13 @@ export class VercelAgentRunner implements AgentRunnerService {
         stepResult.object = finalOutput
         stepResult.text = extractStructuredText(finalOutput) || stepResult.text
       }
+
+      try {
+        const cost = readResponseCost((await result.response).headers)
+        if (cost !== undefined) stepResult.cost = cost
+      } catch {
+        // The cost is optional; a response that cannot be read has none.
+      }
     } catch (err) {
       console.warn(
         '[VercelAgentRunner] Stream error:',
@@ -687,6 +714,9 @@ export class VercelAgentRunner implements AgentRunnerService {
       reasoningContent:
         (step?.content as any)?.find((p: any) => p.type === 'reasoning')
           ?.text ?? undefined,
+      ...costOf(
+        readResponseCost(step?.response?.headers ?? result.response?.headers)
+      ),
     }
   }
 

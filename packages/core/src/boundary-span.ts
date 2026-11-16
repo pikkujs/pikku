@@ -41,8 +41,14 @@ export const disableTracer = (
 export type BoundarySpan = {
   /** What to stamp on the outgoing call: the boundary span if one is open, else the wire's. */
   traceparent: string | undefined
-  /** Closes the span with the call's outcome. Idempotent; never throws. */
-  end(failure?: { error: unknown }): void
+  /**
+   * Closes the span with the call's outcome, after setting `attributes` (facts only known once
+   * the call is over, from the allow-list). Idempotent; never throws.
+   */
+  end(
+    failure?: { error: unknown },
+    attributes?: Record<string, SpanAttributeValue>
+  ): void
 }
 
 const NO_BOUNDARY: Omit<BoundarySpan, 'traceparent'> = { end() {} }
@@ -85,11 +91,14 @@ export const startBoundarySpan = (
   let ended = false
   return {
     traceparent: formatTraceparent(context),
-    end(failure) {
+    end(failure, endAttributes) {
       if (ended) return
       ended = true
       if (isTracerDisabled(tracer)) return
       try {
+        for (const [key, value] of Object.entries(endAttributes ?? {})) {
+          span.setAttribute(key, value)
+        }
         if (failure) {
           // Only the class: a backend error can carry a connection URL or credentials.
           const { type } = redactSpanError(failure.error)

@@ -13,7 +13,7 @@ whether the trace is a root, `pikku.trace.unrecorded_parent_span_id` (a span
 `telemetry.spans: 'always'` forced under a parent that was never exported),
 `pikku.function.duration_ms`, `pikku.user.id`,
 `pikku.org.id`, `pikku.impersonated` and `pikku.impersonator.id` (set only when the session carries `impersonated`), the HTTP method, route and status, queue name and job id,
-scheduler task, workflow name, run id and step, channel id, MCP tool. Boundary
+scheduler task, workflow name, run id and step, channel id, MCP tool. An agent run adds its name and run id (`pikku.agent.name`, `pikku.agent.run_id`); a model call adds `gen_ai.operation.name`, `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.response.finish_reasons` and `pikku.ai.cost_usd` (see [an agent run is a span](an-agent-run-is-a-span-and-so-is-each-model-call.md)). Boundary
 spans (a queue publish, a scheduled RPC, a webhook send, a remote RPC) add
 `messaging.system`, `messaging.destination.name` (a queue name, an RPC name or a
 webhook event name, never a payload or URL) and `rpc.service` (the addon

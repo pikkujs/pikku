@@ -40,10 +40,12 @@ Queue jobs and DO dispatches carry the same traceparent, so a worker does not
 need to read the run before its first log line. Sleep wake-ups pass it to
 `scheduleRPC`.
 
-## Not on the trace yet
+## An agent step
 
-An agent's tool calls build a fresh wire in `agent-prepare.ts`, so an agent step
-keeps the run's trace up to the agent, and its tools do not.
+An agent run is a span of its own, a child of the span of the step that called
+it, and its tool calls and model calls are its children
+([an agent run is a span](an-agent-run-is-a-span-and-so-is-each-model-call.md)).
+The step's trace therefore reaches the agent's tools.
 
 The span of a step is told apart from the calls its function makes: `runTraceWire`
 marks the trace object it builds for a step with its run and step (`markWorkflowStep`),

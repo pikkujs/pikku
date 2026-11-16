@@ -22,6 +22,7 @@ const KINDS: Partial<Record<PikkuWiringTypes, SpanKind>> = {
   scheduler: 'consumer',
   workflow: 'consumer',
   trigger: 'consumer',
+  agent: 'internal',
 }
 
 export type FunctionSpan = {
