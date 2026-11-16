@@ -79,13 +79,6 @@ function parenthesised(
     : { inside: text.slice(open + 1, close), end: close + 1 }
 }
 
-/** The single-quoted literals in `text`, with doubled quotes unescaped. */
-export function quotedValues(text: string): string[] {
-  return [...text.matchAll(/'((?:[^']|'')*)'/g)].map((m) =>
-    m[1]!.replace(/''/g, "'")
-  )
-}
-
 /**
  * The values of a list that holds nothing but string literals (each optionally
  * cast, `'a'::text`), or `undefined` when any element is anything else: a call
