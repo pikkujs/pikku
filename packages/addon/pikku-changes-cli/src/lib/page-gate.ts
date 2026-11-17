@@ -58,6 +58,12 @@ export interface PageGateInput {
   /** For the refusal: `#12`. */
   label?: string
   discover?: (workspaceRoot: string) => Promise<AppPage[]>
+  /**
+   * The pages the change declared (the `Pages:` line its plan filed). The
+   * change is held to exactly these, whatever files it touched: a shared
+   * `$slug` route then answers for its own pages, not for every page.
+   */
+  pages?: string[]
 }
 
 interface Report {
@@ -327,6 +333,7 @@ export async function checkPageGate({
   waive,
   label = 'This change',
   discover = (root) => discoverPages(root),
+  pages: declaredPages = [],
 }: PageGateInput): Promise<PageGateOutcome> {
   if (env.PIKKU_COMPARE_GATE === 'off') return { kind: 'off' }
   const reason = waive?.trim()
@@ -350,11 +357,27 @@ export async function checkPageGate({
 
   const { base, files } = await touchedFiles(git)
   const pages = await discover(workspaceRoot)
-  const touched = touchedPages(
-    pages,
-    workspaceRoot,
-    files.map((f) => resolve(top, f))
-  )
+  const asPath = (page: string) =>
+    (page.startsWith('/') ? page : routeFor(page)).replace(/\/+$/, '') || '/'
+  const declared = [...new Set(declaredPages.map(asPath))]
+  // each declared page as its route's page (named by its own path); one with
+  // no route yet stands in as itself, so its compare row says MISSING
+  const touched = declared.length
+    ? pages.length
+      ? declared.map((path): AppPage => ({
+          ...(pages.find((p) => routeExists(path, [p.path])) ?? {
+            ...pages[0]!,
+            file: '',
+            params: [],
+          }),
+          path,
+        }))
+      : []
+    : touchedPages(
+        pages,
+        workspaceRoot,
+        files.map((f) => resolve(top, f))
+      )
   if (!touched.length)
     return {
       kind: 'skip',
@@ -411,12 +434,18 @@ export async function checkPageGate({
 
   type Need = { app: string; site: Site; shot: ReferenceShot; page: AppPage }
   const needs: Need[] = []
-  for (const page of touched) {
+  touched.forEach((page, i) => {
     const site = siteFor(page.app)
-    for (const shot of site.shots)
-      if (routeExists(routeFor(shot.id, site.map), [page.path]))
+    for (const shot of site.shots) {
+      const route = routeFor(shot.id, site.map)
+      if (
+        declared.length
+          ? asPath(route) === declared[i]
+          : routeExists(route, [page.path])
+      )
         needs.push({ app: page.app, site, shot, page })
-  }
+    }
+  })
   if (!needs.length)
     return {
       kind: 'skip',

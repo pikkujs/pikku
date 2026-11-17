@@ -1,6 +1,12 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
-import { filingOrder, planProblems, validatePlan } from './change-plan.js'
+import {
+  bodyWithPages,
+  declaredPages,
+  filingOrder,
+  planProblems,
+  validatePlan,
+} from './change-plan.js'
 
 /**
  * A recipe box: the data first, then a screen and a function that both wait
@@ -173,5 +179,62 @@ describe('a plan with several kinds of problem', () => {
     assert.match(problems[0]!, /"specialist" must be one of/)
     assert.match(problems[1]!, /dependsOn names "recipes"/)
     assert.match(problems[2]!, /shorter than a sentence/)
+  })
+})
+
+describe('a plan for a clone of an existing site', () => {
+  const clone = (plan: unknown) => planProblems(plan, { clone: true }).problems
+
+  test('a frontend change lists its pages, at most five', () => {
+    const plan = recipeBox() as any[]
+    assert.match(
+      clone(plan)[0]!,
+      /change 2 \("list"\): this project rebuilds an existing site, so a frontend change lists the pages it builds in "pages"/
+    )
+    plan[1].pages = ['/recipes']
+    assert.deepStrictEqual(clone(plan), [])
+    // the build changes need no pages
+    assert.strictEqual(plan[0].pages, undefined)
+  })
+
+  test('a frontend change over five pages is refused: split them into changes of at most five', () => {
+    const plan = recipeBox() as any[]
+    plan[1].pages = ['/', '/about', '/blog', '/contact', '/events', '/shop']
+    const problems = clone(plan)
+    assert.strictEqual(problems.length, 1, problems.join('\n'))
+    assert.match(
+      problems[0]!,
+      /change 2 \("list"\): it covers 6 pages\. Split the pages into changes of at most 5 pages each/
+    )
+  })
+
+  test('a project that is not a clone needs no pages, and may still give them', () => {
+    const plan = recipeBox() as any[]
+    assert.deepStrictEqual(problemsOf(plan), [])
+    plan[1].pages = ['/', '/a', '/b', '/c', '/d', '/e']
+    assert.deepStrictEqual(problemsOf(plan), [])
+  })
+
+  test('pages that are not a list of paths are named', () => {
+    const plan = recipeBox() as any[]
+    plan[1].pages = '/recipes'
+    assert.match(
+      problemsOf(plan)[0]!,
+      /change 2 \("list"\): "pages" must be a list of route paths/
+    )
+  })
+
+  test('the pages are filed on a Pages: line the done gate reads back', () => {
+    const [, list] = validatePlan(
+      recipeBox().map((c) =>
+        c.ref === 'list' ? { ...c, pages: ['/recipes', '/recipes/$id'] } : c
+      ),
+      { clone: true }
+    )
+    const body = bodyWithPages(list!)
+    assert.match(body, /\n\nPages: \/recipes, \/recipes\/\$id$/)
+    assert.deepStrictEqual(declaredPages(body), ['/recipes', '/recipes/$id'])
+    assert.deepStrictEqual(declaredPages('No pages here.'), [])
+    assert.deepStrictEqual(declaredPages(null), [])
   })
 })

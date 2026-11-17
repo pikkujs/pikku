@@ -497,6 +497,39 @@ describe('the page gate on changes done', () => {
     )
   })
 
+  test('a change with declared pages is held to exactly those, whatever route file it touched', async () => {
+    const dir = project()
+    // one catch-all route renders every page: touching it touches all of them
+    write(
+      join(dir, 'apps', 'app', 'src', 'routes', '$slug.tsx'),
+      "export const Route = createFileRoute('/$slug')({})"
+    )
+    const touched = ['apps/app/src/routes/$slug.tsx']
+    report(dir, { rows: [row('about', 1440, 12), row('about', 390, 30)] })
+    assert.deepStrictEqual(
+      await checkPageGate({
+        git: fakeGit(dir, touched),
+        cwd: dir,
+        env: {},
+        pages: ['/about/'],
+      }),
+      { kind: 'pass', pages: ['/about'] }
+    )
+    // a declared page is compared even when no page file was touched; over the limit it is refused
+    report(dir, { rows: [row('index', 1440, 72.6), row('index', 390, 30)] })
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ['apps/app/src/lib/theme.ts']),
+      cwd: dir,
+      env: {},
+      pages: ['index'],
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match(
+      (outcome as { message: string }).message,
+      /index @1440 \(\/\): 72\.6% of pixels differ/
+    )
+  })
+
   test('PIKKU_COMPARE_GATE=off turns it off', async () => {
     const dir = project()
     assert.deepStrictEqual(

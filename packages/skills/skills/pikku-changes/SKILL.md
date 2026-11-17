@@ -34,10 +34,14 @@ the site and write what you find into `knowledge/site/` (notes only, no code). T
 from those notes: the data change stores what `things-kept.md` and `forms.md` say, in the currency and
 languages `prices-and-languages.md` says, and the plan covers every form and page you found. File it
 as below, and stop. A clone also needs its look: after the data change, file a capture change
-(`artifacts`: capture every page at the three widths with the pikku-site-clone scripts, done when the
-screenshots and layout notes are in `reference/` for every page on the list), then a frame change
-(`frontend`: header, footer, theme; depends on the capture), and make every page change depend on the
-frame change, so no page is built before the capture and the frame exist.
+(`artifacts`: run `pikku ui pages capture <url> --out artifacts/references/<site>`, done when every page
+on the list has its screenshots and style.json there and the pictures are in its `pictures/` folder),
+then a frame change (`frontend`: header, footer, theme; depends on the capture), and make every page
+change depend on the frame change, so no page is built before the capture and the frame exist.
+In a clone, every `frontend` change lists the pages it builds in `"pages"`, as route paths:
+`"pages": ["/", "/about"]`. At most 5 pages per change: split the pages into changes of at most 5.
+The frame change lists the pages it is checked on. `pikku changes done` compares exactly those pages
+with the original, and refuses until each one matches.
 
 Otherwise, file from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
 says what each piece does for the person, and the agent that builds it reads the code. Write the whole

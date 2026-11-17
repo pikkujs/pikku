@@ -10,6 +10,7 @@ import {
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { planRefusal } from '../lib/plan-gate.js'
 import { refuseUntilPagesCompared } from '../lib/page-gate.js'
+import { declaredPages } from '../lib/change-plan.js'
 import { refuseUntilChecked } from '../lib/check-gate.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import { dim, safe } from '@pikku/cli/addon-support'
@@ -63,21 +64,27 @@ export const ChangesDone = pikkuSessionlessFunc({
     // A change that touched pages of a site rebuilt from a reference is done
     // only when `pikku ui pages compare` passes at HEAD (or is waived).
     let note = input.note
+    const { rpc, projectId } = await changesContext(input.apiUrl)
     if (await isGitRepo()) {
       const ref = input.changeId.trim()
       await refuseUntilChecked({
         git: (args) => git(args),
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
       })
+      // the pages its plan named (a `Pages:` line), which it is held to
+      const pages = await rpc
+        .invoke('getChange', changeRef(projectId, input.changeId))
+        .then(({ change }) => declaredPages(change.body))
+        .catch(() => [])
       const gate = await refuseUntilPagesCompared({
         git: (args) => git(args),
         waive: input.waive,
+        pages,
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
       })
       if (gate.note) note = note ? `${note}\n\n${gate.note}` : gate.note
     }
 
-    const { rpc, projectId } = await changesContext(input.apiUrl)
     if (headCommit)
       headCommit = await checkCommit(
         rpc,
