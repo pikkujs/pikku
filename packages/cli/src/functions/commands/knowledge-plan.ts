@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
   runKnowledgePlanDefer,
@@ -34,13 +35,28 @@ export const knowledgePlanSchema = pikkuSessionlessFunc({
   func: async () => runKnowledgePlanSchema(),
 })
 
+/**
+ * Plans live at the repository root: `changes done` and the merge read them there. A project whose
+ * config sits in a package (rootDir '.') would otherwise write the plan under that package.
+ */
+const planRoot = (rootDir: string): string => {
+  try {
+    return execFileSync('git', ['rev-parse', '--show-toplevel'], {
+      cwd: rootDir,
+      encoding: 'utf8',
+    }).trim()
+  } catch {
+    return rootDir
+  }
+}
+
 export const knowledgePlanShow = pikkuSessionlessFunc({
   description:
     "Print a changeset's plan, either as it is stored or as the ordered list of work a build follows.",
   input: KnowledgePlanShowInputSchema,
   output: KnowledgePlanShowOutputSchema,
   func: async ({ config }, input) => {
-    return runKnowledgePlanShow(config.rootDir, input)
+    return runKnowledgePlanShow(planRoot(config.rootDir), input)
   },
 })
 
@@ -50,7 +66,10 @@ export const knowledgePlanProgress = pikkuSessionlessFunc({
   input: KnowledgePlanProgressInputSchema,
   output: KnowledgePlanProgressOutputSchema,
   func: async ({ config }, input) => {
-    return runKnowledgePlanProgress(config.rootDir, input)
+    return runKnowledgePlanProgress(
+      planRoot(config.rootDir),
+      input
+    )
   },
 })
 
@@ -60,7 +79,7 @@ export const knowledgePlanSet = pikkuSessionlessFunc({
   input: KnowledgePlanSetInputSchema,
   output: KnowledgePlanSetOutputSchema,
   func: async ({ config }, input) => {
-    return runKnowledgePlanSet(config.rootDir, input)
+    return runKnowledgePlanSet(planRoot(config.rootDir), input)
   },
 })
 
@@ -70,7 +89,7 @@ export const knowledgePlanDefer = pikkuSessionlessFunc({
   input: KnowledgePlanDeferInputSchema,
   output: KnowledgePlanDeferOutputSchema,
   func: async ({ config }, input) =>
-    runKnowledgePlanDefer(config.rootDir, input),
+    runKnowledgePlanDefer(planRoot(config.rootDir), input),
 })
 
 export {
