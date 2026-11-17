@@ -595,7 +595,11 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
     assert.strictEqual(outcome.kind, 'refuse')
     assert.match((outcome as { message: string }).message, /64% of pixels/)
 
-    // a compare that writes nothing leaves the forged report unread
+    // a compare that writes nothing leaves a forged report (dated in the future) unread
+    report(dir, {
+      rows: [row('about', 1440, 1), row('about', 390, 1)],
+      generatedAt: '2999-01-01T00:00:00.000Z',
+    })
     const silent = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,

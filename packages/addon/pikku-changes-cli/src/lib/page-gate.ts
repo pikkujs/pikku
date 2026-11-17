@@ -1,5 +1,11 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import {
@@ -596,6 +602,9 @@ export async function checkPageGate({
     const ids = [...new Set(appNeeds.map((n) => n.shot.id))]
     if (builder) {
       const out = defaultCompareDir(workspaceRoot, app)
+      const path = join(out, 'report.json')
+      // only what this run writes is read: a report already there goes first
+      rmSync(path, { force: true })
       const started = new Date().toISOString()
       const { output } = compare({
         cwd: configDir,
@@ -604,12 +613,12 @@ export async function checkPageGate({
         ids,
         out,
       })
-      const path = join(out, 'report.json')
       let report: Report | null = null
       try {
         report = JSON.parse(readFileSync(path, 'utf8'))
       } catch {}
-      if (!report || (report.generatedAt ?? '') < started) {
+      const at = report?.generatedAt ?? ''
+      if (!report || at < started || at > new Date().toISOString()) {
         const tail = output.trim().split('\n').slice(-20).join('\n')
         return {
           kind: 'refuse',
