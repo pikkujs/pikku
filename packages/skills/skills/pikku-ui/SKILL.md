@@ -5,18 +5,17 @@ description: >-
 installGroups: [client]
 ---
 
-# Screens go to a subagent
+# How a screen gets made
 
-A screen the main thread draws by hand comes out generic and gets rejected. Every request for
-a screen is handed to a subagent that is told the rules and designs with `impeccable`.
+A screen drawn without the project's design rules comes out generic and gets rejected. Whoever draws it (you, or a subagent if you have the tool) works from the rules below.
 
 ## Steps
 
 1. Find the design rules for this project: `DESIGN.md` and the UI section of `AGENTS.md` at the
    repo root, and the shared component package the screens are built from. If a project has
    none, say so and stop. Do not invent a look.
-2. Start one subagent per screen by calling the tool named `subagent` (it is already in your tool list: call it, do not search for it; up to three at once; each editing subagent works in its own
-   worktree, which is merged back and deleted when it reports; commit your own work first). Its prompt must contain:
+2. Build the screen yourself, in the checkout you were given, under these rules. If you have a tool named `subagent` you may hand a screen to a
+   subagent instead; if you do not, never stop or ask: build it. Either way the work follows these rules:
    - the screen and its route or file, and the content it has to show or do;
    - an instruction to read `DESIGN.md` in full and the UI section of `AGENTS.md` before drawing;
    - an instruction to build only from the shared components, and to copy the closest existing screen;
@@ -29,7 +28,7 @@ a screen is handed to a subagent that is told the rules and designs with `impecc
    the direction; never trade a hero or images for forms, toggles and buttons. The prompt must list what
    must not change and quote the user's actual complaint. A result with less visual character than the
    original is a failure. If it is not clear what is wrong, ask the user before starting.
-4. Do not draw or restyle the screen in the main thread, even for a small screen.
+4. Do not invent a look: stay inside the shared components and the existing theme.
 5. When the subagent reports, look at the screen before telling the user it is done (one render or DOM
    check; `pikku ui pages list` names the route and `pikku ui pages screenshot --base-url <url>` photographs it). Check that it did what it was told. If it only loaded `impeccable`
    and skipped its workflow, send it back. Tell the user what changed and what it decided.
