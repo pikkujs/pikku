@@ -29,8 +29,12 @@ import type { Env } from './dev-env.js'
  * whatever answers on the API's configured port, and the result says so.
  */
 
-/** How this tree's own backend is started: the command, `--port <n>` is appended. */
-export type OwnBackend = { cwd: string; command: string[] }
+/**
+ * How this tree's own backend is started: the command, `--port <n>` is appended.
+ * `migrate` runs first: a worktree's dev database starts empty (it is not in
+ * git), and the backend refuses to start on a schema it does not have.
+ */
+export type OwnBackend = { cwd: string; command: string[]; migrate?: string[] }
 
 /** A port nothing is listening on right now. */
 export const findFreePort = (): Promise<number> =>
@@ -118,6 +122,39 @@ export const spawnGroup = (
   return { child, stop }
 }
 
+/** Runs a command to its end; resolves with the tail of its output when it fails, else null. */
+const runOnce = (
+  command: string[],
+  cwd: string,
+  spawnImpl: typeof nodeSpawn,
+  timeoutMs = 120_000
+): Promise<string | null> =>
+  new Promise((done) => {
+    const [cmd, ...args] = command
+    let tail = ''
+    const child = spawnImpl(cmd!, args, {
+      cwd,
+      env: { ...process.env, PIKKU_NO_LOGO: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    const keep = (d: unknown) => (tail = (tail + String(d)).slice(-800))
+    child.stdout?.on('data', keep)
+    child.stderr?.on('data', keep)
+    const timer = setTimeout(() => child.kill('SIGKILL'), timeoutMs)
+    child.once('error', (error) => (clearTimeout(timer), done(error.message)))
+    child.once(
+      'close',
+      (code) => (
+        clearTimeout(timer),
+        done(
+          code === 0
+            ? null
+            : tail.trim().split('\n').slice(-6).join('\n') || `exit ${code}`
+        )
+      )
+    )
+  })
+
 /** The frontend whose directory is `appDir`, among those with a dev command. */
 export const devFrontendFor = (
   frontends: Parameters<typeof selectDevFrontends>[0],
@@ -191,6 +228,15 @@ export const serveFrontend = async ({
     const apiPort = await freePort()
     const tail: string[] = []
     const command = [...backend.command, '--port', String(apiPort)]
+    const migrateFailed = backend.migrate
+      ? await runOnce(
+          backend.migrate,
+          backend.cwd,
+          (spawnImpl ?? nodeSpawn) as typeof nodeSpawn
+        )
+      : null
+    if (migrateFailed)
+      write(`${backend.migrate!.slice(1).join(' ')} failed: ${migrateFailed}`)
     write(
       `Starting this tree's backend (${command.join(' ')}) on port ${apiPort} for the compare...`
     )
@@ -220,7 +266,7 @@ export const serveFrontend = async ({
     } catch (error) {
       await group.stop()
       // never another checkout's API: pages that load data go without it
-      isolateNote = `This tree's backend did not start for the compare (${command.join(' ')} in ${backend.cwd}: ${error instanceof Error ? error.message : String(error)}), so pages that load data were photographed without their data.${tail.length ? `\n${tail.slice(-8).join('\n')}` : ''}`
+      isolateNote = `This tree's backend did not start for the compare (${command.join(' ')} in ${backend.cwd}: ${error instanceof Error ? error.message : String(error)}), so pages that load data were photographed without their data.${tail.length ? `\n${tail.slice(-8).join('\n')}` : ''}${migrateFailed ? `\nIts database migration failed first (${backend.migrate!.slice(1).join(' ')}): ${migrateFailed}` : ''}`
     }
     // the proxy goes to this tree's backend, or to nothing at all
     apiUrl = `http://localhost:${apiPort}`
