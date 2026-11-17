@@ -22,13 +22,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const skillsRoot = join(root, 'skills')
 
 /**
- * Compiled projects whose @snippet regions skills may reference. Earlier
+ * Compiled sources whose @snippet regions skills may reference. The e2e wirings
+ * hold the addon contract helpers, which need an installed addon that publishes
+ * a contract and so cannot be shown in the shop. Earlier
  * sources win a name collision, so the two docs examples each declare the
  * regions a skill needs without one silently shadowing the other.
  */
 const SNIPPET_SOURCES = [
   join(root, '..', '..', 'templates', 'online-shop'),
   join(root, '..', '..', 'templates', 'field-service'),
+  join(root, '..', '..', 'e2e', 'packages', 'functions', 'src', 'wirings'),
 ]
 
 /** Every file under skills/, as POSIX-relative paths, sorted for a stable diff. */

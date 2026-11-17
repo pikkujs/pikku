@@ -8,9 +8,12 @@ const here = dirname(fileURLToPath(import.meta.url))
 // packages/cli/src/functions/commands -> the repo root
 const repoRoot = join(here, '..', '..', '..', '..', '..')
 // Earlier sources win a name collision, matching scripts/embed.ts.
-const snippetSources = ['online-shop', 'field-service'].map((name) =>
-  join(repoRoot, 'templates', name)
-)
+const snippetSources = [
+  ...['online-shop', 'field-service'].map((name) =>
+    join(repoRoot, 'templates', name)
+  ),
+  join(repoRoot, 'e2e', 'packages', 'functions', 'src', 'wirings'),
+]
 
 /**
  * The code a skill shows is embedded at build time from an example project's
