@@ -164,3 +164,50 @@ fn addon_loader_matches_go_on_the_fixture() {
     assert_eq!(diags, want);
     let _ = std::fs::remove_dir_all(&root);
 }
+
+/// Same sources and wording as Go's `TestWireContributorsRefusesWhatItCannotRead`.
+#[test]
+fn wire_contributors_refuses_what_it_cannot_read() {
+    let root = std::env::temp_dir().join(format!("pikku-rs-wire-contributors-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("src")).unwrap();
+    for (name, text) in [
+        (
+            "tsconfig.json",
+            r#"{"compilerOptions":{"target":"ES2022","module":"Node16","moduleResolution":"Node16","strict":true,"noEmit":true,"skipLibCheck":true},"include":["src"]}"#,
+        ),
+        (
+            "src/first.ts",
+            "import { wireContributors } from '@pikku/core/contributors'\n\nwireContributors({ package: '@fixture/shop-addon', contributors: ['inbox'] })\n",
+        ),
+        (
+            "src/second.ts",
+            "import { wireContributors } from '@pikku/core/contributors'\n\ndeclare const contributors: string[]\ndeclare const options: { contributors?: string[] }\n\nwireContributors({ package: '@fixture/shop-addon', contributors: ['cache'] })\nwireContributors({ package: '@fixture/other-addon', contributors })\nwireContributors({ package: '@fixture/other-addon', contributors: ['a'], ...options })\n",
+        ),
+    ] {
+        std::fs::write(root.join(name), text).unwrap();
+    }
+    let root = root.canonicalize().unwrap();
+    let options = Options {
+        root_dir: root.to_string_lossy().into_owned(),
+        tsconfig: root.join("tsconfig.json").to_string_lossy().into_owned(),
+        ..Default::default()
+    };
+    let req = Request {
+        route_files: ["src/first.ts", "src/second.ts"].iter().map(|f| root.join(f).to_string_lossy().into_owned()).collect(),
+        options,
+        changed_files: vec![],
+    };
+    let res = analyze::run(&req, None).unwrap_or_else(|e| panic!("{e}"));
+    let got: Vec<String> =
+        res.diagnostics.iter().filter(|d| d.code.as_deref() == Some("PKU362")).map(|d| d.message.clone()).collect();
+    assert_eq!(
+        got,
+        [
+            "wireContributors is called twice for package '@fixture/shop-addon' (src/first.ts:3 and src/second.ts:6). Call it once with every contributor to opt in to.",
+            "wireContributors' properties must be plain `key: value` entries, got: contributors",
+            "wireContributors' properties must be plain `key: value` entries, got: ...options",
+        ]
+    );
+    let _ = std::fs::remove_dir_all(&root);
+}

@@ -35,10 +35,18 @@ impl Context<'_> {
             self.log.critical(codes::ADDON_CONTRIBUTORS_NOT_STATIC, msg);
             return;
         }
-        let mut decl = AddonDecl { contributors_only: true, file: file_name_of(node).to_string(), ..Default::default() };
+        let mut decl = AddonDecl { contributors_only: true, file: file_name_of(node).to_string(), site: self.node_position(node), ..Default::default() };
         for p in args[0].properties() {
             let p = *p;
-            let Some(key) = prop_key(p) else { continue };
+            let Some(key) = prop_key(p) else {
+                // A spread, a shorthand or a computed key can set package or
+                // contributors to something the build cannot read.
+                self.log.critical(
+                    codes::ADDON_CONTRIBUTORS_NOT_STATIC,
+                    format!("wireContributors' properties must be plain `key: value` entries, got: {}", node_text(p)),
+                );
+                continue;
+            };
             let Some(init) = p.initializer() else { continue };
             if key == "package" && is_string_literal(init) {
                 decl.pkg = init.text().to_string();
@@ -57,6 +65,16 @@ impl Context<'_> {
             return;
         }
         if decl.contributors.is_empty() {
+            return;
+        }
+        if let Some(prev) = self.contributor_wirings.iter().find(|d| d.pkg == decl.pkg) {
+            self.log.critical(
+                codes::ADDON_CONTRIBUTORS_NOT_STATIC,
+                format!(
+                    "wireContributors is called twice for package '{}' ({} and {}). Call it once with every contributor to opt in to.",
+                    decl.pkg, prev.site, decl.site
+                ),
+            );
             return;
         }
         self.log.debug(format!("• Found wireContributors: {}", decl.pkg));

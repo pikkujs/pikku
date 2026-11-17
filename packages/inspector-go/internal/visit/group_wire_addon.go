@@ -32,6 +32,8 @@ type addonDecl struct {
 	// contributorsOnly marks a wireContributors entry: the contributors are
 	// taken from a plain package that is not an addon.
 	contributorsOnly bool
+	// site is where a wireContributors call is, as file:line, for diagnostics.
+	site string
 	// local is a wireRemoteAddon's local package: the screens and contributors
 	// shown under the remote name are read from it.
 	local *addonLocal

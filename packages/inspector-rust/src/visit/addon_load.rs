@@ -67,6 +67,8 @@ pub struct AddonDecl {
     /// A wireContributors entry: the contributors are taken from a plain
     /// package that is not an addon.
     pub contributors_only: bool,
+    /// Where a wireContributors call is, as file:line, for diagnostics.
+    pub site: String,
     /// A wireRemoteAddon's local package: the screens and contributors shown
     /// under the remote name are read from it.
     pub(crate) local: Option<AddonLocal>,
@@ -136,6 +138,7 @@ impl AddonDecl {
             uses: string_record_of(o.get("uses")),
             contributors: o.get("contributors").map(OJson::string_members).unwrap_or_default(),
             contributors_only: false,
+            site: String::new(),
             local,
             secret_overrides: object_record_of(o.get("secretOverrides")),
             variable_overrides: object_record_of(o.get("variableOverrides")),

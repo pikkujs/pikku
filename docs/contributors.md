@@ -157,7 +157,7 @@ wireContributors({
 })
 ```
 
-It is read statically at build time and does nothing when the app runs. The package and every name must be string literals (PKU362 otherwise), and a name the package does not register is PKU363, as for `wireAddon`.
+It is read statically at build time and does nothing when the app runs. The package and every name must be string literals, written as plain `key: value` entries with no spread, and each package is wired by one call (PKU362 otherwise). A name the package does not register is PKU363, as for `wireAddon`.
 
 ### Choosing by deploy provider
 
@@ -226,6 +226,7 @@ The Cloudflare adapter selects the optional contributor `kysely-coercion` itself
 | `defineContributors` with a non-literal argument or an inline variant     | PKU360                                                                   |
 | The same contributor name twice                                           | PKU361                                                                   |
 | `wireAddon({ contributors })` with a non-literal list                     | PKU362                                                                   |
+| `wireContributors` with a spread or shorthand, or twice for one package   | PKU362                                                                   |
 | An opt-in name the addon does not register                                | PKU363                                                                   |
 | `pikku.contributors` still in an addon's `package.json`                   | PKU364 (a hard error, no longer silently ignored)                        |
 | `dev.contributors` or `deploy.contributors` still in `pikku.config.json`  | the CLI refuses to load the config, naming the key                       |

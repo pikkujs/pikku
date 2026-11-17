@@ -1,6 +1,8 @@
 package visit
 
 import (
+	"fmt"
+
 	"github.com/microsoft/typescript-go/shim/ast"
 
 	"github.com/pikkujs/pikku/packages/inspector-go/internal/diag"
@@ -28,10 +30,13 @@ func (s *Context) addWireContributors(node *ast.Node) {
 		notStatic(msg)
 		return
 	}
-	decl := &addonDecl{contributorsOnly: true, file: ast.GetSourceFileOfNode(node).FileName()}
+	decl := &addonDecl{contributorsOnly: true, file: ast.GetSourceFileOfNode(node).FileName(), site: s.nodePosition(node)}
 	for _, p := range args[0].Properties() {
 		key, ok := propKey(p)
 		if !ok {
+			// A spread, a shorthand or a computed key can set package or
+			// contributors to something the build cannot read.
+			notStatic("wireContributors' properties must be plain `key: value` entries, got: " + tsutil.NodeText(p))
 			continue
 		}
 		init := p.Initializer()
@@ -52,6 +57,14 @@ func (s *Context) addWireContributors(node *ast.Node) {
 	}
 	if len(decl.contributors) == 0 {
 		return
+	}
+	for _, prev := range s.contributorWirings {
+		if prev.pkg == decl.pkg {
+			s.Log.Critical(diag.AddonContributorsNotStatic, fmt.Sprintf(
+				"wireContributors is called twice for package '%s' (%s and %s). Call it once with every contributor to opt in to.",
+				decl.pkg, prev.site, decl.site))
+			return
+		}
 	}
 	s.Log.Debugf("• Found wireContributors: %s", decl.pkg)
 	s.contributorWirings = append(s.contributorWirings, decl)
