@@ -53,4 +53,19 @@ describe('browserConfigFromEnv', () => {
 
     assert.equal(config.apiUrl, 'https://sandbox-a1b2.example.com/api')
   })
+
+  test('the chrome binary is PLAYWRIGHT_CHROMIUM_PATH, else PIKKU_CHROMIUM', () => {
+    assert.equal(
+      browserConfigFromEnv({}, { PIKKU_CHROMIUM: '/b/chrome' }).chromiumPath,
+      '/b/chrome'
+    )
+    assert.equal(
+      browserConfigFromEnv(
+        {},
+        { PIKKU_CHROMIUM: '/b/chrome', PLAYWRIGHT_CHROMIUM_PATH: '/a/chrome' }
+      ).chromiumPath,
+      '/a/chrome'
+    )
+    assert.equal(browserConfigFromEnv({}, {}).chromiumPath, undefined)
+  })
 })

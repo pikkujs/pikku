@@ -96,7 +96,8 @@ export function browserConfigFromEnv(
     videoStepHoldMs:
       overrides.videoStepHoldMs ?? Number(env.E2E_VIDEO_STEP_HOLD_MS ?? 2_000),
     chromiumPath:
-      overrides.chromiumPath ?? (env.PLAYWRIGHT_CHROMIUM_PATH || undefined),
+      overrides.chromiumPath ??
+      (env.PLAYWRIGHT_CHROMIUM_PATH || env.PIKKU_CHROMIUM || undefined),
     cdpUrl: overrides.cdpUrl ?? (env.XBROWSER_CDP_URL || undefined),
     hostnameOnly:
       overrides.hostnameOnly ?? (host ? host.split(':')[0] : undefined),
