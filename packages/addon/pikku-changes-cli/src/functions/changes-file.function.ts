@@ -31,6 +31,19 @@ export const ChangesFileInput = z.object({
   backlog: z.boolean().optional(),
 })
 
+/**
+ * A builder (PIKKU_CHANGES_BUILDER=1) that files a change mid-build puts it in
+ * the backlog: scope grown after the plan was made waits for a person to make
+ * it ready. PIKKU_CHANGES_BUILDER_FILE_READY=1 lets it file straight to ready.
+ */
+export const builderFilesToBacklog = (
+  projectId: string | null | undefined,
+  env: NodeJS.ProcessEnv = process.env
+): boolean =>
+  env.PIKKU_CHANGES_BUILDER === '1' &&
+  env.PIKKU_CHANGES_BUILDER_FILE_READY !== '1' &&
+  projectId === LOCAL_PROJECT_ID
+
 export const ChangesFileOutput = z.object({
   change: z.any().optional(),
   filed: z.array(z.object({ ref: z.string(), change: z.any() })).optional(),
@@ -76,7 +89,8 @@ export const ChangesFile = pikkuSessionlessFunc({
       locale: input.locale,
       specialist: input.specialist,
       dependsOn: idList(input.dependsOn),
-      backlog: input.backlog ? true : undefined,
+      backlog:
+        input.backlog || builderFilesToBacklog(projectId) ? true : undefined,
     }
     return await rpc.invoke('createChange', filing)
   },
@@ -125,7 +139,8 @@ async function filePlan(
       dependsOn: planned.dependsOn.length
         ? planned.dependsOn.map((ref) => ids.get(ref)!)
         : undefined,
-      backlog: input.backlog ? true : undefined,
+      backlog:
+        input.backlog || builderFilesToBacklog(projectId) ? true : undefined,
     }
     const { change } = await rpc.invoke('createChange', filing)
     ids.set(planned.ref, change.changeId)
@@ -150,6 +165,9 @@ async function readStdin(): Promise<string> {
   return Buffer.concat(chunks).toString('utf8')
 }
 
+const BACKLOGGED =
+  'Filed to the backlog, not ready: a change filed while building waits for a person to make it ready (pikku changes ready <id>). Finish the change you are on; do not build this one now.'
+
 export const renderChangesFile = (
   _s: unknown,
   { change, filed }: z.infer<typeof ChangesFileOutput>
@@ -165,6 +183,11 @@ export const renderChangesFile = (
         `Filed #${safe(change.shortId)}  ${safe(ref)}  ${safe(tagged.specialist ?? '')}  ${safe(change.title)}${after}`
       )
     }
+    if (
+      filed.some((f) => f.change.status === 'backlog') &&
+      process.env.PIKKU_CHANGES_BUILDER === '1'
+    )
+      console.log(BACKLOGGED)
     console.log(
       `Filing is complete: ${filed.length} change(s) filed. Stop now: do not claim, build or mark anything done; another agent builds them.`
     )
@@ -172,4 +195,6 @@ export const renderChangesFile = (
   }
   console.log(`Filed #${safe(change.shortId)}  ${safe(change.title)}`)
   console.log(dim(`  ${safe(change.changeId)}`))
+  if (change.status === 'backlog' && process.env.PIKKU_CHANGES_BUILDER === '1')
+    console.log(BACKLOGGED)
 }
