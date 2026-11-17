@@ -20,6 +20,7 @@ export type InspectorGoAnalysisOptions = Pick<
   InspectorOptions,
   | 'tsconfig'
   | 'rootDir'
+  | 'baseDir'
   | 'setupOnly'
   | 'types'
   | 'isAddon'
@@ -117,6 +118,7 @@ export const toAnalysisOptions = (
   const picked: InspectorGoAnalysisOptions = {
     tsconfig: options.tsconfig,
     rootDir: options.rootDir,
+    baseDir: options.baseDir,
     setupOnly: options.setupOnly,
     types: options.types,
     schemaConfig: options.schemaConfig && {

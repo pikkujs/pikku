@@ -26,6 +26,9 @@ type Options struct {
 	// RootDir bounds the swept files; defaults to the common ancestor of
 	// RouteFiles, like the TS findCommonAncestor fallback.
 	RootDir string
+	// BaseDir is a nested pikku project the sweeps still visit: the root
+	// project's base package, inspected in place.
+	BaseDir string
 	// Tsconfig is read for path mappings only (readProjectPathMappings).
 	Tsconfig string
 }
@@ -108,7 +111,13 @@ func Create(opts Options, cache *Cache) (*Program, error) {
 	}
 	rootDir = tspath.NormalizePath(rootDir)
 
-	isNested := NestedProjectFilter(rootDir)
+	baseDir := ""
+	if opts.BaseDir != "" {
+		if abs, err := filepath.Abs(opts.BaseDir); err == nil {
+			baseDir = tspath.NormalizePath(abs)
+		}
+	}
+	isNested := NestedProjectFilter(rootDir, baseDir)
 	var files []*ast.SourceFile
 	for _, sf := range prog.GetSourceFiles() {
 		name := sf.FileName()
@@ -163,14 +172,15 @@ func commonAncestor(files []string) string {
 
 // NestedProjectFilter reports files inside a nested pikku project under
 // rootDir (a directory with its own pikku.config.json), with a per-directory
-// cache like createNestedProjectFilter.
-func NestedProjectFilter(rootDir string) func(string) bool {
+// cache like createNestedProjectFilter. Files under baseDir (when set) belong
+// to the project even though baseDir has its own config.
+func NestedProjectFilter(rootDir, baseDir string) func(string) bool {
 	cache := map[string]bool{}
 	return func(fileName string) bool {
 		var pending []string
 		dir := path.Dir(fileName)
 		nested := false
-		for strings.HasPrefix(dir, rootDir) && dir != rootDir {
+		for strings.HasPrefix(dir, rootDir) && dir != rootDir && dir != baseDir {
 			if v, ok := cache[dir]; ok {
 				nested = v
 				break

@@ -490,6 +490,7 @@ export const createSingletonServices: CreateSingletonServices<
       unfilteredState = await inspectWithGo(logger, wiringFiles, {
         setupOnly,
         rootDir,
+        baseDir: config.basePackage?.dir,
         isAddon: !!config.addon,
         tsconfig: config.tsconfig,
         types: {

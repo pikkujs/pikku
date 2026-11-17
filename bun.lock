@@ -2079,32 +2079,32 @@
       },
     },
     "verifiers/base-addons": {
-      "name": "@pikku/verifier-pikku-directories",
+      "name": "@pikku/verifier-base-addons",
       "dependencies": {
         "@pikku/core": "workspace:*",
-        "@pikku/verifier-pd-addon": "workspace:*",
-        "@pikku/verifier-pd-plain": "workspace:*",
+        "@pikku/verifier-ba-app": "workspace:*",
+        "@pikku/verifier-ba-tools": "workspace:*",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
       },
     },
-    "verifiers/base-addons/packages/addon": {
-      "name": "@pikku/verifier-pd-addon",
+    "verifiers/base-addons/packages/app": {
+      "name": "@pikku/verifier-ba-app",
       "version": "0.1.0",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/verifier-ba-tools": "workspace:*",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
       },
     },
-    "verifiers/base-addons/packages/plain": {
-      "name": "@pikku/verifier-pd-plain",
+    "verifiers/base-addons/packages/tools": {
+      "name": "@pikku/verifier-ba-tools",
       "version": "0.1.0",
       "dependencies": {
         "@pikku/core": "workspace:*",
-        "@pikku/verifier-pd-addon": "workspace:*",
       },
       "devDependencies": {
         "@pikku/cli": "workspace:*",
@@ -3851,15 +3851,15 @@
 
     "@pikku/verifier-addon-workspace-functions": ["@pikku/verifier-addon-workspace-functions@workspace:verifiers/addon-workspace/functions"],
 
+    "@pikku/verifier-ba-app": ["@pikku/verifier-ba-app@workspace:verifiers/base-addons/packages/app"],
+
+    "@pikku/verifier-ba-tools": ["@pikku/verifier-ba-tools@workspace:verifiers/base-addons/packages/tools"],
+
+    "@pikku/verifier-base-addons": ["@pikku/verifier-base-addons@workspace:verifiers/base-addons"],
+
     "@pikku/verifier-db-addon": ["@pikku/verifier-db-addon@workspace:verifiers/db-schema/addon"],
 
     "@pikku/verifier-db-remote-addon": ["@pikku/verifier-db-remote-addon@workspace:verifiers/db-schema/remote-addon"],
-
-    "@pikku/verifier-pd-addon": ["@pikku/verifier-pd-addon@workspace:verifiers/base-addons/packages/addon"],
-
-    "@pikku/verifier-pd-plain": ["@pikku/verifier-pd-plain@workspace:verifiers/base-addons/packages/plain"],
-
-    "@pikku/verifier-pikku-directories": ["@pikku/verifier-pikku-directories@workspace:verifiers/base-addons"],
 
     "@pikku/verifier-registry-addon": ["@pikku/verifier-registry-addon@workspace:verifiers/addon-registry/source"],
 

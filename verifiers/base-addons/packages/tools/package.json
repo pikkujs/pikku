@@ -1,11 +1,12 @@
 {
-  "name": "@pikku/verifier-pd-addon",
+  "name": "@pikku/verifier-ba-tools",
   "version": "0.1.0",
   "type": "module",
   "private": true,
   "imports": {
-    "#pikku/*.js": "./.pikku/*.ts",
-    "#pikku/*": "./.pikku/*/index.ts"
+    "#pikku/addon/*": "./.pikku/addon/*/index.ts",
+    "#pikku/*.js": "./.pikku/addon/*.ts",
+    "#pikku/*": "./.pikku/addon/*/index.ts"
   },
   "exports": {
     "./.pikku/*": "./.pikku/addon/*",

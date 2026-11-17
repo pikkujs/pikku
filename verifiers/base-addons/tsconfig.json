@@ -3,7 +3,13 @@
   "compilerOptions": {
     "noEmit": true,
     "resolveJsonModule": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*", "types/**/*", ".pikku/**/*"]
+  "include": [
+    "packages/app/src/**/*",
+    "packages/app/types/**/*",
+    ".pikku/**/*"
+  ]
 }
