@@ -1,5 +1,14 @@
 # @pikku/addon-admin
 
+## 0.12.18
+
+### Patch Changes
+
+- `@pikku/addon-console` is removed from the repository and will no longer be published. The CLI drops everything that supported it: `scaffold.console` and its generated files, `pikku enable console`, the `PIKKU_CONSOLE_TOKEN` bearer middleware in the generated auth wiring, the console steps of `pikku ci`, the `/console/knowledge` link in `pikku knowledge plan` output, and the `pikku:console` scope from the studio session (it is now `['admin']`). What remains of the console's functions moves to Pikku Studio. See docs/MIGRATION.md.
+- Updated dependencies [b2fe534]
+- Updated dependencies
+  - @pikku/core@0.12.160
+
 ## 0.12.17
 
 ### Patch Changes

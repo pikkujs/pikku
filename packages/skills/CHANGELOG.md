@@ -1,5 +1,13 @@
 # @pikku/skills
 
+## 0.12.78
+
+### Patch Changes
+
+- dd0a6f0: An addon declares its tables with `defineTables` in its own `db/tables.ts`, and `pikku db export` publishes the declaration as JSON instead of SQL per dialect (no database or `db.mysqlUrl` needed). The app's `pikku db generate` merges each wired addon's declaration with `db/tables.ts` and plans it once, so addon tables get derived SQL, annotations, constraints and approval-gated drops and renames. Table names need the addon's wired prefix, a name declared twice is refused, and an old SQL-per-dialect artifact is refused with "rebuild or upgrade the addon". `db migrate`, `check`, `codegen` and `reset` now read the wired addons through the inspector. See docs/MIGRATION.md.
+- bdf19ed: Document `wireContributors` and `platform.provider` in the pikku-addon and pikku-build skills.
+- f6753b2: A Pikku `wire*` call (`wireHTTP`, `wireChannel`, `wireContributors`, `wireAddon`, `wireRemoteAddon` and the rest) inside a function is now a critical diagnostic, PKU367. Calls at the top level of a file are unchanged. Move the call out of the function; a wiring that depends on a name only a function knows has to be declared once per name instead.
+
 ## 0.12.77
 
 ### Patch Changes

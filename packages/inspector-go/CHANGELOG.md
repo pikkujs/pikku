@@ -1,5 +1,18 @@
 # @pikku/inspector-go
 
+## 0.12.17
+
+### Patch Changes
+
+- b2fe534: Add `wireContributors({ package, contributors })` to opt a package's deploy contributors in without declaring an addon, put the deploy provider on the contributor platform, and add a `nats` contributor in `@pikku/queue-nats` that replaces the in-memory queue and scheduler in standalone deploys only. It attaches to the stage's own JetStream stream (`pikku_<project>_<stage>`) as a restricted user and needs `NATS_URL`, `NATS_USER`, `NATS_PASSWORD`, `PIKKU_PROJECT` and `PIKKU_STAGE`; it refuses to start without them.
+- 0d0762f: `wireContributors` is refused with PKU362 when the same package is wired by two calls, or when an entry is a spread, shorthand or computed property that could change the package or contributor list. Before, the second call replaced the first and a spread or shorthand was skipped silently.
+- f6753b2: A Pikku `wire*` call (`wireHTTP`, `wireChannel`, `wireContributors`, `wireAddon`, `wireRemoteAddon` and the rest) inside a function is now a critical diagnostic, PKU367. Calls at the top level of a file are unchanged. Move the call out of the function; a wiring that depends on a name only a function knows has to be declared once per name instead.
+- Updated dependencies [b2fe534]
+- Updated dependencies
+- Updated dependencies [f6753b2]
+  - @pikku/core@0.12.160
+  - @pikku/inspector@0.12.122
+
 ## 0.12.16
 
 ### Patch Changes
