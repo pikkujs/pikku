@@ -33,6 +33,14 @@ a screen is handed to a subagent that is told the rules and designs with `impecc
    check; `pikku ui pages list` names the route and `pikku ui pages screenshot --base-url <url>` photographs it). Check that it did what it was told. If it only loaded `impeccable`
    and skipped its workflow, send it back. Tell the user what changed and what it decided.
 
+## No subagent tool
+
+If you have no tool to start a subagent, do not stop and do not ask. Build the screen yourself, under the same rules:
+read `DESIGN.md` and the UI section of `AGENTS.md` in full first, read the `impeccable` skill and follow its
+design workflow before writing code, build only from the shared components, copy the closest existing screen, and
+keep to the existing theme tokens. Then do step 5: photograph the screen with `pikku ui pages screenshot` and look at it.
+Step 4 does not apply when you are the only agent.
+
 ## What stays in the main thread
 
 Wiring: routes, data hooks, state, redirects, and what a screen should contain. The subagent owns
