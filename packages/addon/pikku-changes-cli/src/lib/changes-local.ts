@@ -64,7 +64,9 @@ export type Declaration = {
   needsPlan: boolean
 }
 
-type Group = ListChangesOutput['groups'][number] & Partial<Declaration>
+/** `branch`: the changeset branch `claim --worktree` made for it (local queue). */
+type Group = ListChangesOutput['groups'][number] &
+  Partial<Declaration> & { branch?: string }
 type Message = GetChangeOutput['thread'][number]
 
 export type Store = {
@@ -427,6 +429,7 @@ const handlers: {
       alters: input.alters ?? existing?.alters,
       reads: input.reads ?? existing?.reads,
       needsPlan: input.needsPlan ?? existing?.needsPlan,
+      ...(existing?.branch ? { branch: existing.branch } : {}),
     }
     const clash = conflicts(store, group, now)
     if (clash) throw new LocalChangesError(clash, 409)
@@ -497,6 +500,22 @@ export async function releaseChangeset(
   await withStore(path, (store) => {
     const group = store.groups.find((g) => g.groupId === groupId)
     if (group) group.claimExpiresAt = new Date()
+  })
+}
+
+/**
+ * The branch a changeset is built on, recorded when `claim --worktree` makes
+ * (or hands back) its worktree, so the changeset is found by its group and
+ * not by a slug of a title that a later claim may change.
+ */
+export async function recordChangesetBranch(
+  path: string,
+  groupId: string,
+  branch: string
+): Promise<void> {
+  await withStore(path, (store) => {
+    const group = store.groups.find((g) => g.groupId === groupId)
+    if (group) group.branch = branch
   })
 }
 

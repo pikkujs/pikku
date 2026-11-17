@@ -12,10 +12,14 @@ import {
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { dim, safe } from '@pikku/cli/addon-support'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
-import { releaseChangeset } from '../lib/changes-local.js'
+import {
+  recordChangesetBranch,
+  releaseChangeset,
+} from '../lib/changes-local.js'
 import {
   addChangesetWorktree,
   assertWorktreeRoom,
+  changesetBranch,
 } from '../lib/changeset-worktree.js'
 import type { ClaimChangesOutput } from '../lib/types.js'
 import { statuses } from '../lib/changes-board.js'
@@ -86,17 +90,30 @@ export const ChangesClaim = pikkuSessionlessFunc({
     }
     const planWhy = declaration?.why
     if (!input.worktree) return { ...claimed, planWhy }
+    // a changeset claimed again keeps the branch it was given, whatever
+    // --title it is claimed with now
+    const branch =
+      (claimed.group as { branch?: string }).branch ??
+      changesetBranch(claimed.group.title)
     let worktree: string
     try {
       worktree = await addChangesetWorktree(claimed.group.title, {
         reuse: !!input.groupId,
+        branch,
       })
     } catch (error) {
       // No checkout to build it in: the lease just taken goes back.
       if (storePath) await releaseChangeset(storePath, claimed.group.groupId)
       throw error
     }
-    return { ...claimed, planWhy, worktree }
+    if (storePath)
+      await recordChangesetBranch(storePath, claimed.group.groupId, branch)
+    return {
+      ...claimed,
+      group: { ...claimed.group, branch },
+      planWhy,
+      worktree,
+    }
   },
 })
 

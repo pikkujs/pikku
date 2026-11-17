@@ -25,6 +25,10 @@ export const changesetSlug = (title: string): string =>
     .replace(/^-|-$/g, '')
     .slice(0, 48)
 
+/** The branch a new changeset with this title is built on. */
+export const changesetBranch = (title: string): string =>
+  `changeset/${changesetSlug(title)}`
+
 export interface ChangesetWorktree {
   path: string
   branch: string
@@ -70,11 +74,20 @@ export async function assertWorktreeRoom(
  */
 export async function addChangesetWorktree(
   title: string,
-  { reuse = false, cwd }: { reuse?: boolean; cwd?: string } = {},
+  {
+    reuse = false,
+    cwd,
+    branch: recorded,
+  }: {
+    reuse?: boolean
+    cwd?: string
+    /** The branch recorded on the group: used rather than a slug of the title. */
+    branch?: string
+  } = {},
   max = maxChangesetWorktrees()
 ): Promise<string> {
-  const slug = changesetSlug(title)
-  const branch = `changeset/${slug}`
+  const branch = recorded ?? changesetBranch(title)
+  const slug = branch.replace(/^changeset\//, '')
   const live = await changesetWorktrees(cwd)
   const existing = live.find((w) => w.branch === branch)
   const exists = await branchExists(branch, cwd)
