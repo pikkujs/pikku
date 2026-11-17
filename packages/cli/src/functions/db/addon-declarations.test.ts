@@ -262,6 +262,89 @@ describe('reading what wired addons publish', () => {
     )
   })
 
+  test('a name that is not a plain identifier is refused, so a marker cannot be forged', () => {
+    for (const name of [
+      'labels_x,user',
+      'labels_x\nuser',
+      "labels_x'",
+      'labels_x user',
+      'labels.x',
+      '__proto__',
+      'constructor',
+      'prototype',
+      '1labels',
+    ]) {
+      publish(
+        'addon-labels',
+        JSON.parse(
+          `{${JSON.stringify(name)}: ${JSON.stringify(LABELS.labelsItem)}}`
+        )
+      )
+      assert.throws(
+        () => addonDeclarations(root, wire('labels')),
+        /the 'addon-labels' addon: .*not a plain identifier/,
+        name
+      )
+    }
+  })
+
+  test('a column name that is not a plain identifier is refused too', () => {
+    for (const column of ['a,b', 'a\nb', '__proto__', 'x'.repeat(80)]) {
+      publish(
+        'addon-labels',
+        JSON.parse(
+          `{"labelsItem": {"columns": {${JSON.stringify(column)}: {"type": "text"}}}}`
+        )
+      )
+      assert.throws(
+        () => addonDeclarations(root, wire('labels')),
+        /not a plain identifier/,
+        column
+      )
+    }
+  })
+
+  test('a column declared public is refused: the app exposes it in its own declaration', () => {
+    publish('addon-labels', {
+      labelsItem: {
+        columns: {
+          id: { type: 'key', primaryKey: true },
+          title: { type: 'text', security: 'public' },
+        },
+      },
+    })
+    assert.throws(
+      () => addonDeclarations(root, wire('labels')),
+      /labelsItem\.title.*'public'.*app can expose it in its own declaration/
+    )
+  })
+
+  test('pii and secret stay accepted', () => {
+    publish('addon-labels', LABELS)
+    assert.equal(addonDeclarations(root, wire('labels')).length, 1)
+  })
+
+  test('an artifact over the size cap is refused before it is read', () => {
+    publish('addon-labels', {
+      labelsItem: LABELS.labelsItem,
+      pad: 'x'.repeat(1_100_000),
+    })
+    assert.throws(
+      () => addonDeclarations(root, wire('labels')),
+      /larger than 1 MB/
+    )
+  })
+
+  test('an artifact with more than 1000 tables is refused', () => {
+    const many: Record<string, unknown> = {}
+    for (let i = 0; i < 1001; i++) many[`labels_t${i}`] = LABELS.labelsItem
+    publish('addon-labels', many)
+    assert.throws(
+      () => addonDeclarations(root, wire('labels')),
+      /more than 1000 tables/
+    )
+  })
+
   test('the prefix is the wired name with separators folded to underscores', () => {
     assert.equal(addonTablePrefix('invoice-tracker'), 'invoice_tracker_')
   })
@@ -280,10 +363,7 @@ describe('merging declarations', () => {
     })
     assert.equal(mergeDeclarations(mine, [addon('labels', {})]), mine)
     assert.equal(mergeDeclarations(null, []), null)
-    assert.deepEqual(
-      mergeDeclarations(null, [addon('labels', {})])!.schema.tables,
-      {}
-    )
+    assert.equal(mergeDeclarations(null, [addon('labels', {})]), null)
   })
 
   test('addon tables, annotations and constraints join the app’s', () => {
@@ -440,6 +520,86 @@ describe('the app creates what its addons declare', () => {
       sql(await generate(wire('labels'), true)),
       /DROP TABLE "labels_item"/
     )
+  })
+
+  test('unwiring the only addon, with no db/tables.ts, waits for approval and exits clean', async () => {
+    rmSync(join(root, 'db', 'tables.ts'))
+    publish('addon-labels', LABELS)
+    await generate(wire('labels'))
+    const refused = await generate([])
+    assert.deepEqual(refused.refusals, [])
+    assert.match(
+      refused.destructive.map((d) => d.what).join(),
+      /DROP TABLE labels_item/
+    )
+    assert.equal(
+      (await computeDeclaredTablesDrift(resolved(), [])).refusals.length,
+      0
+    )
+    assert.match(sql(await generate([], true)), /DROP TABLE "labels_item"/)
+  })
+
+  test('switching the addon to remote, with no db/tables.ts, is the same drop', async () => {
+    rmSync(join(root, 'db', 'tables.ts'))
+    publish('addon-labels', LABELS)
+    await generate(wire('labels'))
+    const refused = await generate(wire('labels', { remote: true }))
+    assert.deepEqual(refused.refusals, [])
+    assert.match(
+      sql(await generate(wire('labels', { remote: true }), true)),
+      /DROP TABLE "labels_item"/
+    )
+  })
+
+  test('unwiring the addon, with a db/tables.ts, waits for approval', async () => {
+    publish('addon-labels', LABELS)
+    await generate(wire('labels'))
+    const refused = await generate([])
+    assert.deepEqual(refused.refusals, [])
+    assert.match(
+      refused.destructive.map((d) => d.what).join(),
+      /DROP TABLE labels_item/
+    )
+    assert.match(sql(await generate([], true)), /DROP TABLE "labels_item"/)
+  })
+
+  test('a table adopted from old migrations and later removed from the addon is kept, and nothing is offered', async () => {
+    // No app table: with one, its new migration would record the adopted table too.
+    rmSync(join(root, 'db', 'tables.ts'))
+    mkdirSync(join(root, 'db', 'sqlite'), { recursive: true })
+    writeFileSync(
+      join(root, 'db', 'sqlite', '0001-labels.sql'),
+      `CREATE TABLE labels_item (\n  id TEXT PRIMARY KEY NOT NULL,\n  name TEXT NOT NULL,\n  owner TEXT,\n  weight INTEGER\n);\n\nCREATE UNIQUE INDEX labels_item_name_unique ON labels_item (name);\n`
+    )
+    publish('addon-labels', LABELS)
+    await generate(wire('labels'))
+    publish('addon-labels', {})
+    const result = await generate(wire('labels'), true)
+    assert.deepEqual(result.refusals, [])
+    assert.deepEqual(result.destructive, [])
+    assert.deepEqual(
+      result.written.filter((w) => w.source === 'app-tables'),
+      []
+    )
+  })
+
+  test('a refusal an addon causes names the addon, not db/tables.ts', async () => {
+    publish('addon-labels', LABELS)
+    await generate(wire('labels'))
+    publish('addon-labels', {
+      labelsItem: {
+        columns: {
+          ...LABELS.labelsItem.columns,
+          color: { type: 'text', required: true },
+        },
+      },
+    })
+    const { refusals } = await generate(wire('labels'))
+    assert.match(
+      refusals.join('\n'),
+      /Give it a default in the 'addon-labels' addon/
+    )
+    assert.doesNotMatch(refusals.join('\n'), /db\/tables\.ts/)
   })
 
   test('addons with no tables and nothing recorded write nothing', async () => {

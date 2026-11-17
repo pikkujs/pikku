@@ -56,6 +56,7 @@ import {
 } from './addon-declarations.js'
 import {
   declaredTableNames,
+  emptyDeclaration,
   declaredTablesMarker,
   declareOnlyProblems,
   recordedDeclaredTables,
@@ -1202,7 +1203,7 @@ function schemaQualifiedMatch(
 
 /**
  * A schema somebody other than the project's own migrations defines — Better
- * Auth, the pikku runtime, an addon.
+ * Auth or the pikku runtime.
  *
  * Every such source answers the same two questions, which is what lets one
  * mechanism serve all of them: `tables` is what must exist, and `sql` is what
@@ -1926,7 +1927,7 @@ function nextMigrationFile(migrationsDir: string, label: string): string {
 /**
  * Something other than the project's own migrations that declares tables.
  *
- * Better Auth, the pikku runtime, an addon. They differ only in where the
+ * Better Auth or the pikku runtime. They differ only in where the
  * declaration comes from; once materialized they answer the same two questions,
  * which is what lets one generator serve all of them.
  */
@@ -1946,7 +1947,7 @@ export interface SchemaSource {
    *
    * Carried per source rather than read off the resolved database because only
    * the sources pikku compiles can honour it. Better Auth writes its own
-   * migration SQL through its own migrator and an addon ships SQL as text —
+   * migration SQL through its own migrator and the runtime ships SQL as text —
    * neither goes through the schema builder, so neither can be qualified from
    * here, and claiming otherwise on their behalf would emit a delta that names
    * a table in a schema their `CREATE TABLE` never put it in.
@@ -2085,7 +2086,7 @@ function applyRenames(
  */
 async function materializeDeclaration(
   resolved: ResolvedDb,
-  { schema }: LoadedDeclaration,
+  { schema, owners }: LoadedDeclaration,
   covered: SchemaMap,
   schemaName: string | undefined
 ): Promise<{ desired?: DesiredSchema; refusals: string[] }> {
@@ -2096,7 +2097,7 @@ async function materializeDeclaration(
     const info = coveredTable(covered, table, schemaName)?.get(column)
     if (!info) {
       refusals.push(
-        `${TABLES_FILE} references ${table}.${column}, which neither it nor any migration creates.`
+        `${owners?.[table] ?? TABLES_FILE} references ${table}.${column}, which neither it nor any migration creates.`
       )
       continue
     }
@@ -2187,17 +2188,13 @@ export async function planDeclaredTables(
   } = {}
 ): Promise<DeclaredTablesPlan | null> {
   const recorded = recordedDeclaredTables(resolved.migrationsDir)
+  // No `db/tables.ts` and no wired addon owning tables is an empty declaration:
+  // whatever the migrations recorded is dropped by an approved change, as when
+  // a table leaves a declaration that exists. Only nothing recorded means
+  // there is nothing to plan.
   if (!declaration) {
     if (recorded.size === 0) return null
-    return {
-      tables: [],
-      bodies: [],
-      destructive: [],
-      refusals: [
-        `The migrations record declared tables (${[...recorded].join(', ')}), but ${TABLES_FILE} is ` +
-          'gone, and their classifications went with it. Restore it.',
-      ],
-    }
+    declaration = emptyDeclaration()
   }
 
   // Before the declaration is materialized: a server that cannot take a CHECK
@@ -2258,10 +2255,11 @@ export async function planDeclaredTables(
     )
   )
 
+  const ownerOf = (table: string) => declaration.owners?.[table] ?? TABLES_FILE
   for (const source of otherSources) {
     for (const table of tables.filter((t) => source.desired.tables.has(t))) {
       refusals.push(
-        `${TABLES_FILE} declares ${table}, which belongs to ${source.origin}. Pick another name.`
+        `${ownerOf(table)} declares ${table}, which belongs to ${source.origin}. Pick another name.`
       )
     }
   }
@@ -2276,7 +2274,8 @@ export async function planDeclaredTables(
               desired.tables.get(table)!,
               actual,
               resolved.migrationsDir,
-              resolved.rootDir
+              resolved.rootDir,
+              ownerOf(table)
             ),
           ]
         : []
@@ -2952,7 +2951,7 @@ export async function writeSourceMigrations(
  * The delta is itself two different things, and only one of them is a diff. A
  * table the migrations already have but a column short is a genuine alteration,
  * so it becomes `ALTER TABLE … ADD COLUMN`. A table they do not have at all —
- * what enabling a Better Auth plugin or upgrading an addon produces — has
+ * what enabling a Better Auth plugin produces — has
  * nothing to diff against, so it is lifted verbatim out of the source's own SQL
  * for the same reason the first-time case is: the column map it would otherwise
  * be rendered from knows nothing about keys, constraints or indexes.

@@ -39,6 +39,8 @@ export interface LoadedDeclaration {
   annotations: TableAnnotations
   /** The columns declared with `renamedFrom`, in physical names. */
   renames: ColumnRename[]
+  /** Who declared each table (physical name), when it was not `db/tables.ts`: what messages name. */
+  owners?: Record<string, string>
 }
 
 /** A column that is the old one under a new name. */
@@ -256,6 +258,19 @@ export async function loadTableDeclaration(
  * through it, so a declaration means the same thing wherever it came from.
  * `label` names the source in every message.
  */
+const IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/
+const FORBIDDEN_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
+/**
+ * A name that reaches SQL, the `-- pikku:tables` marker and object keys. A comma
+ * there would forge ownership of another table, so anything but a plain
+ * identifier is refused rather than quoted or dropped.
+ */
+const identifierProblem = (what: string, name: string): string | null =>
+  IDENTIFIER.test(name) && !FORBIDDEN_KEYS.has(name)
+    ? null
+    : `${what} ${JSON.stringify(name)} is not a plain identifier: use letters, digits and underscores, not starting with a digit, at most 63 characters`
+
 export function parseDeclaration(
   exported: Record<string, unknown>,
   label: string
@@ -266,6 +281,11 @@ export function parseDeclaration(
   const renames: ColumnRename[] = []
   const declareOnly: TablesDeclaration = {}
   for (const [table, declaration] of Object.entries(exported)) {
+    const badTable = identifierProblem('table', table)
+    if (badTable) {
+      problems.push(badTable)
+      continue
+    }
     if (!isObject(declaration) || !isObject(declaration.columns)) {
       problems.push(`${table} must be an object with its columns`)
       continue
@@ -277,6 +297,11 @@ export function parseDeclaration(
     }
     const physical: TableAnnotations[string] = {}
     for (const [column, entry] of Object.entries(declaration.columns)) {
+      const badColumn = identifierProblem(`${table} column`, column)
+      if (badColumn) {
+        problems.push(badColumn)
+        continue
+      }
       if (!isObject(entry)) {
         problems.push(`${table}.${column} must be an object`)
         continue
@@ -334,6 +359,14 @@ export function parseDeclaration(
     renames,
   }
 }
+
+/** A declaration of nothing: what an app with no `db/tables.ts` declares of its own. */
+export const emptyDeclaration = (): LoadedDeclaration => ({
+  schema: { name: APP_TABLES_SOURCE, tables: {} },
+  declareOnly: {},
+  annotations: {},
+  renames: [],
+})
 
 /** Every table a declaration names, managed or not, in physical names. */
 export const declaredTableNames = (
@@ -447,7 +480,8 @@ export function refuseTableChanges(
   desired: Map<string, ColumnInfo>,
   actual: Map<string, ColumnInfo>,
   migrationsDir: string,
-  rootDir: string
+  rootDir: string,
+  declaredIn: string = TABLES_FILE
 ): { refusals: string[]; destructive: DestructiveChange[] } {
   const refusals: string[] = []
   const destructive: DestructiveChange[] = []
@@ -464,7 +498,7 @@ export function refuseTableChanges(
       kind: 'dropColumn',
       table,
       column,
-      what: `DROP COLUMN ${table}.${column}: its data is lost${moved}`,
+      what: `DROP COLUMN ${table}.${column}: its data is lost${moved}${declaredIn === TABLES_FILE ? '' : ` (declared by ${declaredIn})`}`,
     })
   }
 
@@ -479,7 +513,7 @@ export function refuseTableChanges(
       } else if (column.notNull && column.defaultValue === null) {
         refusals.push(
           `${table}.${name} is new and NOT NULL with no default, so there is no value for the rows ` +
-            `${table} already has. Give it a default in ${TABLES_FILE}, or make it nullable.`
+            `${table} already has. Give it a default in ${declaredIn}, or make it nullable.`
         )
       }
       continue
@@ -488,7 +522,7 @@ export function refuseTableChanges(
     if (changes.length > 0) {
       refusals.push(
         `${table}.${name} differs from the migrations: ${changes.join('; ')}. generate does not change ` +
-          `an existing column's type or constraints. Change ${TABLES_FILE} to match, or a person writes ` +
+          `an existing column's type or constraints. Change ${declaredIn} to match, or a person writes ` +
           `that change in ${where}.`
       )
     }

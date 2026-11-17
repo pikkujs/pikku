@@ -320,13 +320,37 @@ describe('declared tables on sqlite', () => {
     await assert.rejects(() => generate(sqliteProject()), /must export/)
   })
 
-  test('migrations that record declared tables need the file', async () => {
+  test('migrations that record declared tables, with the file gone, offer the drops for approval', async () => {
     declare(ITEM)
     const resolved = sqliteProject()
     await generate(resolved)
     rmSync(join(root, 'db', 'tables.ts'))
-    const { refusals } = await generate(resolved)
-    assert.match(refusals[0]!, /db\/tables\.ts is gone/)
+    const { refusals, destructive } = await generate(resolved)
+    assert.deepEqual(refusals, [])
+    assert.match(destructive.map((d) => d.what).join(), /DROP TABLE item/)
+  })
+
+  test('a table or column name that is not a plain identifier is refused in an app too', () => {
+    for (const name of [
+      'a,b',
+      'a b',
+      "a'b",
+      'a.b',
+      '__proto__',
+      'constructor',
+    ]) {
+      assert.throws(
+        () =>
+          parseDeclaration(
+            JSON.parse(
+              `{${JSON.stringify(name)}: {"columns": {"id": {"type": "key", "primaryKey": true}}}}`
+            ),
+            'db/tables.ts'
+          ),
+        /db\/tables\.ts: .*not a plain identifier/,
+        name
+      )
+    }
   })
 
   test('drift says when the declaration is ahead of the migrations', async () => {

@@ -6,7 +6,7 @@ import { join } from 'node:path'
  *
  * `source` is the stable identifier a consumer filters on — the same label
  * `db generate` gives the migration it writes (`better-auth`, `pikku-runtime`,
- * an addon's flattened package name). `origin` is the prose from the migration
+ * or `app-tables` for the project's and its addons' declared tables). `origin` is the prose from the migration
  * header, written for a human reading a tooltip.
  */
 export interface TableProvenance {

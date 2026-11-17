@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { dirname, join } from 'node:path'
 import type { TableAnnotations, TablesDeclaration } from '@pikku/core/db'
 import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
@@ -110,6 +116,10 @@ const isOldShape = (published: Record<string, unknown>): boolean =>
       typeof (entry as { tables?: unknown }).tables === 'object'
   )
 
+/** What a published declaration may weigh, so a bad build cannot make the CLI read without bound. */
+const MAX_ARTIFACT_BYTES = 1_000_000
+const MAX_ARTIFACT_TABLES = 1000
+
 /** Read, check and prefix-check what one wired addon published. */
 function readAddonDeclaration(
   rootDir: string,
@@ -134,6 +144,12 @@ function readAddonDeclaration(
     )
   }
 
+  const size = statSync(artifactPath).size
+  if (size > MAX_ARTIFACT_BYTES) {
+    throw new Error(
+      `The '${addon.package}' addon publishes a ${ADDON_DB_ARTIFACT} larger than 1 MB (${size} bytes), which is not read. Rebuild the addon.`
+    )
+  }
   let published: unknown
   try {
     published = JSON.parse(readFileSync(artifactPath, 'utf8'))
@@ -152,6 +168,11 @@ function readAddonDeclaration(
       `The '${addon.package}' addon publishes a ${ADDON_DB_ARTIFACT} that is not an object of tables. Rebuild the addon.`
     )
   }
+  if (Object.keys(published).length > MAX_ARTIFACT_TABLES) {
+    throw new Error(
+      `The '${addon.package}' addon publishes more than ${MAX_ARTIFACT_TABLES} tables, which is not read. Rebuild the addon.`
+    )
+  }
   if (isOldShape(published as Record<string, unknown>)) {
     throw new Error(
       `The '${addon.package}' addon publishes its schema as SQL per dialect, which is no longer read. Rebuild or upgrade the addon so it publishes its table declaration.`
@@ -163,6 +184,15 @@ function readAddonDeclaration(
     published as Record<string, unknown>,
     label
   )
+  for (const [table, entry] of Object.entries(declaration.schema.tables)) {
+    for (const [column, spec] of Object.entries(entry.columns)) {
+      if ((spec as { security?: string }).security === 'public') {
+        throw new Error(
+          `${label} declares ${table}.${column} with security 'public'. An addon's columns are private; the app can expose it in its own declaration.`
+        )
+      }
+    }
+  }
   const declaredOnly = Object.keys(declaration.declareOnly)
   if (declaredOnly.length > 0) {
     throw new Error(
@@ -206,12 +236,6 @@ export function addonDeclarations(
  * refused, and the merged declaration is compiled so a reference from one to
  * another is checked.
  */
-const emptyDeclaration = (): LoadedDeclaration => ({
-  schema: { name: APP_TABLES_SOURCE, tables: {} },
-  declareOnly: {},
-  annotations: {},
-  renames: [],
-})
 
 export function mergeDeclarations(
   app: LoadedDeclaration | null,
@@ -222,15 +246,13 @@ export function mergeDeclarations(
       ({ declaration }) => !Object.keys(declaration.schema.tables).length
     )
   ) {
-    // Wired addons with nothing to declare still own what they declared
-    // before: with no db/tables.ts, an empty declaration lets their dropped
-    // tables reach the destructive gate rather than read as a deleted file.
-    return app ?? (addons.length > 0 ? emptyDeclaration() : null)
+    return app
   }
   const tables: TablesDeclaration = { ...app?.schema.tables }
   const annotations: TableAnnotations = { ...app?.annotations }
   const renames = [...(app?.renames ?? [])]
   const owners = new Map<string, string>()
+  const attributed: Record<string, string> = {}
   for (const name of Object.keys({
     ...app?.schema.tables,
     ...app?.declareOnly,
@@ -249,6 +271,9 @@ export function mergeDeclarations(
       }
       owners.set(physical, owner)
     }
+    for (const name of Object.keys(declaration.schema.tables)) {
+      attributed[snakeCase(name)] = owner
+    }
     Object.assign(tables, declaration.schema.tables)
     Object.assign(annotations, declaration.annotations)
     renames.push(...declaration.renames)
@@ -264,6 +289,7 @@ export function mergeDeclarations(
     declareOnly,
     annotations,
     renames,
+    owners: attributed,
   }
 }
 
