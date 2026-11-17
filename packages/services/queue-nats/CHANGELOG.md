@@ -1,5 +1,15 @@
 # @pikku/queue-nats
 
+## 0.12.6
+
+### Patch Changes
+
+- b2fe534: Add `wireContributors({ package, contributors })` to opt a package's deploy contributors in without declaring an addon, put the deploy provider on the contributor platform, and add a `nats` contributor in `@pikku/queue-nats` that replaces the in-memory queue and scheduler in standalone deploys only. It attaches to the stage's own JetStream stream (`pikku_<project>_<stage>`) as a restricted user and needs `NATS_URL`, `NATS_USER`, `NATS_PASSWORD`, `PIKKU_PROJECT` and `PIKKU_STAGE`; it refuses to start without them.
+- b7d37c2: `NatsServiceFactory.close()` now waits for recurring tasks that are still running before the connection closes, so they ack instead of being redelivered after `ack_wait`. A refused attach in `init()` closes the connection it opened.
+- Updated dependencies [b2fe534]
+- Updated dependencies
+  - @pikku/core@0.12.160
+
 ## 0.12.5
 
 ### Patch Changes

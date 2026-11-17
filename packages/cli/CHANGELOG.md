@@ -1,3 +1,22 @@
+## 0.12.214
+
+### Patch Changes
+
+- 309e8c8: The surface doc build collects `@snippet` regions from an extra directory (`--snippets-extra`), so the addon contract helper examples can come from compiled e2e wirings.
+- dd0a6f0: An addon declares its tables with `defineTables` in its own `db/tables.ts`, and `pikku db export` publishes the declaration as JSON instead of SQL per dialect (no database or `db.mysqlUrl` needed). The app's `pikku db generate` merges each wired addon's declaration with `db/tables.ts` and plans it once, so addon tables get derived SQL, annotations, constraints and approval-gated drops and renames. Table names need the addon's wired prefix, a name declared twice is refused, and an old SQL-per-dialect artifact is refused with "rebuild or upgrade the addon". `db migrate`, `check`, `codegen` and `reset` now read the wired addons through the inspector. See docs/MIGRATION.md.
+- b2fe534: Add `wireContributors({ package, contributors })` to opt a package's deploy contributors in without declaring an addon, put the deploy provider on the contributor platform, and add a `nats` contributor in `@pikku/queue-nats` that replaces the in-memory queue and scheduler in standalone deploys only. It attaches to the stage's own JetStream stream (`pikku_<project>_<stage>`) as a restricted user and needs `NATS_URL`, `NATS_USER`, `NATS_PASSWORD`, `PIKKU_PROJECT` and `PIKKU_STAGE`; it refuses to start without them.
+- `@pikku/addon-console` is removed from the repository and will no longer be published. The CLI drops everything that supported it: `scaffold.console` and its generated files, `pikku enable console`, the `PIKKU_CONSOLE_TOKEN` bearer middleware in the generated auth wiring, the console steps of `pikku ci`, the `/console/knowledge` link in `pikku knowledge plan` output, and the `pikku:console` scope from the studio session (it is now `['admin']`). What remains of the console's functions moves to Pikku Studio. See docs/MIGRATION.md.
+- Updated dependencies [dd0a6f0]
+- Updated dependencies [b2fe534]
+- Updated dependencies
+- Updated dependencies [bdf19ed]
+- Updated dependencies [0d0762f]
+- Updated dependencies [f6753b2]
+  - @pikku/skills@0.12.78
+  - @pikku/core@0.12.160
+  - @pikku/inspector@0.12.122
+  - @pikku/inspector-go@0.12.17
+
 ## 0.12.213
 
 ### Patch Changes

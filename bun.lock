@@ -272,7 +272,7 @@
     },
     "packages/addon/pikku-admin": {
       "name": "@pikku/addon-admin",
-      "version": "0.12.17",
+      "version": "0.12.18",
       "devDependencies": {
         "@pikku/better-auth": "^0.12.66",
         "@pikku/cli": "^0.12.213",
@@ -370,7 +370,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.213",
+      "version": "0.12.214",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -473,7 +473,7 @@
     },
     "packages/core": {
       "name": "@pikku/core",
-      "version": "0.12.159",
+      "version": "0.12.160",
       "dependencies": {
         "@standard-schema/spec": "^1.1.0",
         "@types/json-schema": "^7.0.15",
@@ -634,7 +634,7 @@
     },
     "packages/inspector": {
       "name": "@pikku/inspector",
-      "version": "0.12.121",
+      "version": "0.12.122",
       "dependencies": {
         "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.4",
       },
@@ -648,7 +648,7 @@
     },
     "packages/inspector-go": {
       "name": "@pikku/inspector-go",
-      "version": "0.12.16",
+      "version": "0.12.17",
       "dependencies": {
         "@pikku/inspector": "^0.12.121",
         "tsx": "^4.23.15",
@@ -1248,7 +1248,7 @@
     },
     "packages/services/queue-nats": {
       "name": "@pikku/queue-nats",
-      "version": "0.12.5",
+      "version": "0.12.6",
       "dependencies": {
         "@nats-io/jetstream": "^3.4.0",
         "@nats-io/nats-core": "^3.4.0",
@@ -1308,7 +1308,7 @@
     },
     "packages/skills": {
       "name": "@pikku/skills",
-      "version": "0.12.77",
+      "version": "0.12.78",
       "devDependencies": {
         "@types/node": "^26.6.5",
         "yaml": "^2.9.1",
