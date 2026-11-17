@@ -12,6 +12,54 @@ const tempStore = async () =>
 const store = async () => localChangesRPC(await tempStore())
 
 describe('local changes queue', () => {
+  test("claim --group-id with no change ids takes that group's own changes, never other ready ones", async () => {
+    const rpc = await store()
+    for (const title of ['A', 'B', 'C'])
+      await rpc.invoke('createChange', { stageId: 'local', title })
+    const g = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      changeIds: ['1'],
+      claimedBy: 'me',
+      leaseMinutes: 0,
+    })
+    const again = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      groupId: g.group.groupId,
+      claimedBy: 'me',
+    })
+    assert.deepStrictEqual(
+      again.changes.map((c) => c.shortId),
+      ['1']
+    )
+    const { changes } = await rpc.invoke('listChanges', {
+      projectId: 'local',
+      includeDone: true,
+    })
+    assert.deepStrictEqual(
+      changes.map((c) => c.groupId),
+      [g.group.groupId, null, null]
+    )
+    // a group with nothing left to pick up is refused, not filled with others
+    await rpc.invoke('completeChange', { projectId: 'local', changeId: '1' })
+    await assert.rejects(
+      rpc.invoke('claimChanges', {
+        projectId: 'local',
+        groupId: g.group.groupId,
+        claimedBy: 'me',
+      }),
+      /Nothing ready to claim/
+    )
+    // naming no group still takes every free change
+    const free = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      claimedBy: 'me',
+    })
+    assert.deepStrictEqual(
+      free.changes.map((c) => c.shortId),
+      ['2', '3']
+    )
+  })
+
   test('files, claims, refuses a second claim, and completes', async () => {
     const rpc = await store()
     const a = await rpc.invoke('createChange', { stageId: 'local', title: 'A' })
