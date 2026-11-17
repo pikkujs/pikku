@@ -41,6 +41,12 @@ export const later = function () {
 
 void Wirer
 `,
+		"src/wrapper.ts": `import { wireHTTP as coreWireHTTP } from '@pikku/core/http'
+
+export const wireHTTP = (config: any) => {
+  coreWireHTTP(config)
+}
+`,
 		"src/top.ts": `import { wireContributors } from '@pikku/core/contributors'
 
 wireContributors({ package: '@fixture/top-addon', contributors: ['inbox'] })
@@ -55,7 +61,7 @@ wireContributors({ package: '@fixture/top-addon', contributors: ['inbox'] })
 		}
 	}
 	res, err := Run(protocol.Request{
-		RouteFiles: []string{filepath.Join(root, "src/nested.ts"), filepath.Join(root, "src/enclosures.ts"), filepath.Join(root, "src/top.ts")},
+		RouteFiles: []string{filepath.Join(root, "src/nested.ts"), filepath.Join(root, "src/enclosures.ts"), filepath.Join(root, "src/top.ts"), filepath.Join(root, "src/wrapper.ts")},
 		Options:    protocol.Options{RootDir: root, Tsconfig: filepath.Join(root, "tsconfig.json")},
 	}, nil)
 	if err != nil {

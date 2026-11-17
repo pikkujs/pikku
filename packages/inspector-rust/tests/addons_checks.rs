@@ -232,6 +232,10 @@ fn wirings_are_top_level() {
             "import { wireHTTP as wire } from '@pikku/core/http'\n\nclass Wirer {\n  attach() {\n    wire({ route: '/b', func: {} as any })\n  }\n}\n\nexport const later = function () {\n  wire({ route: '/c', func: {} as any })\n}\n\nvoid Wirer\n",
         ),
         (
+            "src/wrapper.ts",
+            "import { wireHTTP as coreWireHTTP } from '@pikku/core/http'\n\nexport const wireHTTP = (config: any) => {\n  coreWireHTTP(config)\n}\n",
+        ),
+        (
             "src/top.ts",
             "import { wireContributors } from '@pikku/core/contributors'\n\nwireContributors({ package: '@fixture/top-addon', contributors: ['inbox'] })\n",
         ),
@@ -245,7 +249,7 @@ fn wirings_are_top_level() {
         ..Default::default()
     };
     let req = Request {
-        route_files: ["src/nested.ts", "src/enclosures.ts", "src/top.ts"].iter().map(|f| root.join(f).to_string_lossy().into_owned()).collect(),
+        route_files: ["src/nested.ts", "src/enclosures.ts", "src/top.ts", "src/wrapper.ts"].iter().map(|f| root.join(f).to_string_lossy().into_owned()).collect(),
         options,
         changed_files: vec![],
     };

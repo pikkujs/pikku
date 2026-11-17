@@ -58,6 +58,11 @@ func (s *Context) checkWiringsTopLevel(node *ast.Node) {
 	}
 	for _, name := range topLevelWirings {
 		if s.callsImportedDefiner(node.Expression(), name) {
+			// A typed wrapper that is itself named after the wiring (the generated
+			// wireCLI / wireAddon) forwards to the core call by design.
+			if functionLabel(fn) == name {
+				return
+			}
 			s.Log.Critical(diag.WiringNotTopLevel, fmt.Sprintf(
 				"%s must be called at the top level of a file, not inside a function (inside %s, %s)",
 				name, functionLabel(fn), s.nodePosition(fn)))

@@ -80,6 +80,11 @@ impl Context<'_> {
         let Some(f) = enclosing_function(node) else { return };
         for name in TOP_LEVEL_WIRINGS {
             if self.calls_imported_definer(node.expression().unwrap(), name) {
+                // A typed wrapper named after the wiring (the generated wireCLI /
+                // wireAddon) forwards to the core call by design.
+                if function_label(f) == name {
+                    return;
+                }
                 let message = format!(
                     "{name} must be called at the top level of a file, not inside a function (inside {}, {})",
                     function_label(f),
