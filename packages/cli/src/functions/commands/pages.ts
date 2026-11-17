@@ -9,6 +9,7 @@ import {
   type AppPage,
 } from '@pikku/code-edit/routes'
 import { findWorkspaceRoot } from '@pikku/code-edit/workspace'
+import { git } from '../../utils/git.js'
 import { added, changed, dim } from '../../utils/output.js'
 import {
   PagesListInput,
@@ -269,6 +270,28 @@ export const renderPagesScreenshot = (
   }
 }
 
+/** A linked worktree (`git worktree add`), not the main checkout. */
+const inLinkedWorktree = async (cwd: string): Promise<boolean> => {
+  try {
+    const [dir, common] = (
+      await git(
+        [
+          'rev-parse',
+          '--path-format=absolute',
+          '--git-dir',
+          '--git-common-dir',
+        ],
+        cwd
+      )
+    )
+      .trim()
+      .split('\n')
+    return !!dir && !!common && resolve(dir) !== resolve(common)
+  } catch {
+    return false
+  }
+}
+
 /** Playwright's chromium, from whichever playwright package resolves. */
 const loadChromium = async (): Promise<unknown> => {
   for (const name of ['@playwright/test', 'playwright', 'playwright-core']) {
@@ -510,6 +533,9 @@ export const pagesCompare = pikkuSessionlessFunc({
         )?.dev?.port
         served = await serveFrontend({
           frontend,
+          // in a changeset worktree the configured port may be serving
+          // another checkout's code: start this tree's own server
+          isolate: await inLinkedWorktree(frontend.cwd),
           apiUrl: apiPort ? `http://localhost:${apiPort}` : undefined,
           envFor: (f) =>
             frontendEnv(
