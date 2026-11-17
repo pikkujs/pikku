@@ -374,6 +374,16 @@ export class NatsSchedulerService extends SchedulerService {
     this.consumer = undefined
   }
 
+  /**
+   * Stop pulling fires and wait for the ones running to settle their acks.
+   * Returns `false` if some were still running when the timeout expired.
+   */
+  async drain(timeoutMs: number): Promise<boolean> {
+    const consumer = this.consumer
+    this.consumer = undefined
+    return consumer ? consumer.drain(timeoutMs) : true
+  }
+
   /** Run one recurring fire. Owns the message's terminal call — `consumeQueue`
    *  launches handlers without awaiting them, so it cannot ack on their behalf. */
   private async runFire(msg: JsMsg): Promise<void> {

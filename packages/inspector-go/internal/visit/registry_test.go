@@ -21,12 +21,12 @@ func TestVisitorsRunInTSOrder(t *testing.T) {
 func TestRegisteredGroups(t *testing.T) {
 	want := map[Phase][]string{
 		PhaseSetup: {
-			"addFileExtendsCoreType CoreSingletonServices", "addFileExtendsCoreType CoreServices",
+			"addFileExtendsCoreType CoreSingletonServices", "checkWiringsTopLevel", "addFileExtendsCoreType CoreServices",
 			"addFileExtendsCoreType CoreUserSession", "addFileExtendsCoreType CoreConfig",
 			"addFileWithFactory CreateSingletonServices", "addFileWithFactory CreateWireServices",
 			"addFileWithFactory CreateConfig", "addFileWithFactory ServerLifecycle", "checkHiddenFactory",
 			"addAnalytics", "addOutgoingWebhook",
-			"addRPCInvocations", "addWireAddon", "addPikkuStudio", "addDefineContributors", "addWireRemoteAddon", "addMiddleware", "addPermission", "checkIndirectRegistrations",
+			"addRPCInvocations", "addWireAddon", "addPikkuStudio", "addDefineContributors", "addWireContributors", "addWireRemoteAddon", "addMiddleware", "addPermission", "checkIndirectRegistrations",
 			"addApprovalDescription", "addWorkflow",
 		},
 		PhaseFunctions: {"addFunctions"},

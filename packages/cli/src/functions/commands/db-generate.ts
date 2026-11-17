@@ -10,6 +10,7 @@ import {
 import type { DestructiveChange } from '../db/table-declaration.js'
 import { SQLITE_UNENFORCED_RULE } from '../db/sqlite-constraint-notice.js'
 import { askYesNo } from './addon-grants.js'
+import { wiredAddons } from '../db/addon-declarations.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 /**
@@ -76,15 +77,7 @@ export const dbGenerate = pikkuSessionlessFunc<
     }
 
     const state = await getInspectorState()
-    const addons = [...state.rpc.wireAddonDeclarations.entries()].map(
-      ([namespace, { package: pkg, remote, file, ui }]) => ({
-        package: pkg,
-        remote,
-        file,
-        name: namespace,
-        ui,
-      })
-    )
+    const addons = wiredAddons(state)
 
     const generate = (allowDestructive?: boolean) =>
       generateMigrations(
@@ -156,7 +149,7 @@ export const dbGenerate = pikkuSessionlessFunc<
     }
 
     if (config.validate?.rules?.[SQLITE_UNENFORCED_RULE] !== 'off') {
-      const notice = await declaredSqliteConstraintNotice(resolved)
+      const notice = await declaredSqliteConstraintNotice(resolved, addons)
       if (notice) logger.warn(`db generate: ${notice}`)
     }
 

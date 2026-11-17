@@ -152,6 +152,16 @@ Rules the inspector and the build enforce:
   opt in (an unknown name is PKU363). Ship `.pikku` in `files`.
 - `pikku.contributors` in `package.json` is removed and is now an error
   (PKU364), not silently ignored.
+- A plain package (not an addon) can register contributors the same way, and a
+  project opts in without wiring an addon:
+  `wireContributors({ package: '@my-org/queue', contributors: ['nats'] })`. It
+  is read at build time and does nothing at runtime; the names are checked
+  against the package's meta (PKU363) and the list must be string literals
+  (PKU362).
+- `platform.provider` is the deploy provider building the unit (`standalone`,
+  `cloudflare`, ...), set by every deploy build and never by `pikku dev`. A
+  `when` that depends on where the app is going tests it, and treats an unset
+  value as "not mine": `when: (p) => p.needsQueue && p.provider === 'standalone'`.
 - Contributors run after every contributor providing one of their `needs`; a
   dotted need (`logSources.stage`) is met by a provider of the key or its
   prefix. `run` reads services the target built before it as `runtime.<name>` —

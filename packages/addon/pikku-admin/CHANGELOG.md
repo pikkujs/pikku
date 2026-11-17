@@ -1,5 +1,31 @@
 # @pikku/addon-admin
 
+## 0.12.17
+
+### Patch Changes
+
+- 9976f7b: The generated `wireAddon` for `@pikku/addon-admin` now sets `globalSecrets` (and widens the `globalCredentials` reason), so `admin:secretHas`, `admin:secretGet`, `admin:secretSet` and the variable functions are no longer refused with `Access denied to secret key` for every caller. Apps that wire the admin addon by hand must add `globalSecrets: '<reason>'` too; see the addon README.
+- daa8c4c: The secret, variable, installed-addon, scorer and access functions move from `@pikku/addon-console` to `@pikku/addon-admin` and are deleted from the console: `admin:secretGet|secretHas|secretSet`, `admin:variableGet|variableSet`, `admin:getInstalledAddons`, `admin:getAddonInstances`, `admin:getScorers` and `admin:getMyAccess`. Secrets, variables and addon reads are gated by the new `admin:secrets:read|write`, `admin:variables:read|write` and `admin:addons:read` scopes (also added to `ADMIN_SCOPE_TREE`), replacing `pikku:console:secrets:*`, `pikku:console:variables:*` and `pikku:console:addons:read` for these functions. The console's `startVirtualUserRun` and `setVirtualUserSchedule` pass-throughs are deleted; call the host functions directly. The addon forwards the host's `secrets`, `variables` and `metaService`. See docs/MIGRATION.md.
+- ab60937: Add an optional `AuditService.verify()` for tamper evidence, and surface it as an optional `intact` field on `admin:getAudits`. Absent when the sink does not implement `verify`.
+- 1a14a30: `WiringService`, `readAllMeta` and the `AllMeta` types now live in `@pikku/core` (MIT), exported as `@pikku/core/services/wiring-service`, so Studio and the controlplane can share them. `@pikku/addon-console` no longer exports them (the `@pikku/addon-console/services` entry is removed). `@pikku/addon-admin` gains `agentCredentialCheck` under `admin:credentials:read`, reading the agent from running state, and the console's `agentCredentialCheck` is removed. See docs/MIGRATION.md.
+- Updated dependencies [daa8c4c]
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/better-auth@0.12.66
+  - @pikku/core@0.12.159
+
 ## 0.12.16
 
 ### Patch Changes

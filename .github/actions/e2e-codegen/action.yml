@@ -1,21 +1,20 @@
 name: E2E Codegen
-description: Rebuild the console and graph addons, generate pikku files for the e2e fixtures and project, then compile the fixtures.
+description: Rebuild the changes, cloud and graph addons, generate pikku files for the e2e fixtures and project, then compile the fixtures.
 
 # Generated files hold absolute paths (the meta service reads its .pikku from
 # one at runtime), so this runs in the same container as the e2e jobs, whose
 # checkout sits at /__w rather than the build runner's /home/runner/work. That
-# is also why the console and graph addons are rebuilt here although the Build
+# is also why the changes, cloud and graph addons are rebuilt here although the Build
 # job already built them.
 runs:
   using: composite
   steps:
     # Their build runs `pikku all` before tsc.
-    - name: Rebuild the console and graph addons
+    - name: Rebuild the changes, cloud and graph addons
       shell: bash
       run: |
         bun run --filter @pikku/addon-changes-cli build
         bun run --filter @pikku/addon-cloud-cli build
-        bun run --filter @pikku/addon-console build
         bun run --filter @pikku/addon-graph build
     - name: Generate pikku files for the e2e fixtures
       shell: bash

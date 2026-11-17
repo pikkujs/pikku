@@ -1,0 +1,34 @@
+{
+  "name": "@pikku/verifiers-deploy-standalone-nats",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "scripts": {
+    "pikku": "echo 'skip'",
+    "tsc": "tsc --noEmit -p tsconfig.check.json",
+    "build": "echo 'skip'",
+    "test": "npx tsx test-nats.ts && npx tsx test-permissions.ts && npx tsx test-reload.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/queue-nats": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*",
+    "@pikku/schedule": "workspace:*",
+    "@pikku/bun-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@nats-io/jetstream": "^3.4.0",
+    "@nats-io/transport-node": "^3.4.0",
+    "@pikku/cli": "workspace:*",
+    "@pikku/cloudflare": "workspace:*",
+    "@pikku/deploy-cloudflare": "workspace:*",
+    "@pikku/deploy-standalone": "workspace:*",
+    "@pikku/fetch": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "tsx": "^4.23.15"
+  }
+}

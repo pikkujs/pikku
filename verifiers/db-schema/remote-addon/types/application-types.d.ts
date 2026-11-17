@@ -16,7 +16,7 @@ import type { Kysely } from 'kysely'
  * somewhere else, against a database this project must not migrate.
  */
 export interface NotesDB {
-  notes: {
+  notes_note: {
     id: string
     body: string
   }

@@ -1,5 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { resolveDb, reset, migrateAndCodegen, devSeed } from '../db/local-db.js'
+import { wiredAddons } from '../db/addon-declarations.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 /**
@@ -12,7 +13,7 @@ import { loadUserConfigForDb } from './db-shared.js'
  */
 export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
   remote: true,
-  func: async ({ logger, config }, { noSeed }) => {
+  func: async ({ logger, config, getInspectorState }, { noSeed }) => {
     if (process.env.NODE_ENV === 'production') {
       logger.error(
         'pikku db reset refused: NODE_ENV=production. This command only runs in dev.'
@@ -51,7 +52,10 @@ export const dbReset = pikkuSessionlessFunc<{ noSeed?: boolean }, void>({
     const { migrate, codegen, zod } = await migrateAndCodegen(
       resolved,
       // Reset has just emptied the database, so there are no rows to rewrite.
-      { allowDestructive: true }
+      {
+        allowDestructive: true,
+        addons: wiredAddons(await getInspectorState()),
+      }
     )
     for (const warning of codegen.warnings) {
       logger.diagnostic(warning)

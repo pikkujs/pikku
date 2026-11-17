@@ -1,5 +1,28 @@
 # @pikku/better-auth
 
+## 0.12.66
+
+### Patch Changes
+
+- daa8c4c: The secret, variable, installed-addon, scorer and access functions move from `@pikku/addon-console` to `@pikku/addon-admin` and are deleted from the console: `admin:secretGet|secretHas|secretSet`, `admin:variableGet|variableSet`, `admin:getInstalledAddons`, `admin:getAddonInstances`, `admin:getScorers` and `admin:getMyAccess`. Secrets, variables and addon reads are gated by the new `admin:secrets:read|write`, `admin:variables:read|write` and `admin:addons:read` scopes (also added to `ADMIN_SCOPE_TREE`), replacing `pikku:console:secrets:*`, `pikku:console:variables:*` and `pikku:console:addons:read` for these functions. The console's `startVirtualUserRun` and `setVirtualUserSchedule` pass-throughs are deleted; call the host functions directly. The addon forwards the host's `secrets`, `variables` and `metaService`. See docs/MIGRATION.md.
+- 83e1d1f: `VIRTUAL_USER_VERIFY_KEY` accepts a single key (unchanged) or a JSON list of `{ kid, publicKey }`, so a stage can hold more than one virtual user statement key. `pikkuVirtualUser({ verifyKey })` and `JoseVirtualUserStatementVerifier` take the same union; a statement naming a `kid` is checked against that key only (unknown `kid` rejected), one without a `kid` is tried against each key. New statements carry a `kid` (the RFC 7638 thumbprint, `okpThumbprint` in `@pikku/core/services`). A malformed verify key now stops the app at start-up rather than failing each sign-in. `signVirtualUserStatement` takes an optional precomputed `kid`; `resolveStatementMint` computes it. `rsaThumbprint` is exported too.
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+  - @pikku/jose@0.12.11
+
 ## 0.12.65
 
 ### Patch Changes

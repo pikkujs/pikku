@@ -29,7 +29,7 @@ import {
   runAddonSync,
   type RegistryInvoke,
 } from '../../utils/remote-addon-sync.js'
-import { writeSchemaArtifact } from '../db/local-db.js'
+import { writeAddonDeclaration } from '../db/addon-declarations.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
 import {
   PikkuTypecheckFailedError,
@@ -683,13 +683,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       // Written on every build, empty when the addon has no tables: the
       // consumer reads an absent file as a package that cannot say whether it
       // ships a schema, which is a broken publish rather than a quiet no.
-      await writeSchemaArtifact(
-        config.rootDir,
-        config.outDir,
-        config.db?.pgliteExtensions,
-        config.db?.sqliteExtensions,
-        config.db?.mysqlUrl
-      )
+      await writeAddonDeclaration(config.rootDir, config.outDir)
     }
 
     const hasFunctionRegistrations = await workflow.do(

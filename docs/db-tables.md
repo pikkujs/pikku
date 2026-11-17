@@ -303,9 +303,61 @@ export const tables = defineTables({
 })
 ```
 
-Generate refuses when the target does not exist yet. A table owned by Better Auth,
-the Pikku runtime or an addon cannot be generated from here, but it can be declared
-with `declareOnly`.
+Generate refuses when the target does not exist yet. A table owned by Better Auth or
+the Pikku runtime cannot be generated from here, but it can be declared with
+`declareOnly`. A table an addon declares cannot: declaring it here too is refused as
+declared by two owners (reference its columns instead).
+
+## Addons
+
+An addon declares its own tables the same way, in its `db/tables.ts`, and `pikku db
+export` (run by `pikku all`) publishes the declaration as plain JSON. `pikku db
+generate` reads the declaration of each wired addon, adds it to the app's, and plans
+the result once, so an addon's tables get everything the app's do: derived SQL,
+column annotations and constraints in the sidecar and the generated Zod, and
+approval for drops and renames. `pikku db migrate`, `check`, `codegen` and `reset`
+read the same list.
+
+```ts
+// the addon's db/tables.ts, wired as `wireAddon({ name: 'labels', ... })`
+export const tables = defineTables({
+  labelsLabel: {
+    columns: {
+      id: { type: 'key', primaryKey: true },
+      name: { type: 'text', required: true, unique: true },
+    },
+  },
+})
+```
+
+- Every table starts with the wired name, snake-cased (`labels_label`). A table
+  without it is an error, so two addons cannot collide.
+- A table name has one owner: the app and each addon. Declaring it twice is an error.
+- `declareOnly` is refused in an addon. An addon may reference a table the app
+  owns, such as `user.id`.
+- A `wireRemoteAddon` addon contributes nothing: its tables belong to the host.
+- An addon built before it declared tables (artifact holds SQL per dialect) is
+  refused with "rebuild or upgrade the addon"; there is no fallback.
+- Tables an addon's older migration already created are adopted, not created again.
+
+`pikku all` writes `db/schema.gen.ts` before any command has inspected the project
+(`ensureDbTypes`), so it knows no addons: until the next `pikku db migrate`, the
+sidecar and generated types are the app's alone.
+
+An addon's names are plain identifiers (letters, digits and underscores, at most 63
+characters), as are the app's. A column an addon declares is never `security:
+'public'`: the app can expose it in its own declaration. The published file is
+capped at 1 MB and 1000 tables.
+
+Adopting is not owning. A table an old addon migration created is adopted by name
+with nothing to write, so when nothing else is written in that run no migration
+records it as declared. If the addon later removes it, the table is kept and `--allowDestructive` offers nothing; drop it by
+hand. A drop is offered only for tables a generated migration recorded. Unwiring an
+addon (or wiring it as remote) is an approved drop of what it recorded, with or
+without a `db/tables.ts`.
+
+`pikku meta context/db` is addon-blind, like `ensureDbTypes`: it reads the app's own
+declaration until the next `pikku db migrate`.
 
 ## `declareOnly` tables
 

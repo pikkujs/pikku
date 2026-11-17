@@ -7,7 +7,7 @@ import type {
 import type { Kysely } from 'kysely'
 
 /**
- * The table this addon ships, declared in `db/sqlite/0001-labels.sql` and
+ * The table this addon ships, declared in `db/tables.ts` and
  * published to consumers by `pikku db export`.
  *
  * The addon types its own table and never sees the consumer's. At runtime both
@@ -15,10 +15,12 @@ import type { Kysely } from 'kysely'
  * against the tables it owns, which is what keeps the boundary honest.
  */
 export interface LabelsDB {
-  labels: {
+  labels_label: {
     id: string
     name: string
     color: string | null
+    owner: string | null
+    weight: number | null
   }
 }
 

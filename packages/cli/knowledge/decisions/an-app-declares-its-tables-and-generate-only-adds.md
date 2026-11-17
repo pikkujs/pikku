@@ -103,3 +103,19 @@ by `verifiers/db-schema`), and the migrator's probes run before the file they si
 Adding, changing or removing a declared `CHECK` on a Postgres or MySQL column that exists is written, not refused. Postgres adds `NOT VALID` then `VALIDATE`s, but the migrator's one transaction holds the `ACCESS EXCLUSIVE` lock to the commit, so the split does not shorten the lock; the probe is the guard. MySQL needs 8.0.16 (older servers parse and ignore `CHECK`, so generate refuses up front, from the declaration); MySQL drops with `DROP CHECK`, and a changed check is added under an interim name before the old one is dropped, since DDL commits as it goes. Each added check carries a `-- pikku:check-probe {json}` line, which `checkProbeHook` (a `beforeMigration` hook of `migrate`, wired into local `db migrate` and the standalone Postgres `db migrate`) runs against the live rows before that migration. Check names stay within 63 bytes by swapping the middle for a hash while keeping the `_<kind>_check` ending.
 
 **SQLite gets no generated CHECK, by decision.** It cannot drop or change one without rebuilding the table, and a rebuild (copy, drop, rename, put indexes/triggers/views back, foreign keys off) is a destructive migration Pikku will not write on the user's behalf. The declared constraints still drive zod, the generated unions and the console; the database just does not enforce them, and generate/check say so once with the `CHECK` SQL to add by hand. Hand-written sqlite checks are left alone and still read back as enums. `pikku:destructive` stays as a gate any migration can carry; bun:sqlite drops the error of a statement that something follows, so its `exec` runs one statement at a time using a sqlite-specific splitter (no backslash escapes, no dollar quoting), otherwise a failed hand-written copy would go on to drop its source table and be recorded as applied.
+
+## Addons declare theirs the same way
+
+An addon puts its tables in its own `db/tables.ts`; `pikku db export` validates
+the declaration (`parseDeclaration`, shared with `loadTableDeclaration`) and writes
+it as JSON to `.pikku/db/pikku-db-meta.gen.json`, replacing the per-dialect SQL it
+used to carry. `addonDeclarations` in `packages/cli/src/functions/db/addon-declarations.ts`
+reads each wired local addon's file, and `mergeDeclarations` adds them to the app's
+declaration (a table name declared twice is an error; `compileTables` runs again over
+the merged whole). `planDeclaredTables` then runs once on the result, so addon tables
+need no second diff path, and every command that plans (generate, migrate, check,
+codegen, reset) gets the addon list from the inspector through `wiredAddons`.
+Without it the `-- pikku:tables` marker would read an addon's recorded tables as
+removed. `ensureDbTypes` has no inspector state and writes the sidecar app-only.
+An addon table without the wired name's prefix, `declareOnly` in an addon and the old
+SQL-per-dialect artifact are all errors.

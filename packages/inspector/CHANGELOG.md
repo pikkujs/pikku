@@ -1,3 +1,27 @@
+## 0.12.121
+
+### Patch Changes
+
+- 058b973: `defineKeyPair` declares an asymmetric key pair by name (algorithm, purpose, rotation period, verify grace, scope) from `@pikku/core/keypair`, `#pikku/keypairs` in an app. Both inspector engines record it in `state.keyPairs`; the CLI validates it (allow-list ed25519, x25519, rs256; verify grace of at least one hour and at least the signed lifetime plus cache and skew; rotation at least twice the grace) and writes `pikku-keypairs-meta.gen.json` and a `KeyPairsMap`, so `keys.sign` takes only signing names and `keys.open` only sealing names. `signedFormat: 'domain' | 'jws'` (signing keys only, default `'domain'`, recorded explicitly in meta) is validated and refused on sealing keys; enforcement belongs to the key service. Declarations hold no key material. `SecretService` gains an optional `durable` flag that the typed and scoped wrappers forward. `defineSecret` now accepts `rotationPeriod: 'never'` in both inspectors and its `generate: { size }` option reaches the state, which both inspectors previously dropped.
+- 9a54796: The event hub is publish-only and owned by the runtime. `services.eventHub` publishes; `pikkuSubscribeFunc` returns the topic a client may follow; the runtime attaches sockets and streams to the hub it created. See docs/MIGRATION.md. Open SSE streams get a heartbeat, open subscriptions are re-checked by a sweeper, and `PgEventHubRelay` replaces `PgEventHubService`.
+- 9796787: OTLP and analytics sink registries. Core creates `otlpSinks` and `analyticsSinks` before `createSingletonServices` in `pikku dev`, `pikku serve` and standalone builds; an app registers sinks in plain code with `add(sink, map)`. The tracer is always real (the endpoint only controls the HTTP sink) and spans are skipped while no sink is registered. Removed: the `analyticsService` registration, `AnalyticsSink` with `accepts`, and the exporter-typed tracer, logger and metrics constructors. See docs/MIGRATION.md.
+- 278f2d5: Licence change: `@pikku/cli`, `@pikku/inspector` and `@pikku/inspector-go` move from the Business Source License 1.1 to AGPL-3.0-only (the Rust inspector, not published, too). Every other package stays MIT. Versions published before this release keep the BUSL-1.1 terms they shipped with. Code the CLI generates into your project is not meant to be covered by the AGPL (draft wording pending legal review, see LICENSE). Other licensing is available: see LICENSE-COMMERCIAL.md. Details in docs/MIGRATION.md.
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+
 ## 0.12.120
 
 ### Patch Changes

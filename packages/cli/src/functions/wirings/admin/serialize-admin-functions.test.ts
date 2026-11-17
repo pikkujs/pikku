@@ -22,5 +22,21 @@ test('serializeAdminFunctions puts no scope on the addon and authenticates the s
 
   assert.doesNotMatch(out, /wireAddon\(\{[^}]*scopes:/)
   assert.match(out, /auth: true/)
-  assert.match(out, /globalCredentials:/)
+})
+
+// The secret and credential functions read names an operator supplies at run
+// time, which no static declaration covers. Without the exemptions core scopes
+// the addon to what it declared (nothing), and every call is refused.
+test('serializeAdminFunctions exempts the addon from secret and credential scoping with a reason', () => {
+  const out = serializeAdminFunctions(leaf)
+  const call = out.match(/wireAddon\(\{[\s\S]*?\n\}\)/)
+  assert.ok(call)
+
+  for (const field of ['globalSecrets', 'globalCredentials']) {
+    const reason = call[0].match(new RegExp(`${field}:\\s*'([^']+)'`))
+    assert.ok(reason, `${field} is set`)
+    assert.ok(reason[1].length > 20, `${field} has a reason`)
+  }
+  assert.equal(call[0].includes('secretGrants'), false)
+  assert.equal(call[0].includes('credentialGrants'), false)
 })

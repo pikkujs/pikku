@@ -19,6 +19,7 @@ import { scopeSchema } from './scope.schema.js'
 import { flagSchema } from './flag.schema.js'
 import { triggerSourceSchema } from './trigger-source.schema.js'
 import { incomingWebhookSchema } from './incoming-webhook.schema.js'
+import { keySchema } from './key.schema.js'
 import { leaseSchema } from './lease.schema.js'
 import { secretSchema } from './secret.schema.js'
 import { sessionSchema } from './session.schema.js'
@@ -122,6 +123,7 @@ export const pikkuSchemas: PikkuSchema[] = [
   analyticsSchema,
   virtualUserSchema,
   virtualUserScheduleSchema,
+  keySchema,
 ]
 
 export { agentSchema } from './agent.schema.js'
@@ -131,6 +133,7 @@ export { channelSchema } from './channel.schema.js'
 export { credentialSchema } from './credential.schema.js'
 export { deploymentSchema } from './deployment.schema.js'
 export { flagSchema } from './flag.schema.js'
+export { keySchema } from './key.schema.js'
 export { leaseSchema } from './lease.schema.js'
 export { triggerSourceSchema } from './trigger-source.schema.js'
 export { incomingWebhookSchema } from './incoming-webhook.schema.js'

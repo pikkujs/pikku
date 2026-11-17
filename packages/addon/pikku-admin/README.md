@@ -19,15 +19,19 @@ wireAddon({
   name: 'admin',
   package: '@pikku/addon-admin',
   expose: true,
+  globalSecrets:
+    'administering secrets and variables means reading, writing and checking any name an operator supplies at runtime, so it cannot be scoped to a declared set',
   globalCredentials:
-    'administering credentials means setting and clearing any of them, for any user, so it cannot be scoped to a declared set',
+    'administering credentials means setting and clearing any of them, for any user, and reporting whether the caller has connected the OAuth credentials agents need, which other addons declare, so it cannot be scoped to a declared set',
 })
 ```
 
-`globalCredentials` is required for the `admin:credential*` functions. An addon
-is otherwise handed a `CredentialService` scoped to the credentials it declares
-itself, and this one declares none — so without the opt-out every credential
-call finds nothing. Leave it off if you only want users, scopes and audits.
+`globalSecrets` is required for the `admin:secret*` and `admin:variable*`
+functions, and `globalCredentials` for the `admin:credential*` ones. An addon is
+otherwise handed a `SecretService` and `CredentialService` scoped to the names it
+declares itself, and this one declares none — so without the opt-outs every call
+is refused with `Access denied to secret key` or finds nothing. Leave them off
+if you only want users, scopes and audits.
 
 Every function carries its own `admin:*` scope, so a role can grant reading the
 directory without granting the ability to ban anyone. Note the absence of

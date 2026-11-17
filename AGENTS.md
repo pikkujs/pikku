@@ -328,8 +328,10 @@ An `@example` names a region, never restates code:
 ```
 
 The region is a `// @snippet start <name>` … `// @snippet end <name>` pair in
-`templates/online-shop`, the only source — an export missing an example gets the
-usage written there first. Regions may nest, `.sql` files use `--` markers, and
+`templates/online-shop` — an export missing an example gets the usage written
+there first. The one exception is the addon contract helpers (`refHTTP`,
+`refChannel`, `refCLI`), which need an installed addon that publishes a contract,
+so their regions live in `e2e/packages/functions/src/wirings`. Regions may nest, `.sql` files use `--` markers, and
 `packages/cli/build.sh` collects them into the `snippets.json` the CLI ships.
 
 Two tests in `packages/cli/src/functions/surface/` enforce it: a name with no

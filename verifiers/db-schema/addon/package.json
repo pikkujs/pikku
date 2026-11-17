@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
-  "description": "An addon that ships a table. Publishes its schema via `pikku db export` so the consumer can fold it into its own migration history.",
+  "description": "An addon that ships a table. Declares it in db/tables.ts and publishes the declaration via `pikku db export`; the consumer's `pikku db generate` creates it.",
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"
@@ -42,6 +42,6 @@
     "zod": "^4"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.44"
+    "@pikku/kysely": "^0.13.46"
   }
 }

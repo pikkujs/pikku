@@ -12,7 +12,6 @@ import { tmpdir } from 'node:os'
 import { resolve, isAbsolute, relative, dirname, join } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 import { CamelCasePlugin, Kysely, PostgresDialect, sql } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
@@ -52,10 +51,14 @@ import {
 } from '@pikku/migrator-sql'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import {
+  loadMergedDeclaration,
+  type AddonDeclaration,
+} from './addon-declarations.js'
+import {
   declaredTableNames,
+  emptyDeclaration,
   declaredTablesMarker,
   declareOnlyProblems,
-  loadTableDeclaration,
   recordedDeclaredTables,
   refuseTableChanges,
   type DestructiveChange,
@@ -695,6 +698,13 @@ export interface MigrateAndCodegenOutcome {
 const REPLAY = { allowDestructive: true }
 
 export interface MigrateAndCodegenOptions {
+  /**
+   * The addons the project wires, whose declared tables join its own. Left out
+   * by a caller with no inspector state (`pikku all` generating a first set of
+   * types), the annotations written are the app's alone until the next
+   * `db migrate`.
+   */
+  addons?: AddonDeclaration[]
   /** Apply migrations marked `-- pikku:destructive` to the configured database. */
   allowDestructive?: boolean
   /**
@@ -726,7 +736,10 @@ export async function migrateAndCodegen(
     allowDestructive: options.scratch || options.allowDestructive,
   }
 
-  const declaration = await loadTableDeclaration(resolved.rootDir)
+  const declaration = await loadMergedDeclaration(
+    resolved.rootDir,
+    options.addons
+  )
 
   // Codegen reads the sidecar, so it is written first.
   const classificationsJsonWritten = writeAnnotationsSidecar(
@@ -1190,7 +1203,7 @@ function schemaQualifiedMatch(
 
 /**
  * A schema somebody other than the project's own migrations defines — Better
- * Auth, the pikku runtime, an addon.
+ * Auth or the pikku runtime.
  *
  * Every such source answers the same two questions, which is what lets one
  * mechanism serve all of them: `tables` is what must exist, and `sql` is what
@@ -1914,7 +1927,7 @@ function nextMigrationFile(migrationsDir: string, label: string): string {
 /**
  * Something other than the project's own migrations that declares tables.
  *
- * Better Auth, the pikku runtime, an addon. They differ only in where the
+ * Better Auth or the pikku runtime. They differ only in where the
  * declaration comes from; once materialized they answer the same two questions,
  * which is what lets one generator serve all of them.
  */
@@ -1934,7 +1947,7 @@ export interface SchemaSource {
    *
    * Carried per source rather than read off the resolved database because only
    * the sources pikku compiles can honour it. Better Auth writes its own
-   * migration SQL through its own migrator and an addon ships SQL as text —
+   * migration SQL through its own migrator and the runtime ships SQL as text —
    * neither goes through the schema builder, so neither can be qualified from
    * here, and claiming otherwise on their behalf would emit a delta that names
    * a table in a schema their `CREATE TABLE` never put it in.
@@ -2073,7 +2086,7 @@ function applyRenames(
  */
 async function materializeDeclaration(
   resolved: ResolvedDb,
-  { schema }: LoadedDeclaration,
+  { schema, owners }: LoadedDeclaration,
   covered: SchemaMap,
   schemaName: string | undefined
 ): Promise<{ desired?: DesiredSchema; refusals: string[] }> {
@@ -2084,7 +2097,7 @@ async function materializeDeclaration(
     const info = coveredTable(covered, table, schemaName)?.get(column)
     if (!info) {
       refusals.push(
-        `${TABLES_FILE} references ${table}.${column}, which neither it nor any migration creates.`
+        `${owners?.[table] ?? TABLES_FILE} references ${table}.${column}, which neither it nor any migration creates.`
       )
       continue
     }
@@ -2167,6 +2180,7 @@ export interface DeclaredTablesPlan {
  */
 export async function planDeclaredTables(
   resolved: ResolvedDb,
+  declaration: LoadedDeclaration | null,
   otherSources: SchemaSource[] = [],
   options: {
     serverVersion?: () => Promise<string>
@@ -2174,18 +2188,13 @@ export async function planDeclaredTables(
   } = {}
 ): Promise<DeclaredTablesPlan | null> {
   const recorded = recordedDeclaredTables(resolved.migrationsDir)
-  const declaration = await loadTableDeclaration(resolved.rootDir)
+  // No `db/tables.ts` and no wired addon owning tables is an empty declaration:
+  // whatever the migrations recorded is dropped by an approved change, as when
+  // a table leaves a declaration that exists. Only nothing recorded means
+  // there is nothing to plan.
   if (!declaration) {
     if (recorded.size === 0) return null
-    return {
-      tables: [],
-      bodies: [],
-      destructive: [],
-      refusals: [
-        `The migrations record declared tables (${[...recorded].join(', ')}), but ${TABLES_FILE} is ` +
-          'gone, and their classifications went with it. Restore it.',
-      ],
-    }
+    declaration = emptyDeclaration()
   }
 
   // Before the declaration is materialized: a server that cannot take a CHECK
@@ -2246,10 +2255,11 @@ export async function planDeclaredTables(
     )
   )
 
+  const ownerOf = (table: string) => declaration.owners?.[table] ?? TABLES_FILE
   for (const source of otherSources) {
     for (const table of tables.filter((t) => source.desired.tables.has(t))) {
       refusals.push(
-        `${TABLES_FILE} declares ${table}, which belongs to ${source.origin}. Pick another name.`
+        `${ownerOf(table)} declares ${table}, which belongs to ${source.origin}. Pick another name.`
       )
     }
   }
@@ -2264,7 +2274,8 @@ export async function planDeclaredTables(
               desired.tables.get(table)!,
               actual,
               resolved.migrationsDir,
-              resolved.rootDir
+              resolved.rootDir,
+              ownerOf(table)
             ),
           ]
         : []
@@ -2558,10 +2569,11 @@ export interface DeclaredTablesDrift {
 }
 
 export async function declaredSqliteConstraintNotice(
-  resolved: ResolvedDb
+  resolved: ResolvedDb,
+  addons: AddonDeclaration[] = []
 ): Promise<string | undefined> {
   if (resolved.dialect !== 'sqlite') return undefined
-  const declaration = await loadTableDeclaration(resolved.rootDir)
+  const declaration = await loadMergedDeclaration(resolved.rootDir, addons)
   if (!declaration) return undefined
   // What the migrations already enforce comes from replaying them, as the
   // declaration is compared with elsewhere.
@@ -2573,9 +2585,13 @@ export async function declaredSqliteConstraintNotice(
 }
 
 export async function computeDeclaredTablesDrift(
-  resolved: ResolvedDb
+  resolved: ResolvedDb,
+  addons: AddonDeclaration[] = []
 ): Promise<DeclaredTablesDrift> {
-  const plan = await planDeclaredTables(resolved)
+  const plan = await planDeclaredTables(
+    resolved,
+    await loadMergedDeclaration(resolved.rootDir, addons)
+  )
   return {
     pending: Boolean(plan?.bodies.length || plan?.destructive.length),
     refusals: plan?.refusals ?? [],
@@ -2584,324 +2600,18 @@ export async function computeDeclaredTablesDrift(
   }
 }
 
-// ─── The addon schema channel ────────────────────────────────────────────────
-
-/**
- * Where an addon publishes its schema, relative to its package root.
- *
- * One more channel beside `.pikku/function`, `.pikku/scopes` and the rest, so a
- * consumer reaches it the same way they do: through the package name, never a
- * path into somebody else's tree.
- */
-const ADDON_DB_ARTIFACT = '.pikku/db/pikku-db-meta.gen.json'
-
-/** One dialect's worth of a published schema. */
-export interface ExportedSchema {
-  sql: string
-  tables: Record<string, ColumnInfo[]>
-}
-
-/**
- * What an addon publishes: its schema, per dialect it supports.
- *
- * Per-dialect rather than one portable form because there is no portable form —
- * the SQL an addon ships is the SQL it wrote for that engine, and a consumer
- * on a dialect the addon never wrote for is a real incompatibility rather than
- * something to paper over at generate time.
- */
-export type SchemaArtifact = Partial<
-  Record<ResolvedDb['dialect'], ExportedSchema>
->
-
-/** An addon as the consumer wired it. */
-export interface AddonDeclaration {
-  package: string
-  /**
-   * A `wireRemoteAddon` addon runs on another host, against that host's
-   * database. Its tables are not this project's to create.
-   */
-  remote?: boolean
-  /** Absolute path of the file that wires it; resolution starts from its package. */
-  file?: string
-  /** The name it is wired under, which its tables are prefixed with. */
-  name?: string
-  /** Wired with `ui: true`: a table without the prefix is an error rather than a warning. */
-  ui?: boolean
-}
-
-/** Every table an addon creates starts with its name, so two addons, or an addon and the app, cannot collide. */
-export const addonTablePrefix = (name: string): string =>
-  `${name.replace(/[^a-zA-Z0-9]+/g, '_')}_`
-
-export const unprefixedAddonTables = (
-  tables: Record<string, unknown>,
-  name: string
-): string[] => {
-  const prefix = addonTablePrefix(name)
-  return Object.keys(tables).filter(
-    (table) => !table.replace(/^.*\./, '').startsWith(prefix)
-  )
-}
-
-const serializeSchemaMap = (tables: SchemaMap): Record<string, ColumnInfo[]> =>
-  Object.fromEntries(
-    [...tables].map(([table, columns]) => [table, [...columns.values()]])
-  )
-
-const deserializeSchemaMap = (
-  tables: Record<string, ColumnInfo[]>
-): SchemaMap =>
-  new Map(
-    Object.entries(tables).map(([table, columns]) => [
-      table,
-      new Map(columns.map((column) => [column.name, column])),
-    ])
-  )
-
-const concatMigrations = (migrationsDir: string): string =>
-  readdirSync(migrationsDir)
-    .filter((f) => f.endsWith('.sql'))
-    .sort()
-    .map((f) => readFileSync(join(migrationsDir, f), 'utf8').trim())
-    .join('\n\n')
-
-/**
- * Materialize this package's own migrations into something a consumer can use.
- *
- * The producer half of the addon channel, and the same trick the auth and
- * runtime sources use: run the SQL into a throwaway database and introspect it,
- * so the artifact answers both "what must exist" and "what creates it" without
- * a second, hand-written description that drifts.
- *
- * Every dialect the package has migrations for is exported, not just the one it
- * happens to be configured against — an addon is published once and consumed by
- * projects on either engine.
- */
-export async function exportSchema(
-  rootDir: string,
-  pgliteExtensions: string[] = [],
-  sqliteExtensions?: string[],
-  mysqlUrl?: string
-): Promise<SchemaArtifact> {
-  const artifact: SchemaArtifact = {}
-
-  const sqliteDir = join(rootDir, 'db', 'sqlite')
-  if (existsSync(sqliteDir)) {
-    artifact.sqlite = {
-      sql: concatMigrations(sqliteDir),
-      tables: serializeSchemaMap(
-        await coveredSqliteSchema(
-          sqliteDir,
-          sqliteExtensionContext(rootDir, { sqliteExtensions })
-        )
-      ),
-    }
-  }
-
-  const postgresDir = join(rootDir, 'db', 'postgres')
-  if (existsSync(postgresDir)) {
-    artifact.postgres = {
-      sql: concatMigrations(postgresDir),
-      tables: serializeSchemaMap(
-        await coveredPostgresSchema(postgresDir, { rootDir, pgliteExtensions })
-      ),
-    }
-  }
-
-  const mysqlDir = join(rootDir, 'db', 'mysql')
-  if (existsSync(mysqlDir)) {
-    if (!mysqlUrl) {
-      throw new Error(
-        'This package has db/mysql migrations, and MySQL has no embedded engine to materialize ' +
-          'them on. Set db.mysqlUrl in pikku.config.json to a server it may create and drop a ' +
-          'scratch database on.'
-      )
-    }
-    artifact.mysql = {
-      sql: concatMigrations(mysqlDir),
-      tables: serializeSchemaMap(
-        await coveredMysqlSchema(mysqlDir, { connectionString: mysqlUrl })
-      ),
-    }
-  }
-
-  return artifact
-}
-
-/**
- * Write the artifact a consumer reads, whether or not this package has tables.
- *
- * An addon with no tables still publishes, because the consumer's only other
- * reading of an absent file is "this package cannot say", which it must treat
- * as a broken publish. The empty artifact is the addon stating, in a file that
- * ships, that it needs nothing.
- */
-export async function writeSchemaArtifact(
-  rootDir: string,
-  outDir: string,
-  pgliteExtensions?: string[],
-  sqliteExtensions?: string[],
-  mysqlUrl?: string
-): Promise<{ file: string; dialects: string[] }> {
-  const artifact = await exportSchema(
-    rootDir,
-    pgliteExtensions,
-    sqliteExtensions,
-    mysqlUrl
-  )
-  const file = join(outDir, 'db', 'pikku-db-meta.gen.json')
-  mkdirSync(dirname(file), { recursive: true })
-  writeFileSync(file, `${JSON.stringify(artifact, null, 2)}\n`, 'utf8')
-  return { file, dialects: Object.keys(artifact) }
-}
-
-/**
- * Read and check one addon's published artifact.
- *
- * The file is generated, so a malformed one is not an authoring mistake to be
- * explained away — it is a broken publish, and every branch here says which
- * package to go and rebuild. Answering with half an artifact would be worse
- * than refusing: a dialect carrying tables but no SQL generates a migration
- * that creates nothing, and the schema silently drifts from what the addon's
- * own functions expect.
- */
-function readSchemaArtifact(artifactPath: string, pkg: string): SchemaArtifact {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(readFileSync(artifactPath, 'utf8'))
-  } catch (error: any) {
-    throw new Error(
-      `The '${pkg}' addon publishes an unreadable ${ADDON_DB_ARTIFACT} ` +
-        `(${artifactPath}): ${error.message}. Rebuild the addon.`
-    )
-  }
-
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error(
-      `The '${pkg}' addon publishes a ${ADDON_DB_ARTIFACT} that is not an ` +
-        'object of dialects. Rebuild the addon.'
-    )
-  }
-
-  for (const [dialect, exported] of Object.entries(
-    parsed as Record<string, unknown>
-  )) {
-    const entry = exported as { sql?: unknown; tables?: unknown }
-    const hasSql = typeof entry?.sql === 'string' && entry.sql.trim().length > 0
-    const hasTables =
-      typeof entry?.tables === 'object' &&
-      entry.tables !== null &&
-      !Array.isArray(entry.tables)
-
-    if (!hasSql || !hasTables) {
-      throw new Error(
-        `The '${pkg}' addon publishes a ${dialect} schema that is incomplete — ` +
-          `it needs both the SQL to run and the tables that SQL creates, and it ` +
-          `has ${!hasSql ? 'no sql' : 'sql'} and ${!hasTables ? 'no tables' : 'tables'}. ` +
-          'Rebuild the addon.'
-      )
-    }
-  }
-
-  return parsed as SchemaArtifact
-}
-
-/**
- * The schema every wired addon publishes, as sources.
- *
- * An addon never creates its own tables. It has no database of its own — it
- * runs inside the consumer, against the consumer's — so the only honest place
- * for its DDL is the consumer's own migration history, which is what turning it
- * into a `SchemaSource` achieves.
- */
-export async function addonSchemaSources(
-  rootDir: string,
-  dialect: ResolvedDb['dialect'],
-  addons: AddonDeclaration[],
-  logger: { error: (msg: string) => void; warn?: (msg: string) => void }
-): Promise<SchemaSource[]> {
-  if (addons.length === 0) return []
-
-  const sources: SchemaSource[] = []
-  const seen = new Set<string>()
-
-  for (const addon of addons) {
-    if (addon.remote || seen.has(addon.package)) continue
-    seen.add(addon.package)
-
-    let artifactPath: string
-    try {
-      artifactPath = createAddonResolver(
-        addonResolutionDirs(rootDir, addon.file)
-      ).resolve(`${addon.package}/${ADDON_DB_ARTIFACT}`)
-    } catch {
-      // Every addon publishes this file, and one with no tables publishes an
-      // empty one. Absence is therefore never "contributes nothing" — it is a
-      // package that cannot say, and the two used to be indistinguishable:
-      // the addon was skipped in silence and the mistake surfaced much later,
-      // as a function querying a table nobody created.
-      throw new Error(
-        `The '${addon.package}' addon does not publish ${ADDON_DB_ARTIFACT}, so ` +
-          'there is no way to tell whether it ships tables. Build it with a ' +
-          'current CLI (`pikku all` writes the file, empty when there are no ' +
-          'tables), and make sure the package exports and packs it:\n' +
-          `  "exports": { "./${ADDON_DB_ARTIFACT}": "./dist/.pikku/addon/db/pikku-db-meta.gen.json" }\n` +
-          '  "files": ["dist"]'
-      )
-    }
-
-    const artifact = readSchemaArtifact(artifactPath, addon.package)
-    // An addon with no tables says so with an empty artifact, which is the
-    // ordinary case and contributes nothing.
-    if (Object.keys(artifact).length === 0) continue
-
-    const exported = artifact[dialect]
-    if (!exported) {
-      logger.error(
-        `The '${addon.package}' addon publishes a schema, but not for ${dialect} — ` +
-          `it supports ${Object.keys(artifact).join(', ') || 'no dialect'}. ` +
-          'Its tables cannot be created here, so its services will fail at runtime.'
-      )
-      continue
-    }
-
-    if (addon.name) {
-      const offenders = unprefixedAddonTables(exported.tables, addon.name)
-      if (offenders.length > 0) {
-        const message =
-          `The '${addon.name}' addon creates tables without its prefix ` +
-          `'${addonTablePrefix(addon.name)}': ${offenders.join(', ')}. ` +
-          'Rename them in its migrations, so they cannot collide with the app or another addon.'
-        if (addon.ui) throw new Error(message)
-        logger.warn?.(`${message} This will become an error.`)
-      }
-    }
-
-    sources.push({
-      name: addon.package.replace(/^@/, '').replace(/[^a-zA-Z0-9]+/g, '-'),
-      desired: {
-        tables: deserializeSchemaMap(exported.tables),
-        sql: exported.sql,
-      },
-      origin: `the '${addon.package}' addon`,
-    })
-  }
-
-  return sources
-}
-
 /**
  * Every schema source the project has, in the order they must be applied.
  *
  * Auth comes first because the runtime's scope tables reference its `user`
- * table; addons come last because they may reference either.
+ * table. Addon tables are not a source: they are declared, and join the app's
+ * own declaration.
  */
 export async function schemaSources(
   resolved: ResolvedDb,
   rootDir: string,
   srcDirectories: string[],
   logger: { error: (msg: string) => void },
-  addons: AddonDeclaration[] = [],
   services?: ReadonlySet<string>
 ): Promise<SchemaSource[]> {
   const sources: SchemaSource[] = []
@@ -2935,10 +2645,6 @@ export async function schemaSources(
       schema: resolved.dialect === 'postgres' ? resolved.schema : undefined,
     })
   }
-
-  sources.push(
-    ...(await addonSchemaSources(rootDir, resolved.dialect, addons, logger))
-  )
 
   return sources
 }
@@ -3096,52 +2802,17 @@ export interface GenerateResult {
 }
 
 /**
- * Write a migration for every schema source the migrations do not yet cover.
- *
- * Three cases per source, and the distinction matters. Fully covered is
- * nothing to do. Nothing covered writes the source's own SQL verbatim, which is
- * the one case where the source knows better than any diff — it carries the
- * indexes, constraints and ordering a table-and-column comparison cannot see.
- * Partially covered writes the delta, because re-emitting the whole schema
- * would fail on the tables that already exist.
- *
- * The delta is itself two different things, and only one of them is a diff. A
- * table the migrations already have but a column short is a genuine alteration,
- * so it becomes `ALTER TABLE … ADD COLUMN`. A table they do not have at all —
- * what enabling a Better Auth plugin or upgrading an addon produces — has
- * nothing to diff against, so it is lifted verbatim out of the source's own SQL
- * for the same reason the first-time case is: the column map it would otherwise
- * be rendered from knows nothing about keys, constraints or indexes.
- *
- * Migrations are written one file per source, numbered in dependency order, so
- * a project can review and apply them independently.
+ * Write a migration for each source the migrations do not yet cover. The
+ * sources are Better Auth's and the runtime's; the tables a project and its
+ * addons declare are planned separately, against what these write.
  */
-export async function generateMigrations(
+export async function writeSourceMigrations(
   resolved: ResolvedDb,
-  rootDir: string,
-  srcDirectories: string[],
-  logger: { error: (msg: string) => void },
-  addons: AddonDeclaration[] = [],
-  services?: ReadonlySet<string>,
-  options: { allowDestructive?: boolean } = {}
-): Promise<GenerateResult> {
-  // Read and checked first: a retired or unreadable declaration refuses the
-  // whole command, so no source's migration may be written before it does.
-  await loadTableDeclaration(resolved.rootDir)
-  const sources = await schemaSources(
-    resolved,
-    rootDir,
-    srcDirectories,
-    logger,
-    addons,
-    services
-  )
-  const result: GenerateResult = {
-    upToDate: [],
-    written: [],
-    refusals: [],
-    destructive: [],
-    notes: [],
+  sources: SchemaSource[]
+): Promise<{ upToDate: string[]; written: GeneratedMigration[] }> {
+  const result = {
+    upToDate: [] as string[],
+    written: [] as GeneratedMigration[],
   }
 
   for (const source of sources) {
@@ -3264,9 +2935,64 @@ export async function generateMigrations(
     result.written.push({ source: source.name, file, needsBackfill, orphaned })
   }
 
+  return result
+}
+
+/**
+ * Write a migration for every schema source the migrations do not yet cover.
+ *
+ * Three cases per source, and the distinction matters. Fully covered is
+ * nothing to do. Nothing covered writes the source's own SQL verbatim, which is
+ * the one case where the source knows better than any diff — it carries the
+ * indexes, constraints and ordering a table-and-column comparison cannot see.
+ * Partially covered writes the delta, because re-emitting the whole schema
+ * would fail on the tables that already exist.
+ *
+ * The delta is itself two different things, and only one of them is a diff. A
+ * table the migrations already have but a column short is a genuine alteration,
+ * so it becomes `ALTER TABLE … ADD COLUMN`. A table they do not have at all —
+ * what enabling a Better Auth plugin produces — has
+ * nothing to diff against, so it is lifted verbatim out of the source's own SQL
+ * for the same reason the first-time case is: the column map it would otherwise
+ * be rendered from knows nothing about keys, constraints or indexes.
+ *
+ * Migrations are written one file per source, numbered in dependency order, so
+ * a project can review and apply them independently.
+ */
+export async function generateMigrations(
+  resolved: ResolvedDb,
+  rootDir: string,
+  srcDirectories: string[],
+  logger: { error: (msg: string) => void },
+  addons: AddonDeclaration[] = [],
+  services?: ReadonlySet<string>,
+  options: { allowDestructive?: boolean } = {}
+): Promise<GenerateResult> {
+  // Read and checked first: a retired or unreadable declaration refuses the
+  // whole command, so no source's migration may be written before it does.
+  const declaration = await loadMergedDeclaration(resolved.rootDir, addons)
+  const sources = await schemaSources(
+    resolved,
+    rootDir,
+    srcDirectories,
+    logger,
+    services
+  )
+  const result: GenerateResult = {
+    upToDate: [],
+    written: [],
+    refusals: [],
+    destructive: [],
+    notes: [],
+  }
+
+  const fromSources = await writeSourceMigrations(resolved, sources)
+  result.upToDate.push(...fromSources.upToDate)
+  result.written.push(...fromSources.written)
+
   // Last, and only now: a declared table may reference any of the above, and
   // what those sources just wrote is part of what it is compared against.
-  const plan = await planDeclaredTables(resolved, sources, {
+  const plan = await planDeclaredTables(resolved, declaration, sources, {
     allowDestructive: options.allowDestructive,
   })
   if (plan) {

@@ -5,6 +5,7 @@
 
 // visitSetup
 pub const CORE_SINGLETON_SERVICES: i32 = 0; // addFileExtendsCoreType CoreSingletonServices
+pub const CHECK_WIRINGS_TOP_LEVEL: i32 = 5;
 pub const CORE_SERVICES: i32 = 10; // addFileExtendsCoreType CoreServices
 pub const CORE_USER_SESSION: i32 = 20; // addFileExtendsCoreType CoreUserSession
 pub const CORE_CONFIG: i32 = 30; // addFileExtendsCoreType CoreConfig
@@ -19,6 +20,7 @@ pub const ADD_RPC_INVOCATIONS: i32 = 100;
 pub const ADD_WIRE_ADDON: i32 = 110;
 pub const ADD_PIKKU_STUDIO: i32 = 120;
 pub const ADD_DEFINE_CONTRIBUTORS: i32 = 125;
+pub const ADD_WIRE_CONTRIBUTORS: i32 = 126;
 pub const ADD_WIRE_REMOTE_ADDON: i32 = 130;
 pub const ADD_MIDDLEWARE: i32 = 140;
 pub const ADD_PERMISSION: i32 = 150;

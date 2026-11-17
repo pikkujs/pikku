@@ -1,5 +1,28 @@
 # @pikku/bun-server
 
+## 0.12.18
+
+### Patch Changes
+
+- 278e2b6: PikkuBunServer now applies the configured `maxBodySize` to request bodies instead of always using the 10 MiB default.
+- 9a54796: The event hub is publish-only and owned by the runtime. `services.eventHub` publishes; `pikkuSubscribeFunc` returns the topic a client may follow; the runtime attaches sockets and streams to the hub it created. See docs/MIGRATION.md. Open SSE streams get a heartbeat, open subscriptions are re-checked by a sweeper, and `PgEventHubRelay` replaces `PgEventHubService`.
+- d8d339a: Request hot path. New `trustedFraming` option on `PikkuFetchHTTPRequest` (default off); `PikkuBunServer` sets it. With it, a request body whose `content-length` is strictly digits, within `maxBodySize`, with no `transfer-encoding` is read with the native `arrayBuffer()` (size re-checked after the read; every other body and every other runtime keeps the bounded reader and its 413). `OtlpLogger` does no record work while the sink registry is empty. An HTTP request's trace and span ids are drawn when first read (error `errorId`, scoped logger, span, queued job, audit) instead of on every request. The permission runner reuses one secretless view per singleton services object, and the wire credential service is built on first use.
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+
 ## 0.12.17
 
 ### Patch Changes
