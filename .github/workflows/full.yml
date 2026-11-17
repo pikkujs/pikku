@@ -38,13 +38,14 @@ jobs:
     env:
       MAX_BRANCHES: 5
     steps:
-      # At most MAX_BRANCHES branches (main included) may exist on origin.
+      # At most MAX_BRANCHES branches (main included, changeset-release/main not) may exist on origin.
       # Merge or delete one before opening another.
       - name: Count branches
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          branches=$(gh api --paginate "repos/$GITHUB_REPOSITORY/branches" --jq ".[].name")
+          # changeset-release/main is the release bot's branch and is not counted.
+          branches=$(gh api --paginate "repos/$GITHUB_REPOSITORY/branches" --jq ".[].name" | grep -vx "changeset-release/main")
           count=$(printf "%s\n" "$branches" | grep -c .)
           echo "Branches on origin: $count (max $MAX_BRANCHES)"
           printf "%s\n" "$branches" | sed "s/^/  - /"
