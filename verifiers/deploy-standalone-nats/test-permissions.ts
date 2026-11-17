@@ -128,7 +128,8 @@ await check(
       const got: string[] = []
       for await (const m of batch) {
         got.push((m.json() as { for: string }).for)
-        m.ack()
+        // Confirmed by the server, so a later count of B's stream cannot race it.
+        await m.ackAck()
       }
       if (got.join() !== s.stage)
         throw new Error(`${s.stage} received ${got.join() || 'nothing'}`)
@@ -174,6 +175,9 @@ await check(
         } catch {}
       })()
     }
+    // The server must hold the subscriptions before the admin publishes, or
+    // an allowed one would receive nothing and pass.
+    await a.nc.flush()
     adminNc.publish(jobsFor(B), '{"x":1}')
     adminNc.publish('other.thing', '1')
     await new Promise((r) => setTimeout(r, 800))
@@ -203,13 +207,17 @@ await check("it cannot touch B's consumers", async () => {
   await denied('delete', () =>
     a.jsm.consumers.delete(streamOf(B), consumerConfig(B).durable_name)
   )
-  await denied('pull', async () => {
-    const consumer = await a.js.consumers.get(
-      streamOf(B),
-      consumerConfig(B).durable_name
+  // A direct pull request, not consumers.get(): that asks for the consumer's
+  // info first, which is already refused above, so it would pass without ever
+  // sending a pull. `no_wait` makes an allowed pull answer at once (no
+  // messages), so only a refused one times out.
+  await denied('pull', () =>
+    a.nc.request(
+      `$JS.API.CONSUMER.MSG.NEXT.${streamOf(B)}.${consumerConfig(B).durable_name}`,
+      JSON.stringify({ batch: 1, no_wait: true }),
+      { timeout: 1_500 }
     )
-    await consumer.fetch({ max_messages: 1, expires: 1_000 })
-  })
+  )
 })
 await check(
   "a consumer of A's stream filtered onto B subjects can never see B's jobs",

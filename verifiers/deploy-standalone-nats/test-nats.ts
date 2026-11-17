@@ -180,17 +180,26 @@ if (!natsOk || !bunOk) {
 
   type App = ReturnType<typeof run>
   const run = (env: Record<string, string>) => {
+    // The settings under test come only from `env`, never from this process:
+    // an inherited NATS_URL would make a "missing" case start fine.
+    const inherited = Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([k]) => !/^(NATS_|PIKKU_PROJECT$|PIKKU_STAGE$)/.test(k)
+      )
+    )
     const proc = spawn('bun', [join(UNIT_DIR, 'bundle.js')], {
       cwd: UNIT_DIR,
-      env: { ...process.env, HOST: '127.0.0.1', ...env },
+      env: { ...inherited, HOST: '127.0.0.1', ...env },
       stdio: 'pipe',
     })
     procs.push(proc)
     let output = ''
     proc.stdout?.on('data', (d) => (output += d))
     proc.stderr?.on('data', (d) => (output += d))
+    // `close`, not `exit`: it fires after the stdio streams end, so the output
+    // read once this resolves includes the child's last lines.
     const exited = new Promise<number | null>((resolve) =>
-      proc.on('exit', resolve)
+      proc.on('close', resolve)
     )
     return { proc, exited, output: () => output }
   }
@@ -298,12 +307,22 @@ if (!natsOk || !bunOk) {
       "refuses to start when the stage's stream does not exist",
       async () => {
         await adminJsm.streams.delete(streamOf(A))
-        const app = run(await envFor(A))
-        const code = await app.exited
-        if (code === 0) throw new Error('it started')
-        if (!/stream 'pikku_acme_alpha' is not available/.test(app.output()))
-          throw new Error(app.output().slice(-600))
-        await adminJsm.streams.add(streamConfig(A))
+        try {
+          const app = run(await envFor(A))
+          const timer = setTimeout(() => app.proc.kill('SIGKILL'), 20_000)
+          const code = await app.exited
+          clearTimeout(timer)
+          if (/pikku: ready/.test(app.output()))
+            throw new Error(`it started:\n${app.output().slice(-600)}`)
+          if (code === 0 || code === null)
+            throw new Error(
+              `exited ${code}, expected a failure:\n${app.output().slice(-600)}`
+            )
+          if (!/stream 'pikku_acme_alpha' is not available/.test(app.output()))
+            throw new Error(app.output().slice(-600))
+        } finally {
+          await adminJsm.streams.add(streamConfig(A))
+        }
       }
     )
 

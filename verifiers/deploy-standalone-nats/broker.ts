@@ -148,13 +148,25 @@ export const startBroker = async (
     )
   write(stages)
   const proc = spawn(bin, ['-c', confPath], { stdio: 'ignore' })
-  await until('nats-server', async () => {
-    try {
-      return (await fetch(`http://127.0.0.1:${monitorPort}/healthz`)).ok
-    } catch {
-      return false
-    }
-  })
+  try {
+    await until('nats-server', async () => {
+      try {
+        return (await fetch(`http://127.0.0.1:${monitorPort}/healthz`)).ok
+      } catch {
+        return false
+      }
+    })
+  } catch (err) {
+    // The caller never gets `stop` when startup fails, so release it here.
+    const closed =
+      proc.exitCode !== null || proc.signalCode !== null
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => proc.once('close', () => resolve()))
+    proc.kill('SIGKILL')
+    await closed
+    rmSync(dir, { recursive: true, force: true })
+    throw err
+  }
   return {
     url: `nats://127.0.0.1:${port}`,
     port,
