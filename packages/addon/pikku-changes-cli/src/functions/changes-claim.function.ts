@@ -59,6 +59,14 @@ export const ChangesClaim = pikkuSessionlessFunc({
     const project = requireProjectId(projectId)
     const changeIds = idList(input.changeIds)
     const declaration = await declare(rpc, project, changeIds, input)
+    // Claiming a group again (to declare its tables, or renew the lease)
+    // keeps who holds it: the loop that releases a stale lease finds it by that.
+    const claimedBy =
+      input.claimedBy ??
+      (input.groupId
+        ? await holderOf(rpc, project, input.groupId)
+        : undefined) ??
+      'pikku-cli'
     let claimed: ClaimChangesOutput
     try {
       claimed = await rpc.invoke('claimChanges', {
@@ -66,7 +74,7 @@ export const ChangesClaim = pikkuSessionlessFunc({
         groupId: input.groupId,
         changeIds,
         title: input.title,
-        claimedBy: input.claimedBy ?? 'pikku-cli',
+        claimedBy,
         leaseMinutes: input.leaseMinutes ?? 30,
         ...declaration,
       })
@@ -91,6 +99,19 @@ export const ChangesClaim = pikkuSessionlessFunc({
     return { ...claimed, planWhy, worktree }
   },
 })
+
+async function holderOf(
+  rpc: ChangesRPC,
+  projectId: string,
+  groupId: string
+): Promise<string | undefined> {
+  const { groups } = await rpc.invoke('listChanges', {
+    projectId,
+    groupId,
+    includeDone: true,
+  })
+  return groups.find((g) => g.groupId === groupId)?.claimedBy ?? undefined
+}
 
 const declared = (input: z.infer<typeof ChangesClaimInput>) =>
   Boolean(

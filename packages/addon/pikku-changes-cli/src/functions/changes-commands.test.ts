@@ -119,6 +119,36 @@ describe('changes claim', () => {
     assert.strictEqual(data.projectId, 'proj_flag')
   })
 
+  test('claiming a group again without --claimed-by keeps who holds it', async () => {
+    respond = (name) =>
+      name === 'listChanges'
+        ? {
+            groups: [{ groupId: 'g1', claimedBy: 'studio-builder:shop' }],
+            changes: [],
+          }
+        : { group: { groupId: 'g1', title: 'x' }, changes: [] }
+    try {
+      invoked.length = 0
+      await ChangesClaim.func(
+        {} as any,
+        { groupId: 'g1', creates: ['orders'] } as any
+      )
+      const claim = invoked.find((i) => i.name === 'claimChanges')!
+      assert.strictEqual(claim.data.claimedBy, 'studio-builder:shop')
+      invoked.length = 0
+      await ChangesClaim.func(
+        {} as any,
+        { groupId: 'g1', claimedBy: 'someone', needsPlan: false } as any
+      )
+      assert.strictEqual(
+        invoked.find((i) => i.name === 'claimChanges')!.data.claimedBy,
+        'someone'
+      )
+    } finally {
+      respond = () => ({ ok: true })
+    }
+  })
+
   test('refuses to claim when nothing says which project', async () => {
     projectId = null
     try {
