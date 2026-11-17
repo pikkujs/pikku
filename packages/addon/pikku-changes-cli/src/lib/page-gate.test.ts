@@ -49,8 +49,19 @@ const project = ({
       'index-390.jpg',
       'about-1440.jpg',
       'about-390.jpg',
-    ])
+    ]) {
       write(join(dir, 'artifacts', 'references', 'example.com', name), 'x')
+      write(
+        join(
+          dir,
+          'artifacts',
+          'references',
+          'example.com',
+          name.replace('.jpg', '.style.json')
+        ),
+        '{}'
+      )
+    }
   return dir
 }
 
@@ -387,6 +398,103 @@ describe('the page gate on changes done', () => {
       env: {},
     })
     assert.strictEqual(outcome.kind, 'skip')
+  })
+
+  test('a clone with archaeology notes and no capture is refused with the capture command', async () => {
+    const dir = project({ reference: false })
+    write(
+      join(dir, 'knowledge', 'site', 'index.md'),
+      'Pages of https://www.example.com/ (crawled):\n- / home\n'
+    )
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+      label: '#3',
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    const message = (outcome as { message: string }).message
+    assert.match(message, /^#3 touched pages of a site rebuilt/)
+    assert.match(message, /There is no capture of the original/)
+    assert.match(
+      message,
+      /Run: pikku ui pages capture https:\/\/www\.example\.com\/ --out artifacts\/references\/<site>/
+    )
+  })
+
+  test('a reference written by hand in viewport folders is refused: no style.json, so capture it again', async () => {
+    const dir = project({ reference: false })
+    const ref = join(dir, 'artifacts', 'references', 'www.example.com')
+    // a 1440 x 10 PNG header is all the reader needs for the width
+    const png = Buffer.alloc(33)
+    png.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+    png.writeUInt32BE(1440, 16)
+    png.writeUInt32BE(10, 20)
+    for (const name of ['index', 'about']) {
+      write(join(ref, 'laptop', `${name}.png`), '')
+      writeFileSync(join(ref, 'laptop', `${name}.png`), png)
+    }
+    write(join(ref, 'layout-notes.json'), '{}')
+    write(join(ref, 'pages.txt'), 'https://www.example.com/\n')
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    const message = (outcome as { message: string }).message
+    assert.match(message, /was not made by pikku ui pages capture/)
+    assert.match(
+      message,
+      /Run: pikku ui pages capture https:\/\/www\.example\.com\/ --out artifacts\/references\/www\.example\.com/
+    )
+  })
+
+  test('a capture whose pictures were not downloaded is refused; with them it goes on to the compare', async () => {
+    const dir = project()
+    const ref = join(dir, 'artifacts', 'references', 'example.com')
+    write(
+      join(ref, 'about.json'),
+      JSON.stringify({
+        id: 'about',
+        url: 'https://example.com/about',
+        pictures: [{ src: 'https://example.com/a.jpg', file: null }],
+      })
+    )
+    const refused = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+    })
+    assert.strictEqual(refused.kind, 'refuse')
+    assert.match(
+      (refused as { message: string }).message,
+      /none were downloaded into artifacts\/references\/example\.com\/pictures[\s\S]*Run: pikku ui pages capture https:\/\/example\.com\/ --out artifacts\/references\/example\.com/
+    )
+    write(join(ref, 'pictures', 'a-1234abcd.jpg'), 'x')
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match(
+      (outcome as { message: string }).message,
+      /There is no compare report yet/
+    )
+  })
+
+  test('a clone change that touched no page is untouched, even with no capture', async () => {
+    const dir = project({ reference: false })
+    write(join(dir, 'knowledge', 'site', 'index.md'), '- / home\n')
+    assert.deepStrictEqual(
+      await checkPageGate({
+        git: fakeGit(dir, ['packages/functions/src/newsletter.ts']),
+        cwd: dir,
+        env: {},
+      }),
+      { kind: 'skip', why: 'no page file touched since main' }
+    )
   })
 
   test('PIKKU_COMPARE_GATE=off turns it off', async () => {
