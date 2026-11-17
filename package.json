@@ -26,6 +26,7 @@
       "verifiers/db-schema/addon",
       "verifiers/db-schema/remote-addon",
       "verifiers/addon-workspace/functions",
+      "verifiers/pikku-directories/packages/*",
       "verifiers/addon-dependencies/stripe",
       "verifiers/addon-dependencies/billing",
       "verifiers/addon-dependencies/host",

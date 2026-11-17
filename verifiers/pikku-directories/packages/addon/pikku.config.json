@@ -1,0 +1,9 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "tsconfig": "./tsconfig.json",
+  "addon": {
+    "displayName": "Directories Verifier Addon",
+    "description": "An addon listed in pikkuDirectories",
+    "categories": ["Utility"]
+  }
+}

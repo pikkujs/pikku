@@ -14,7 +14,7 @@ const skippedPatterns = (): string[] => [
 ]
 
 /**
- * Every `.ts` file under each of `sourceDirs`, as absolute paths, leaving out
+ * Every file matching `pattern` (`.ts` files by default) under each of `sourceDirs`, as absolute paths, leaving out
  * what a project never inspects: dependencies, build output, its generated
  * tree, and any directory that holds its own pikku.config.json.
  *
@@ -25,7 +25,8 @@ const skippedPatterns = (): string[] => [
 export const findSourceFiles = async (
   rootDir: string,
   sourceDirs: string[],
-  ignoreFiles: string[]
+  ignoreFiles: string[],
+  pattern = '**/*.ts'
 ): Promise<string[]> =>
   (
     await Promise.all(
@@ -38,7 +39,7 @@ export const findSourceFiles = async (
           .map((file) => path.posix.dirname(file.split(path.sep).join('/')))
           .filter((nestedDir) => nestedDir !== '.')
           .map((nestedDir) => `${escapePath(nestedDir)}/**`)
-        return glob('**/*.ts', {
+        return glob(pattern, {
           cwd,
           ignore: [...ignoreFiles, ...skipped, ...nested],
           absolute: true,

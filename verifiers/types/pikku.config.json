@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
-  "ignoreFiles": ["src/invalid-functions/**", "type-tests/**", "src/rpc/**"],
+  "ignoreFiles": ["src/invalid-functions/**", "type-tests/**", "src/rpc/**", "**/*.test.ts", "**/*.spec.ts"],
   "tsconfig": "./tsconfig.pikku.json",
   "schema": {
     "supportsImportAttributes": true

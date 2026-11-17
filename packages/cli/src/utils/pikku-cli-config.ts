@@ -456,7 +456,9 @@ const assertBackendsDeclared = (
   assertContentConfig(config, file)
 
   // An addon is a package other projects wire, not a server; it builds no backend.
-  if (config.addon) {
+  // A package a root project lists in pikkuDirectories is run for that root,
+  // which builds the backends from what the package generates.
+  if (config.addon || process.env.PIKKU_PACKAGE_PASS === '1') {
     return
   }
 
@@ -811,6 +813,13 @@ const _getPikkuCLIConfig = async (
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)
     result.resolvedScaffoldDir = resolvedScaffoldDir
+    if (result.pikkuPackages.length > 0) {
+      result.pikkuPackagesFile = join(
+        resolvedScaffoldDir,
+        'packages',
+        'packages.gen.ts'
+      )
+    }
 
     // Per-unit deploy codegen re-runs the whole of `pikku all` with `--outDir`
     // pointed at one unit's `.pikku`. It needs the `.pikku` artifacts and

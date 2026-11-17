@@ -1,7 +1,7 @@
 import assert from 'node:assert'
 import { join, relative } from 'node:path'
 import { describe, test } from 'node:test'
-import { planDistCopies } from './dist.js'
+import { inCodeDirectories, planDistCopies } from './dist.js'
 
 describe('planDistCopies', () => {
   const root = join('/repo', 'addon')
@@ -69,6 +69,27 @@ describe('planDistCopies', () => {
     assert.deepEqual(
       plan(join(root, '.pikku', 'index.ts'), join(root, 'src', 'a.ts')),
       []
+    )
+  })
+})
+
+describe('inCodeDirectories', () => {
+  const root = join('/repo', 'addon')
+
+  test('keeps files under directories that hold TypeScript and drops the rest', () => {
+    const files = [
+      join(root, 'src', 'a.ts'),
+      join(root, 'src', 'sql', 'init.sql'),
+      join(root, 'types', 'app.d.ts'),
+      join(root, 'knowledge', 'index.md'),
+    ]
+    assert.deepEqual(
+      inCodeDirectories(root, files).map((f) => relative(root, f)),
+      [
+        join('src', 'a.ts'),
+        join('src', 'sql', 'init.sql'),
+        join('types', 'app.d.ts'),
+      ]
     )
   })
 })

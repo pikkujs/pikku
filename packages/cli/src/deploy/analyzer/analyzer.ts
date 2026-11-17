@@ -21,6 +21,7 @@ import {
 } from '../../functions/wirings/scenarios/scenario-partition.js'
 import { toSafeKebab } from './naming.js'
 import { mcpSurfaceSlug } from '../../utils/mcp-surface.js'
+import { addonExposedFunctions } from '../../utils/addon-exposed.js'
 import { createUnitResolver, type GroupingConfig } from './grouping.js'
 
 import type {
@@ -488,19 +489,13 @@ export function analyzeDeployment(
 
   // ── Step 1b: Addon units ───────────────────────────────────────────
   const addonUnitByRpcName = new Map<string, string>()
+  const exposedByNamespace = addonExposedFunctions(state)
   for (const [namespace, addonMeta] of entries(state.addonFunctions ?? {})) {
-    // The addon must declare the function `expose: true` and the wiring must
-    // opt in, with `true` or a list naming it — the same rule `rpc.exposed`
-    // applies at runtime, so the unit carries exactly what can be called.
-    const wiredExpose = state.rpc?.wireAddonDeclarations?.get(namespace)?.expose
-    const isExposed = (funcName: string, meta: { expose?: boolean }) =>
-      !!meta.expose &&
-      (Array.isArray(wiredExpose)
-        ? wiredExpose.includes(funcName)
-        : wiredExpose === true)
+    const exposedNames = new Set(exposedByNamespace[namespace] ?? [])
+    const isExposed = (funcName: string) => exposedNames.has(funcName)
     const wired = entries(addonMeta).filter(
-      ([funcName, meta]) =>
-        isExposed(funcName, meta) ||
+      ([funcName]) =>
+        isExposed(funcName) ||
         collectHttpRoutes(httpMeta, `${namespace}:${funcName}`).length > 0
     )
     if (wired.length === 0) {
@@ -524,7 +519,7 @@ export function analyzeDeployment(
       routes.push(
         ...collectHttpRoutes(httpMeta, rpcName, claimedSyntheticBridges)
       )
-      if (isExposed(funcName, funcMeta)) {
+      if (isExposed(funcName)) {
         addonUnitByRpcName.set(rpcName, unitName)
         routes.push({
           method: 'post',

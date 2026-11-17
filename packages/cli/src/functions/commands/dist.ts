@@ -3,7 +3,7 @@ import { cp, mkdir, readdir } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { readTsconfigOutDir } from '../../inspector-helpers.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
-import { listProjectFiles } from '../../utils/pikku-directories.js'
+import { findSourceFiles } from '../../utils/find-source-files.js'
 
 /**
  * Carry into the build output the files `tsc` compiles around but never emits.
@@ -53,6 +53,21 @@ const walk = async (dir: string): Promise<string[]> => {
   return files.flat()
 }
 
+/**
+ * Only the top-level directories that hold TypeScript are code: a `src` carries
+ * its `.sql` and templates to the build output, a `knowledge` of markdown does not.
+ */
+export const inCodeDirectories = (
+  rootDir: string,
+  files: string[]
+): string[] => {
+  const top = (file: string) => relative(rootDir, file).split(sep)[0]
+  const code = new Set(
+    files.filter((file) => file.endsWith('.ts')).map((file) => top(file))
+  )
+  return files.filter((file) => code.has(top(file)))
+}
+
 export const planDistCopies = (
   rootDir: string,
   distDir: string,
@@ -68,7 +83,7 @@ export const planDistCopies = (
 
 export const pikkuDist = pikkuSessionlessFunc<{ distDir?: string }, void>({
   func: async ({ logger, config }, data) => {
-    const { rootDir, outDir, sourceDirs, tsconfig } = config as any
+    const { rootDir, outDir, sourceDirs, ignoreFiles, tsconfig } = config as any
 
     const distDir = data.distDir
       ? resolve(rootDir, data.distDir)
@@ -81,11 +96,12 @@ export const pikkuDist = pikkuSessionlessFunc<{ distDir?: string }, void>({
       process.exit(1)
     }
 
+    const projectFiles = (
+      await findSourceFiles(rootDir, sourceDirs, ignoreFiles ?? [], '**/*')
+    ).filter((file) => dirname(file) !== resolve(rootDir))
     const copies = planDistCopies(rootDir, distDir, [
       ...(await walk(outDir)),
-      ...(
-        await listProjectFiles(rootDir, sourceDirs, ['.d.ts', '.json'])
-      ).filter((file) => dirname(file) !== resolve(rootDir)),
+      ...inCodeDirectories(rootDir, projectFiles),
     ])
 
     for (const { from, to } of copies) {
