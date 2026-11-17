@@ -1,6 +1,7 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { runKnowledgeIndex } from '@pikku/knowledge'
 import { renderKnowledgeIndex } from '../knowledge/render.js'
+import { planRoot } from './knowledge-plan.js'
 import {
   KnowledgeIndexInputSchema,
   KnowledgeIndexOutputSchema,
@@ -12,7 +13,7 @@ export const knowledgeIndex = pikkuSessionlessFunc({
   input: KnowledgeIndexInputSchema,
   output: KnowledgeIndexOutputSchema,
   func: async ({ config }, { check }) =>
-    runKnowledgeIndex(config.rootDir, check ?? false),
+    runKnowledgeIndex(planRoot(config.rootDir), check ?? false),
 })
 
 export { renderKnowledgeIndex }

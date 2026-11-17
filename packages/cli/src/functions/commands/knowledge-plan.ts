@@ -39,7 +39,7 @@ export const knowledgePlanSchema = pikkuSessionlessFunc({
  * Plans live at the repository root: `changes done` and the merge read them there. A project whose
  * config sits in a package (rootDir '.') would otherwise write the plan under that package.
  */
-const planRoot = (rootDir: string): string => {
+export const planRoot = (rootDir: string): string => {
   try {
     return execFileSync('git', ['rev-parse', '--show-toplevel'], {
       cwd: rootDir,

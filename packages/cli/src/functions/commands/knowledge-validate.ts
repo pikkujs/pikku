@@ -2,6 +2,7 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { ErrorCode } from '@pikku/inspector'
 import { runKnowledgeValidate } from '@pikku/knowledge'
 import { renderKnowledgeValidate } from '../knowledge/render.js'
+import { planRoot } from './knowledge-plan.js'
 import {
   KnowledgeValidateInputSchema,
   KnowledgeValidateOutputSchema,
@@ -13,7 +14,10 @@ export const knowledgeValidate = pikkuSessionlessFunc({
   input: KnowledgeValidateInputSchema,
   output: KnowledgeValidateOutputSchema,
   func: async ({ config, logger }) => {
-    const result = await runKnowledgeValidate(config.rootDir, config.outDir)
+    const result = await runKnowledgeValidate(
+      planRoot(config.rootDir),
+      config.outDir
+    )
     const orphans = result.findings.filter((f) =>
       f.id.startsWith('knowledge-orphan-')
     )
