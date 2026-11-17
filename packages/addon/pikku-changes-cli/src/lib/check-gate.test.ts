@@ -3,7 +3,12 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, test } from 'node:test'
-import { hasPikkuProject, refuseUntilChecked } from './check-gate.js'
+import { spawnSync } from 'node:child_process'
+import {
+  hasPikkuProject,
+  refuseUntilChecked,
+  uncommitted,
+} from './check-gate.js'
 
 const dirs: string[] = []
 const repo = (config?: string) => {
@@ -82,5 +87,47 @@ describe('refuseUntilChecked', () => {
     assert.equal(hasPikkuProject(repo('pikku.config.json')), true)
     assert.equal(hasPikkuProject(repo('apps/web/pikku.config.json')), true)
     assert.equal(hasPikkuProject(repo()), false)
+  })
+
+  test('a real repo with a pikku.config.json: an untracked compare report under artifacts/tmp is not uncommitted work, other untracked files are', async () => {
+    const top = repo('packages/functions/pikku.config.json')
+    const sh = (...args: string[]) =>
+      spawnSync('git', args, { cwd: top, encoding: 'utf8' }).stdout
+    sh('init', '-q', '-b', 'main')
+    sh('add', '.')
+    sh('-c', 'user.email=t@e', '-c', 'user.name=t', 'commit', '-qm', 'init')
+    mkdirSync(join(top, 'artifacts', 'tmp', 'compare', 'app'), {
+      recursive: true,
+    })
+    writeFileSync(
+      join(top, 'artifacts', 'tmp', 'compare', 'app', 'report.json'),
+      '{}'
+    )
+    const git = async (args: string[]) => sh(...args)
+    let checked = 0
+    await refuseUntilChecked({
+      git,
+      label: '#1',
+      check: () => (checked++, { code: 0, output: '' }),
+    })
+    assert.equal(checked, 1)
+    writeFileSync(join(top, 'stray.ts'), 'x')
+    await assert.rejects(
+      refuseUntilChecked({
+        git,
+        label: '#1',
+        check: () => assert.fail('must not run'),
+      }),
+      /uncommitted/
+    )
+  })
+
+  test('uncommitted leaves out scratch paths at any depth', () => {
+    assert.deepEqual(
+      uncommitted(
+        '?? artifacts/tmp/compare/app/report.json\n?? apps/web/artifacts/tmp/x.png\n M src/a.ts\n'
+      ),
+      [' M src/a.ts']
+    )
   })
 })

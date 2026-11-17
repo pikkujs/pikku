@@ -9,6 +9,9 @@ import { CloudPreconditionError } from '@pikku/cli/addon-support'
  * committed and `pikku check` passes at HEAD. The refusal carries the errors so the agent fixes them
  * instead of parking the change. PIKKU_CHANGES_CHECK_GATE=off turns it off; a repository with no
  * pikku.config.json has nothing to check and passes.
+ *
+ * `artifacts/tmp/` (the compare reports and diff images `pikku ui pages compare` writes) is
+ * scratch: it is not part of the commit and does not make the tree dirty.
  */
 export type CheckRun = (cwd: string) => { code: number; output: string }
 
@@ -42,6 +45,16 @@ export const hasPikkuProject = (top: string): boolean => {
   return false
 }
 
+/** Scratch output that is never committed: compare reports and diff images. */
+export const SCRATCH_PATH = /^"?(?:.*\/)?artifacts\/tmp\//
+
+/** The `git status --porcelain` lines that are real uncommitted work. */
+export const uncommitted = (porcelain: string): string[] =>
+  porcelain
+    .split('\n')
+    .filter((line) => line.trim())
+    .filter((line) => !SCRATCH_PATH.test(line.slice(3)))
+
 export async function refuseUntilChecked({
   git,
   label,
@@ -54,7 +67,7 @@ export async function refuseUntilChecked({
   if (process.env.PIKKU_CHANGES_CHECK_GATE === 'off') return
   const top = (await git(['rev-parse', '--show-toplevel'])).trim()
   if (!top || !hasPikkuProject(top)) return
-  if ((await git(['status', '--porcelain'])).trim())
+  if (uncommitted(await git(['status', '--porcelain', '-uall'])).length)
     throw new CloudPreconditionError(
       `${label} has uncommitted changes. Commit them first: done is judged on the commit, and \`pikku check\` runs on what is committed.`
     )
