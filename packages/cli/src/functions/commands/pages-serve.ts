@@ -1,3 +1,4 @@
+import { createServer } from 'node:net'
 import { resolve } from 'node:path'
 import type { spawn } from 'node:child_process'
 import {
@@ -15,7 +16,26 @@ import type { Env } from './dev-env.js'
  * done. Only the frontend is started: the API is not. A data-driven page is
  * compared as served, so with no API running it is photographed without its
  * data, and the result says so.
+ *
+ * `isolate` (a changeset worktree): whatever answers on the configured port
+ * may be another checkout's code, so it is never used. The dev command is
+ * started on a free port (`--port <n>` appended, PORT set) and stopped after.
  */
+
+/** A port nothing is listening on right now. */
+export const findFreePort = (): Promise<number> =>
+  new Promise((resolvePort, reject) => {
+    const server = createServer()
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      server.close(() =>
+        typeof address === 'object' && address
+          ? resolvePort(address.port)
+          : reject(new Error('no free port'))
+      )
+    })
+  })
 
 export type Served = {
   baseUrl: string
@@ -76,6 +96,8 @@ export const serveFrontend = async ({
   healthTimeoutMs = 120_000,
   fetchImpl = fetch,
   spawnImpl,
+  isolate = false,
+  freePort = findFreePort,
 }: {
   frontend: DevFrontend
   /** The API the frontend proxies to (VITE_API_PROXY), as `pikku dev` sets it. */
@@ -85,13 +107,29 @@ export const serveFrontend = async ({
   healthTimeoutMs?: number
   fetchImpl?: typeof fetch
   spawnImpl?: typeof spawn
+  /** Never reuse a server on the configured port; start one on a free port. */
+  isolate?: boolean
+  freePort?: () => Promise<number>
 }): Promise<Served> => {
+  if (isolate) {
+    const port = await freePort()
+    frontend = {
+      ...frontend,
+      port,
+      command: [...frontend.command, '--port', String(port)],
+    }
+    const base = envFor
+    envFor = (f) => ({ ...base(f), PORT: String(port) })
+  }
   const baseUrl = `http://localhost:${frontend.port}`
   const apiNote =
     apiUrl && !(await answersAtAll(apiUrl, fetchImpl))
       ? `The API at ${apiUrl} did not answer, so pages that load data were photographed without it. Run \`pikku dev\` first to compare them with their data.`
       : null
-  if (await answersOk(`${baseUrl}${frontend.healthPath}`, fetchImpl))
+  if (
+    !isolate &&
+    (await answersOk(`${baseUrl}${frontend.healthPath}`, fetchImpl))
+  )
     return { baseUrl, started: false, command: null, apiNote, stop: () => {} }
   const command = frontend.command.join(' ')
   write(
@@ -118,7 +156,7 @@ export const serveFrontend = async ({
     })
   } catch (error) {
     throw new Error(
-      `Could not start ${frontend.name} for the compare (${command} in ${frontend.cwd}): ${error instanceof Error ? error.message : String(error)}${tail.length ? `\n${tail.join('\n')}` : ''}\nStart it yourself, or pass --baseUrl.`
+      `Could not start ${frontend.name} for the compare (${command} in ${frontend.cwd}): ${error instanceof Error ? error.message : String(error)}${tail.length ? `\n${tail.join('\n')}` : ''}\n${isolate ? `In a changeset worktree the compare starts its own server on a free port (${command}); the dev command has to accept --port. ` : ''}Start it yourself, or pass --baseUrl.`
     )
   }
   return { baseUrl, started: true, command, apiNote, stop: running.stop }

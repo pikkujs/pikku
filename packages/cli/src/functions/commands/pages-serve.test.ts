@@ -137,4 +137,30 @@ describe('serveFrontend', () => {
       /Could not start app for the compare[\s\S]*boom[\s\S]*pass --baseUrl/
     )
   })
+
+  test('isolated (a changeset worktree), it never uses what answers on the configured port: it starts its own on a free port', async () => {
+    const other = await listen(200)
+    // a dev server that listens on the port given by its last --port
+    const script =
+      "const a=process.argv;const p=+a[a.lastIndexOf('--port')+1];require('http').createServer((q,s)=>s.end('mine')).listen(p,'127.0.0.1');setInterval(()=>{},1000)"
+    try {
+      const served = await serveFrontend({
+        frontend: frontend(other.port, [process.execPath, '-e', script, '--']),
+        envFor: () => ({ ...process.env }),
+        write: () => {},
+        healthTimeoutMs: 15_000,
+        isolate: true,
+      })
+      try {
+        assert.equal(served.started, true)
+        assert.notEqual(served.baseUrl, `http://localhost:${other.port}`)
+        const body = await (await fetch(`${served.baseUrl}/`)).text()
+        assert.equal(body, 'mine')
+      } finally {
+        served.stop()
+      }
+    } finally {
+      await close(other.server)
+    }
+  })
 })
