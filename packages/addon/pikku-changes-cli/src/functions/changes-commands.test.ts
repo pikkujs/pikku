@@ -368,10 +368,16 @@ describe('changes file', () => {
     assert.strictEqual(data.body, undefined)
   })
 
-  test('a builder files to the backlog unless PIKKU_CHANGES_BUILDER_FILE_READY=1', async () => {
+  test('a builder of a parallel loop files to the backlog unless PIKKU_CHANGES_BUILDER_FILE_READY=1; a serial builder files ready', async () => {
     projectId = 'local'
     process.env.PIKKU_CHANGES_BUILDER = '1'
     try {
+      // serial (no PIKKU_CHANGES_PARALLEL): ready, as before
+      const { data: serial } = await sent(() =>
+        ChangesFile.func({} as any, { title: 'Add a blog' } as any)
+      )
+      assert.strictEqual(serial.backlog, undefined)
+      process.env.PIKKU_CHANGES_PARALLEL = '1'
       const { data } = await sent(() =>
         ChangesFile.func({} as any, { title: 'Add a blog' } as any)
       )
@@ -384,6 +390,7 @@ describe('changes file', () => {
     } finally {
       projectId = 'proj_linked'
       delete process.env.PIKKU_CHANGES_BUILDER
+      delete process.env.PIKKU_CHANGES_PARALLEL
       delete process.env.PIKKU_CHANGES_BUILDER_FILE_READY
     }
     const { data } = await sent(() =>

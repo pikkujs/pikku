@@ -35,15 +35,19 @@ export const ChangesFileInput = z.object({
 })
 
 /**
- * A builder (PIKKU_CHANGES_BUILDER=1) that files a change mid-build puts it in
- * the backlog: scope grown after the plan was made waits for a person to make
- * it ready. PIKKU_CHANGES_BUILDER_FILE_READY=1 lets it file straight to ready.
+ * A builder of a parallel loop (PIKKU_CHANGES_BUILDER=1 and
+ * PIKKU_CHANGES_PARALLEL=1) that files a change mid-build puts it in the
+ * backlog: scope grown after the plan was made waits for a person to make it
+ * ready, rather than being picked up by another builder alongside. A serial
+ * builder files to ready, as before, and the next agent builds it.
+ * PIKKU_CHANGES_BUILDER_FILE_READY=1 lets a parallel builder file to ready.
  */
 export const builderFilesToBacklog = (
   projectId: string | null | undefined,
   env: NodeJS.ProcessEnv = process.env
 ): boolean =>
   env.PIKKU_CHANGES_BUILDER === '1' &&
+  env.PIKKU_CHANGES_PARALLEL === '1' &&
   env.PIKKU_CHANGES_BUILDER_FILE_READY !== '1' &&
   projectId === LOCAL_PROJECT_ID
 

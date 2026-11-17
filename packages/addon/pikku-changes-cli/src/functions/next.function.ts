@@ -61,7 +61,12 @@ export const next = pikkuSessionlessFunc({
     const merged = [...current.merged]
     for (;;) {
       if (!current.agent) return { ...current, merged }
-      const code = await launch(input.exec, current, input.harnessArg ?? [])
+      const code = await launch(
+        input.exec,
+        current,
+        input.harnessArg ?? [],
+        parallelLoop(!!input.parallel)
+      )
       if (code !== 0)
         throw new CloudPreconditionError(
           `The ${current.agent} agent exited with ${code}.`
@@ -189,7 +194,7 @@ export async function pick(
     context: [
       `# Open changes for the ${specialist} specialist`,
       '',
-      specialistScope(specialist!),
+      specialistScope(specialist!, parallelLoop(parallel)),
       '',
       ...ready.flatMap((c) => [
         `## #${c.shortId} ${c.title}`,
@@ -209,6 +214,12 @@ export async function pick(
  * exits, and is merged on a later fill. Until its commit is in HEAD (the
  * branch a new worktree is cut from) a change that depends on it waits.
  */
+/** A parallel loop: `next --parallel`, or the loop's PIKKU_CHANGES_PARALLEL=1. */
+const parallelLoop = (
+  parallel: boolean,
+  env: NodeJS.ProcessEnv = process.env
+): boolean => parallel || env.PIKKU_CHANGES_PARALLEL === '1'
+
 async function doneNotMerged(
   root: string,
   changes: Array<{ changeId: string; status: string; headCommit?: unknown }>
@@ -336,8 +347,16 @@ The first change is the data change, and every other change depends on it. When 
 `,
 })
 
-const specialistScope = (specialist: string): string =>
-  `You are the ${specialist} specialist and these changes are tagged for you. Stay inside your scope. When a change needs something that is another specialist's work, do not do it: file it for that specialist with \`pikku changes file --specialist <name> --depends-on <this change> --title "<one line>"\` and carry on with the rest.`
+/**
+ * A builder of a parallel loop (PIKKU_CHANGES_PARALLEL=1) files to the
+ * backlog (see `builderFilesToBacklog`); a serial one files ready, and the
+ * next agent builds it. The text says which.
+ */
+export const specialistScope = (
+  specialist: string,
+  parallel: boolean
+): string =>
+  `You are the ${specialist} specialist and these changes are tagged for you. Stay inside your scope. When a change needs something that is another specialist's work, do not do it: file it for that specialist with \`pikku changes file --specialist <name> --depends-on <this change> --title "<one line>"\` and carry on with the rest.${parallel ? ' Alongside other builders it goes to the backlog, where a person makes it ready; it is not built in this run, so finish what you can of your change without it.' : ' It is filed ready and built by the next agent after yours.'}`
 
 const WORKING_THEM = `These are every open change. Group them into changesets as the pikku-changes skill's Changesets section says, then claim one, build it, mark its changes done and stop. pikku changes next merges it, and the next changeset gets a fresh agent.
 `
@@ -370,7 +389,8 @@ const SKILL_DIRS: Record<Harness, string> = {
 async function launch(
   harness: Harness,
   current: Route,
-  extra: string[]
+  extra: string[],
+  parallel = false
 ): Promise<number> {
   const skill = join(SKILL_DIRS[harness], current.skill!, 'SKILL.md')
   if (!existsSync(skill))
@@ -401,7 +421,11 @@ async function launch(
       env:
         current.agent === 'intake'
           ? env
-          : { ...env, PIKKU_CHANGES_BUILDER: '1' },
+          : {
+              ...env,
+              PIKKU_CHANGES_BUILDER: '1',
+              ...(parallel ? { PIKKU_CHANGES_PARALLEL: '1' } : {}),
+            },
     })
     child.on('error', reject)
     child.on('exit', (code) => resolve(code ?? 1))
