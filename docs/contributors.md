@@ -159,6 +159,8 @@ wireContributors({
 
 It is read statically at build time and does nothing when the app runs. The package and every name must be string literals, written as plain `key: value` entries with no spread, and each package is wired by one call (PKU362 otherwise). A name the package does not register is PKU363, as for `wireAddon`.
 
+Like every `wire*` call, it belongs at the top level of a file. Called from inside a function, an arrow function or a method, it is a build error (PKU367): the build reads the call as a declaration, and a function body is not a place the build can promise runs.
+
 ### Choosing by deploy provider
 
 `platform.provider` is the deploy provider building the unit (`standalone`, `cloudflare`, ...). Every deploy build sets it; `pikku dev` never does, and a `when` should treat an unset value as "not mine":
@@ -228,6 +230,7 @@ The Cloudflare adapter selects the optional contributor `kysely-coercion` itself
 | `wireAddon({ contributors })` with a non-literal list                     | PKU362                                                                   |
 | `wireContributors` with a spread or shorthand, or twice for one package   | PKU362                                                                   |
 | An opt-in name the addon does not register                                | PKU363                                                                   |
+| Any `wire*` call (`wireHTTP`, `wireContributors`, ...) inside a function  | PKU367                                                                   |
 | `pikku.contributors` still in an addon's `package.json`                   | PKU364 (a hard error, no longer silently ignored)                        |
 | `dev.contributors` or `deploy.contributors` still in `pikku.config.json`  | the CLI refuses to load the config, naming the key                       |
 | Two contributors providing one key (after `when` and `requires`)          | `Contributors 'a' and 'b' both provide 'key'`                            |
