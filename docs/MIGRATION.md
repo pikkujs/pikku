@@ -137,8 +137,9 @@ What an app sees:
 **What:** a project inspects its own directory, so `srcDirectories` is gone and a config that still sets it is rejected. `pikkuDirectories` lists the packages a root project assembles. Each entry is a directory with its own `pikku.config.json` and a `package.json` name (an addon or a functions package). Folders of source are no longer listed.
 
 - The project skips `node_modules`, `dist`, `build`, `.pikku`, dot-directories and any directory with its own `pikku.config.json`. Source that sat outside the project directory, or that the old list excluded by omission, is now inspected unless `ignoreFiles` names it.
-- `pikku all` at the root runs `pikku all` in each listed package, dependencies first (the four dependency fields and `pikku.uses` order them; a cycle is an error), then wires each package as an addon named after its directory, and builds the backends. The SDKs land in the root `.pikku/sdk/<backend>/exposed`.
-- A listed package needs no `backends` or `frontends`. It needs `exports` for `./.pikku/*`, as any addon does.
+- `pikku all` at the root runs `pikku all` in each listed package, dependencies first (the four dependency fields and `pikku.uses` order them; a cycle is an error), then wires each package as an addon under the `namespace` its own `pikku.config.json` declares, and builds the backends. The SDKs land in the root `.pikku/sdk/<backend>/exposed`.
+- A listed package needs no `backends` or `frontends`. It needs `exports` for `./.pikku/*`, as any addon does, and a required `namespace` in its `pikku.config.json` (lowercase letter first, then lowercase alphanumerics, hyphens or underscores; unique among the listed packages). A missing or duplicate namespace is an error. Every function the package declares `expose: true` is exposed as `<namespace>:<function>`.
+- Release order: publish the new `@pikku/cli` before any config, the cli's own included, drops `srcDirectories`. The build bootstraps with the published CLI, which still requires the key, and fails otherwise.
 - A backend filter selects an addon's functions with `names: ["<namespace>:*"]`.
 
 ```json
@@ -147,6 +148,9 @@ What an app sees:
 
 // after, at the root
 { "pikkuDirectories": ["packages/billing"] }
+
+// packages/billing/pikku.config.json
+{ "namespace": "billing" }
 ```
 
 **Find:** `rg -n '"srcDirectories"' --glob pikku.config.json`

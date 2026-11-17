@@ -23,6 +23,9 @@ export const SKIP_DIRS = new Set([
 
 export const CONFIG_FILE = 'pikku.config.json'
 
+/** What an addon name may be, the rule `pikku new addon` applies. */
+export const NAMESPACE_PATTERN = /^[a-z][a-z0-9_-]*$/
+
 export const isSkippedDirectory = (name: string): boolean =>
   SKIP_DIRS.has(name) || name.startsWith('.')
 
@@ -92,6 +95,8 @@ export type PikkuPackage = {
   dir: string
   /** The package.json name. */
   name: string
+  /** The namespace the package is wired under, from its own pikku.config.json. */
+  namespace: string
   /** The package names this package depends on, whether or not they are listed. */
   dependsOn: string[]
 }
@@ -180,9 +185,21 @@ export const resolvePikkuDirectories = async (
         `${where} lists "${entry}", which has no ${CONFIG_FILE}. Each listed directory is a Pikku project of its own: add ${label}/${CONFIG_FILE}, or remove the entry.`
       )
     }
-    if ('pikkuDirectories' in (await readJson(configPath))) {
+    const listedConfig = await readJson(configPath)
+    if ('pikkuDirectories' in listedConfig) {
       throw new PikkuCLIConfigError(
         `${where} lists "${entry}", whose ${CONFIG_FILE} lists pikkuDirectories itself. List its packages here instead; only one level is supported.`
+      )
+    }
+    const namespace = listedConfig.namespace
+    if (typeof namespace !== 'string' || namespace === '') {
+      throw new PikkuCLIConfigError(
+        `${where} lists "${entry}", whose ${CONFIG_FILE} has no namespace. The root wires the package under that name (\`namespace:function\`). Add "namespace" to ${label}/${CONFIG_FILE}.`
+      )
+    }
+    if (!NAMESPACE_PATTERN.test(namespace)) {
+      throw new PikkuCLIConfigError(
+        `The namespace "${namespace}" in ${label}/${CONFIG_FILE} is not valid: it must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores.`
       )
     }
     const pkg = await readJson(join(dir, 'package.json'))
@@ -195,6 +212,7 @@ export const resolvePikkuDirectories = async (
       entry,
       dir,
       name: pkg.name,
+      namespace,
       dependsOn: packageDependencyNames(pkg),
     })
   }
@@ -207,6 +225,16 @@ export const resolvePikkuDirectories = async (
       )
     }
     seen.set(p.name, p.entry)
+  }
+  const namespaces = new Map<string, string>()
+  for (const p of packages) {
+    const first = namespaces.get(p.namespace)
+    if (first) {
+      throw new PikkuCLIConfigError(
+        `${where} lists "${first}" and "${p.entry}", which both declare the namespace "${p.namespace}". Give each package its own namespace in its ${CONFIG_FILE}.`
+      )
+    }
+    namespaces.set(p.namespace, p.entry)
   }
   return packages
 }

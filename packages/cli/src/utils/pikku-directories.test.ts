@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, describe, test } from 'node:test'
 import {
   isNestedProject,
@@ -27,7 +27,10 @@ const project = async (
   roots.push(root)
   for (const [dir, pkg] of Object.entries(packages)) {
     await mkdir(join(root, dir), { recursive: true })
-    await writeFile(join(root, dir, 'pikku.config.json'), '{}')
+    await writeFile(
+      join(root, dir, 'pikku.config.json'),
+      JSON.stringify({ namespace: basename(dir) })
+    )
     if (pkg)
       await writeFile(join(root, dir, 'package.json'), JSON.stringify(pkg))
   }
@@ -42,6 +45,7 @@ const pkg = (
   entry,
   dir: `/x/${entry}`,
   name,
+  namespace: name,
   dependsOn,
 })
 
@@ -215,6 +219,44 @@ describe('resolvePikkuDirectories', () => {
     await assert.rejects(
       resolvePikkuDirectories(file, none, ['packages/a']),
       /package.json has no name/
+    )
+  })
+
+  test('refuses a listed package whose config has no namespace', async () => {
+    const root = await project({ 'packages/a': { name: 'a' } })
+    await writeFile(join(root, 'packages/a/pikku.config.json'), '{}')
+    await assert.rejects(
+      resolvePikkuDirectories(file, root, ['packages/a']),
+      /"packages\/a", whose pikku.config.json has no namespace/
+    )
+  })
+
+  test('refuses a namespace that is not a valid addon name', async () => {
+    const root = await project({ 'packages/a': { name: 'a' } })
+    await writeFile(
+      join(root, 'packages/a/pikku.config.json'),
+      '{"namespace":"Bad Name"}'
+    )
+    await assert.rejects(
+      resolvePikkuDirectories(file, root, ['packages/a']),
+      /namespace "Bad Name" in packages\/a\/pikku.config.json is not valid/
+    )
+  })
+
+  test('refuses two packages that declare the same namespace', async () => {
+    const root = await project({
+      'packages/a': { name: 'a' },
+      'packages/b': { name: 'b' },
+    })
+    for (const d of ['a', 'b']) {
+      await writeFile(
+        join(root, 'packages', d, 'pikku.config.json'),
+        '{"namespace":"shared"}'
+      )
+    }
+    await assert.rejects(
+      resolvePikkuDirectories(file, root, ['packages/a', 'packages/b']),
+      /"packages\/a" and "packages\/b", which both declare the namespace "shared"/
     )
   })
 

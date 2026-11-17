@@ -48,7 +48,10 @@ describe('getPikkuCLIConfig', () => {
     dependencies: Record<string, string> = {}
   ) => {
     await mkdir(join(root, dir), { recursive: true })
-    await writeFile(join(root, dir, 'pikku.config.json'), '{}')
+    await writeFile(
+      join(root, dir, 'pikku.config.json'),
+      JSON.stringify({ namespace: dir.replace('packages/', '') })
+    )
     await writeFile(
       join(root, dir, 'package.json'),
       JSON.stringify({ name: dir.replace('packages/', ''), dependencies })
