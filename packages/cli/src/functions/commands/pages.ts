@@ -487,10 +487,14 @@ export const pagesCompare = pikkuSessionlessFunc({
   ) => {
     const refDir = resolve(reference)
     let shots = readReference(refDir)
+    // A page is named by its reference id (index, about) or by its route (/, /about), as a change's `Pages:` line writes it.
     const onlyIds = page
       ?.split(',')
       .map((id) => id.trim())
       .filter(Boolean)
+      .map((id) =>
+        id.startsWith('/') ? id.replace(/^\/+|\/+$/g, '') || 'index' : id
+      )
     if (onlyIds?.length)
       shots = shots.filter((shot) => onlyIds.includes(shot.id))
     const wanted = widths
@@ -502,7 +506,7 @@ export const pagesCompare = pikkuSessionlessFunc({
     shots = shots.filter((shot) => wanted.includes(shot.width))
     if (!shots.length)
       throw new Error(
-        `No reference screenshot in ${reference} for ${onlyIds?.length ? `page ${onlyIds.join(', ')} at ` : ''}width ${wanted.join(', ')}`
+        `No reference screenshot in ${reference} for ${onlyIds?.length ? `page ${onlyIds.join(', ')} at ` : ''}width ${wanted.join(', ')}. Pages in the reference: ${[...new Set(readReference(refDir).map((shot) => shot.id))].slice(0, 12).join(', ')}`
       )
 
     const mapFile = map ?? join(refDir, 'map.json')
