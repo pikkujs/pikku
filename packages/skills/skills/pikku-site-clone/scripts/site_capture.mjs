@@ -18,9 +18,9 @@
 // <out-dir>/<reference-dir> is the project's reference artifact: artifacts/references/<site> (site = the original's host name).
 // To compare your pages with it use `pikku ui pages compare --reference artifacts/references/<site> --baseUrl <url>`.
 // Needs a Chromium and playwright-core: PIKKU_CHROMIUM (or PLAYWRIGHT_CHROMIUM_PATH) = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
-// module (default: `playwright-core` resolved from the current directory). Browser profile, tmp and downloads stay under <out-dir>/.browser.
+// module (default: `playwright-core` resolved from the current directory). Browser profile, tmp and downloads stay under <out-dir>/.browser while it runs, and are removed after.
 // Tiles and pixel scores use ImageMagick (`convert`, `compare`) when it is installed.
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
 import { basename, extname, join, resolve } from 'node:path'
 import { createHash } from 'node:crypto'
@@ -365,6 +365,8 @@ export async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
   const worker = async () => { while (next < urls.length) { const i = next++; index[i] = await capturePage(browser, out, urls[i], vps, tiles, opts) } }
   await Promise.all(Array.from({ length: Math.min(jobs, urls.length) }, worker))
   await browser.close()
+  // the browser's profile, caches and sockets are not part of the reference: left here they are committed with it
+  rmSync(resolve(out, '.browser'), { recursive: true, force: true })
   writeFileSync(join(out, 'capture.json'), JSON.stringify(index, null, 1))
   const got = opts.pictures === false ? null : await downloadPictures(out, opts)
   return { pages: index, pictures: got }
