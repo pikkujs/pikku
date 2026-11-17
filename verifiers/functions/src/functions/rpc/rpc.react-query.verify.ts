@@ -38,3 +38,16 @@ usePikkuInfiniteQuery('doesNotExist', {})
 
 // @ts-expect-error — wrong input type must fail
 usePikkuInfiniteQuery('listItems', { wrong: 'field' })
+
+void usePikkuInfiniteQuery('listItems', {
+  filter: { category: 'books' },
+  sort: [{ column: 'label', direction: 'asc' }],
+})
+
+// @ts-expect-error — 'id' is not a declared sort column
+usePikkuInfiniteQuery('listItems', {
+  sort: [{ column: 'id', direction: 'asc' }],
+})
+
+// @ts-expect-error — the filter fields are nested under filter, not merged flat
+usePikkuInfiniteQuery('listItems', { category: 'books' })

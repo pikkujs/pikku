@@ -35,6 +35,12 @@ Version numbers in brackets are the release of the named package that shipped th
 >
 > - `@pikku/core/services` no longer re-exports the in-memory workflow, queue, trigger and gateway services (pending `refactor/core-services-surface`).
 
+### A list function's input schema is generated from `ListInput`
+
+The generated input schema of a `pikkuListFunc` no longer merges the fields of `F` at the top level. Filters belong under `filter`, a recursive `Filter<F>`, and `sort.column` is limited to the declared sort columns. A client that sent filter fields flat now fails validation; nest them under `filter`. Search for `pikkuListFunc` and the callers of those RPCs.
+
+`pikku verify` also fails with `PKU492` when a generated input or output schema contains `unknown` or `never` that the source did not write. Write `unknown` explicitly in the type or Zod schema where it is meant.
+
 ### `WiringService` moved to `@pikku/core`; `agentCredentialCheck` moved to `@pikku/addon-admin`
 
 `WiringService`, `readAllMeta` and the `AllMeta` types now live in `@pikku/core/services/wiring-service` (MIT). `@pikku/addon-console` no longer exports them and the `@pikku/addon-console/services` entry is removed; import from `@pikku/core/services/wiring-service` instead.

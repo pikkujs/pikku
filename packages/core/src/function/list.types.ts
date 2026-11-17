@@ -61,7 +61,7 @@ export type LeafValue<T> =
  * discriminator is unambiguous — multi-key objects are OR groups.
  */
 export type LeafFilter<F extends Record<string, unknown>> = {
-  [K in keyof F]: { [Key in K]: LeafValue<F[K]> }
+  [K in keyof F]-?: { [Key in K]: LeafValue<Required<F>[K]> }
 }[keyof F]
 
 /**

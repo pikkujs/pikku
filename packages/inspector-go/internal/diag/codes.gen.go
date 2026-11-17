@@ -104,6 +104,7 @@ const (
 	AgentProviderOptionsUnreadable    Code = "PKU156"
 	SchemaAndWiringColocated          Code = "PKU490"
 	SchemaTransformNotSupported       Code = "PKU491"
+	GeneratedSchemaHasUnknown         Code = "PKU492"
 	ServicesNotDestructured           Code = "PKU410"
 	WiresNotDestructured              Code = "PKU411"
 	FunctionDynamicImport             Code = "PKU498"
