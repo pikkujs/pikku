@@ -196,8 +196,68 @@ describe('merging a changeset that committed scratch output', () => {
           },
           undefined
         ),
-        /holds untracked \(page\.tsx\)/
+        /holds untracked, and not all of them are the same as the branch's \(page\.tsx\)/
       )
+    } finally {
+      process.chdir(cwd)
+    }
+  })
+
+  test("untracked copies identical to the branch's (intake's capture) are deleted and the merge goes ahead; one that differs refuses and nothing is deleted", async () => {
+    const dir = await repo()
+    await writeFile(join(dir, 'pikku.config.json'), '{}\n')
+    await git(['add', '.'], dir)
+    await git([...ID, 'commit', '-q', '-m', 'config'], dir)
+    const site = join('artifacts', 'references', 'example.com')
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 255, 254, 10])
+    const write = async (root: string, name: string, body: Buffer | string) => {
+      await mkdir(join(root, site), { recursive: true })
+      await writeFile(join(root, site, name), body)
+    }
+    // the branch commits the capture; main holds the same files untracked
+    const tree = await addChangesetWorktree('Capture', { cwd: dir })
+    await write(tree, 'index-1440.png', png)
+    await write(tree, 'index.json', '{"url":"https://example.com/"}')
+    await git(['add', '.'], tree)
+    await git([...ID, 'commit', '-q', '-m', '#1 Capture'], tree)
+    await write(dir, 'index-1440.png', png)
+    await write(dir, 'index.json', '{"url":"https://example.com/"}')
+    // a second branch whose copy differs from what main holds
+    const other = await addChangesetWorktree('Other capture', { cwd: dir })
+    await mkdir(join(other, 'notes'), { recursive: true })
+    await writeFile(join(other, 'notes', 'a.md'), 'same')
+    await writeFile(join(other, 'notes', 'b.md'), 'branch')
+    await git(['add', '.'], other)
+    await git([...ID, 'commit', '-q', '-m', '#2 Notes'], other)
+    await mkdir(join(dir, 'notes'), { recursive: true })
+    await writeFile(join(dir, 'notes', 'a.md'), 'same')
+    await writeFile(join(dir, 'notes', 'b.md'), 'checkout')
+    const cwd = process.cwd()
+    process.chdir(dir)
+    try {
+      const outcome = await mergeChangeset(
+        {
+          group: { groupId: 'g1', title: 'Capture' } as any,
+          branch: 'changeset/capture',
+        },
+        undefined
+      )
+      assert.strictEqual(outcome.kind, 'merged')
+      assert.strictEqual(
+        (await git(['status', '--porcelain', '--', site], dir)).trim(),
+        ''
+      )
+      await assert.rejects(
+        mergeChangeset(
+          {
+            group: { groupId: 'g2', title: 'Other capture' } as any,
+            branch: 'changeset/other-capture',
+          },
+          undefined
+        ),
+        /not all of them are the same as the branch's \(notes\/a\.md, notes\/b\.md\)/
+      )
+      assert.ok(existsSync(join(dir, 'notes', 'a.md')))
     } finally {
       process.chdir(cwd)
     }

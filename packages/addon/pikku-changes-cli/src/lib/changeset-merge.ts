@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import type { ListChangesOutput } from './types.js'
@@ -106,8 +106,8 @@ export async function mergeChangeset(
   }
   const worktree = await worktreeOf(branch)
   await clearScratchCollisions(branch)
-  try {
-    await git([
+  const merge = () =>
+    git([
       'merge',
       '--no-ff',
       branch,
@@ -116,6 +116,20 @@ export async function mergeChangeset(
       '-m',
       `Changeset: ${group.groupId}`,
     ])
+  try {
+    try {
+      await merge()
+    } catch (error) {
+      // untracked copies of exactly what the branch adds (intake's capture,
+      // committed by the capture change) go, and the merge runs again
+      if (!(error instanceof GitError)) throw error
+      const blocking = untrackedInTheWay(error.stderr)
+      if (!blocking.length || !(await sameAsBranch(blocking, branch)))
+        throw error
+      const top = (await git(['rev-parse', '--show-toplevel'])).trim()
+      for (const file of blocking) await rm(join(top, file), { force: true })
+      await merge()
+    }
   } catch (error) {
     if (!(error instanceof GitError)) throw error
     const files = (await git(['diff', '--name-only', '--diff-filter=U']))
@@ -125,7 +139,7 @@ export async function mergeChangeset(
       const blocking = untrackedInTheWay(error.stderr)
       if (blocking.length)
         throw new CloudPreconditionError(
-          `${branch} cannot be merged into ${into}: it adds files this checkout already holds untracked (${blocking.join(', ')}). Move or delete them here, then run pikku changes next again.`
+          `${branch} cannot be merged into ${into}: it adds files this checkout already holds untracked, and not all of them are the same as the branch's (${blocking.join(', ')}). Move or delete them here, then run pikku changes next again.`
         )
       throw error
     }
@@ -219,6 +233,33 @@ async function healLockfiles(files: string[], branch: string): Promise<void> {
   }
   await git(['add', '--', ...files])
   await git(['commit', '--no-edit', '--quiet'])
+}
+
+/**
+ * Is every one of these untracked files (repo-relative) byte for byte what
+ * `branch` holds at that path?
+ */
+export async function sameAsBranch(
+  files: string[],
+  branch: string,
+  cwd?: string
+): Promise<boolean> {
+  const top = (await git(['rev-parse', '--show-toplevel'], cwd)).trim()
+  for (const file of files) {
+    const theirs = spawnSync('git', ['cat-file', 'blob', `${branch}:${file}`], {
+      cwd: top,
+      maxBuffer: 512 * 1024 * 1024,
+    })
+    if (theirs.status !== 0) return false
+    let ours: Buffer
+    try {
+      ours = readFileSync(join(top, file))
+    } catch {
+      return false
+    }
+    if (!ours.equals(theirs.stdout)) return false
+  }
+  return true
 }
 
 /** The paths git names when untracked files would be overwritten by a merge. */
