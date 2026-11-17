@@ -1290,6 +1290,11 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
      * tree and any directory holding its own pikku.config.json.
      */
     sourceDirs: string[]
+    /**
+     * The packages `pikkuDirectories` lists, ordered so each comes after the
+     * listed packages it depends on. Empty when the project lists none.
+     */
+    pikkuPackages: Array<{ entry: string; dir: string; name: string }>
     addonName?: string
     stateOutput?: string
     stateInput?: string

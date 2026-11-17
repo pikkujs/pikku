@@ -42,6 +42,58 @@ describe('getPikkuCLIConfig', () => {
     return root
   }
 
+  const writePackage = async (
+    root: string,
+    dir: string,
+    dependencies: Record<string, string> = {}
+  ) => {
+    await mkdir(join(root, dir), { recursive: true })
+    await writeFile(join(root, dir, 'pikku.config.json'), '{}')
+    await writeFile(
+      join(root, dir, 'package.json'),
+      JSON.stringify({ name: dir.replace('packages/', ''), dependencies })
+    )
+  }
+
+  test('pikkuDirectories lists packages in dependency order, and the project inspects its own directory', async () => {
+    const root = await writeConfig({
+      pikkuDirectories: ['packages/app', 'packages/lib'],
+    })
+    await writePackage(root, 'packages/app', { lib: '1' })
+    await writePackage(root, 'packages/lib')
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+
+    assert.deepEqual(
+      config.pikkuPackages.map((p) => p.entry),
+      ['packages/lib', 'packages/app']
+    )
+    assert.deepEqual(config.sourceDirs, ['.'])
+  })
+
+  test('pikkuDirectories naming a directory with no pikku.config.json is an error', async () => {
+    const root = await writeConfig({ pikkuDirectories: ['packages/none'] })
+    await mkdir(join(root, 'packages/none'), { recursive: true })
+
+    await assert.rejects(
+      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /"packages\/none", which has no pikku.config.json/
+    )
+  })
+
+  test('srcDirectories is refused and points at pikkuDirectories', async () => {
+    const root = await writeConfig({ srcDirectories: ['src'] })
+
+    await assert.rejects(
+      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /srcDirectories in .* was renamed to pikkuDirectories/
+    )
+  })
+
   test('derives the analytics scaffold outputs and leaves the union in src', async () => {
     const root = await writeConfig({ scaffold: { analytics: true } })
 

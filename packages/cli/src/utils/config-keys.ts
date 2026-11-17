@@ -253,6 +253,7 @@ const MOVED_TOP_LEVEL: Record<
   addonName: 'is derived from package.json; delete it',
   configDir: 'is derived by the CLI; delete it',
   sourceDirs: 'is derived by the CLI; delete it',
+  pikkuPackages: 'is derived by the CLI; delete it',
   clientAuthFile: UNREAD,
 }
 

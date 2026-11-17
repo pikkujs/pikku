@@ -11,6 +11,10 @@ import {
 } from './resolve-scaffold-feature.js'
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
+import {
+  orderPikkuPackages,
+  resolvePikkuDirectories,
+} from './pikku-directories.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 import { assertKnownConfigKeys } from './config-keys.js'
 import { assertContentConfig } from './content-buckets.js'
@@ -523,8 +527,20 @@ const _getPikkuCLIConfig = async (
       config as unknown as Record<string, unknown>,
       configDir
     )
+    const rootDir = config.rootDir
+      ? resolve(configDir, config.rootDir)
+      : configDir
+    const pikkuPackages = orderPikkuPackages(
+      await resolvePikkuDirectories(
+        configFile,
+        rootDir,
+        config.pikkuDirectories
+      ),
+      configFile
+    )
     const result: PikkuCLIConfig = {
       ...(config as unknown as PikkuCLIConfig),
+      pikkuPackages,
       environments: normalizeEnvironments(
         config,
         `${configDir}/pikku.config.json`
@@ -532,7 +548,7 @@ const _getPikkuCLIConfig = async (
       outDir: join(configDir, '.pikku'),
       configDir,
       packageMappings: config.packageMappings || {},
-      rootDir: config.rootDir ? resolve(configDir, config.rootDir) : configDir,
+      rootDir,
       sourceDirs: ['.'],
       registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
       ignoreFiles: config.ignoreFiles ?? [
