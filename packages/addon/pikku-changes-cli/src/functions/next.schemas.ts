@@ -8,6 +8,7 @@ export const NextInput = z.object({
   loop: z.boolean().optional(),
   parallel: z.boolean().optional(),
   push: z.boolean().optional(),
+  merge: z.boolean().optional(),
 })
 
 export const NextOutput = z.object({
