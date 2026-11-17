@@ -79,6 +79,9 @@ export interface NatsServiceFactoryOptions {
 }
 
 /** Server version that first shipped repeating (cron / `@every`) message schedules. */
+// How long close() waits for running recurring fires before the connection closes.
+const SCHEDULER_DRAIN_TIMEOUT_MS = 10_000
+
 const MIN_SCHEDULER_VERSION = [2, 14, 0] as const
 
 /**
@@ -216,7 +219,14 @@ export class NatsServiceFactory {
     }
 
     if (this.options.attachToStream) {
-      await this.assertStageStream(jsm)
+      try {
+        await this.assertStageStream(jsm)
+      } catch (err) {
+        // The connection reconnects forever, so a refused attach would keep the
+        // process alive with nothing left to close it.
+        await this.close()
+        throw err
+      }
     } else {
       // `add` is STREAM.CREATE, which errors if the stream exists with a different
       // config — so the first deploy that changes duplicate_window or replicas
@@ -373,6 +383,16 @@ export class NatsServiceFactory {
     // and keep the process alive.
     if (!this.connection) return
     this.closing = true
+    // A recurring fire still running when the connection closes cannot ack, so
+    // the broker redelivers it after ack_wait and the task runs twice.
+    const firesSettled = await this.schedulerService?.drain(
+      SCHEDULER_DRAIN_TIMEOUT_MS
+    )
+    if (firesSettled === false) {
+      console.warn(
+        `NATS recurring tasks were still running after ${SCHEDULER_DRAIN_TIMEOUT_MS}ms; they are redelivered after ack_wait.`
+      )
+    }
     await this.schedulerService?.stop()
     await this.queueWorkers?.stop()
     // `drain` rather than `close`: it flushes pending acks and lets in-flight

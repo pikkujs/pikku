@@ -48,12 +48,6 @@ if (!servers) {
     async () => {
       const admin = await connect({ servers })
       const jsm = await jetstreamManager(admin)
-      await jsm.streams.add({
-        name: stream,
-        subjects: [`pikku.${project}.${stage}.>`],
-        retention: RetentionPolicy.Workqueue,
-        allow_msg_schedules: true,
-      })
       const factory = new NatsServiceFactory(
         natsOptionsFromEnv({
           NATS_URL: servers,
@@ -63,7 +57,29 @@ if (!servers) {
           PIKKU_STAGE: stage,
         })
       )
-      await factory.init()
+      // Each step runs even if an earlier one failed, so one failure does not
+      // leave the stream or a connection behind.
+      const release = async () => {
+        for (const step of [
+          () => factory.close(),
+          () => jsm.streams.delete(stream),
+          () => admin.close(),
+        ]) {
+          await step().catch(() => {})
+        }
+      }
+      try {
+        await jsm.streams.add({
+          name: stream,
+          subjects: [`pikku.${project}.${stage}.>`],
+          retention: RetentionPolicy.Workqueue,
+          allow_msg_schedules: true,
+        })
+        await factory.init()
+      } catch (err) {
+        await release()
+        throw err
+      }
       return {
         service: factory.getQueueService(),
         startWorkers: async () => {

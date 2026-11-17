@@ -692,7 +692,13 @@ it('attach mode refuses a stream whose subjects only lookalike the stage prefix'
       retention: RetentionPolicy.Workqueue,
       allow_msg_schedules: true,
     })
-    await assert.rejects(attach().init(), /does not hold subjects/)
+    const refused = attach()
+    await assert.rejects(refused.init(), /does not hold subjects/)
+    assert.equal(
+      (refused as any).connection,
+      undefined,
+      'a refused attach must not leave its connection open'
+    )
     await jsm.streams.update(stream, {
       subjects: ['pikku.acme.>'],
       retention: RetentionPolicy.Workqueue,
