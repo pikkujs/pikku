@@ -10,7 +10,10 @@ import { hasScopes } from '#pikku/scopes/pikku-scope-client.gen.js'
  * channel or CLI commands, so each recipe takes the contract name as a type
  * parameter bounded by the names the installed addons publish: it compiles
  * against whatever is installed, and a name no addon publishes does not. Each
- * recipe is a function so nothing runs when the module is loaded.
+ * recipe is a function so nothing runs when the module is loaded. It sits
+ * outside `src/`, so `pikku all` does not read the calls as real wirings: a
+ * wire call inside a function is refused there, and these have no contract
+ * name to wire at the top level.
  */
 
 type HTTPContract = Parameters<typeof refHTTP>[0]
