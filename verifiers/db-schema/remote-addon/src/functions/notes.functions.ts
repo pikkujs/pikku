@@ -22,7 +22,11 @@ export const listNotesV1 = pikkuSessionlessFunc({
   description: 'Lists the ids of the notes stored on the host',
   version: 1,
   func: async ({ kysely }) =>
-    await kysely.selectFrom('notes').select(['id']).orderBy('id').execute(),
+    await kysely
+      .selectFrom('notes_note')
+      .select(['id'])
+      .orderBy('id')
+      .execute(),
   output: NoteIds,
   remote: true,
   tags: ['addon'],
@@ -32,7 +36,7 @@ export const listNotes = pikkuSessionlessFunc({
   description: 'Lists the notes stored on the host that runs this addon',
   func: async ({ kysely }) =>
     await kysely
-      .selectFrom('notes')
+      .selectFrom('notes_note')
       .select(['id', 'body'])
       .orderBy('id')
       .execute(),
@@ -48,7 +52,7 @@ export const listNotes = pikkuSessionlessFunc({
 export const countNotes = pikkuSessionlessFunc<void, { count: number }>({
   description: 'Counts the notes stored on the host',
   func: async ({ kysely }) => {
-    const rows = await kysely.selectFrom('notes').select(['id']).execute()
+    const rows = await kysely.selectFrom('notes_note').select(['id']).execute()
     return { count: rows.length }
   },
   tags: ['addon'],
