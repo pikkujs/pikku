@@ -132,6 +132,25 @@ What an app sees:
 - Local content no longer reads files stored outside `private/` and `public/` under `localFileUploadPath`: move any old `<bucket>/<key>` files into `private/<bucket>/<key>`. `resolveContentRequestTarget(basePath, key)` is synchronous and takes no `mode`.
 - A column with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
 
+### `srcDirectories` is now `pikkuDirectories`
+
+**What:** a project inspects its own directory, so `srcDirectories` is gone and a config that still sets it is rejected. `pikkuDirectories` lists the packages a root project assembles. Each entry is a directory with its own `pikku.config.json` and a `package.json` name (an addon or a functions package). Folders of source are no longer listed.
+
+- The project skips `node_modules`, `dist`, `build`, `.pikku`, dot-directories and any directory with its own `pikku.config.json`. Source that sat outside the project directory, or that the old list excluded by omission, is now inspected unless `ignoreFiles` names it.
+- `pikku all` at the root runs `pikku all` in each listed package, dependencies first (the four dependency fields and `pikku.uses` order them; a cycle is an error), then wires each package as an addon named after its directory, and builds the backends. The SDKs land in the root `.pikku/sdk/<backend>/exposed`.
+- A listed package needs no `backends` or `frontends`. It needs `exports` for `./.pikku/*`, as any addon does.
+- A backend filter selects an addon's functions with `names: ["<namespace>:*"]`.
+
+```json
+// before
+{ "srcDirectories": ["src", "packages/billing"] }
+
+// after, at the root
+{ "pikkuDirectories": ["packages/billing"] }
+```
+
+**Find:** `rg -n '"srcDirectories"' --glob pikku.config.json`
+
 ### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
 
 A config declares the servers it builds as `backends` (`"backends": { "api": { "filter": {} } }`, even for one), the apps it ships as `frontends`, or both. One declaring neither is refused; an addon declares neither and is exempt. A frontend-only project builds no backend: `pikku all` runs only the shared pass and writes no `.pikku/backends/` or `.pikku/sdk/`, `pikku dev` runs only its frontends, `pikku serve` errors "no backend to serve", and `environments.<name>.backends` may be omitted. A backend is a named, filtered build of your functions package; its `filter` takes every field `namedFilters` did (`tags`, `names`, `wires`, `target`, `excludeTarget`, ...). `pikku all` writes the full tree to `.pikku/`, then one filtered tree per backend to `.pikku/backends/<name>/`; `pikku all --backend <name>` builds only that one. Two or more backends each need `dev.port`.
