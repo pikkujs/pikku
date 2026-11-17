@@ -154,7 +154,10 @@ async function declare(
     : (
         await rpc.invoke('listChanges', {
           projectId,
-          status: statuses('ready'),
+          // a named group is judged on its own changes, as it claims only those
+          ...(input.groupId
+            ? { groupId: input.groupId }
+            : { status: statuses('ready') }),
           includeDone: false,
         })
       ).changes

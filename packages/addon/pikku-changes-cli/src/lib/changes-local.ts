@@ -379,12 +379,16 @@ const handlers: {
 
   claimChanges: (store, input: ClaimChangesInput & Partial<Declaration>) => {
     const now = new Date()
+    // naming a group and no changes picks up that group's own changes only;
+    // naming neither takes every change nobody holds
     const wanted = input.changeIds?.length
       ? input.changeIds.map((ref) => find(store, ref))
       : store.changes.filter(
           (c) =>
             pickableStatus(c.status) &&
-            (c.groupId === input.groupId || !leaseLive(store, c, now))
+            (input.groupId
+              ? c.groupId === input.groupId
+              : !leaseLive(store, c, now))
         )
     const shelved = wanted.filter((c) => c.status === 'backlog')
     if (shelved.length)
