@@ -1100,6 +1100,33 @@ export function filterInspectorState(
     }
   }
 
+  // An addon's functions are not in functions.meta; its published metadata is
+  // the only place a filter can see them. `names: ["agent:*"]` selects the
+  // addon by namespace, which keeps its functions and services in the build.
+  if (hasFunctionLevelFilters) {
+    for (const [namespace, addonMeta] of Object.entries(
+      state.addonFunctions ?? {}
+    )) {
+      for (const [funcName, funcMeta] of Object.entries(addonMeta)) {
+        const funcId = `${namespace}:${funcName}`
+        const matches = matchesFilters(
+          filters,
+          {
+            type: 'rpc' as PikkuWiringTypes,
+            name: funcId,
+            tags: funcMeta.tags,
+          },
+          logger,
+          undefined,
+          keptByDeploy
+        )
+        if (matches) {
+          filteredState.serviceAggregation.usedFunctions.add(funcId)
+        }
+      }
+    }
+  }
+
   // Post-filter version expansion: when an unversioned base name is matched,
   // include all its versions. Specific version matches (e.g. analyzeData@v1)
   // do NOT expand to include other versions.
