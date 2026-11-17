@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { basename, dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -177,7 +177,67 @@ export interface ReferenceShot {
 }
 
 const SHOT = /^(.+)-(\d+)\.(jpe?g|png)$/i
+/** A folder per viewport, `<viewport>/<id>.png`: a capture made by hand rather than with `pikku ui pages capture`. */
+const VIEWPORT_DIR = /^(phone|mobile|tablet|laptop|desktop|large-screen|\d+)$/i
+const VIEWPORT_SHOT = /^(.+)\.(jpe?g|png)$/i
 
+/** The pixel width of a PNG or a JPEG, read from its header; null when it is neither. */
+export function imageWidth(file: string): number | null {
+  const buf = readFileSync(file)
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf.length >= 24)
+    return buf.readUInt32BE(16)
+  if (buf[0] !== 0xff || buf[1] !== 0xd8) return null
+  // walk the JPEG markers to the frame header (SOF0-SOF15, not DHT/JPG/DAC)
+  for (let i = 2; i + 9 < buf.length;) {
+    if (buf[i] !== 0xff) return null
+    const marker = buf[i + 1]!
+    if (marker === 0xff) {
+      i++
+      continue
+    }
+    const length = buf.readUInt16BE(i + 2)
+    if (
+      marker >= 0xc0 &&
+      marker <= 0xcf &&
+      ![0xc4, 0xc8, 0xcc].includes(marker)
+    )
+      return buf.readUInt16BE(i + 7)
+    i += 2 + length
+  }
+  return null
+}
+
+/** `<viewport>/<id>.png|jpg`; the width is the folder's number, else the image's own width. */
+function readViewportFolders(dir: string): ReferenceShot[] {
+  const shots: ReferenceShot[] = []
+  for (const folder of readdirSync(dir).sort()) {
+    const sub = join(dir, folder)
+    if (!VIEWPORT_DIR.test(folder) || !statSync(sub).isDirectory()) continue
+    for (const name of readdirSync(sub).sort()) {
+      const m = name.match(VIEWPORT_SHOT)
+      if (!m || name.endsWith('.diff.png')) continue
+      const file = join(sub, name)
+      const width = /^\d+$/.test(folder) ? Number(folder) : imageWidth(file)
+      if (!width) continue
+      const layout = join(sub, `${m[1]}.layout.json`)
+      const style = join(sub, `${m[1]}.style.json`)
+      shots.push({
+        id: m[1]!,
+        width,
+        file,
+        layout: existsSync(layout) ? layout : null,
+        style: existsSync(style) ? style : null,
+      })
+    }
+  }
+  return shots
+}
+
+/**
+ * The reference screenshots: `<id>-<width>.jpg|png` in the folder (what
+ * `pikku ui pages capture` writes), else `<viewport>/<id>.png|jpg` in viewport
+ * folders (phone, laptop, large-screen or a width).
+ */
 export function readReference(dir: string): ReferenceShot[] {
   if (!existsSync(dir)) throw new Error(`--reference ${dir} does not exist`)
   const shots: ReferenceShot[] = []
@@ -194,9 +254,10 @@ export function readReference(dir: string): ReferenceShot[] {
       style: existsSync(style) ? style : null,
     })
   }
+  if (!shots.length) shots.push(...readViewportFolders(dir))
   if (!shots.length)
     throw new Error(
-      `--reference ${dir} has no <id>-<width>.jpg or .png screenshots`
+      `--reference ${dir} has no <id>-<width>.jpg or .png screenshots (nor <viewport>/<id>.png folders). Capture the original with: pikku ui pages capture <url> --out ${dir}`
     )
   return shots
 }

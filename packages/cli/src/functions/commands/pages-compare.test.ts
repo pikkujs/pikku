@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import jpeg from 'jpeg-js'
@@ -10,6 +10,7 @@ import {
   diffImages,
   encodePng,
   gitStamp,
+  imageWidth,
   overThreshold,
   readReference,
   routeExists,
@@ -130,6 +131,40 @@ describe('pages compare', () => {
       ]
     )
     assert.throws(() => readReference(join(dir, 'nope')), /does not exist/)
+  })
+
+  test('reads viewport folders when there is no <id>-<width> screenshot: the width from a number, else from the image', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pages-compare-'))
+    for (const sub of ['laptop', 'phone', '1920', 'small', 'pictures'])
+      mkdirSync(join(dir, sub))
+    writeFileSync(join(dir, 'laptop', 'about.png'), encodePng(page(144, 30)))
+    writeFileSync(join(dir, 'laptop', 'about.style.json'), '{}')
+    const phone = page(39, 20)
+    writeFileSync(
+      join(dir, 'phone', 'index.jpg'),
+      jpeg.encode({ ...phone, data: Buffer.from(phone.data) }).data
+    )
+    writeFileSync(join(dir, '1920', 'index.png'), encodePng(page(50, 10)))
+    writeFileSync(join(dir, 'small', 'index-1440-0.jpg'), '')
+    writeFileSync(join(dir, 'pictures', 'hero.jpg'), '')
+    writeFileSync(join(dir, 'layout-notes.json'), '{}')
+    assert.equal(imageWidth(join(dir, 'phone', 'index.jpg')), 39)
+    assert.deepEqual(
+      readReference(dir).map((s) => [s.id, s.width, !!s.style]),
+      [
+        ['index', 1920, false],
+        ['about', 144, true],
+        ['index', 39, false],
+      ]
+    )
+    // the standard layout wins when both are there
+    writeFileSync(join(dir, 'index-1440.jpg'), '')
+    assert.deepEqual(
+      readReference(dir).map((s) => [s.id, s.width]),
+      [['index', 1440]]
+    )
+    const empty = mkdtempSync(join(tmpdir(), 'pages-compare-'))
+    assert.throws(() => readReference(empty), /pikku ui pages capture/)
   })
 
   test('maps reference ids to routes and reports a page with no route as missing', () => {
