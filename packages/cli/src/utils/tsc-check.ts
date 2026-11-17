@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { relative, resolve as resolvePath } from 'node:path'
 import { spawn } from 'node:child_process'
 import { PikkuError } from '@pikku/core/errors'
 import {
@@ -208,9 +210,14 @@ export const typecheckProjects = async (
   const stop = signal ? AbortSignal.any([signal, failed.signal]) : failed.signal
   const checks = await Promise.all(
     projects.map(async (project) => {
+      // An app outside the functions folder (apps/app next to packages/functions) is its own root:
+      // measured from the functions folder, every error in it would look like one beyond the root.
+      const root = relative(rootDir, project.dir).startsWith('..')
+        ? project.dir
+        : rootDir
       const { diagnostics, exitCode } = await runProjectTypecheck(
         project.tsconfig,
-        rootDir,
+        root,
         { cwd: project.dir, signal: stop, timeoutMs }
       ).catch((error) => {
         failed.abort()
