@@ -26,6 +26,9 @@ type Request struct {
 type Options struct {
 	Tsconfig  string `json:"tsconfig,omitempty"`
 	RootDir   string `json:"rootDir,omitempty"`
+	// BaseDir is the root project's base package, a nested project whose
+	// source is still inspected.
+	BaseDir   string `json:"baseDir,omitempty"`
 	SetupOnly bool   `json:"setupOnly,omitempty"`
 	// IsAddon is InspectorOptions.isAddon: the project is an addon package,
 	// so checkAddonBans applies.

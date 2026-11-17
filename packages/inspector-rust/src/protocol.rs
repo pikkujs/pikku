@@ -33,6 +33,10 @@ pub struct Options {
     pub tsconfig: String,
     #[serde(skip_serializing_if = "String::is_empty")]
     pub root_dir: String,
+    /// The root project's base package: a nested project whose source is
+    /// still inspected.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub base_dir: String,
     #[serde(skip_serializing_if = "is_false")]
     pub setup_only: bool,
     /// InspectorOptions.isAddon: the project is an addon package, so

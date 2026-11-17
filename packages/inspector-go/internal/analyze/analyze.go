@@ -46,6 +46,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 	prog, err := program.Create(program.Options{
 		RouteFiles: req.RouteFiles,
 		RootDir:    req.Options.RootDir,
+		BaseDir:    req.Options.BaseDir,
 		Tsconfig:   req.Options.Tsconfig,
 	}, cache)
 	if err != nil {

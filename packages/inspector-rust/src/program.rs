@@ -40,6 +40,9 @@ pub struct Options {
     /// Bounds the swept files; defaults to the common ancestor of
     /// `route_files`, like the TS findCommonAncestor fallback.
     pub root_dir: String,
+    /// A nested pikku project the sweeps still visit: the root project's base
+    /// package, inspected in place.
+    pub base_dir: String,
     /// Read for path mappings only (readProjectPathMappings).
     pub tsconfig: String,
 }
@@ -180,7 +183,8 @@ pub fn create(opts: &Options, cache: Option<&Cache>) -> Result<Program, String> 
     let root_dir = if opts.root_dir.is_empty() { common_ancestor(&roots) } else { absolute(&opts.root_dir) };
     let root_dir = tspath::normalize_path(&root_dir);
 
-    let mut is_nested = nested_project_filter(&root_dir);
+    let base_dir = if opts.base_dir.is_empty() { String::new() } else { tspath::normalize_path(&absolute(&opts.base_dir)) };
+    let mut is_nested = nested_project_filter(&root_dir, &base_dir);
     let mut files: Vec<P<SourceFile>> = program
         .get_source_files()
         .iter()
@@ -224,15 +228,17 @@ pub fn common_ancestor(files: &[String]) -> String {
 
 /// Reports files inside a nested pikku project under `root_dir` (a directory
 /// with its own pikku.config.json), with a per-directory cache like
-/// createNestedProjectFilter.
-pub fn nested_project_filter(root_dir: &str) -> impl FnMut(&str) -> bool + use<> {
+/// createNestedProjectFilter. Files under `base_dir` (when set) belong to the
+/// project even though `base_dir` has its own config.
+pub fn nested_project_filter(root_dir: &str, base_dir: &str) -> impl FnMut(&str) -> bool + use<> {
     let root_dir = root_dir.to_string();
+    let base_dir = base_dir.to_string();
     let mut cache: HashMap<String, bool> = HashMap::new();
     move |file_name: &str| {
         let mut pending: Vec<String> = Vec::new();
         let mut dir = go_dir(file_name);
         let mut nested = false;
-        while dir.starts_with(&root_dir) && dir != root_dir {
+        while dir.starts_with(&root_dir) && dir != root_dir && dir != base_dir {
             if let Some(v) = cache.get(&dir) {
                 nested = *v;
                 break;
@@ -422,10 +428,13 @@ mod tests {
         let root = dir.to_string_lossy().into_owned();
         std::fs::create_dir_all(dir.join("inner/deep")).unwrap();
         std::fs::write(dir.join("inner/pikku.config.json"), "{}").unwrap();
-        let mut nested = nested_project_filter(&root);
+        let mut nested = nested_project_filter(&root, "");
         assert!(nested(&format!("{root}/inner/deep/a.ts")));
         assert!(nested(&format!("{root}/inner/b.ts")));
         assert!(!nested(&format!("{root}/c.ts")));
+        let mut with_base = nested_project_filter(&root, &format!("{root}/inner"));
+        assert!(!with_base(&format!("{root}/inner/deep/a.ts")));
+        assert!(!with_base(&format!("{root}/inner/b.ts")));
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

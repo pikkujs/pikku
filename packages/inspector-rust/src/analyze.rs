@@ -73,6 +73,7 @@ fn run_inner(
         &program::Options {
             route_files: req.route_files.clone(),
             root_dir: req.options.root_dir.clone(),
+            base_dir: req.options.base_dir.clone(),
             tsconfig: req.options.tsconfig.clone(),
         },
         cache,

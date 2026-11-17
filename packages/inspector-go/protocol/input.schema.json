@@ -27,6 +27,10 @@
           "description": "Absolute project root; files outside it are not swept.",
           "type": "string"
         },
+        "baseDir": {
+          "description": "Absolute directory of the root project's base package: a nested project whose source is still swept.",
+          "type": "string"
+        },
         "setupOnly": {
           "description": "Run only the setup sweep (factories, wireAddon, config), skipping functions, routes and schemas.",
           "type": "boolean"

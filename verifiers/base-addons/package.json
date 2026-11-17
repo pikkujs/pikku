@@ -1,16 +1,16 @@
 {
-  "name": "@pikku/verifier-pikku-directories",
+  "name": "@pikku/verifier-base-addons",
   "type": "module",
   "private": true,
-  "description": "A root project that lists an addon and a plain package in pikkuDirectories",
+  "description": "A root project with one addon and a base package that owns the wirings and services",
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/verifier-pd-addon": "workspace:*",
-    "@pikku/verifier-pd-plain": "workspace:*"
+    "@pikku/verifier-ba-tools": "workspace:*",
+    "@pikku/verifier-ba-app": "workspace:*"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*"

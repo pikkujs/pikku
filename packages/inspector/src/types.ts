@@ -387,6 +387,11 @@ export interface InspectorPassStats {
 export type InspectorOptions = Partial<{
   setupOnly: boolean
   rootDir: string
+  /**
+   * The root project's base package: a directory with its own
+   * pikku.config.json whose source is inspected as part of this project.
+   */
+  baseDir: string
   isAddon: boolean
   /**
    * Fail the build on quality gates the runtime can live without: an agent tool

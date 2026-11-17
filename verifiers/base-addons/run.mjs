@@ -1,10 +1,11 @@
 /**
- * A root project that lists an addon and a plain package in pikkuDirectories.
+ * A root project with one addon and a base package that owns the wirings and services.
  *
- *   1. pikku all at the root runs pikku all in each listed package
- *   2. the plain package declares no backends and no frontends, and needs none
- *   3. the root's exposed SDK carries the root's function and the exposed
- *      functions of both packages, namespaced by the namespace each package's config declares
+ *   1. pikku all at the root runs pikku all in the addon, then in the base
+ *   2. the root inspects the base's source in place: its http meta carries the base's routes
+ *   3. the root's exposed SDK carries the base's exposed function as `ping` and the addon's as `tools:greet`
+ *   4. the root bootstrap imports the base's wirings, never the base's own bootstrap
+ *   5. the base's route runs, and reaches the addon through `tools:greet`
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
@@ -12,16 +13,17 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const PIKKU = join(resolve(here, '../..'), 'packages/cli/dist/bin/pikku.js')
+const repoRoot = resolve(here, '../..')
+const PIKKU = join(repoRoot, 'packages/cli/dist/bin/pikku.js')
+const TSX = join(repoRoot, 'node_modules/.bin/tsx')
 const fail = (message) => {
   console.error(`✗ ${message}`)
   process.exit(1)
 }
 
-for (const pkg of ['addon', 'plain']) {
-  rmSync(join(here, 'packages', pkg, '.pikku'), { recursive: true, force: true })
+for (const dir of ['.', 'packages/tools', 'packages/app']) {
+  rmSync(join(here, dir, '.pikku'), { recursive: true, force: true })
 }
-rmSync(join(here, '.pikku'), { recursive: true, force: true })
 const run = spawnSync('node', [PIKKU, 'all'], { cwd: here, encoding: 'utf8' })
 if (run.status !== 0) {
   console.error(run.stdout + run.stderr)
@@ -29,21 +31,29 @@ if (run.status !== 0) {
 }
 console.log('✓ pikku all ran at the root')
 
-for (const pkg of ['addon', 'plain']) {
+for (const pkg of ['tools', 'app']) {
   if (!existsSync(join(here, 'packages', pkg, '.pikku'))) {
     fail(`packages/${pkg} was not generated`)
   }
 }
-console.log('✓ each listed package was generated')
+console.log('✓ the addon and the base were generated')
+
+const http = JSON.parse(
+  readFileSync(join(here, '.pikku/http/pikku-http-wirings-meta.gen.json'), 'utf8')
+)
+for (const route of ['/ping', '/greet']) {
+  if (!http.get?.[route]) fail(`the root http meta has no ${route}`)
+}
+console.log('✓ the root http meta carries the base routes')
 
 const manifest = JSON.parse(
   readFileSync(join(here, '.pikku/sdk/api/manifest.json'), 'utf8')
 )
-const want = ['ping', 'shared:shout', 'tools:greet']
+const want = ['ping', 'tools:greet']
 if (JSON.stringify(manifest.exposed) !== JSON.stringify(want)) {
   fail(`exposed was ${JSON.stringify(manifest.exposed)}, wanted ${JSON.stringify(want)}`)
 }
-console.log('✓ the root SDK carries the packages exposed functions')
+console.log('✓ the SDK carries the base function and the addon function')
 
 const map = readFileSync(
   join(here, '.pikku/sdk/api/exposed/contract/rpc/pikku-rpc-wirings-map.gen.d.ts'),
@@ -51,3 +61,19 @@ const map = readFileSync(
 )
 if (/'hidden'/.test(map)) fail('a function that is not exposed reached the SDK')
 console.log('✓ a function that is not exposed stays out')
+
+const bootstrap = readFileSync(join(here, '.pikku/pikku-bootstrap.gen.ts'), 'utf8')
+if (/packages\/app\/\.pikku/.test(bootstrap)) {
+  fail("the root bootstrap imports the base's own bootstrap")
+}
+if (!bootstrap.includes('packages/app/src/app.wiring')) {
+  fail("the root bootstrap does not import the base's wirings")
+}
+console.log("✓ the root bootstrap imports the base's wirings, not its bootstrap")
+
+const smoke = spawnSync(TSX, ['smoke.ts'], { cwd: here, encoding: 'utf8' })
+if (smoke.status !== 0) {
+  console.error(smoke.stdout + smoke.stderr)
+  fail('the runtime smoke test failed')
+}
+console.log(smoke.stdout.split('\n').filter((l) => l.startsWith('✓')).join('\n'))
