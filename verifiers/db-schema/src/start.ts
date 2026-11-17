@@ -5,7 +5,7 @@
  * against a real file:
  *
  *   1. The addon reads and writes the table the consumer migrated on its behalf.
- *      The addon shipped `labels`, never created it, and finds it there.
+ *      The addon shipped `labels_label`, never created it, and finds it there.
  *   2. The boot-time check finds exactly the runtime schemas this project's
  *      services own, refuses the ones it does not reach, and issues no DDL
  *      either way. The runtime is not an author of the schema: `pikku db

@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, test, beforeEach, afterEach } from 'node:test'
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
+import {
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+  readFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { dbReset } from './db-reset.js'
@@ -31,6 +37,15 @@ const config = () => ({
   outDir: join(root, '.pikku'),
   runtimeDir: join(root, '.pikku-runtime'),
   srcDirectories: ['src'],
+})
+
+/** The services a reset is handed; `wired` stands in for the inspector's wired addons. */
+const services = (wired: Record<string, { package: string }> = {}) => ({
+  logger,
+  config: config(),
+  getInspectorState: async () => ({
+    rpc: { wireAddonDeclarations: new Map(Object.entries(wired)) },
+  }),
 })
 
 const todoCount = async () => {
@@ -75,7 +90,7 @@ afterEach(() => {
 
 describe('pikku db reset', () => {
   test('migrates and seeds by default', async () => {
-    await dbReset.func({ logger, config: config() } as any, {} as any)
+    await dbReset.func(services() as any, {} as any)
 
     assert.equal(await todoCount(), 2)
     assert.ok(
@@ -86,7 +101,7 @@ describe('pikku db reset', () => {
 
   test('--no-seed migrates without seeding', async () => {
     await dbReset.func(
-      { logger, config: config() } as any,
+      services() as any,
       {
         noSeed: true,
       } as any
@@ -104,8 +119,8 @@ describe('pikku db reset', () => {
   })
 
   test('a non-idempotent seed survives repeated resets', async () => {
-    await dbReset.func({ logger, config: config() } as any, {} as any)
-    await dbReset.func({ logger, config: config() } as any, {} as any)
+    await dbReset.func(services() as any, {} as any)
+    await dbReset.func(services() as any, {} as any)
 
     assert.equal(await todoCount(), 2)
   })
@@ -123,7 +138,7 @@ describe('pikku db reset', () => {
       `INSERT INTO todos (title) VALUES ('from a migration');\n`
     )
 
-    await dbReset.func({ logger, config: config() } as any, {} as any)
+    await dbReset.func(services() as any, {} as any)
 
     assert.equal(await todoCount(), 1)
     assert.ok(
@@ -142,10 +157,7 @@ describe('pikku db reset', () => {
       `INSERT INTO todos (title) VALUES ('from a migration');\n`
     )
 
-    await dbReset.func(
-      { logger, config: config() } as any,
-      { noSeed: true } as any
-    )
+    await dbReset.func(services() as any, { noSeed: true } as any)
 
     assert.equal(await todoCount(), 1)
     assert.ok(
@@ -155,7 +167,7 @@ describe('pikku db reset', () => {
   })
 
   test('a connection held across the reset, as pikku dev holds one, can still write', async () => {
-    await dbReset.func({ logger, config: config() } as any, {} as any)
+    await dbReset.func(services() as any, {} as any)
     const resolved = resolveDb(
       { sqliteDb: '.pikku-runtime/dev.db' },
       root,
@@ -165,14 +177,41 @@ describe('pikku db reset', () => {
     const runtime = await loadSqliteRuntime()
     const held = runtime.open(resolved.dbFile)
     try {
-      await dbReset.func(
-        { logger, config: config() } as any,
-        { noSeed: true } as any
-      )
+      await dbReset.func(services() as any, { noSeed: true } as any)
       held.prepare(`INSERT INTO todos (title) VALUES ('after reset')`).run()
       assert.equal(await todoCount(), 1)
     } finally {
       held.close()
     }
+  })
+
+  test('it reads the wired addons, so their annotations reach the sidecar', async () => {
+    const dir = join(root, 'node_modules', 'addon-labels')
+    mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
+    writeFileSync(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'addon-labels', version: '1.0.0' })
+    )
+    writeFileSync(
+      join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
+      JSON.stringify({
+        labelsItem: {
+          columns: {
+            id: { type: 'key', primaryKey: true },
+            owner: { type: 'text', security: 'pii' },
+          },
+        },
+      })
+    )
+
+    await dbReset.func(
+      services({ labels: { package: 'addon-labels' } }) as any,
+      { noSeed: true } as any
+    )
+
+    const sidecar = JSON.parse(
+      readFileSync(join(root, 'db', 'annotations.gen.json'), 'utf8')
+    )
+    assert.equal(sidecar.labels_item?.owner?.security, 'pii')
   })
 })

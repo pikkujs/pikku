@@ -3,13 +3,13 @@
  *
  * Every source `pikku db generate` knows about is present and real: Better Auth
  * configured with plugins that add tables *and* columns, the `@pikku/kysely`
- * runtime declaration, and an addon that ships a table and publishes it with
- * `pikku db export`. Nothing is stubbed — the CLI binary runs against a real
+ * runtime declaration, and an addon that declares a table in `db/tables.ts` and
+ * publishes the declaration with `pikku db export`. Nothing is stubbed — the CLI binary runs against a real
  * database, and the assertions read the migrations it wrote and the database it
  * migrated.
  *
  * A second addon is wired with `wireRemoteAddon`, and it must contribute
- * nothing. Its artifact is on disk and is as complete as the local addon's, so
+ * nothing. Its declaration is on disk and is as complete as the local addon's, so
  * the only thing standing between its table and this project's migrations is
  * the declaration — which is exactly the claim worth running the whole pipeline
  * to make. The unit tests pass `remote: true` in by hand; only here does it come
@@ -26,13 +26,14 @@
  * rejected for as long as it was.
  *
  * The sequence:
- *   1.  addons: pikku all + pikku db export    → publishes .pikku/db, per dialect
+ *   1.  addons: pikku all + pikku db export    → publishes the declaration as JSON
  *   2.  link node_modules/<addon> → ./addon    (what a yarn workspace makes)
  *   3.  app:   pikku all                       → records both addon declarations
- *   4.  app:   pikku db generate               → one migration per source, ordered
+ *   4.  app:   pikku db generate               → one migration per source, ordered; the
+ *                                                addon's tables join the app's declaration
  *   5.  assert the auth migration carries the plugin tables and columns
  *   6.  assert the runtime migration carries the tables that need `user.id`
- *   7.  assert the addon migration is the addon's own SQL, indexes intact
+ *   7.  assert the addon's table is created from its declaration
  *   8.  assert the remote addon got no migration at all
  *   9.  app:   pikku db migrate                → applies all three
  *   10. app:   pikku db check                  → clean, and the remote table is absent
@@ -40,7 +41,8 @@
  *   12. app:   tsc + runtime                   → addon reads its table, boot does no DDL
  *   13. app:   pikku db baseline               → adopts a database that already has it
  *   14. app:   pikku db baseline               → refuses one that is actually behind
- *   15. app:   pikku db generate               → refuses a mispackaged addon
+ *   15. app:   pikku db generate               → refuses a mispackaged addon; an addon that
+ *                                                grows, drops, mis-prefixes or ships the old shape
  *   16. app:   db/tables.ts                    → a generated table beside a declareOnly
  *                                                one Better Auth owns; the old shape refused
  */
@@ -57,7 +59,6 @@ import {
   symlinkSync,
   writeFileSync,
 } from 'node:fs'
-import { cpSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, relative, resolve } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -77,7 +78,7 @@ const TSX = join(repoRoot, 'node_modules/.bin/tsx')
 const ADDON_PKG = '@pikku/verifier-db-addon'
 const REMOTE_ADDON_PKG = '@pikku/verifier-db-remote-addon'
 /** The table the remote addon ships, which belongs to the host's database. */
-const REMOTE_TABLE = 'notes'
+const REMOTE_TABLE = 'notes_note'
 
 /** The table both migrators record applied migrations in. */
 const TRACKING_TABLE = 'sql_migrations'
@@ -366,43 +367,6 @@ const store = useMysql
 
 console.log(`\n══ db-schema verifier (${dialect}) ══`)
 
-/**
- * The addons' MySQL migrations exist only in a MySQL run. An addon that ships
- * `db/mysql` has to be exported against a server, so leaving them in place would
- * make every other dialect's run need one — and the artifact would then name a
- * dialect that run is not about.
- */
-const ADDON_PKG_DIRS = [addonDir, remoteAddonDir]
-for (const dir of ADDON_PKG_DIRS) {
-  rmSync(join(dir, 'db', 'mysql'), { recursive: true, force: true })
-  if (useMysql)
-    cpSync(join(dir, 'fixtures', 'mysql'), join(dir, 'db', 'mysql'), {
-      recursive: true,
-    })
-}
-const ADDON_CONFIGS = ADDON_PKG_DIRS.map((dir) =>
-  join(dir, 'pikku.config.json')
-)
-const SAVED_CONFIGS = ADDON_CONFIGS.map((file) => readFileSync(file, 'utf8'))
-if (useMysql) {
-  ADDON_CONFIGS.forEach((file, i) => {
-    writeFileSync(
-      file,
-      `${JSON.stringify({ ...JSON.parse(SAVED_CONFIGS[i]), db: { mysqlUrl } }, null, 2)}\n`
-    )
-  })
-}
-const restoreAddonConfigs = () => {
-  ADDON_CONFIGS.forEach((file, i) => writeFileSync(file, SAVED_CONFIGS[i]))
-  for (const dir of ADDON_PKG_DIRS) {
-    rmSync(join(dir, 'db', 'mysql'), { recursive: true, force: true })
-  }
-}
-process.on('exit', restoreAddonConfigs)
-for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.on(signal, () => process.exit(130))
-}
-
 for (const other of ['sqlite', 'postgres', 'mysql']) {
   rmSync(join(here, 'db', other), { recursive: true, force: true })
 }
@@ -585,7 +549,7 @@ try {
   rmSync(versionsFile, { force: true })
 }
 
-console.log('\n▶ assert: the published artifact describes the addon’s table')
+console.log('\n▶ assert: the published artifact is the addon’s declaration')
 // An addon roots its whole generated tree under `.pikku/addon`, so that every
 // leaf it authors is reached as `#pikku/addon/<leaf>` and cannot be shadowed by
 // the host application's flat one.
@@ -599,19 +563,18 @@ const artifactPath = join(
 check(existsSync(artifactPath), 'pikku db export wrote .pikku/addon/db')
 const artifact = JSON.parse(readFileSync(artifactPath, 'utf8'))
 check(
-  Object.keys(artifact).sort().join(',') ===
-    (useMysql ? 'mysql,postgres,sqlite' : 'postgres,sqlite'),
-  `every dialect the addon has migrations for is published (${Object.keys(artifact).join(',') || 'none'})`
+  Object.keys(artifact).join(',') === 'labelsLabel',
+  `the artifact is the declaration, not SQL per dialect (${Object.keys(artifact).join(',') || 'none'})`
 )
-const exported = artifact[dialect]
 check(
-  exported?.tables?.labels?.map((c) => c.name).join(',') === 'id,name,color',
-  `the ${dialect} artifact carries the introspected columns of \`labels\``
+  Object.keys(artifact.labelsLabel?.columns ?? {}).join(',') ===
+    'id,name,color,owner,weight',
+  'the artifact carries the declared columns of `labels_label`'
 )
-contains(
-  exported?.sql ?? '',
-  'CREATE UNIQUE INDEX labels_name_unique',
-  'the artifact carries the SQL that creates it, indexes included'
+check(
+  artifact.labelsLabel.columns.name.unique === true &&
+    artifact.labelsLabel.columns.owner.security === 'pii',
+  'and their constraints and annotations'
 )
 
 // The remote addon's artifact has to be just as complete, or the fact that no
@@ -626,15 +589,12 @@ const remoteArtifactPath = join(
 )
 check(
   existsSync(remoteArtifactPath),
-  'the remote addon published a schema too — its table is real, and not this project’s'
+  'the remote addon published a declaration too — its table is real, and not this project’s'
 )
-const remoteExported = JSON.parse(readFileSync(remoteArtifactPath, 'utf8'))[
-  dialect
-]
+const remoteExported = JSON.parse(readFileSync(remoteArtifactPath, 'utf8'))
 check(
-  remoteExported?.tables?.[REMOTE_TABLE]?.map((c) => c.name).join(',') ===
-    'id,body',
-  `the ${dialect} artifact carries the introspected columns of \`${REMOTE_TABLE}\``
+  Object.keys(remoteExported.notesNote?.columns ?? {}).join(',') === 'id,body',
+  `the artifact carries the declared columns of \`${REMOTE_TABLE}\``
 )
 
 // 2. The symlink `yarn install` would make for a workspace member, so that
@@ -690,8 +650,8 @@ check(
   `runtime is second (${runtimeFile})`
 )
 check(
-  /db-addon|addon/.test(addonFile ?? ''),
-  `the addon is last (${addonFile})`
+  /app-tables/.test(addonFile ?? ''),
+  `the declared tables are last, the addon’s among them (${addonFile})`
 )
 
 const sqlOf = (file) => readFileSync(join(MIGRATIONS_DIR, file), 'utf8')
@@ -794,12 +754,16 @@ check(
   'no runtime schema was skipped for an unmet requirement'
 )
 
-// 7. Nothing covered means the source's own SQL, verbatim — a column diff would
-//    have silently dropped the unique index.
-console.log('\n▶ assert: the addon migration is the addon’s own SQL')
+// 7. The addon's table is rendered from its declaration, with the marker that
+//    lets a later generate see it dropped, and nothing the declaration lacks.
+console.log('\n▶ assert: the addon’s table is created from its declaration')
 const addonSql = sqlOf(addonFile)
-contains(addonSql, 'CREATE TABLE labels', 'the table')
-contains(addonSql, 'CREATE UNIQUE INDEX labels_name_unique', 'and its index')
+check(
+  new RegExp(`create table ${q('labels_label')}`, 'i').test(addonSql),
+  'the table, under the addon’s prefix'
+)
+contains(addonSql, '-- pikku:tables labels_label', 'the marker names it')
+contains(addonSql, 'unique', 'and its unique name')
 
 // 8. The remote addon is the same channel, the same artifact, and the opposite
 //    answer. Three migrations above already says there is no fourth; this says
@@ -827,9 +791,61 @@ check(
   checked.includes('db check: the database matches its migrations'),
   'db check reports the database matches its migrations'
 )
+// The addon's column annotations travel with its declaration: into the sidecar,
+// the generated types and the generated zod schema, as if the app had declared
+// them itself.
+const addonSidecar = JSON.parse(
+  readFileSync(join(here, 'db', 'annotations.gen.json'), 'utf8')
+)
+check(
+  addonSidecar.labels_label?.owner?.security === 'pii' &&
+    addonSidecar.labels_label?.owner?.format === 'email' &&
+    addonSidecar.labels_label?.weight?.min === 0 &&
+    addonSidecar.labels_label?.weight?.max === 10,
+  'the addon’s security, format and bounds reached the sidecar'
+)
+check(
+  /owner: ColumnType<Pii</.test(
+    readFileSync(join(here, '.pikku', 'db', 'schema.gen.ts'), 'utf8')
+  ),
+  'labels_label.owner is typed Pii<...> from the addon’s annotation'
+)
+check(
+  /weight: z\.number\(\)\.int\(\)\.min\(0\)\.max\(10\)/.test(
+    readFileSync(join(here, '.pikku', 'db', 'zod.gen.ts'), 'utf8')
+  ),
+  'and the generated zod schema carries the addon’s bounds'
+)
 check(
   !(await store.hasTable(REMOTE_TABLE)),
   `\`${REMOTE_TABLE}\` is not in this database — the remote addon reads it on another one`
+)
+
+// The same annotations must survive the two commands that regenerate them
+// without generating a migration: `db codegen` and `db reset` each rebuild the
+// sidecar and the Zod schema, so each must read the wired addon.
+const addonOutputs = () => ({
+  sidecar: JSON.parse(
+    readFileSync(join(here, 'db', 'annotations.gen.json'), 'utf8')
+  ),
+  zod: readFileSync(join(here, '.pikku', 'db', 'zod.gen.ts'), 'utf8'),
+})
+const addonCarried = ({ sidecar, zod }) =>
+  sidecar.labels_label?.owner?.security === 'pii' &&
+  sidecar.labels_label?.weight?.max === 10 &&
+  /weight: z\.number\(\)\.int\(\)\.min\(0\)\.max\(10\)/.test(zod)
+for (const sub of ['codegen', 'reset']) {
+  rmSync(join(here, 'db', 'annotations.gen.json'), { force: true })
+  rmSync(join(here, '.pikku', 'db', 'zod.gen.ts'), { force: true })
+  run(`app: pikku db ${sub}`, 'node', [PIKKU, 'db', sub])
+  check(
+    addonCarried(addonOutputs()),
+    `db ${sub} writes the addon’s annotations into the sidecar and the Zod schema`
+  )
+}
+check(
+  await store.hasTable('labels_label'),
+  'db reset recreated the addon’s table from its declaration'
 )
 
 // 10b. A tarball packed on macOS carries an AppleDouble `._<name>.sql` beside
@@ -967,7 +983,9 @@ check(
 )
 writeFileSync(linkedArtifact, savedArtifact)
 
-// And an addon that genuinely has no tables says so, and is waved through.
+// An addon that now publishes no tables is a declaration like any other: the
+// table it declared before is a pending drop, held for approval, and not a
+// declaration that has gone missing.
 writeFileSync(linkedArtifact, '{}\n')
 const empty = expectFailure('app: pikku db generate (empty artifact)', [
   PIKKU,
@@ -975,9 +993,126 @@ const empty = expectFailure('app: pikku db generate (empty artifact)', [
   'generate',
 ])
 check(
-  empty.status === 0,
-  'an empty artifact still means "this addon needs no tables"'
+  empty.status !== 0,
+  'an empty artifact drops the addon’s recorded table, so it waits for approval'
 )
+writeFileSync(linkedArtifact, savedArtifact)
+
+// The addon is a declaration now, so what it publishes next is read like the
+// app's own: a column it adds is added, a table it drops waits for approval,
+// and a declaration that breaks a rule stops the command.
+console.log('\n▶ an addon that changes its declaration is followed')
+const published = JSON.parse(savedArtifact)
+const publish = (value) =>
+  writeFileSync(linkedArtifact, `${JSON.stringify(value)}\n`)
+const knownMigrations = new Set(readdirSync(MIGRATIONS_DIR))
+const generateWith = (label, ...args) => {
+  console.log(`\n▶ ${label}`)
+  const result = spawnSync('node', [PIKKU, 'db', 'generate', ...args], {
+    cwd: here,
+    encoding: 'utf8',
+    env,
+  })
+  const output = `${result.stdout ?? ''}${result.stderr ?? ''}`
+  process.stdout.write(output)
+  const added = readdirSync(MIGRATIONS_DIR).filter(
+    (f) => !knownMigrations.has(f)
+  )
+  const sqlAdded = added.map((f) => sqlOf(f)).join('\n')
+  for (const f of added) rmSync(join(MIGRATIONS_DIR, f))
+  return { status: result.status, output, sqlAdded, added }
+}
+
+publish({
+  labelsLabel: {
+    columns: { ...published.labelsLabel.columns, shade: { type: 'text' } },
+  },
+})
+const grown = generateWith('app: pikku db generate (addon added a column)')
+check(grown.status === 0, 'a column the addon adds is generated')
+check(
+  new RegExp(
+    `alter table ${q('labels_label')} add column ${q('shade')}`,
+    'i'
+  ).test(grown.sqlAdded),
+  'as an ALTER TABLE ADD COLUMN on the addon’s table'
+)
+
+publish({ labelsOther: { columns: { id: { type: 'key', primaryKey: true } } } })
+const dropped = generateWith('app: pikku db generate (addon dropped a table)')
+check(
+  dropped.status !== 0 && dropped.added.length === 0,
+  'a table the addon drops is refused: nothing is written without approval'
+)
+contains(dropped.output, 'DROP TABLE labels_label', 'and the refusal names it')
+const approved = generateWith(
+  'app: pikku db generate --allowDestructive (addon dropped a table)',
+  '--allowDestructive'
+)
+check(
+  approved.status === 0 &&
+    new RegExp(`drop table ${q('labels_label')}`, 'i').test(approved.sqlAdded),
+  '--allowDestructive writes the drop'
+)
+
+publish({ items: published.labelsLabel })
+const unprefixed = generateWith('app: pikku db generate (unprefixed table)')
+check(
+  unprefixed.status !== 0 && unprefixed.output.includes('without its prefix'),
+  'a table without the addon’s prefix stops the command'
+)
+
+publish({ sqlite: { sql: 'CREATE TABLE labels_label (id TEXT);', tables: {} } })
+const oldArtifact = generateWith(
+  'app: pikku db generate (old per-dialect artifact)'
+)
+check(
+  oldArtifact.status !== 0 &&
+    oldArtifact.output.includes('Rebuild or upgrade the addon'),
+  'an artifact in the old SQL-per-dialect shape is refused'
+)
+
+// An old addon's migration created `labels_legacy`; the addon now declares it.
+// The table is adopted — nothing is created — and a column the addon adds later
+// is added to it, on this engine's real introspection.
+const adoptSql = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.includes('app-tables'))
+  .map((f) => sqlOf(f))
+  .join('\n')
+  .split('\n')
+  .filter((line) => !line.startsWith('--'))
+  .join('\n')
+  .replaceAll('labels_label', 'labels_legacy')
+const legacyFile = join(MIGRATIONS_DIR, '0999-labels-legacy.sql')
+writeFileSync(legacyFile, `${adoptSql}\n`)
+knownMigrations.add('0999-labels-legacy.sql')
+publish({
+  labelsLabel: published.labelsLabel,
+  labelsLegacy: published.labelsLabel,
+})
+const adopted = generateWith('app: pikku db generate (addon adopts a table)')
+check(
+  adopted.status === 0 && !/create table/i.test(adopted.sqlAdded),
+  'a table an old addon migration created is adopted, not created again'
+)
+publish({
+  labelsLabel: published.labelsLabel,
+  labelsLegacy: {
+    columns: { ...published.labelsLabel.columns, shade: { type: 'text' } },
+  },
+})
+const adoptedGrown = generateWith(
+  'app: pikku db generate (adopted table gains a column)'
+)
+check(
+  adoptedGrown.status === 0 &&
+    new RegExp(
+      `alter table ${q('labels_legacy')} add column ${q('shade')}`,
+      'i'
+    ).test(adoptedGrown.sqlAdded),
+  'a column added to an adopted table is added with ALTER TABLE'
+)
+rmSync(legacyFile)
 writeFileSync(linkedArtifact, savedArtifact)
 
 // 16. The app's own declaration, from the real binary. `user` is Better Auth's:
@@ -1019,9 +1154,9 @@ capture('app: pikku db generate (declared tables)', 'node', [
   'db',
   'generate',
 ])
-const tablesFile = readdirSync(MIGRATIONS_DIR).find((f) =>
-  f.includes('app-tables')
-)
+const tablesFile = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.includes('app-tables'))
+  .pop()
 check(
   Boolean(tablesFile),
   `a migration was written for db/tables.ts (${tablesFile})`
@@ -1029,8 +1164,8 @@ check(
 const tablesSql = tablesFile ? sqlOf(tablesFile) : ''
 contains(
   tablesSql,
-  '-- pikku:tables bookmark\n',
-  'the marker names only the generated table'
+  '-- pikku:tables bookmark, labels_label\n',
+  'the marker names the app’s table and the addon’s, never the declareOnly one'
 )
 check(
   new RegExp(`create table ${q('bookmark')}`, 'i').test(tablesSql),

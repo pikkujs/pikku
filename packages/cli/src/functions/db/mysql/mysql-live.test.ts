@@ -16,11 +16,12 @@ import {
   computeSchemaDrift,
   createKysely,
   devSeed,
-  generateMigrations,
+  writeSourceMigrations,
   migrateAndCodegen,
   reset,
   resolveDb,
   type ResolvedMysqlDb,
+  type SchemaSource,
 } from '../local-db.js'
 import { withMysqlClient, withScratchMysqlDatabase } from './mysql-client.js'
 import { MysqlIntrospector } from './mysql-introspector.js'
@@ -346,12 +347,6 @@ describe('mysql, against a real server', { skip: !SERVER_URL }, () => {
   issuer VARCHAR(64) NOT NULL
 );`
       )
-      const addon = join(dir, 'node_modules', 'addon-auth')
-      mkdirSync(join(addon, '.pikku', 'db'), { recursive: true })
-      writeFileSync(
-        join(addon, 'package.json'),
-        JSON.stringify({ name: 'addon-auth', version: '1.0.0' })
-      )
       const column = (name: string, type: string, pk = false) => ({
         name,
         type,
@@ -359,32 +354,30 @@ describe('mysql, against a real server', { skip: !SERVER_URL }, () => {
         pk,
         defaultValue: null,
       })
-      writeFileSync(
-        join(addon, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-        JSON.stringify({
-          mysql: {
-            sql: 'CREATE TABLE todos (id INT PRIMARY KEY, title VARCHAR(100) NOT NULL);',
-            tables: {
-              todos: [
-                column('id', 'int', true),
-                column('title', 'varchar(100)'),
-              ],
-            },
-          },
-        })
-      )
+      // A source that stopped declaring `issuer`, as the Better Auth and runtime
+      // sources hand it to `db generate`.
+      const source: SchemaSource = {
+        name: 'addon-auth',
+        origin: "the 'addon-auth' source",
+        desired: {
+          sql: 'CREATE TABLE todos (id INT PRIMARY KEY, title VARCHAR(100) NOT NULL);',
+          tables: new Map([
+            [
+              'todos',
+              new Map([
+                ['id', column('id', 'int', true)],
+                ['title', column('title', 'varchar(100)')],
+              ]),
+            ],
+          ]),
+        },
+      }
       await migrateAndCodegen(target)
       await withMysqlClient(target, (c) =>
         c.exec("INSERT INTO todos (id, title, issuer) VALUES (1, 'a', 'x')")
       )
 
-      const { written } = await generateMigrations(
-        target,
-        dir,
-        ['src'],
-        { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-        [{ package: 'addon-auth' }]
-      )
+      const { written } = await writeSourceMigrations(target, [source])
       const migration = written.find((w) => w.source === 'addon-auth')
       assert.ok(migration, 'the orphaned column got a migration')
       assert.deepEqual(migration.orphaned, ['todos.issuer'])

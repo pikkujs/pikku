@@ -1,5 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { resolveDb, migrateAndCodegen } from '../db/local-db.js'
+import { wiredAddons } from '../db/addon-declarations.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 /**
@@ -14,7 +15,7 @@ import { loadUserConfigForDb } from './db-shared.js'
  */
 export const dbCodegen = pikkuSessionlessFunc<{}, void>({
   remote: true,
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
@@ -34,6 +35,7 @@ export const dbCodegen = pikkuSessionlessFunc<{}, void>({
 
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved, {
       scratch: true,
+      addons: wiredAddons(await getInspectorState()),
     })
 
     for (const warning of codegen.warnings) {
