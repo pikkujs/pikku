@@ -18,6 +18,28 @@ env:
   BETTER_AUTH_SECRET: ci-build-only-better-auth-secret-not-real
 
 jobs:
+  branch-limit:
+    name: Branch limit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    env:
+      MAX_BRANCHES: 5
+    steps:
+      # At most MAX_BRANCHES branches (main included) may exist on origin.
+      # Merge or delete one before opening another.
+      - name: Count branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branches=$(gh api --paginate "repos/$GITHUB_REPOSITORY/branches" --jq ".[].name")
+          count=$(printf "%s\n" "$branches" | grep -c .)
+          echo "Branches on origin: $count (max $MAX_BRANCHES)"
+          printf "%s\n" "$branches" | sed "s/^/  - /"
+          if [ "$count" -gt "$MAX_BRANCHES" ]; then
+            echo "::error::$count branches exist, the limit is $MAX_BRANCHES. Merge or delete a branch first."
+            exit 1
+          fi
+
   validate-deps:
     name: Validate Package Deps
     if: ${{ !github.event.pull_request.draft }}
