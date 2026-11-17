@@ -341,6 +341,7 @@ describe('isolatedCompare / ownBackend', () => {
       '--no-frontends',
       '--no-hmr',
     ])
+    assert.deepEqual(one?.migrate?.slice(1), ['/bin/pikku.js', 'db', 'migrate'])
     const two = ownBackend(
       { rootDir: '/p', backends: { api: {}, admin: {} } },
       '/bin/pikku.js'

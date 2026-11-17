@@ -289,7 +289,8 @@ export const isolatedCompare = async (
 /**
  * How this tree's backend is started for an isolated compare: `pikku dev
  * --serveOnly` (no codegen, so nothing in the tree is rewritten; it serves the
- * generated code the tree already has), from the config's directory; with
+ * generated code the tree already has), from the config's directory, after
+ * `pikku db migrate` there (a worktree's dev database starts empty); with
  * more than one backend, the first declared, which the frontends proxy to.
  * Null when the config declares no backend.
  */
@@ -315,6 +316,7 @@ export const ownBackend = (
       '--no-frontends',
       '--no-hmr',
     ],
+    migrate: [process.execPath, bin, 'db', 'migrate'],
   }
 }
 
