@@ -185,6 +185,10 @@ export const changesCommands = defineCLICommands({
           'Track it without anyone picking it up — claim, next and wait skip it until `pikku changes ready`',
         type: 'boolean',
       },
+      pages: {
+        description:
+          'The pages (route paths) it builds, comma separated, e.g. /,/about: written as its Pages: line, which done compares with the original (at most 5 in a site rebuilt from an original)',
+      },
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),

@@ -669,7 +669,7 @@ describe('a clone change that names its pages', () => {
     )
   })
 
-  test('a frontend change with no Pages: line is refused, even one that touched no route', async () => {
+  test('a frontend change with no Pages: line that touched no page or route file is refused', async () => {
     const dir = project()
     const outcome = await checkPageGate({
       git: fakeGit(dir, ['apps/app/src/components/Card.tsx']),
@@ -680,7 +680,7 @@ describe('a clone change that names its pages', () => {
     assert.strictEqual(outcome.kind, 'refuse')
     assert.match(
       (outcome as { message: string }).message,
-      /is a frontend change[\s\S]*names no pages/
+      /is a frontend change[\s\S]*names no pages[\s\S]*touched no page or route file/
     )
     // a build change that touched no page is still untouched
     assert.strictEqual(
@@ -693,6 +693,30 @@ describe('a clone change that names its pages', () => {
       ).kind,
       'skip'
     )
+  })
+
+  test('a frontend change filed before the project was a clone (no Pages: line) is held to the pages it touched, not refused', async () => {
+    const dir = project()
+    report(dir, { rows: allAbout })
+    assert.deepStrictEqual(
+      await checkPageGate({
+        git: fakeGit(dir, ABOUT),
+        cwd: dir,
+        env: {},
+        frontend: true,
+      }),
+      { kind: 'pass', pages: ['/about'] }
+    )
+    // and a touched page over the limit still fails
+    report(dir, { rows: [row('about', 1440, 80), row('about', 390, 1)] })
+    const over = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+      frontend: true,
+    })
+    assert.strictEqual(over.kind, 'refuse')
+    assert.match((over as { message: string }).message, /Over the 40% limit/)
   })
 })
 

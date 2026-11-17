@@ -1,7 +1,8 @@
 import { after, describe, test } from 'node:test'
 import assert from 'node:assert'
 import { mock } from 'bun:test'
-import { mkdtemp, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import * as changesLib from '../lib/changes.js'
@@ -389,6 +390,58 @@ describe('changes file', () => {
       ChangesFile.func({} as any, { title: 'Add a blog' } as any)
     )
     assert.strictEqual(data.backlog, undefined)
+  })
+
+  test('--pages writes the Pages: line done holds the change to; in a clone at most 5', async () => {
+    const { data } = await sent(() =>
+      ChangesFile.func(
+        {} as any,
+        {
+          title: 'About page',
+          body: 'The about page as on the original.',
+          pages: '/about, /',
+        } as any
+      )
+    )
+    assert.strictEqual(
+      data.body,
+      'The about page as on the original.\n\nPages: /about, /'
+    )
+    // a project rebuilt from an original (a pikku.config.json and a capture folder)
+    const dir = await mkdtemp(join(tmpdir(), 'pikku-file-clone-'))
+    execFileSync('git', ['init', '-q'], { cwd: dir })
+    await writeFile(join(dir, 'pikku.config.json'), '{}')
+    await mkdir(join(dir, 'artifacts', 'references', 'example.com'), {
+      recursive: true,
+    })
+    const home = process.cwd()
+    process.chdir(dir)
+    try {
+      await assert.rejects(
+        ChangesFile.func(
+          {} as any,
+          { title: 'Pages', pages: '/a,/b,/c,/d,/e,/f' } as any
+        ),
+        /--pages names 6 pages[\s\S]*at most 5/
+      )
+      const { data: two } = await sent(() =>
+        ChangesFile.func({} as any, { title: 'Pages', pages: '/a,/b' } as any)
+      )
+      assert.strictEqual(two.body, 'Pages: /a, /b')
+    } finally {
+      process.chdir(home)
+    }
+    await assert.rejects(
+      ChangesFile.func({} as any, { title: 'x', pages: 'about' } as any),
+      /route paths starting with \//
+    )
+    await assert.rejects(
+      ChangesFile.func(
+        {} as any,
+        { title: 'x', body: 'Body.\n\nPages: /a', pages: '/b' } as any
+      ),
+      /already has a Pages: line/
+    )
   })
 
   test('reads the body from a file', async () => {

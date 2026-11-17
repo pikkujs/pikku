@@ -8,7 +8,9 @@ import type { CreateChangeOutput } from '../lib/types.js'
 import { LOCAL_PROJECT_ID } from '../lib/changes-local.js'
 import { SPECIALISTS } from '../lib/specialists.js'
 import {
+  MAX_CLONE_PAGES,
   bodyWithPages,
+  declaredPages,
   filingOrder,
   parsePlanText,
   validatePlan,
@@ -29,6 +31,7 @@ export const ChangesFileInput = z.object({
   specialist: z.enum(SPECIALISTS).optional(),
   dependsOn: z.array(z.string()).optional(),
   backlog: z.boolean().optional(),
+  pages: z.string().optional(),
 })
 
 /**
@@ -77,9 +80,10 @@ export const ChangesFile = pikkuSessionlessFunc({
         'The backlog is kept in the local changes queue; this project keeps its changes in Pikku Studio Cloud.'
       )
 
-    const body = input.bodyFile
+    const text = input.bodyFile
       ? await readFile(input.bodyFile, 'utf8')
       : input.body
+    const body = await withPagesLine(text, input.pages)
 
     const filing = {
       stageId: input.stageId ?? 'local',
@@ -105,7 +109,7 @@ async function filePlan(
   input: z.infer<typeof ChangesFileInput>
 ): Promise<z.infer<typeof ChangesFileOutput>> {
   const single = (
-    ['title', 'body', 'bodyFile', 'specialist', 'dependsOn'] as const
+    ['title', 'body', 'bodyFile', 'specialist', 'dependsOn', 'pages'] as const
   ).filter((key) => input[key] !== undefined)
   if (single.length)
     throw new CloudPreconditionError(
@@ -147,6 +151,50 @@ async function filePlan(
     filed.push({ ref: planned.ref, change })
   }
   return { filed }
+}
+
+/**
+ * `--pages /a,/b`: the body as filed with its `Pages:` line, the pages done
+ * holds the change to. In a clone project at most MAX_CLONE_PAGES, as in a plan.
+ */
+export async function withPagesLine(
+  body: string | undefined,
+  pages: string | undefined,
+  clone?: boolean
+): Promise<string | undefined> {
+  if (pages === undefined) return body
+  const list = [
+    ...new Set(
+      pages
+        .split(',')
+        .map((page) => page.trim())
+        .filter(Boolean)
+    ),
+  ]
+  if (!list.length)
+    throw new CloudPreconditionError(
+      '--pages names no page: give route paths, comma separated, e.g. --pages /,/about.'
+    )
+  const bad = list.filter((page) => !page.startsWith('/'))
+  if (bad.length)
+    throw new CloudPreconditionError(
+      `--pages takes route paths starting with /: ${bad.join(', ')}.`
+    )
+  if (declaredPages(body).length)
+    throw new CloudPreconditionError(
+      'The body already has a Pages: line; give the pages once, in the body or with --pages.'
+    )
+  clone ??= isCloneProject(
+    await git(['rev-parse', '--show-toplevel'])
+      .then((out) => out.trim())
+      .catch(() => process.cwd())
+  )
+  if (clone && list.length > MAX_CLONE_PAGES)
+    throw new CloudPreconditionError(
+      `--pages names ${list.length} pages. This project rebuilds an existing site, so a change builds at most ${MAX_CLONE_PAGES} pages, each compared with the original: file the rest as further changes.`
+    )
+  const text = body?.trim()
+  return `${text ? `${text}\n\n` : ''}Pages: ${list.join(', ')}`
 }
 
 async function readPlanFile(path: string): Promise<string> {
