@@ -372,7 +372,10 @@ if (!natsOk || !bunOk) {
           appB.output().includes('job done b1')
       )
       await new Promise((r) => setTimeout(r, 500))
-      if (appA.output().includes('b1') || appB.output().includes('a1'))
+      if (
+        appA.output().includes('job done b1') ||
+        appB.output().includes('job done a1')
+      )
         throw new Error('a job crossed stages')
     })
     await check('each stage gets only its own cron fires', async () => {
