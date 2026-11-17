@@ -6,7 +6,8 @@ package visit
 
 // visitSetup
 const (
-	OrderCoreSingletonServices      = 0  // addFileExtendsCoreType CoreSingletonServices
+	OrderCoreSingletonServices      = 0 // addFileExtendsCoreType CoreSingletonServices
+	OrderCheckWiringsTopLevel       = 5
 	OrderCoreServices               = 10 // addFileExtendsCoreType CoreServices
 	OrderCoreUserSession            = 20 // addFileExtendsCoreType CoreUserSession
 	OrderCoreConfig                 = 30 // addFileExtendsCoreType CoreConfig
@@ -21,6 +22,7 @@ const (
 	OrderAddWireAddon               = 110
 	OrderAddPikkuStudio             = 120
 	OrderAddDefineContributors      = 125
+	OrderAddWireContributors        = 126
 	OrderAddWireRemoteAddon         = 130
 	OrderAddMiddleware              = 140
 	OrderAddPermission              = 150

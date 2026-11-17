@@ -35,7 +35,27 @@ const secrets = {
   hasSecret: async () => true,
 }
 
-const wireWorker = (name: string) => {
+const identityWorker = {
+  auth: false,
+  func: async (
+    _services: unknown,
+    data: { n: number; retry?: boolean },
+    wire: any
+  ) => {
+    runs.push({
+      n: data.n,
+      user: wire.pikkuUserId,
+      session: wire.session?.userId,
+      traceId: wire.traceId,
+    })
+    if (data.retry && !failedOnce.has(data.n)) {
+      failedOnce.add(data.n)
+      throw new Error('first attempt')
+    }
+  },
+}
+
+const registerWorkerMeta = (name: string) => {
   const pikkuFuncId = `queue_${name}`
   pikkuState(null, 'queue', 'meta')[name] = {
     pikkuFuncId,
@@ -48,29 +68,12 @@ const wireWorker = (name: string) => {
     outputSchemaName: null,
     sessionless: true,
   } as never
-  wireQueueWorker({
-    name,
-    func: {
-      auth: false,
-      func: async (
-        _services: unknown,
-        data: { n: number; retry?: boolean },
-        wire: any
-      ) => {
-        runs.push({
-          n: data.n,
-          user: wire.pikkuUserId,
-          session: wire.session?.userId,
-          traceId: wire.traceId,
-        })
-        if (data.retry && !failedOnce.has(data.n)) {
-          failedOnce.add(data.n)
-          throw new Error('first attempt')
-        }
-      },
-    },
-  } as never)
 }
+
+registerWorkerMeta('identity-bullmq')
+registerWorkerMeta('identity-pg-boss')
+wireQueueWorker({ name: 'identity-bullmq', func: identityWorker } as never)
+wireQueueWorker({ name: 'identity-pg-boss', func: identityWorker } as never)
 
 const waitForRuns = async (count: number) => {
   const deadline = Date.now() + 15000
@@ -151,8 +154,6 @@ const main = async () => {
       get: async (id: string) => (id === USER ? { userId: USER } : undefined),
     },
   } as never)
-  wireWorker('identity-bullmq')
-  wireWorker('identity-pg-boss')
 
   if (REDIS_PORT) {
     const connection = { host: '127.0.0.1', port: Number(REDIS_PORT) }

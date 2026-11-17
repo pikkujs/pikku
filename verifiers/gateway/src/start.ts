@@ -55,6 +55,64 @@ async function runTest(
   }
 }
 
+// Create separate adapters per gateway for clean assertion isolation
+const webhookAdapter = new MockGatewayAdapter()
+const wsAdapter = new MockGatewayAdapter()
+const listenerAdapter = new MockGatewayAdapter()
+
+// Shared handler function — logs gateway info and echoes text
+const createHandler = () => ({
+  func: async (services: any, data: any, wire: any) => {
+    services.logger.info({
+      type: 'gateway-handler',
+      gatewayName: wire.gateway.gatewayName,
+      senderId: data.senderId,
+      platform: wire.gateway.platform,
+      text: data.text,
+    })
+    return { text: `echo: ${data.text}` }
+  },
+})
+
+// Wire all three gateway types
+wireGateway({
+  name: 'test-webhook',
+  type: 'webhook',
+  route: '/webhooks/test',
+  adapter: webhookAdapter,
+  func: createHandler(),
+})
+
+wireGateway({
+  name: 'test-ws',
+  type: 'websocket',
+  route: '/gateway/ws',
+  adapter: wsAdapter,
+  func: createHandler(),
+})
+
+wireGateway({
+  name: 'test-listener',
+  type: 'listener',
+  adapter: listenerAdapter,
+  func: createHandler(),
+})
+
+// A separate gateway whose handler sends proactively
+const proactiveAdapter = new MockGatewayAdapter()
+wireGateway({
+  name: 'test-proactive',
+  type: 'webhook',
+  route: '/webhooks/proactive',
+  adapter: proactiveAdapter,
+  func: {
+    func: async (_services: any, _data: any, wire: any) => {
+      await wire.gateway.send({ text: 'proactive message' })
+      // Return nothing — no auto-send
+    },
+  },
+})
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -69,49 +127,6 @@ async function main(): Promise<void> {
   console.log('  - webhook: HTTP POST/GET routes')
   console.log('  - websocket: channel-based message handling')
   console.log('  - listener: standalone event loop')
-
-  // Create separate adapters per gateway for clean assertion isolation
-  const webhookAdapter = new MockGatewayAdapter()
-  const wsAdapter = new MockGatewayAdapter()
-  const listenerAdapter = new MockGatewayAdapter()
-
-  // Shared handler function — logs gateway info and echoes text
-  const createHandler = () => ({
-    func: async (services: any, data: any, wire: any) => {
-      services.logger.info({
-        type: 'gateway-handler',
-        gatewayName: wire.gateway.gatewayName,
-        senderId: data.senderId,
-        platform: wire.gateway.platform,
-        text: data.text,
-      })
-      return { text: `echo: ${data.text}` }
-    },
-  })
-
-  // Wire all three gateway types
-  wireGateway({
-    name: 'test-webhook',
-    type: 'webhook',
-    route: '/webhooks/test',
-    adapter: webhookAdapter,
-    func: createHandler(),
-  })
-
-  wireGateway({
-    name: 'test-ws',
-    type: 'websocket',
-    route: '/gateway/ws',
-    adapter: wsAdapter,
-    func: createHandler(),
-  })
-
-  wireGateway({
-    name: 'test-listener',
-    type: 'listener',
-    adapter: listenerAdapter,
-    func: createHandler(),
-  })
 
   // =========================================================================
   // Webhook tests
@@ -203,21 +218,6 @@ async function main(): Promise<void> {
   })
 
   await runTest('wire.gateway.send() sends proactive messages', async () => {
-    // Wire a separate gateway with a handler that sends proactively
-    const proactiveAdapter = new MockGatewayAdapter()
-    wireGateway({
-      name: 'test-proactive',
-      type: 'webhook',
-      route: '/webhooks/proactive',
-      adapter: proactiveAdapter,
-      func: {
-        func: async (_services: any, _data: any, wire: any) => {
-          await wire.gateway.send({ text: 'proactive message' })
-          // Return nothing — no auto-send
-        },
-      },
-    })
-
     const request = new Request('http://localhost/webhooks/proactive', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

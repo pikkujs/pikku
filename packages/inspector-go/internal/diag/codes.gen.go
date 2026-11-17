@@ -57,6 +57,7 @@ const (
 	AddonLegacyContributors           Code = "PKU364"
 	StudioScreenAgentInvalid          Code = "PKU365"
 	StudioPackageFilesMissing         Code = "PKU366"
+	WiringNotTopLevel                 Code = "PKU367"
 	DbColumnNameTypeContradiction     Code = "PKU480"
 	DbJsonColumnUntyped               Code = "PKU481"
 	DbFormatOnNonString               Code = "PKU482"

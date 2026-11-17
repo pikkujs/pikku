@@ -2,7 +2,8 @@
 // file is compiled by tsc only (tsconfig.type-tests.json); it sits outside
 // srcDirectories because the inspector would otherwise read the deliberately
 // wrong calls below and fail the build with PKU363, which is the backstop and
-// not what is under test here. It never runs.
+// not what is under test here. It never runs, and the wirings sit at the top
+// level because a wire call inside a function is a build error.
 import { wireAddon } from '#pikku/addon'
 
 type Equal<A, B> =
@@ -32,32 +33,30 @@ assertType<
   Equal<string extends NamesOf<'@verifier/contrib-notify'> ? 1 : 0, 0>
 >()
 
-export const typed = () => {
-  wireAddon({
-    name: 'select',
-    package: '@verifier/contrib-select',
-    contributors: ['store-sqlite', 'queue-noop'],
-  })
+wireAddon({
+  name: 'select',
+  package: '@verifier/contrib-select',
+  contributors: ['store-sqlite', 'queue-noop'],
+})
 
-  wireAddon({
-    name: 'select',
-    package: '@verifier/contrib-select',
-    // @ts-expect-error 'store-mysql' is not registered by @verifier/contrib-select
-    contributors: ['store-mysql'],
-  })
+wireAddon({
+  name: 'select',
+  package: '@verifier/contrib-select',
+  // @ts-expect-error 'store-mysql' is not registered by @verifier/contrib-select
+  contributors: ['store-mysql'],
+})
 
-  wireAddon({
-    name: 'notify',
-    package: '@verifier/contrib-notify',
-    // @ts-expect-error a contributor of @verifier/contrib-select is not one of notify's
-    contributors: ['store-sqlite'],
-  })
+wireAddon({
+  name: 'notify',
+  package: '@verifier/contrib-notify',
+  // @ts-expect-error a contributor of @verifier/contrib-select is not one of notify's
+  contributors: ['store-sqlite'],
+})
 
-  // An addon whose contributors meta is not installed falls back to string, so
-  // the build-time check is the only guard and the type does not block it.
-  wireAddon({
-    name: 'elsewhere',
-    package: '@verifier/not-installed',
-    contributors: ['anything'],
-  })
-}
+// An addon whose contributors meta is not installed falls back to string, so
+// the build-time check is the only guard and the type does not block it.
+wireAddon({
+  name: 'elsewhere',
+  package: '@verifier/not-installed',
+  contributors: ['anything'],
+})

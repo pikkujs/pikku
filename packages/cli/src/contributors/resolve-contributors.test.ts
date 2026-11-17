@@ -101,6 +101,33 @@ describe('resolveTargetContributors', () => {
     assert.deepEqual(deploy.withoutVariant, ['b'])
   })
 
+  test('a wireContributors package resolves from the calling file, with no wireAddon declaration', async () => {
+    mkdirSync(join(root, 'sub/src'), { recursive: true })
+    writeFileSync(join(root, 'sub/package.json'), '{}')
+    // Installed beside the calling file's package, not at the project root.
+    const path = join(root, 'sub/node_modules/plain/src/a.ts')
+    mkdirSync(join(path, '..'), { recursive: true })
+    writeFileSync(path, '')
+    writeFileSync(join(root, 'sub/node_modules/plain/package.json'), '{}')
+    modules['plain/src/a.ts'] = { aDev: { provides: ['a'], run() {} } }
+    const state = {
+      optedInContributors: {
+        plain: {
+          packageName: 'plain',
+          file: join(root, 'sub/src/wiring.ts'),
+          contributors: { a: { dev: { module: 'src/a.ts', export: 'aDev' } } },
+        },
+      },
+      rpc: { wireAddonDeclarations: new Map() },
+    } as never
+    const { ordered } = await run(state)
+    assert.deepEqual(
+      ordered.map((c) => c.name),
+      ['a']
+    )
+    assert.ok(ordered[0]!.module.endsWith('sub/node_modules/plain/src/a.ts'))
+  })
+
   test('a published addon with only a build resolves its .ts to dist .js', async () => {
     install('addon', ['dist/src/a.js'])
     modules['dist/src/a.js'] = { aDev: { provides: ['a'], run() {} } }

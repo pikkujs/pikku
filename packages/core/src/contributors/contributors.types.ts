@@ -35,6 +35,12 @@ export interface ContributorPlatform {
   runtimeServices?: string[]
   /** The app's database, when it uses SQLite or Postgres. Unset otherwise. */
   db?: ContributorDb
+  /**
+   * The deploy provider building the unit (`standalone`, `cloudflare`, ...).
+   * Set by every deploy build, never by `pikku dev`. A `when` that depends on
+   * where the app is going tests it, and treats an unset value as "not mine".
+   */
+  provider?: string
 }
 
 export interface Contributor<

@@ -79,3 +79,10 @@ reverse order and every one is attempted (`composeServerLifecycle` in
 
 **Gotchas:** each `dev` and `deploy` variant must live in its own module, or
 both are bundled; a contributor whose binding is missing at startup throws.
+
+## Packages that are not addons
+
+A package with contributors but no functions (for example `@pikku/queue-nats`)
+is opted in with `wireContributors({ package, contributors })`. The inspector
+records it as it does a `wireAddon` list, with the calling file as the
+resolution directory, and declares no addon.

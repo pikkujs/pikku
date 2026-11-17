@@ -1818,6 +1818,22 @@
       }
     },
     "optedInContributors": {
+      "@fixture/shop-addon": {
+        "packageName": "@fixture/shop-addon",
+        "contributors": {
+          "inbox": {
+            "dev": {
+              "module": "src/contributors/inbox.ts",
+              "export": "inboxDev"
+            },
+            "deploy": {
+              "module": "src/contributors/inbox.ts",
+              "export": "inboxDeploy"
+            }
+          }
+        },
+        "file": "<fixture>/src/contributors.ts"
+      },
       "shop": {
         "packageName": "@fixture/shop-addon",
         "contributors": {
@@ -1963,6 +1979,11 @@
     },
     {
       "level": "critical",
+      "code": "PKU362",
+      "message": "wireContributors' contributors must be an array of string literals, got: dynamic"
+    },
+    {
+      "level": "critical",
       "code": "PKU345",
       "message": "A screen's component must be () => import('<literal>'), got: () => null"
     },
@@ -2060,6 +2081,11 @@
       "level": "critical",
       "code": "PKU357",
       "message": "definePlugin declares two screens at '/users'; each screen needs its own path"
+    },
+    {
+      "level": "critical",
+      "code": "PKU363",
+      "message": "wireContributors('@fixture/bare-addon') opts in to contributor 'ghost', but @fixture/bare-addon registers no such contributor. It registers none; add a defineContributors call to the package and run pikku all in it."
     },
     {
       "level": "critical",
@@ -2392,7 +2418,7 @@
     }
   ],
   "validationPass": {
-    "start": 85,
-    "end": 100
+    "start": 87,
+    "end": 102
   }
 }

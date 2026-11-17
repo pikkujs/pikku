@@ -144,6 +144,31 @@ The type is the editor-time guard; the build is the backstop. A name the addon d
 
 The services contributors build reach your app as the second argument of `createSingletonServices(config, existingServices)`, so read them from `existingServices` and put them on the object you return.
 
+### Contributors from a plain package: `wireContributors`
+
+A package that registers contributors with `defineContributors` but is not an addon (it has no functions or screens to wire) is opted in with `wireContributors`, which declares no addon:
+
+```ts
+import { wireContributors } from '@pikku/core/contributors'
+
+wireContributors({
+  package: '@my-org/queue',
+  contributors: ['nats'],
+})
+```
+
+It is read statically at build time and does nothing when the app runs. The package and every name must be string literals, written as plain `key: value` entries with no spread, and each package is wired by one call (PKU362 otherwise). A name the package does not register is PKU363, as for `wireAddon`.
+
+Like every `wire*` call, it belongs at the top level of a file. Called from inside a function, an arrow function or a method, it is a build error (PKU367): the build reads the call as a declaration, and a function body is not a place the build can promise runs.
+
+### Choosing by deploy provider
+
+`platform.provider` is the deploy provider building the unit (`standalone`, `cloudflare`, ...). Every deploy build sets it; `pikku dev` never does, and a `when` should treat an unset value as "not mine":
+
+```ts
+when: (platform) => platform.needsQueue && platform.provider === 'standalone'
+```
+
 ### Hosts that inject an addon
 
 A host that adds an addon on the project's behalf (CI, Pikku Studio) does the same thing. It writes a host-owned, gitignored wiring file in the project's source tree containing `wireAddon({ name, package, contributors })`. There is no config-file route for contributors: a config cannot carry source.
@@ -203,7 +228,9 @@ The Cloudflare adapter selects the optional contributor `kysely-coercion` itself
 | `defineContributors` with a non-literal argument or an inline variant     | PKU360                                                                   |
 | The same contributor name twice                                           | PKU361                                                                   |
 | `wireAddon({ contributors })` with a non-literal list                     | PKU362                                                                   |
+| `wireContributors` with a spread or shorthand, or twice for one package   | PKU362                                                                   |
 | An opt-in name the addon does not register                                | PKU363                                                                   |
+| Any `wire*` call (`wireHTTP`, `wireContributors`, ...) inside a function  | PKU367                                                                   |
 | `pikku.contributors` still in an addon's `package.json`                   | PKU364 (a hard error, no longer silently ignored)                        |
 | `dev.contributors` or `deploy.contributors` still in `pikku.config.json`  | the CLI refuses to load the config, naming the key                       |
 | Two contributors providing one key (after `when` and `requires`)          | `Contributors 'a' and 'b' both provide 'key'`                            |

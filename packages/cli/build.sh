@@ -227,6 +227,7 @@ node dist/src/functions/surface/generate-surface-doc.js \
   --frontend ../frontend/react \
   --core ../core \
   --snippets ../../templates/online-shop \
+  --snippets-extra ../../e2e/packages/functions/src/wirings \
   --out surface.json \
   --snippets-out snippets.json \
   --snippets-meta-out snippets-meta.json

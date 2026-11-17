@@ -38,6 +38,10 @@ describe('writeUnitPlatformServices', () => {
       `export const onlyApi = { provides: ['marker'], when: (p: any) => p.unit.name === 'api', run(s: any) { s.marker = 1 } }\n`
     )
     writeFileSync(
+      join(root, 'node_modules', 'addon', 'src', 'fake-only.ts'),
+      `export const fakeOnly = { provides: ['marker'], when: (p: { provider?: string }) => p.provider === 'fake', run(s: Record<string, unknown>) { s.marker = 1 } }\n`
+    )
+    writeFileSync(
       join(root, 'node_modules', 'addon', 'src', 'bindings.ts'),
       `export const bindings = { provides: ['b'], requires: ['cloudflare'], run() {} }\n`
     )
@@ -111,6 +115,13 @@ describe('writeUnitPlatformServices', () => {
     )
     assert.equal(await run('worker', st), undefined)
     assert.equal(existsSync(join(unitDir, PLATFORM_SERVICES_FILE)), false)
+  })
+
+  test('the platform names the provider, so a contributor can apply to one target only', async () => {
+    const st = state('fakeOnly', 'src/fake-only.ts', 'fakeOnly')
+    assert.ok(await run('api', st))
+    const other = { ...provider(['env']), name: 'cloudflare' } as never
+    assert.equal(await run('api', st, other), undefined)
   })
 
   test('a contributor requiring a binding the provider lacks is a build error naming it', async () => {

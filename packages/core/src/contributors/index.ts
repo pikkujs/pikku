@@ -1,4 +1,5 @@
 export { defineContributors } from './define-contributors.js'
+export { wireContributors } from './wire-contributors.js'
 export {
   ContributorDependencyError,
   DEFAULT_CONTRIBUTOR_BINDING_SOURCES,
