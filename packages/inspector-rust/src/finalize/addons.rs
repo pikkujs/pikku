@@ -122,6 +122,38 @@ pub fn validate_secret_overrides(log: &mut Logger, st: &State) {
     }
 }
 
+/// Port of Go `validateAddonParentServices`: what a used addon function needs
+/// from the project that wires it must be declared in the project's own
+/// SingletonServices (or Services).
+pub fn validate_addon_parent_services(log: &mut Logger, st: &State) {
+    let Some(types) = &st.service_types else { return };
+    if types.singleton_services.is_none() || st.addon_services_factory_seen {
+        return;
+    }
+    let agg = &st.service_aggregation;
+    let provided: std::collections::HashSet<&String> =
+        agg.all_singleton_services.iter().chain(agg.all_wire_services.iter()).collect();
+    let parent: std::collections::HashSet<&String> = st.addon_required_parent_services.iter().collect();
+    let mut reported: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for id in agg.used_functions.values() {
+        let Some((ns, func)) = id.split_once(':') else { continue };
+        let Some(fns) = st.addon_functions.get(ns) else { continue };
+        let Some(meta) = fns.get(func) else { continue };
+        for service in &meta.services.services {
+            if !parent.contains(service) || !agg.required_services.has(service) || provided.contains(service) {
+                continue;
+            }
+            if !reported.insert(format!("{id} {service}")) {
+                continue;
+            }
+            log.critical(
+                codes::ADDON_SERVICE_NOT_PROVIDED,
+                format!("Addon function '{id}' needs the service '{service}' from its project, but SingletonServices does not declare it. Add '{service}' to SingletonServices and build it in createSingletonServices of the package that wires '{ns}'."),
+            );
+        }
+    }
+}
+
 pub fn validate_addon_uses(log: &mut Logger, st: &State) {
     let decls = addon_decls(st);
     for e in &decls {

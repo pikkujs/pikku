@@ -47,6 +47,7 @@ const (
 	AddonDependencyVersionMismatch    Code = "PKU354"
 	AddonUsesNotDeclared              Code = "PKU355"
 	AddonDependencyInvalid            Code = "PKU356"
+	AddonServiceNotProvided           Code = "PKU368"
 	StudioScreenPathDuplicate         Code = "PKU357"
 	StudioMessageKeyMissing           Code = "PKU358"
 	StudioBadgeFunctionNotFound       Code = "PKU359"

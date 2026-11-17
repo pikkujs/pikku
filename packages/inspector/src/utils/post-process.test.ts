@@ -9,6 +9,7 @@ import {
   validateSecretOverrides,
   validateCredentialOverrides,
   validateAddonUses,
+  validateAddonParentServices,
   validateAddonContentGrants,
   validateVariableOverrides,
   validateRemoteAddonDependencies,
@@ -190,6 +191,47 @@ describe('aggregateRequiredServices — synthetic workflow queue workers', () =>
     assert.deepEqual(Object.keys(state.queueWorkers.meta), [
       'wf-orchestrator-order-workflow',
     ])
+  })
+})
+
+describe('validateAddonParentServices', () => {
+  const stateDeclaring = (singletonServices: string[]) => {
+    const state = makeState({
+      usedFunctions: ['console:getSchema'],
+      addonFunctions: {
+        console: {
+          getSchema: {
+            services: { optimized: true, services: ['metaService'] },
+          },
+        },
+      },
+      addonRequiredParentServices: CONSOLE_PARENT_SERVICES,
+    })
+    ;(state as any).serviceTypes = { singletonServices, services: [] }
+    aggregateRequiredServices(state)
+    return state
+  }
+
+  test('a service the project declares is accepted', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonParentServices(logger, stateDeclaring(['metaService']))
+    assert.deepEqual(criticals, [])
+  })
+
+  test('a service the project does not declare is reported (PKU368)', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    validateAddonParentServices(logger, stateDeclaring([]))
+    assert.equal(criticals.length, 1)
+    assert.equal(criticals[0]!.code, 'PKU368')
+    assert.match(criticals[0]!.message, /'console:getSchema'.*'metaService'/)
+  })
+
+  test('nothing is reported when the service types were not resolved', () => {
+    const { logger, criticals } = makeCriticalLogger()
+    const state = stateDeclaring([])
+    ;(state as any).serviceTypes = undefined
+    validateAddonParentServices(logger, state)
+    assert.deepEqual(criticals, [])
   })
 })
 

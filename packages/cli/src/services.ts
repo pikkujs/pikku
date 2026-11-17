@@ -38,6 +38,7 @@ import {
 import { inspect as inspectWithGo } from '@pikku/inspector-go'
 import { selectInspectorEngine } from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
+import { assertAddonsWired } from './utils/project-packages.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
@@ -546,6 +547,19 @@ export const createSingletonServices: CreateSingletonServices<
         unfilteredState.diagnostics.length > 0
       ) {
         processDiagnostics(unfilteredState.diagnostics, config.lint)
+      }
+
+      try {
+        assertAddonsWired(
+          'pikku.config.json',
+          config.addonPackages,
+          unfilteredState.rpc.wireAddonDeclarations.keys()
+        )
+      } catch (error) {
+        // A step that failed here runs again; the cached state would let the
+        // second attempt skip this check and carry on.
+        unfilteredState = undefined
+        throw error
       }
 
       if (stateOutput) {

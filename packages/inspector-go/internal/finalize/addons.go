@@ -106,6 +106,50 @@ func validateAddonUses(log *diag.Logger, st *state.State) {
 	}
 }
 
+// validateAddonParentServices checks that what a used addon function needs
+// from the project that wires it is declared in the project's own
+// SingletonServices (or Services). The project is the base package: its
+// factory builds the services, and an addon cannot build them itself.
+func validateAddonParentServices(log *diag.Logger, st *state.State) {
+	if st.ServiceTypes == nil || st.ServiceTypes.SingletonServices == nil || st.AddonServicesFactorySeen {
+		return
+	}
+	agg := &st.ServiceAggregation
+	provided := map[string]bool{}
+	for _, s := range agg.AllSingletonServices {
+		provided[s] = true
+	}
+	for _, s := range agg.AllWireServices {
+		provided[s] = true
+	}
+	parent := map[string]bool{}
+	for _, s := range st.AddonRequiredParentServices {
+		parent[s] = true
+	}
+	reported := map[string]bool{}
+	for _, id := range agg.UsedFunctions.Values() {
+		ns, fn, ok := strings.Cut(id, ":")
+		if !ok {
+			continue
+		}
+		fns, ok := st.AddonFunctions.Get(ns)
+		if !ok || fns == nil {
+			continue
+		}
+		meta, ok := fns.Get(fn)
+		if !ok || meta == nil {
+			continue
+		}
+		for _, service := range meta.Services.Services {
+			if !parent[service] || !agg.RequiredServices.Has(service) || provided[service] || reported[id+" "+service] {
+				continue
+			}
+			reported[id+" "+service] = true
+			log.Critical(diag.AddonServiceNotProvided, "Addon function '"+id+"' needs the service '"+service+"' from its project, but SingletonServices does not declare it. Add '"+service+"' to SingletonServices and build it in createSingletonServices of the package that wires '"+ns+"'.")
+		}
+	}
+}
+
 func validateAddonContentGrants(log *diag.Logger, st *state.State) {
 	decls := addonDecls(st)
 	if len(decls) == 0 {
