@@ -48,6 +48,10 @@ import {
   ChangesMerge,
   renderChangesMerge,
 } from './functions/changes-merge.function.js'
+import {
+  ChangesRelease,
+  renderChangesRelease,
+} from './functions/changes-release.function.js'
 
 export const changesCommands = defineCLICommands({
   list: pikkuCLICommand({
@@ -334,6 +338,19 @@ export const changesCommands = defineCLICommands({
       },
       groupId: { description: 'The changeset to merge' },
       apiUrl: { description: 'Override the API URL for this call' },
+    },
+  }),
+  release: pikkuCLICommand({
+    parameters: '<ref>',
+    func: ChangesRelease,
+    render: renderChangesRelease,
+    description:
+      'Give a changeset back to the queue before its lease runs out — for a builder that stopped with work left. Its worktree and branch are kept for whoever claims the group again. Local queue only',
+    options: {
+      ref: {
+        description:
+          'The changeset’s group id, or a change in it — 2, #2 or its uuid',
+      },
     },
   }),
   done: pikkuCLICommand({
