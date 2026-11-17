@@ -1,6 +1,8 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import jpeg from 'jpeg-js'
@@ -11,6 +13,7 @@ import {
   encodePng,
   gitStamp,
   imageWidth,
+  loadSiteCapture,
   overThreshold,
   readReference,
   routeExists,
@@ -198,6 +201,54 @@ describe('pages compare', () => {
       ['gone', 'b']
     )
     assert.deepEqual(overThreshold(rows), [])
+  })
+})
+
+describe('the capture script behind pikku ui pages capture', () => {
+  test('is loaded with its capture, page list and picture download; pictures land in <out>/pictures with their file recorded', async () => {
+    const site = await loadSiteCapture()
+    assert.ok(site?.capture && site.pages && site.downloadPictures)
+    const png = encodePng(page(8, 8))
+    const server = createServer((req, res) => {
+      if (req.url === '/media/hero.png') res.end(png)
+      else res.writeHead(404).end()
+    })
+    await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok))
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    const out = mkdtempSync(join(tmpdir(), 'pages-capture-'))
+    writeFileSync(
+      join(out, 'index.json'),
+      JSON.stringify({
+        id: 'index',
+        pictures: [
+          { src: `${base}/media/hero.png`, file: null },
+          { src: `${base}/gone.jpg`, file: null },
+        ],
+      })
+    )
+    writeFileSync(join(out, 'index-1440.layout.json'), '{"images":[]}')
+    try {
+      const got = (await site.downloadPictures!(out)) as {
+        downloaded: number
+        failed: number
+      }
+      assert.equal(got.downloaded, 1)
+      assert.equal(got.failed, 1)
+    } finally {
+      server.close()
+    }
+    const doc = JSON.parse(readFileSync(join(out, 'index.json'), 'utf8'))
+    const file = doc.pictures[0].file as string
+    assert.match(file, /^pictures\/hero-[0-9a-f]{8}\.png$/)
+    assert.deepEqual(readFileSync(join(out, file)), png)
+    assert.equal(doc.pictures[1].file, null)
+    const index = JSON.parse(
+      readFileSync(join(out, 'pictures', 'index.json'), 'utf8')
+    )
+    assert.deepEqual(index[`${base}/media/hero.png`], {
+      file,
+      pages: ['index'],
+    })
   })
 })
 

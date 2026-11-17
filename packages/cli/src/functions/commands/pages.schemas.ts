@@ -95,3 +95,25 @@ export const PagesCompareOutput = z.object({
   rows: z.array(PagesCompareRow),
   failed: z.array(z.string()),
 })
+
+export const PagesCaptureInput = z.object({
+  url: z.string(),
+  out: z.string().optional(),
+  viewports: z.string().optional(),
+  page: z.string().optional(),
+  jobs: z.number().optional(),
+  tiles: z.boolean().optional(),
+})
+export const PagesCaptureOutput = z.object({
+  url: z.string(),
+  dir: z.string(),
+  widths: z.array(z.number()),
+  pages: z.array(z.object({ id: z.string(), url: z.string() })),
+  errors: z.array(z.string()),
+  pictures: z.object({
+    listed: z.number(),
+    downloaded: z.number(),
+    failed: z.number(),
+    dir: z.string(),
+  }),
+})

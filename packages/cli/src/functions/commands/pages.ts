@@ -17,6 +17,8 @@ import {
   PagesScreenshotOutput,
   PagesCompareInput,
   PagesCompareOutput,
+  PagesCaptureInput,
+  PagesCaptureOutput,
 } from './pages.schemas.js'
 import {
   compareShot,
@@ -267,6 +269,127 @@ export const renderPagesScreenshot = (
   }
 }
 
+/** Playwright's chromium, from whichever playwright package resolves. */
+const loadChromium = async (): Promise<unknown> => {
+  for (const name of ['@playwright/test', 'playwright', 'playwright-core']) {
+    const mod = await import(name).catch(() => null)
+    const chromium = mod?.chromium ?? mod?.default?.chromium
+    if (chromium) return chromium
+  }
+  throw new Error(
+    "Capturing needs a browser: 'yarn add -D @playwright/test', and PLAYWRIGHT_CHROMIUM_PATH (or PIKKU_CHROMIUM) for a chromium that is not Playwright's own"
+  )
+}
+
+export const pagesCapture = pikkuSessionlessFunc({
+  description:
+    'Capture the original site a clone is rebuilt from, into the reference pages compare and the done gate read: every page from its sitemap and links, at each width, as <id>-<width>.jpg, .layout.json and .style.json, <id>.json (title, menu, headings, text, colours and fonts by use, pictures), and the original pictures downloaded into <out>/pictures/.',
+  input: PagesCaptureInput,
+  output: PagesCaptureOutput,
+  func: async ({ config }, { url, out, viewports, page, jobs, tiles }) => {
+    const site = await loadSiteCapture()
+    if (!site?.capture || !site.pages || !site.downloadPictures)
+      throw new Error(
+        'The pikku-site-clone capture script (in @pikku/skills) could not be loaded next to the CLI'
+      )
+    const origin = new URL(url)
+    const dir = resolve(
+      out ??
+        join(
+          findWorkspaceRoot(config.rootDir),
+          'artifacts',
+          'references',
+          origin.host
+        )
+    )
+    mkdirSync(dir, { recursive: true })
+    const only = page
+      ?.split(',')
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => new URL(p, origin).href)
+    const urls = only?.length ? only : await site.pages(url)
+    if (!urls.length) urls.push(origin.href)
+    writeFileSync(join(dir, 'pages.txt'), `${urls.join('\n')}\n`)
+    const widths = (viewports ?? '1440,390,1920')
+      .split(',')
+      .map((w) => Number(w.trim()))
+      .filter(Boolean)
+    const log = (...parts: unknown[]) =>
+      process.stderr.write(`${parts.join(' ')}\n`)
+    log(
+      dim(
+        `Capturing ${urls.length} page(s) at ${widths.join(', ')} px into ${dir}: about a minute per page and width`
+      )
+    )
+    const { pages, pictures } = await site
+      .capture(dir, urls, widths, tiles ?? true, jobs ?? 4, {
+        chromium: await loadChromium(),
+        log,
+      })
+      .catch((error: Error) => {
+        if (!/Executable doesn't exist|launch/i.test(String(error?.message)))
+          throw error
+        throw new Error(
+          `No browser started for the capture. Set PLAYWRIGHT_CHROMIUM_PATH to a chrome binary, or run 'npx playwright install chromium'. ${String(error.message).split('\n')[0]}`
+        )
+      })
+    const rel = (file: string) => {
+      const r = relative(process.cwd(), file) || '.'
+      return r.startsWith('..') ? file : r
+    }
+    return {
+      url,
+      dir: rel(dir),
+      widths,
+      pages: pages.map(({ id, url }) => ({ id, url })),
+      errors: pages.flatMap(({ id, viewports }) =>
+        Object.entries(viewports)
+          .filter(([, v]) => v.error)
+          .map(([w, v]) => `${id} @${w}: ${v.error}`)
+      ),
+      pictures: pictures
+        ? { ...pictures, dir: rel(pictures.dir) }
+        : {
+            listed: 0,
+            downloaded: 0,
+            failed: 0,
+            dir: rel(join(dir, 'pictures')),
+          },
+    }
+  },
+})
+
+export const renderPagesCapture = (
+  _services: unknown,
+  {
+    url,
+    dir,
+    widths,
+    pages,
+    errors,
+    pictures,
+  }: z.infer<typeof PagesCaptureOutput>
+): void => {
+  process.stdout.write(
+    `${url}: ${pages.length} page(s) at ${widths.join(', ')} px into ${dir}\n`
+  )
+  for (const error of errors)
+    process.stdout.write(`  ${changed('✗')} ${error}\n`)
+  process.stdout.write(
+    `Pictures: ${pictures.downloaded} of ${pictures.listed} downloaded into ${pictures.dir}${pictures.failed ? changed(` (${pictures.failed} failed)`) : ''}; ${pictures.dir}/index.json maps each original address to its file, and each <page>.json lists its pictures with their file.\n`
+  )
+  process.stdout.write(
+    [
+      'Next:',
+      `  Read ${dir}/<page>.json (menu, headings, text, coloursByUse, fontsByUse, pictures) and ${dir}/<page>-1440.layout.json before you build.`,
+      `  Copy the pictures from ${pictures.dir} into the app's public folder and use them where the original does.`,
+      `  Put the colours and fonts of ${dir}/<page>-1440.style.json in the theme.`,
+      `  After each page: pikku ui pages compare --reference ${dir} --page <page>`,
+    ].join('\n') + '\n'
+  )
+}
+
 export const pagesCompare = pikkuSessionlessFunc({
   description:
     "Compare one frontend's pages with reference screenshots (<id>-<width>.jpg|png, as the pikku-site-clone capture writes them): photograph each page at each width, write <id>-<width>.diff.png and report.json, and report the changed-pixel share, the page heights and, where the reference has a layout.json, the biggest section differences. A reference page with no route is MISSING.",
@@ -343,7 +466,7 @@ export const pagesCompare = pikkuSessionlessFunc({
         : 'Section differences left out: the pikku-site-clone capture script (in @pikku/skills) could not be loaded to read our layout.'
     const withStyle = shots.some((shot) => shot.style)
     const stylesNote = !withStyle
-      ? 'The reference has no <id>-<width>.style.json (captured before styles were recorded), so there are no style differences; capture it again with site_capture.mjs to get them.'
+      ? 'The reference has no <id>-<width>.style.json (captured before styles were recorded), so there are no style differences; capture it again with pikku ui pages capture <url> --out <reference> to get them.'
       : siteCapture?.extractStyleInPage
         ? null
         : 'Style differences left out: the pikku-site-clone capture script (in @pikku/skills) could not be loaded to read our styles.'

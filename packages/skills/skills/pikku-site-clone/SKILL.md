@@ -12,41 +12,38 @@ screen, and look at layout first: how many columns a section has, which picture 
 pictures are, how tall the page is, then colours, type and copy. Text alone does not carry the layout: capture it from
 the rendered page, build the layout first, style second, and check every page against the original.
 
-The scripts are in this skill's `scripts/` folder; run them, do not rewrite them. They need a Chromium and its Playwright
-module: `PIKKU_CHROMIUM` is the path of the chrome binary and `PLAYWRIGHT_CORE` the path of the playwright-core module
-(the environment you work in sets both; if `echo $PIKKU_CHROMIUM` is empty there is no browser here, use the text-only
-route at the end). Screenshot copies and tiles need ImageMagick (`convert`).
-
 ```bash
-SC=<this skill's folder>/scripts/site_capture.mjs
 REF=artifacts/references/<site>        # <site> = the original's host name, e.g. www.the-site.example
+SC=<this skill's folder>/scripts/site_capture.mjs   # for the quick checks in step 4
 ```
 
 The reference is an artifact of the project: it lives in `artifacts/references/<site>/` at the project root, and every
 command below reads it from there.
 
-## 1. The page list
+## 1. Capture the original, once, before you build
+
+Run this command. Do not write your own capture script: `pikku changes done` refuses page changes of a clone until this
+reference exists.
 
 ```bash
-mkdir -p $REF && node $SC pages https://the-site.example > $REF/pages.txt
+mkdir -p $REF && pikku ui pages capture https://the-site.example/ --out $REF > $REF/capture.log 2>&1 &   # slow: a minute or two per page; carry on reading
 ```
 
-It reads robots.txt and the sitemap (and the sitemaps it points to), then adds every same-site link it finds by following
-links. That list is your to-do list: a page not on it is a page you will miss.
+It finds every page (robots.txt, the sitemaps, then same-site links) and writes the list to `$REF/pages.txt`. That list
+is your to-do list. Then, for every page, it writes into `$REF/`: `<page>.html` (as served), `<page>.json` (title,
+description, menu in order, headings with computed sizes, text, colours by use, fonts by use, CSS breakpoints, pictures),
+`<page>-<width>.layout.json` (the layout, see `references/layout.md`), `<page>-<width>.style.json` (colours and fonts of
+the page background, header, headings, first paragraph and button), `<page>-<width>.jpg` (the full-page screenshot) and
+`small/<page>-<width>-<n>.jpg` (tiles about 1024 px tall: about 1000 image tokens each or less). Widths are 1440, 390 and
+1920. It downloads the original pictures into `$REF/pictures/`. `$REF/pictures/index.json` maps each original address to
+its file. Each picture in `<page>.json` has its `file`. Only some pages: `--page /,/about`.
 
-## 2. Capture the original, once, before you build
+It needs a browser: `PLAYWRIGHT_CHROMIUM_PATH` (or `PIKKU_CHROMIUM`) names the chrome binary when Playwright has none.
+If the command says there is no browser, use the text-only route at the end.
 
-```bash
-node $SC capture $REF --tiles @$REF/pages.txt        # 1440, 390 and 1920 wide by default; slow (a minute or two per page): run it in the background
-```
+## 2. Read it before you build
 
-For every page this writes into `$REF/`: `<page>.html` (as served), `<page>.json` (title, description, menu in order,
-headings with computed sizes, text, colours by use, fonts by use, CSS breakpoints), `<page>-<width>.layout.json` (the
-layout, see `references/layout.md`), `<page>-<width>.jpg` (the full-page screenshot) and `small/<page>-<width>-<n>.jpg`
-(the screenshot cut into tiles about 1024 px tall and 768 px wide, 390 for the phone: about 1000 image tokens each or
-less). Capturing takes a minute or two per page and width: run it in the background and carry on reading.
-
-Read the JSON files before you build. `*.layout.json` says, per page and width, how many sections it has, how many columns
+Read the JSON files. `*.layout.json` says, per page and width, how many sections it has, how many columns
 each section has, where every picture sits and how big it is (as shares of the page width and height), which side of the
 text it is on, and which pictures run edge to edge. That is the layout; the tiles let you look at it.
 
@@ -59,7 +56,7 @@ text it is on, and which pictures run edge to edge. That is the layout; the tile
 - Then style it from the same files: the main background, text colour and accent colours from `coloursByUse` go into the
   project's theme tokens, and the fonts from `fontsByUse` into its theme fonts. Heading sizes keep the original's proportion.
 - Same menu labels in the same order, same titles and descriptions, same headings in the same order with the same copy,
-  the same pictures (download the originals from their addresses in `<page>.json`; keep their proportions).
+  the same pictures: copy them from `$REF/pictures/` into the app's public folder and keep their proportions.
 - Pages carry their content in the server-rendered HTML (data loaded on the server, not after the page loads).
 
 ## 4. Compare after every page
