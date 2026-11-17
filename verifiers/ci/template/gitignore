@@ -6,3 +6,4 @@ apps/*/dist
 *.marker
 packages/functions/src/scaffold
 db/annotations.gen.json
+artifacts/tmp/

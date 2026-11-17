@@ -145,6 +145,65 @@ describe('merging a changeset built in a worktree', () => {
   })
 })
 
+describe('merging a changeset that committed scratch output', () => {
+  test('a compare report the branch committed does not stop the merge when the checkout holds one untracked', async () => {
+    const dir = await repo()
+    const tree = await addChangesetWorktree('Clone home', { cwd: dir })
+    const report = join('artifacts', 'tmp', 'compare', 'app', 'report.json')
+    await mkdir(join(tree, 'artifacts', 'tmp', 'compare', 'app'), {
+      recursive: true,
+    })
+    await writeFile(join(tree, report), '{"branch":true}')
+    await writeFile(join(tree, 'home.tsx'), 'export const home = 1\n')
+    await git(['add', '.'], tree)
+    await git([...ID, 'commit', '-q', '-m', '#1 Clone home'], tree)
+    await mkdir(join(dir, 'artifacts', 'tmp', 'compare', 'app'), {
+      recursive: true,
+    })
+    await writeFile(join(dir, report), '{"main":true}')
+    const cwd = process.cwd()
+    process.chdir(dir)
+    try {
+      const outcome = await mergeChangeset(
+        {
+          group: { groupId: 'g1', title: 'Clone home' } as any,
+          branch: 'changeset/clone-home',
+        },
+        undefined
+      )
+      assert.strictEqual(outcome.kind, 'merged')
+    } finally {
+      process.chdir(cwd)
+    }
+    assert.ok(existsSync(join(dir, 'home.tsx')))
+  })
+
+  test('another untracked file in the way is refused with its name', async () => {
+    const dir = await repo()
+    const tree = await addChangesetWorktree('Add page', { cwd: dir })
+    await writeFile(join(tree, 'page.tsx'), 'export const page = 1\n')
+    await git(['add', '.'], tree)
+    await git([...ID, 'commit', '-q', '-m', '#1 Add page'], tree)
+    await writeFile(join(dir, 'page.tsx'), 'mine')
+    const cwd = process.cwd()
+    process.chdir(dir)
+    try {
+      await assert.rejects(
+        mergeChangeset(
+          {
+            group: { groupId: 'g1', title: 'Add page' } as any,
+            branch: 'changeset/add-page',
+          },
+          undefined
+        ),
+        /holds untracked \(page\.tsx\)/
+      )
+    } finally {
+      process.chdir(cwd)
+    }
+  })
+})
+
 describe('releasing a lease', () => {
   test('makes the change claimable at once, and the group can be claimed again', async () => {
     const path = join(await mkdtemp(join(tmpdir(), 'changes-')), 'q.json')
