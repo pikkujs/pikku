@@ -1,7 +1,7 @@
 import { exitWhenParentDies } from '../../utils/parent-watch.js'
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { rm } from 'node:fs/promises'
-import { join, resolve } from 'path'
+import { basename, join, resolve } from 'path'
 import {
   codegenStateFile,
   collectCodegenPass,
@@ -66,6 +66,10 @@ import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
+import {
+  registerOtlpRuns,
+  withOtlpRunsScope,
+} from '../wirings/otlp/register-otlp-runs.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import {
   clearDevAddress,
@@ -485,6 +489,17 @@ export const dev = pikkuSessionlessFunc<
       registerScenarioInstrumentation()
     }
     registerStudioSession()
+    // The live runs feed needs the telemetry of a process that serves: the
+    // supervising parent of several backends runs with telemetry off.
+    const wireLiveRuns = () => {
+      if (!telemetry.enabled) return
+      registerOtlpRuns({
+        otlpSinks: telemetry.otlpSinks,
+        eventHub: eventHubServices.eventHub,
+        serviceName: basename(config.rootDir),
+      })
+    }
+    wireLiveRuns()
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
@@ -605,7 +620,7 @@ export const dev = pikkuSessionlessFunc<
         logger,
         requiredServices,
         scopes: flattenScopeDefinitions(
-          projectScopeDefinitions(inspectorState, config)
+          withOtlpRunsScope(projectScopeDefinitions(inspectorState, config))
         ),
         systemRoles: flattenSystemRoleDefinitions(
           inspectorState.systemRoles.definitions
@@ -792,6 +807,7 @@ export const dev = pikkuSessionlessFunc<
         logger,
         schemaService: resolvedServices.schema,
       })
+      wireLiveRuns()
       // Re-import recently changed files now that the fresh meta is
       // in state: wire* calls skip routes whose meta doesn't exist,
       // so a NEW route in a changed wiring file only registers on

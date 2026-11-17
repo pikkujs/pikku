@@ -545,6 +545,14 @@ export type PikkuCLIInput = {
   allowShadowedServices?: string[]
 
   /**
+   * Serve the live runs of this process from `pikku serve`: `GET
+   * /otlp/runs/snapshot` and the SSE stream `GET /otlp/runs/stream`, both
+   * requiring the `otlp:runs` scope. Off by default, because it exposes what
+   * the process is doing; `pikku dev` always serves it.
+   */
+  liveRuns?: boolean
+
+  /**
    * The language the project's **meta** is authored in — the human-readable
    * prose that lives inside the code rather than in a message catalogue:
    * `description` on functions and steps, `name`/`title` on features and
