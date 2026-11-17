@@ -1,4 +1,5 @@
 import assert from 'node:assert'
+import { spawnSync } from 'node:child_process'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -55,6 +56,41 @@ describe('plan set', () => {
       assert.equal(result.path, 'knowledge/plans/cs-1.plan.json')
       const written = JSON.parse(await readFile(join(cwd, result.path), 'utf8'))
       assert.equal(written.changeset, CHANGESET)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  test('a committed plan broken by hand is not replaced by a new one', async () => {
+    const cwd = await project()
+    try {
+      const first = await runKnowledgePlanSet(cwd, {
+        changeset: CHANGESET,
+        file: await planFile(cwd, basePlan()),
+      })
+      assert.equal(first.ok, true)
+      const sh = (...args: string[]) =>
+        spawnSync(
+          'git',
+          ['-c', 'user.email=t@e', '-c', 'user.name=t', ...args],
+          {
+            cwd,
+          }
+        )
+      sh('init', '-q')
+      sh('add', first.path)
+      sh('commit', '-qm', 'plan')
+      await writeFile(join(cwd, first.path), '{ broken')
+      const second = await runKnowledgePlanSet(cwd, {
+        changeset: CHANGESET,
+        file: await planFile(cwd, basePlan()),
+      })
+      assert.equal(second.ok, false)
+      assert.match(
+        second.problems[0]!,
+        /exists but does not read[\s\S]*git checkout/
+      )
+      assert.equal(await readFile(join(cwd, first.path), 'utf8'), '{ broken')
     } finally {
       await rm(cwd, { recursive: true, force: true })
     }
@@ -191,7 +227,6 @@ describe('plan set', () => {
       await rm(cwd, { recursive: true, force: true })
     }
   })
-
 })
 
 describe('plan show', () => {

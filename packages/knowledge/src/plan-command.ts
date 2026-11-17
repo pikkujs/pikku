@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { z } from 'zod'
 import { readKnowledgeNotes } from './notes.js'
@@ -14,6 +15,7 @@ import {
   checkFirstPass,
   checkPlanInternals,
   deferPlanItem,
+  parsePlan,
   planSchemaJson,
   readPlan,
   renderPlanForBuild,
@@ -156,6 +158,21 @@ export const runKnowledgePlanProgress = async (
   }
 }
 
+/** HEAD holds a plan for this changeset at `path` that reads. */
+const committedPlanReads = (
+  root: string,
+  path: string,
+  changeset: string
+): boolean => {
+  const shown = spawnSync('git', ['show', `HEAD:./${path}`], {
+    cwd: root,
+    encoding: 'utf8',
+  })
+  if (shown.status !== 0) return false
+  const read = parsePlan(shown.stdout, path)
+  return read.ok && read.plan.changeset === changeset
+}
+
 export const KnowledgePlanSetInput = z.object({
   changeset: z.string().min(1),
   file: z.string().min(1),
@@ -178,6 +195,18 @@ export const runKnowledgePlanSet = async (
   const path = existing.path
   if (existing.ok) {
     return { ok: false, path, problems: [PLAN_FIXED(path)] }
+  }
+  // A plan that was committed and no longer reads is still the plan: breaking
+  // the file must not be a way to write a weaker one over it. One that was
+  // never committed (a draft that would not parse) can be replaced.
+  if (!existing.missing && committedPlanReads(root, path, changeset)) {
+    return {
+      ok: false,
+      path,
+      problems: [
+        `${path} exists but does not read as this changeset's plan (${existing.reason}). A plan is fixed once written, so it is not replaced: restore it (\`git checkout -- ${path}\`) and take items out with \`pikku knowledge plan defer\`.`,
+      ],
+    }
   }
   let raw: unknown
   try {
