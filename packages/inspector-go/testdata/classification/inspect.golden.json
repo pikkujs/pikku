@@ -1554,12 +1554,17 @@
   "diagnostics": [
     {
       "level": "error",
+      "code": "PKU492",
+      "message": "'sessionlessSync' output schema 'SessionlessSyncOutput' admits anything (unknown) at '[]', which its source does not declare as unknown. The generator could not follow a type there, so the schema is looser than the TypeScript type. Declare the type fully, or write `unknown` explicitly if that is the intent."
+    },
+    {
+      "level": "error",
       "code": "PKU463",
       "message": "1 function contract names a schema that was never generated, so calling it fails at runtime with MissingSchemaError: sessionlessInherited.output → 'Row'. The usual cause is a named type used as the function's input/output that is declared but not exported — export it, or inline the type at the call site."
     }
   ],
   "validationPass": {
-    "start": 1,
-    "end": 1
+    "start": 2,
+    "end": 2
   }
 }

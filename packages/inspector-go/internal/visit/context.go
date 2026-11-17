@@ -66,6 +66,10 @@ type Context struct {
 	// state.coreTypeProperties instead.
 	typesLookup map[string][]*checker.Type
 
+	// declaredUnknowns is read by the generated-schema check once schemas exist;
+	// it is not part of the serialized state.
+	declaredUnknowns map[string]map[string]bool
+
 	// gateNames caches localGateNames per file (check_indirect.go).
 	gateNames map[*ast.SourceFile]map[string]bool
 	// disabledIndex caches disabledByLocalName (check_disabled.go).

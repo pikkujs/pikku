@@ -1,0 +1,453 @@
+{
+  "ListItemsInput": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/ListInput<ListItemsFilter,ListItemsSortColumn>",
+    "definitions": {
+      "ListInput<ListItemsFilter,ListItemsSortColumn>": {
+        "type": "object",
+        "properties": {
+          "cursor": {
+            "type": "string",
+            "description": "Opaque cursor from the previous page's `nextCursor`."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Page size. Server may cap."
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "$ref": "#/definitions/ListItemsSortColumn"
+                },
+                "direction": {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ]
+                }
+              },
+              "required": [
+                "column",
+                "direction"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ordered sort criteria — first entry is primary."
+          },
+          "filter": {
+            "$ref": "#/definitions/Filter<ListItemsFilter>"
+          },
+          "search": {
+            "type": "string",
+            "description": "Unstructured text search across server-configured fields."
+          }
+        },
+        "additionalProperties": false,
+        "description": "A list function is an ordinary `pikkuFunc` whose input and output adopt these shapes. They are purely structural — no runtime behaviour attaches to them — and exist so MCP tools, agents, RPC clients and widget libraries all reason about cursor, filter, sort and search the same way."
+      },
+      "ListItemsSortColumn": {
+        "type": "string",
+        "enum": [
+          "createdAt",
+          "label"
+        ]
+      },
+      "Filter<ListItemsFilter>": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/LeafFilter<ListItemsFilter>"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Filter<ListItemsFilter>"
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/Filter<ListItemsFilter>"
+            }
+          }
+        ],
+        "description": "Recursive filter tree: an array is an AND of its children; an object is an OR of its children, keyed by arbitrary unique labels that are ignored at evaluation time; a single-key object is a leaf predicate."
+      },
+      "LeafFilter<ListItemsFilter>": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "category": {
+                "$ref": "#/definitions/LeafValue<string>"
+              }
+            },
+            "required": [
+              "category"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "inStock": {
+                "$ref": "#/definitions/LeafValue<boolean>"
+              }
+            },
+            "required": [
+              "inStock"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "description": "A single-key object keyed by a field of F. Single-key so the runtime discriminator is unambiguous — multi-key objects are OR groups."
+      },
+      "LeafValue<string>": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "equals": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/definitions/LeafValue<string>"
+                  }
+                ]
+              },
+              "in": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "notIn": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "gt": {
+                "type": "string"
+              },
+              "gte": {
+                "type": "string"
+              },
+              "lt": {
+                "type": "string"
+              },
+              "lte": {
+                "type": "string"
+              },
+              "contains": {
+                "type": "string"
+              },
+              "startsWith": {
+                "type": "string"
+              },
+              "endsWith": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "sensitive",
+                  "insensitive"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        ],
+        "description": "Leaf predicate on a single field. The operator keywords mirror Prisma's vocabulary; they are reserved and cannot be used as user field names in a Filter's `F` type."
+      },
+      "LeafValue<boolean>": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "equals": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/definitions/LeafValue<boolean>"
+                  }
+                ]
+              },
+              "in": {
+                "type": "array",
+                "items": {
+                  "type": "boolean"
+                }
+              },
+              "notIn": {
+                "type": "array",
+                "items": {
+                  "type": "boolean"
+                }
+              },
+              "gt": {
+                "type": "boolean"
+              },
+              "gte": {
+                "type": "boolean"
+              },
+              "lt": {
+                "type": "boolean"
+              },
+              "lte": {
+                "type": "boolean"
+              },
+              "contains": {
+                "type": "string"
+              },
+              "startsWith": {
+                "type": "string"
+              },
+              "endsWith": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "sensitive",
+                  "insensitive"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        ],
+        "description": "Leaf predicate on a single field. The operator keywords mirror Prisma's vocabulary; they are reserved and cannot be used as user field names in a Filter's `F` type."
+      }
+    }
+  },
+  "ListItemsOutput": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "rows": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "label"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "nextCursor": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "totalCount": {
+        "type": "number"
+      }
+    },
+    "required": [
+      "rows",
+      "nextCursor"
+    ],
+    "additionalProperties": false,
+    "definitions": {}
+  },
+  "ListTagsInput": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "cursor": {
+        "type": "string",
+        "description": "Opaque cursor from the previous page's `nextCursor`."
+      },
+      "limit": {
+        "type": "number",
+        "description": "Page size. Server may cap."
+      },
+      "filter": {
+        "$ref": "#/definitions/Filter<ListTagsFilter>"
+      },
+      "search": {
+        "type": "string",
+        "description": "Unstructured text search across server-configured fields."
+      }
+    },
+    "additionalProperties": false,
+    "definitions": {
+      "Filter<ListTagsFilter>": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/LeafFilter<ListTagsFilter>"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Filter<ListTagsFilter>"
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/definitions/Filter<ListTagsFilter>"
+            }
+          }
+        ],
+        "description": "Recursive filter tree: an array is an AND of its children; an object is an OR of its children, keyed by arbitrary unique labels that are ignored at evaluation time; a single-key object is a leaf predicate."
+      },
+      "LeafFilter<ListTagsFilter>": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "$ref": "#/definitions/LeafValue<string>"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false,
+        "description": "A single-key object keyed by a field of F. Single-key so the runtime discriminator is unambiguous — multi-key objects are OR groups."
+      },
+      "LeafValue<string>": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "equals": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/definitions/LeafValue<string>"
+                  }
+                ]
+              },
+              "in": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "notIn": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "gt": {
+                "type": "string"
+              },
+              "gte": {
+                "type": "string"
+              },
+              "lt": {
+                "type": "string"
+              },
+              "lte": {
+                "type": "string"
+              },
+              "contains": {
+                "type": "string"
+              },
+              "startsWith": {
+                "type": "string"
+              },
+              "endsWith": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "sensitive",
+                  "insensitive"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        ],
+        "description": "Leaf predicate on a single field. The operator keywords mirror Prisma's vocabulary; they are reserved and cannot be used as user field names in a Filter's `F` type."
+      }
+    }
+  }
+}

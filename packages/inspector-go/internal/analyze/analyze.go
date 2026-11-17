@@ -93,11 +93,18 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 		// on, and it is most of the heap, so it goes first.
 		prog.Release()
 		debug.FreeOSMemory()
-		out, err := schemas.GenerateAll(log, schemaConfig(sc, st.RootDir), st, cache)
+		cfg := schemaConfig(sc, st.RootDir)
+		declared := ctx.DeclaredUnknowns()
+		if declared == nil {
+			declared = map[string]map[string]bool{}
+		}
+		cfg.DeclaredUnknowns = declared
+		out, err := schemas.GenerateAll(log, cfg, st, cache)
 		if err != nil {
 			return nil, &protocol.Failure{Message: err.Error(), Diagnostics: log.Entries()}
 		}
 		st.Schemas = out
+		schemas.CheckGenerated(log, st, declared)
 	}
 
 	var mem runtime.MemStats

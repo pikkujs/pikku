@@ -4,7 +4,8 @@
 // usage: node vendor-schemas.mjs  < schemaLookup.json  > result.json
 //
 // stdin:  the serialized schemaLookup, [[name, {variableName, sourceFile, vendor}], ...]
-// stdout: {"schemas": [[name, {"schema": <JSON Schema>, "typeText": "<TS type>"}], ...],
+// stdout: {"schemas": [[name, {"schema": <JSON Schema>, "typeText": "<TS type>",
+//                       "declaredUnknowns": ["<path>", ...]}], ...],
 //          "errors": ["<message>", ...]}
 //
 // The conversion is generateZodSchemas / processZodSchema from
@@ -34,6 +35,9 @@ const { zodToTypeText } = await import(
 )
 const { findZodTransform } = await import(
   pathToFileURL(PACKAGE + '/dist/vendor/find-zod-transform.js').href
+)
+const { declaredUnknownPathsOfZod } = await import(
+  pathToFileURL(PACKAGE + '/dist/vendor/declared-unknown-paths.js').href
 )
 const SCHEMA_TRANSFORM_NOT_SUPPORTED = 'PKU491'
 
@@ -73,7 +77,14 @@ function processZodSchema(schemaName, zodSchema, schemas) {
     })
     if (schema.required.length === 0) delete schema.required
   }
-  schemas.push([schemaName, { schema, typeText: zodToTypeText(zodSchema) }])
+  schemas.push([
+    schemaName,
+    {
+      schema,
+      typeText: zodToTypeText(zodSchema),
+      declaredUnknowns: [...declaredUnknownPathsOfZod(zodSchema)],
+    },
+  ])
 }
 
 const schemaLookup = new Map(JSON.parse(readFileSync(0, 'utf8')))

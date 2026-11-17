@@ -115,6 +115,7 @@ func decodeSchema(pair [2]json.RawMessage) (schemas.VendorSchema, error) {
 	var body struct {
 		Schema   json.RawMessage `json:"schema"`
 		TypeText string          `json:"typeText"`
+		Declared []string        `json:"declaredUnknowns"`
 	}
 	if err := json.Unmarshal(pair[0], &name); err != nil {
 		return schemas.VendorSchema{}, err
@@ -122,7 +123,7 @@ func decodeSchema(pair [2]json.RawMessage) (schemas.VendorSchema, error) {
 	if err := json.Unmarshal(pair[1], &body); err != nil {
 		return schemas.VendorSchema{}, err
 	}
-	return schemas.VendorSchema{Name: name, Schema: state.Raw(body.Schema), TypeText: body.TypeText}, nil
+	return schemas.VendorSchema{Name: name, Schema: state.Raw(body.Schema), TypeText: body.TypeText, DeclaredUnknowns: body.Declared}, nil
 }
 
 func (c Converter) run(ctx context.Context, refs []schemas.VendorRef) (runResult, error) {
@@ -205,9 +206,9 @@ func (c Converter) bundle(refs []schemas.VendorRef) (string, error) {
 		lookup = append(lookup, fmt.Sprintf("[%s, %s, %d]", quote(ref.Name), r, i))
 	}
 	entry := "import * as z from 'zod'\n" +
-		"import { zodToTypeText, findZodTransform } from '" + helpersModule + "'\n" +
+		"import { zodToTypeText, findZodTransform, declaredUnknownPathsOfZod } from '" + helpersModule + "'\n" +
 		"import { run } from '" + runnerModule + "'\n" +
-		"globalThis.__pikkuResult = JSON.stringify(run({ z, zodToTypeText, findZodTransform,\n" +
+		"globalThis.__pikkuResult = JSON.stringify(run({ z, zodToTypeText, findZodTransform, declaredUnknownPathsOfZod,\n" +
 		"  files: [" + strings.Join(files, ",\n") + "],\n" +
 		"  lookup: [" + strings.Join(lookup, ",\n") + "] }))\n"
 

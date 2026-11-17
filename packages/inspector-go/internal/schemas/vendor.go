@@ -45,6 +45,9 @@ type VendorSchema struct {
 	// TypeText is zodToTypeText's rendering, added to the typesMap as a
 	// custom type so the generated TypeScript can name the schema.
 	TypeText string
+	// DeclaredUnknowns are the paths at which the Zod schema itself says
+	// z.unknown() or z.any().
+	DeclaredUnknowns []string
 }
 
 // NodeConverter runs a helper script (scripts/vendor-schemas.mjs speaks the
@@ -127,6 +130,7 @@ func (c NodeConverter) Convert(ctx context.Context, refs []VendorRef) (VendorRes
 		var body struct {
 			Schema   json.RawMessage `json:"schema"`
 			TypeText string          `json:"typeText"`
+			Declared []string        `json:"declaredUnknowns"`
 		}
 		if err := json.Unmarshal(pair[0], &name); err != nil {
 			return VendorResult{}, err
@@ -134,7 +138,7 @@ func (c NodeConverter) Convert(ctx context.Context, refs []VendorRef) (VendorRes
 		if err := json.Unmarshal(pair[1], &body); err != nil {
 			return VendorResult{}, err
 		}
-		res.Schemas = append(res.Schemas, VendorSchema{Name: name, Schema: state.Raw(body.Schema), TypeText: body.TypeText})
+		res.Schemas = append(res.Schemas, VendorSchema{Name: name, Schema: state.Raw(body.Schema), TypeText: body.TypeText, DeclaredUnknowns: body.Declared})
 	}
 	return res, nil
 }

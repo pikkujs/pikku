@@ -262,7 +262,56 @@ function findZodTransform(schema) {
   };
   return walk(schema, "");
 }
+
+// ../../../src/vendor/declared-unknown-paths.ts
+var MAX_DEPTH = 12;
+var declaredUnknownPathsOfZod = (zodSchema) => {
+  const found = /* @__PURE__ */ new Set();
+  const visit = (schema, path, depth) => {
+    const def = schema?._zod?.def;
+    if (!def || depth > MAX_DEPTH) return;
+    switch (def.type) {
+      case "unknown":
+      case "any":
+        found.add(path || "$");
+        return;
+      case "object":
+        for (const [name, child] of Object.entries(def.shape ?? {})) {
+          visit(child, `${path}.${name}`, depth + 1);
+        }
+        return;
+      case "array":
+        visit(def.element, `${path}[]`, depth + 1);
+        return;
+      case "tuple":
+        for (const item of def.items ?? []) visit(item, `${path}[]`, depth + 1);
+        return;
+      case "record":
+      case "map":
+        visit(def.valueType, `${path}[*]`, depth + 1);
+        return;
+      case "union":
+        for (const option of def.options ?? []) visit(option, path, depth + 1);
+        return;
+      case "intersection":
+        visit(def.left, path, depth + 1);
+        visit(def.right, path, depth + 1);
+        return;
+      case "pipe":
+        visit(def.in, path, depth + 1);
+        return;
+      case "lazy":
+        visit(def.getter?.(), path, depth + 1);
+        return;
+      default:
+        if (def.innerType) visit(def.innerType, path, depth + 1);
+    }
+  };
+  visit(zodSchema, "", 0);
+  return found;
+};
 export {
+  declaredUnknownPathsOfZod,
   findZodTransform,
   zodToTypeText
 };

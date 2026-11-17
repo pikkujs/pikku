@@ -393,19 +393,22 @@ func (s *Context) addFunctions(node *ast.Node) {
 	var inputNames, outputNames []string
 	var inputTypes []*checker.Type
 	tm := s.TypesMap()
+	var listConfig *listConfigTypes
+	if isListFunc {
+		listConfig = s.resolveListConfig(node)
+	}
 	switch {
 	case inputSchemaRef != nil:
 		inputNames = []string{capitalized + "Input"}
 		s.State.SchemaLookup.Set(inputNames[0], *inputSchemaRef)
 		tm.AddCustomType(inputNames[0], "unknown", nil)
-	case isListFunc && len(generics) >= 1:
-		inputNames = []string{capitalized + "Input"}
-		refs := s.resolveTypeImports(generics[0], true)
-		tm.AddCustomType(inputNames[0], "{ cursor?: string; limit?: number; sort?: Array<{ column: string; direction: 'asc' | 'desc' }>; filter?: unknown; search?: string; } & "+s.typeToString(generics[0]), tsutil.Dedupe(refs))
+	case isListFunc && listConfig != nil:
+		name, listInput := s.registerListInput(capitalized, listConfig)
+		inputNames = []string{name}
 		if p := paramOf(handler, 1); p != nil {
 			inputTypes = []*checker.Type{s.Checker.GetTypeAtLocation(p)}
 		} else {
-			inputTypes = []*checker.Type{generics[0]}
+			inputTypes = []*checker.Type{listInput}
 		}
 	case !isChannelConnection && !isListFunc && len(generics) >= 1:
 		inputNames, inputTypes = s.getNamesAndTypes("Input", name, generics[0])
@@ -423,10 +426,10 @@ func (s *Context) addFunctions(node *ast.Node) {
 		outputNames = []string{capitalized + "Output"}
 		s.State.SchemaLookup.Set(outputNames[0], *outputSchemaRef)
 		tm.AddCustomType(outputNames[0], "unknown", nil)
-	case isListFunc && len(generics) >= 2:
+	case isListFunc && listConfig != nil && listConfig.output != nil:
 		outputNames = []string{capitalized + "Output"}
-		refs := s.resolveTypeImports(generics[1], true)
-		tm.AddCustomType(outputNames[0], "{ rows: Array<"+s.typeToString(generics[1])+">; nextCursor: string | null; totalCount?: number; }", tsutil.Dedupe(refs))
+		row := s.listRow(listConfig.output)
+		tm.AddCustomType(outputNames[0], "{ rows: Array<"+s.typeToString(row)+">; nextCursor: string | null; totalCount?: number; }", tsutil.Dedupe(s.resolveTypeImports(row, true)))
 	case !isListFunc && len(generics) >= 2:
 		outputNames, _ = s.getNamesAndTypes("Output", name, generics[1])
 	case handler == nil:
@@ -436,6 +439,11 @@ func (s *Context) addFunctions(node *ast.Node) {
 			outputNames, _ = s.getNamesAndTypes("Output", pikkuFuncId, ret)
 		}
 	}
+	s.recordDeclaredUnknowns(inputNames, inputTypes)
+	if outputType := s.declaredOutputType(isListFunc, listConfig, generics, handler); outputType != nil {
+		s.recordDeclaredUnknowns(outputNames, []*checker.Type{outputType})
+	}
+
 	mcpOutputTypes := map[string]string{
 		"pikkuMCPResourceFunc": "MCPResourceResponse",
 		"pikkuMCPToolFunc":     "MCPToolResponse",
