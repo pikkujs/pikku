@@ -15,6 +15,8 @@ export const PlanChange = z
     body: z.string().trim().min(1),
     specialist: z.enum(SPECIALISTS),
     dependsOn: z.array(z.string().trim().min(1)).default([]),
+    /** The pages (route paths) a frontend change builds; required in a clone project. */
+    pages: z.array(z.string().trim().min(1)).optional(),
   })
   .strict()
 
@@ -36,6 +38,24 @@ export const OUTCOME_PHRASES = [
 ] as const
 
 const MIN_BODY_WORDS = 8
+/** A frontend change of a clone builds at most this many pages, so each one is compared with the original. */
+export const MAX_CLONE_PAGES = 5
+
+/** The `Pages:` line a filed change carries its plan's `pages` in. */
+const PAGES_LINE = /^Pages:[ \t]*(.+)$/m
+
+/** The body as filed: with the change's pages on a `Pages:` line the done gate reads back. */
+export const bodyWithPages = (change: PlannedChange): string =>
+  change.pages?.length
+    ? `${change.body}\n\nPages: ${change.pages.join(', ')}`
+    : change.body
+
+/** The pages a filed change declared (its `Pages:` line), or none. */
+export const declaredPages = (body: string | null | undefined): string[] =>
+  (body?.match(PAGES_LINE)?.[1] ?? '')
+    .split(',')
+    .map((page) => page.trim())
+    .filter(Boolean)
 
 const hasOutcome = (body: string): boolean => {
   const text = body.toLowerCase()
@@ -49,8 +69,15 @@ const NO_MOCK_REASON = /\bno mocks?\b[^.]*\bbecause\b/i
 const label = (change: Partial<PlannedChange>, index: number): string =>
   `change ${index + 1}${change.ref ? ` ("${change.ref}")` : ''}`
 
-/** Every problem with the plan, in the order a fix should address them. */
-export function planProblems(raw: unknown): {
+/**
+ * Every problem with the plan, in the order a fix should address them.
+ * `clone`: the project rebuilds an existing site, so each frontend change
+ * names its pages, at most MAX_CLONE_PAGES of them.
+ */
+export function planProblems(
+  raw: unknown,
+  { clone = false }: { clone?: boolean } = {}
+): {
   plan: PlannedChange[] | null
   problems: string[]
 } {
@@ -66,11 +93,13 @@ export function planProblems(raw: unknown): {
       const item = (Array.isArray(raw) ? raw[index] : undefined) ?? {}
       const where = label(item as Partial<PlannedChange>, index)
       if (issue.code === 'unrecognized_keys')
-        return `${where}: remove ${issue.keys.map((k) => `"${k}"`).join(', ')}; a change has only ref, title, body, specialist and dependsOn. Write open points as "Decision: ..." in the body.`
+        return `${where}: remove ${issue.keys.map((k) => `"${k}"`).join(', ')}; a change has only ref, title, body, specialist, dependsOn and pages. Write open points as "Decision: ..." in the body.`
       if (field === 'specialist')
         return `${where}: "specialist" must be one of ${SPECIALISTS.join(', ')}.`
       if (field === 'dependsOn')
         return `${where}: "dependsOn" must be a list of refs, e.g. ["data"].`
+      if (field === 'pages')
+        return `${where}: "pages" must be a list of route paths, e.g. ["/", "/about"].`
       return `${where}: "${field}" is required and must be non-empty text.`
     })
     problems.push(...shape)
@@ -97,6 +126,17 @@ export function planProblems(raw: unknown): {
       else if (!refs.has(dep))
         problems.push(
           `${label(change, index)}: dependsOn names "${dep}", which is not a ref in this plan. Refs are: ${[...refs.keys()].join(', ')}.`
+        )
+    }
+    if (clone && change.specialist === 'frontend') {
+      const pages = change.pages ?? []
+      if (!pages.length)
+        problems.push(
+          `${label(change, index)}: this project rebuilds an existing site, so a frontend change lists the pages it builds in "pages", e.g. ["/", "/about"], at most ${MAX_CLONE_PAGES}. Each listed page must match the original before the change is done.`
+        )
+      else if (pages.length > MAX_CLONE_PAGES)
+        problems.push(
+          `${label(change, index)}: it covers ${pages.length} pages. Split the pages into changes of at most ${MAX_CLONE_PAGES} pages each, each with its own "pages" list; a shared layout or theme goes in a first frontend change with the pages it is checked on.`
         )
     }
     const words = change.body.split(/\s+/).filter(Boolean).length
@@ -168,13 +208,19 @@ function lenient(raw: unknown[]): PlannedChange[] {
       dependsOn: Array.isArray(change.dependsOn)
         ? change.dependsOn.map(text).filter(Boolean)
         : [],
+      pages: Array.isArray(change.pages)
+        ? change.pages.map(text).filter(Boolean)
+        : undefined,
     }
   })
 }
 
 /** The plan, or a refusal naming every problem. */
-export function validatePlan(raw: unknown): PlannedChange[] {
-  const { plan, problems } = planProblems(raw)
+export function validatePlan(
+  raw: unknown,
+  options?: { clone?: boolean }
+): PlannedChange[] {
+  const { plan, problems } = planProblems(raw, options)
   if (problems.length || !plan)
     throw new CloudPreconditionError(
       [

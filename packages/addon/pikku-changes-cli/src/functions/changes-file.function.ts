@@ -7,7 +7,14 @@ import { dim, safe } from '@pikku/cli/addon-support'
 import type { CreateChangeOutput } from '../lib/types.js'
 import { LOCAL_PROJECT_ID } from '../lib/changes-local.js'
 import { SPECIALISTS } from '../lib/specialists.js'
-import { filingOrder, parsePlanText, validatePlan } from '../lib/change-plan.js'
+import {
+  bodyWithPages,
+  filingOrder,
+  parsePlanText,
+  validatePlan,
+} from '../lib/change-plan.js'
+import { isCloneProject } from '../lib/page-gate.js'
+import { git } from '@pikku/cli/addon-support'
 
 export const ChangesFileInput = z.object({
   apiUrl: z.string().optional(),
@@ -93,7 +100,12 @@ async function filePlan(
   const source = input.plan === '-' ? 'stdin' : input.plan!
   const text =
     input.plan === '-' ? await readStdin() : await readPlanFile(input.plan!)
-  const plan = validatePlan(parsePlanText(text, source))
+  const top = await git(['rev-parse', '--show-toplevel'])
+    .then((out) => out.trim())
+    .catch(() => process.cwd())
+  const plan = validatePlan(parsePlanText(text, source), {
+    clone: isCloneProject(top),
+  })
 
   const { rpc, projectId } = await changesContext(input.apiUrl, input.projectId)
   if (input.backlog && projectId !== LOCAL_PROJECT_ID)
@@ -106,7 +118,7 @@ async function filePlan(
     const filing = {
       stageId: input.stageId ?? 'local',
       title: planned.title,
-      body: planned.body,
+      body: bodyWithPages(planned),
       route: input.route,
       locale: input.locale,
       specialist: planned.specialist,
