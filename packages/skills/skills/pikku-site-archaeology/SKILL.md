@@ -12,14 +12,15 @@ read it and say "yes, that is the site". You build nothing: the plan is filed af
 
 ## 1. The page list
 
-Use the crawler from the pikku-site-clone skill (read that skill's first section for where its scripts are):
+Capture the original with this command. Do not write your own capture script.
 
 ```bash
-SC=<pikku-site-clone folder>/scripts/site_capture.mjs
-mkdir -p artifacts/references/<site> && node $SC pages https://the-site.example > artifacts/references/<site>/pages.txt
+mkdir -p artifacts/references/<site> && pikku ui pages capture https://the-site.example/ --out artifacts/references/<site> > artifacts/references/<site>/capture.log 2>&1 &
 ```
 
-That list is your to-do list. Look at **every** page on it: a page you did not look at is a page the plan will miss. If
+It writes the page list to `artifacts/references/<site>/pages.txt` at once. It then captures every page (screenshots,
+layout, colours and fonts) and downloads the pictures, in the background. The builders need that reference:
+`pikku changes done` refuses page changes of a clone without it. That list is your to-do list. Look at **every** page on it: a page you did not look at is a page the plan will miss. If
 there is no browser, fetch each page with `curl -sL` and read the text.
 
 ## 2. What to find on every page
@@ -48,5 +49,5 @@ or a field.
 
 ## 4. Then plan from it
 
-Do not build and do not capture layout. Go back to the pikku-changes skill and file the plan from your notes. Finish with
+Do not build. Go back to the pikku-changes skill and file the plan from your notes. Finish with
 a few lines: how many pages you looked at, the forms you found, and the open questions.

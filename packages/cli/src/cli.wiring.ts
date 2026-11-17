@@ -132,6 +132,8 @@ import {
   pagesList,
   pagesScreenshot,
   pagesCompare,
+  pagesCapture,
+  renderPagesCapture,
   renderPagesCompare,
   renderPagesList,
   renderPagesScreenshot,
@@ -1604,6 +1606,38 @@ wireCLI({
                 },
                 viewport: {
                   description: 'Capture the viewport only, not the whole page',
+                  type: 'boolean',
+                },
+              },
+            }),
+            capture: pikkuCLICommand({
+              func: pagesCapture,
+              render: renderPagesCapture,
+              description:
+                'Capture the original site of a clone into artifacts/references/<site>: every page at 1440, 390 and 1920 px (screenshot, layout, style), its text, colours, fonts and pictures, and the pictures downloaded. Run it once before building a clone; pages compare and pikku changes done read it',
+              parameters: '<url>',
+              options: {
+                out: {
+                  description:
+                    'Reference folder. Defaults to artifacts/references/<host of the url> in the workspace',
+                  type: 'string',
+                },
+                viewports: {
+                  description: 'Widths, as 1440,390,1920 (the default)',
+                  type: 'string',
+                },
+                page: {
+                  description:
+                    'Only these pages, as paths or addresses: /,/about. Defaults to every page of the sitemap and its links',
+                  type: 'string',
+                },
+                jobs: {
+                  description: 'Pages captured at once. Defaults to 4',
+                  type: 'number',
+                },
+                tiles: {
+                  description:
+                    'Also cut each screenshot into small/<page>-<width>-<n>.jpg tiles to look at (needs ImageMagick). Defaults to true',
                   type: 'boolean',
                 },
               },

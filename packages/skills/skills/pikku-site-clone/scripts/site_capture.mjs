@@ -2,6 +2,7 @@
 // site_capture.mjs: capture and compare the reference of a website you are cloning, from the RENDERED page.
 //   node site_capture.mjs pages <root-url>                          page list: sitemap(s), else internal links
 //   node site_capture.mjs capture <out-dir> [--viewports 1440,390,1920] [--tiles] [--jobs 4] <url|@file-with-urls> ...
+//   node site_capture.mjs pictures <out-dir>                        download the pictures the capture listed (capture does it too)
 //   node site_capture.mjs shot <out-dir> <url> [--width 1440]       one page, one width: screenshot + tiles, quick (use after each change)
 //   node site_capture.mjs compare <reference-dir> <clone-dir> [--page id] [--width 1440]
 //                                                                   section-by-section differences (columns, pictures, height) and a match score
@@ -11,14 +12,19 @@
 //       --all: the same for every page, 4 at a time (slow: run it in the background, output to a file); prints only problems
 //   capture writes per page and width: <id>-<width>.jpg (screenshot), .layout.json (sections), .style.json (computed style of the
 //   page background, header, h1/h2/h3, first paragraph, primary button, text column: pikku ui pages compare diffs it against yours)
+//   <id>.json lists the page's pictures ({ src, file }); capture downloads them into <out-dir>/pictures/ and sets `file`
+//   (relative to <out-dir>); pictures/index.json maps each original address to its file and pages. capture.json lists the run.
+// `pikku ui pages capture <url> --out artifacts/references/<site>` runs the same capture (page list included) from the CLI.
 // <out-dir>/<reference-dir> is the project's reference artifact: artifacts/references/<site> (site = the original's host name).
 // To compare your pages with it use `pikku ui pages compare --reference artifacts/references/<site> --baseUrl <url>`.
-// Needs a Chromium and playwright-core: PIKKU_CHROMIUM = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
+// Needs a Chromium and playwright-core: PIKKU_CHROMIUM (or PLAYWRIGHT_CHROMIUM_PATH) = path of the chrome binary, PLAYWRIGHT_CORE = path of the playwright-core
 // module (default: `playwright-core` resolved from the current directory). Browser profile, tmp and downloads stay under <out-dir>/.browser.
 // Tiles and pixel scores use ImageMagick (`convert`, `compare`) when it is installed.
-import { mkdirSync, readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
-import { join, resolve } from 'node:path'
+import { basename, extname, join, resolve } from 'node:path'
+import { createHash } from 'node:crypto'
+import { tmpdir } from 'node:os'
 import { createRequire } from 'node:module'
 
 const sh = (cmd, args) => { try { return execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) } catch (e) { return String(e.stderr || '') + String(e.stdout || '') } }
@@ -26,7 +32,8 @@ const idOf = (url) => { const p = new URL(url).pathname.replace(/^\/+|\/+$/g, ''
 const UA = 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
 // ---------------------------------------------------------------- pages
-async function pages(root) {
+/** The site's page list: sitemap(s), then same-site links. */
+export async function pages(root) {
   const base = new URL(root).origin
   const seen = new Set(), out = []
   const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !/\.(jpe?g|png|gif|webp|svg|pdf|css|js|xml|json|ico|txt)$/i.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
@@ -46,7 +53,7 @@ async function pages(root) {
     const html = await get(queue[i])
     for (const h of html.matchAll(/href="([^"#]+)/g)) { const before = out.length; add(h[1].replace(/&amp;/g, '&')); if (out.length > before) queue.push(out[out.length - 1]) }
   }
-  console.log(out.join('\n'))
+  return out
 }
 
 // ---------------------------------------------------------------- in-page extraction (runs in the browser)
@@ -192,14 +199,19 @@ function extractStructure() {
 }
 
 // ---------------------------------------------------------------- capture
-async function launch(out) {
-  const require = createRequire(resolve('.') + '/')
-  const pw = require(process.env.PLAYWRIGHT_CORE ? resolve(process.env.PLAYWRIGHT_CORE) : 'playwright-core')
+/** `chromium` is a playwright `chromium` the caller already has (the pikku CLI passes its own); else playwright-core is loaded. */
+async function launch(out, chromium) {
+  if (!chromium) {
+    const require = createRequire(resolve('.') + '/')
+    chromium = require(process.env.PLAYWRIGHT_CORE ? resolve(process.env.PLAYWRIGHT_CORE) : 'playwright-core').chromium
+  }
   const home = resolve(out, '.browser'); mkdirSync(join(home, 'tmp'), { recursive: true })
-  return pw.chromium.launch({
-    executablePath: process.env.PIKKU_CHROMIUM || undefined, headless: true, downloadsPath: join(home, 'downloads'),
+  // chromium keeps a unix socket in TMPDIR, and a socket path over 107 characters aborts it: a deep project gets a short tmp
+  const tmp = join(home, 'tmp').length > 60 ? mkdtempSync(join(tmpdir(), 'site-capture-')) : join(home, 'tmp')
+  return chromium.launch({
+    executablePath: process.env.PIKKU_CHROMIUM || process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined, headless: true, downloadsPath: join(home, 'downloads'),
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
-    env: { ...process.env, HOME: home, TMPDIR: join(home, 'tmp'), XDG_CONFIG_HOME: join(home, 'config'), XDG_CACHE_HOME: join(home, 'cache') },
+    env: { ...process.env, HOME: home, TMPDIR: tmp, XDG_CONFIG_HOME: join(home, 'config'), XDG_CACHE_HOME: join(home, 'cache') },
   })
 }
 
@@ -309,6 +321,8 @@ export async function settle(page) {
 async function capturePage(browser, out, entry, vps, tiles, opts = {}) {
   const [url, idOverride] = entry.split('|')   // `url|id` names the page's id (a clone whose paths differ from the original's)
   const id = idOverride || idOf(url); const rec = { id, url, viewports: {} }
+  const log = opts.log || console.log
+  let structure = null; const pictures = new Set()
   try { writeFileSync(join(out, `${id}.html`), await (await fetch(url, { headers: { 'user-agent': UA } })).text()) } catch {}
   for (const w of vps) {
     let ctx = await newCaptureContext(browser, w, opts)
@@ -326,27 +340,87 @@ async function capturePage(browser, out, entry, vps, tiles, opts = {}) {
       const layout = await page.evaluate(extractInPage)
       writeFileSync(join(out, `${id}-${w}.layout.json`), JSON.stringify({ viewport: w, ...layout }))
       writeFileSync(join(out, `${id}-${w}.style.json`), JSON.stringify({ ...(await page.evaluate(extractStyleInPage)), ...(scale !== 1 ? { scale: +scale.toFixed(4) } : {}) }, null, 1))
-      if (w === vps[0]) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...(await page.evaluate(extractStructure)) }, null, 1))
+      if (!structure) structure = await page.evaluate(extractStructure)
+      for (const img of layout.images) if (/^https?:/.test(img.src)) pictures.add(img.src)
       await page.screenshot({ path: join(out, `${id}-${w}.jpg`), fullPage: true, type: 'jpeg', quality: 80, animations: 'disabled' })
       rec.viewports[w] = { ...layout.counts, scrollWidth: layout.doc.w, ...(scale !== 1 ? { scale: +scale.toFixed(4) } : {}) }
       if (tiles) makeTiles(join(out, `${id}-${w}.jpg`), join(out, 'small'), `${id}-${w}`, w)
     } catch (e) { rec.viewports[w] = { error: String(e).slice(0, 120) } }
     await ctx.close()
   }
-  console.log(id, JSON.stringify(rec.viewports))
+  if (structure) writeFileSync(join(out, `${id}.json`), JSON.stringify({ id, url, ...structure, pictures: [...pictures].map((src) => ({ src, file: null })) }, null, 1))
+  log(id, JSON.stringify(rec.viewports))
   return rec
 }
 
-/** Pages are independent, so `jobs` of them are captured at once (default 4); the index keeps the order of the list. */
-async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
+/**
+ * Pages are independent, so `jobs` of them are captured at once (default 4); capture.json keeps the order of the list.
+ * Then the pictures are downloaded (unless `opts.pictures === false`). `opts.chromium`: a playwright chromium to launch.
+ */
+export async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
   mkdirSync(out, { recursive: true })
-  const browser = await launch(out)
+  const browser = await launch(out, opts.chromium)
   const index = new Array(urls.length)
   let next = 0
   const worker = async () => { while (next < urls.length) { const i = next++; index[i] = await capturePage(browser, out, urls[i], vps, tiles, opts) } }
   await Promise.all(Array.from({ length: Math.min(jobs, urls.length) }, worker))
   await browser.close()
-  writeFileSync(join(out, 'index.json'), JSON.stringify(index, null, 1))
+  writeFileSync(join(out, 'capture.json'), JSON.stringify(index, null, 1))
+  const got = opts.pictures === false ? null : await downloadPictures(out, opts)
+  return { pages: index, pictures: got }
+}
+
+/** The `<id>.json` page files of a capture (not its layout, style or run files). */
+const pageFiles = (out) => readdirSync(out).filter((f) => f.endsWith('.json') && !/-\d+\.(layout|style)\.json$/.test(f) && f !== 'capture.json' && f !== 'map.json')
+
+/**
+ * Download every picture the capture listed into <out>/pictures/, named after the address and a short hash. Each
+ * `<id>.json` gets `file` (relative to <out>) per picture; pictures/index.json maps address -> file and pages.
+ * A picture already downloaded is kept. Returns counts.
+ */
+export async function downloadPictures(out, { log = console.log, jobs = 6 } = {}) {
+  const dir = join(out, 'pictures'); mkdirSync(dir, { recursive: true })
+  const indexFile = join(dir, 'index.json')
+  let index = {}; try { index = JSON.parse(readFileSync(indexFile, 'utf8')) } catch {}
+  const pagesOf = new Map()
+  const docs = []
+  for (const f of pageFiles(out)) {
+    let doc; try { doc = JSON.parse(readFileSync(join(out, f), 'utf8')) } catch { continue }
+    if (!doc || !Array.isArray(doc.pictures)) continue
+    docs.push([f, doc])
+    for (const p of doc.pictures) { const src = typeof p === 'string' ? p : p?.src; if (src) pagesOf.set(src, [...(pagesOf.get(src) || []), doc.id]) }
+  }
+  const nameOf = (src) => {
+    const u = new URL(src); const hash = createHash('sha1').update(src).digest('hex').slice(0, 8)
+    // Wix serves /media/<name>/v1/fill/.../<name>: the media name is the useful one
+    const part = (u.pathname.match(/\/media\/([^/]+)/) || [])[1] || basename(u.pathname) || 'picture'
+    const ext = extname(part).toLowerCase()
+    return `${part.replace(/\.[^.]*$/, '').replace(/[^\w.-]+/g, '-').slice(0, 60)}-${hash}${/^\.(jpe?g|png|gif|webp|avif|svg)$/.test(ext) ? ext : ''}`
+  }
+  const extFor = (type) => ({ 'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif', 'image/webp': '.webp', 'image/avif': '.avif', 'image/svg+xml': '.svg' })[(type || '').split(';')[0].trim()] || ''
+  const todo = [...pagesOf.keys()].filter((src) => !(index[src]?.file && existsSync(join(out, index[src].file))))
+  let failed = 0, next = 0
+  const worker = async () => {
+    while (next < todo.length) {
+      const src = todo[next++]
+      try {
+        const r = await fetch(src, { headers: { 'user-agent': UA } })
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        let name = nameOf(src); if (!extname(name)) name += extFor(r.headers.get('content-type'))
+        writeFileSync(join(dir, name), Buffer.from(await r.arrayBuffer()))
+        index[src] = { file: `pictures/${name}` }
+      } catch (e) { failed++; log(`picture not downloaded: ${src.slice(0, 120)} (${String(e.message || e).slice(0, 60)})`) }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(jobs, todo.length) }, worker))
+  for (const [src, pagesList] of pagesOf) if (index[src]) index[src].pages = [...new Set(pagesList)]
+  writeFileSync(indexFile, JSON.stringify(index, null, 1))
+  for (const [f, doc] of docs) {
+    doc.pictures = doc.pictures.map((p) => { const src = typeof p === 'string' ? p : p.src; return { src, file: index[src]?.file ?? null } })
+    writeFileSync(join(out, f), JSON.stringify(doc, null, 1))
+  }
+  const downloaded = Object.values(index).filter((v) => v.file).length
+  return { listed: pagesOf.size, downloaded, failed, dir }
 }
 
 /** Agent-sized copies: about 768 px wide (390 for a phone), cut into tiles about 1024 px tall: each costs roughly 1000 image tokens or less. */
@@ -455,7 +529,8 @@ async function audit(base, refDir, only, all) {
 // ---------------------------------------------------------------- cli
 const [cmd, ...rest] = process.argv.slice(2)
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop())) {
-  if (cmd === 'pages') await pages(rest[0])
+  if (cmd === 'pages') console.log((await pages(rest[0])).join('\n'))
+  else if (cmd === 'pictures') console.log(JSON.stringify(await downloadPictures(rest[0])))
   else if (cmd === 'capture') {
     const out = rest.shift(); let vps = [1440, 390, 1920], tiles = false, jobs = 4, urls = []
     while (rest.length) { const a = rest.shift(); if (a === '--viewports') vps = rest.shift().split(',').map(Number); else if (a === '--tiles') tiles = true; else if (a === '--jobs') jobs = Math.max(1, Number(rest.shift()) || 4); else if (a.startsWith('@')) urls.push(...readFileSync(a.slice(1), 'utf8').split(/\s+/).filter(Boolean)); else urls.push(a) }
@@ -466,10 +541,10 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
     compare(pos[0], pos[1], only, width)
   } else if (cmd === 'shot') {
     const out = rest[0], url = rest[1]; const w = rest.includes('--width') ? Number(rest[rest.indexOf('--width') + 1]) : 1440
-    await capture(out, [url], [w], true)
+    await capture(out, [url], [w], true, 1, { pictures: false })
   } else if (cmd === 'check') {
     const only = rest.includes('--page') ? rest[rest.indexOf('--page') + 1] : null, all = rest.includes('--all')
     if (only || all) await audit(rest[0], rest[1], only, all); else await check(rest[0], rest[1])
   }
-  else console.log('usage (out-dir/reference-dir: artifacts/references/<site>): pages <root-url> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | shot <out-dir> <url> [--width 1440] | compare <reference-dir> <clone-dir> [--page id] [--width 1440] | check <base-url> <reference-dir> [--page id | --all]')
+  else console.log('usage (out-dir/reference-dir: artifacts/references/<site>): pages <root-url> | pictures <out-dir> | capture <out-dir> [--viewports 1440,390,1920] [--tiles] <url|@file>... | shot <out-dir> <url> [--width 1440] | compare <reference-dir> <clone-dir> [--page id] [--width 1440] | check <base-url> <reference-dir> [--page id | --all]')
 }

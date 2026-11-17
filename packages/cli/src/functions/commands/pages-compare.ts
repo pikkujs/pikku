@@ -561,6 +561,30 @@ export interface SiteCapture {
   extractStyleInPage?: () => unknown
   settle: (page: unknown) => Promise<void>
   sectionDiff: (ref: unknown, mine: unknown) => SectionDiff
+  /** The page list of a site: its sitemap(s), then same-site links. Older capture scripts have none. */
+  pages?: (root: string) => Promise<string[]>
+  /** Capture pages into `out` and download their pictures. Older capture scripts have none. */
+  capture?: (
+    out: string,
+    urls: string[],
+    widths: number[],
+    tiles: boolean,
+    jobs: number,
+    opts: { chromium?: unknown; log?: (...parts: unknown[]) => void }
+  ) => Promise<{
+    pages: Array<{
+      id: string
+      url: string
+      viewports: Record<string, { error?: string }>
+    }>
+    pictures: {
+      listed: number
+      downloaded: number
+      failed: number
+      dir: string
+    } | null
+  }>
+  downloadPictures?: (out: string) => Promise<unknown>
 }
 
 /**
