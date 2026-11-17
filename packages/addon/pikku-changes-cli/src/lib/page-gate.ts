@@ -619,7 +619,12 @@ export async function checkPageGate({
       } catch {}
       const at = report?.generatedAt ?? ''
       if (!report || at < started || at > new Date().toISOString()) {
-        const tail = output.trim().split('\n').slice(-20).join('\n')
+        const tail = output
+          .trim()
+          .split('\n')
+          .filter((line) => !/^\s+at /.test(line))
+          .slice(-20)
+          .join('\n')
         return {
           kind: 'refuse',
           message: `${label}: done ran \`pikku ui pages compare\` for ${ids.join(', ')} and it wrote no report, so the pages cannot be judged. Fix what it says below, commit, and run done again.\n\n${tail}`,
