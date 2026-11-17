@@ -12,6 +12,7 @@ import { planRefusal } from '../lib/plan-gate.js'
 import { refuseUntilPagesCompared } from '../lib/page-gate.js'
 import { declaredPages } from '../lib/change-plan.js'
 import { refuseUntilChecked } from '../lib/check-gate.js'
+import { changesetSlug, changesetWorktrees } from '../lib/changeset-worktree.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import { dim, safe } from '@pikku/cli/addon-support'
 import type { CompleteChangeOutput } from '../lib/types.js'
@@ -67,6 +68,12 @@ export const ChangesDone = pikkuSessionlessFunc({
     const { rpc, projectId } = await changesContext(input.apiUrl)
     if (await isGitRepo()) {
       const ref = input.changeId.trim()
+      await refuseOutsideChangeset(
+        rpc,
+        projectId!,
+        input.changeId,
+        input.headCommit
+      )
       await refuseUntilChecked({
         git: (args) => git(args),
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
@@ -101,6 +108,62 @@ export const ChangesDone = pikkuSessionlessFunc({
     })
   },
 })
+
+/**
+ * The gates judge the checkout `done` runs in, so it has to be the change's
+ * own: a `--head-commit` is the HEAD here, and a change whose changeset has a
+ * branch (`claim --worktree`) is finished on that branch, in its worktree.
+ * Run from the main checkout with the worktree's sha, the gates would pass on
+ * the main branch and the work would never be merged.
+ */
+export async function refuseOutsideChangeset(
+  rpc: ChangesRPC,
+  projectId: string,
+  ref: string,
+  given: string | undefined,
+  cwd?: string
+): Promise<void> {
+  const head = (await git(['rev-parse', 'HEAD'], cwd)).trim()
+  const { change } = await rpc.invoke('getChange', changeRef(projectId, ref))
+  const label = `#${change.shortId}`
+  if (given) {
+    const sha = (
+      await git(
+        ['rev-parse', '--verify', '--quiet', `${given}^{commit}`],
+        cwd
+      ).catch(() => '')
+    ).trim()
+    if (sha !== head)
+      throw new CloudPreconditionError(
+        `--head-commit ${given} is not HEAD of this checkout (${head.slice(0, 7)}). Run done in the worktree the change was built in, with its last commit checked out, and leave --head-commit out.`
+      )
+  }
+  if (!change.groupId) return
+  const { groups } = await rpc.invoke('listChanges', {
+    projectId,
+    groupId: change.groupId,
+    includeDone: true,
+  })
+  const group = groups.find((g) => g.groupId === change.groupId)
+  if (!group) return
+  const branch = `changeset/${changesetSlug(group.title)}`
+  const exists = await git(
+    ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`],
+    cwd
+  ).then(
+    () => true,
+    () => false
+  )
+  if (!exists) return
+  const here = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd)).trim()
+  if (here === branch) return
+  const worktree = (await changesetWorktrees(cwd)).find(
+    (w) => w.branch === branch
+  )
+  throw new CloudPreconditionError(
+    `${label} belongs to the changeset on ${branch}, and this checkout is on ${here}. Run done there${worktree ? `: cd ${worktree.path}` : ''}, where the change was built and committed.`
+  )
+}
 
 /**
  * On the local queue the commit is the only durable record of a change, so it
