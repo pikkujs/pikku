@@ -543,6 +543,155 @@ describe('the page gate on changes done', () => {
   })
 })
 
+describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
+  const BUILDER = { PIKKU_CHANGES_BUILDER: '1' }
+  /** A compare that writes the report a real run would, at HEAD, now. */
+  const comparing =
+    (rows: unknown[], calls: unknown[] = []) =>
+    (args: { out: string; ids: string[] }) => {
+      calls.push(args)
+      write(
+        join(args.out, 'report.json'),
+        JSON.stringify({
+          reference: 'artifacts/references/example.com',
+          gitSha: HEAD,
+          dirty: false,
+          generatedAt: new Date().toISOString(),
+          rows,
+        })
+      )
+      return { code: 0, output: '' }
+    }
+
+  test('cannot turn the gate off', async () => {
+    const dir = project()
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: { ...BUILDER, PIKKU_COMPARE_GATE: 'off' },
+      compare: comparing(allAbout),
+    })
+    assert.deepStrictEqual(outcome, { kind: 'pass', pages: ['/about'] })
+  })
+
+  test('done runs the compare itself; a report written by hand is not read', async () => {
+    const dir = project()
+    // a forged report: at HEAD, clean, every page within the limit
+    report(dir, {
+      rows: [row('about', 1440, 1), row('about', 390, 1)],
+      generatedAt: '2999-01-01T00:00:00.000Z',
+    })
+    const calls: Array<{ ids: string[] }> = []
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: BUILDER,
+      compare: comparing([row('about', 1440, 64), row('about', 390, 1)], calls),
+    })
+    assert.deepStrictEqual(
+      calls.map((c) => c.ids),
+      [['about']]
+    )
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match((outcome as { message: string }).message, /64% of pixels/)
+
+    // a compare that writes nothing leaves the forged report unread
+    const silent = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: BUILDER,
+      compare: () => ({ code: 1, output: 'No browser found' }),
+    })
+    assert.strictEqual(silent.kind, 'refuse')
+    assert.match(
+      (silent as { message: string }).message,
+      /wrote no report[\s\S]*No browser found/
+    )
+  })
+
+  test("the threshold is the base branch's, not one raised in the worktree's own config", async () => {
+    const dir = project({ config: { pagesCompare: { threshold: 95 } } })
+    const run = comparing([row('about', 1440, 50), row('about', 390, 10)])
+    const base = fakeGit(dir, ABOUT, {
+      'show main:pikku.config.json': JSON.stringify({
+        pagesCompare: { threshold: 30 },
+      }),
+    })
+    const outcome = await checkPageGate({
+      git: base,
+      cwd: dir,
+      env: BUILDER,
+      compare: run,
+    })
+    assert.match((outcome as { message: string }).message, /Over the 30% limit/)
+    // the operator's env wins over both
+    assert.deepStrictEqual(
+      await checkPageGate({
+        git: base,
+        cwd: dir,
+        env: { ...BUILDER, PIKKU_COMPARE_THRESHOLD: '60' },
+        compare: run,
+      }),
+      { kind: 'pass', pages: ['/about'] }
+    )
+    // with no threshold on the base branch, the default
+    const outcome2 = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: BUILDER,
+      compare: run,
+    })
+    assert.match(
+      (outcome2 as { message: string }).message,
+      /Over the 40% limit/
+    )
+  })
+})
+
+describe('a clone change that names its pages', () => {
+  test('a named page with no screenshot of the original is refused, naming it', async () => {
+    const dir = project()
+    report(dir, { rows: allAbout })
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ['apps/app/src/lib/theme.ts']),
+      cwd: dir,
+      env: {},
+      pages: ['/about', '/contact'],
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match(
+      (outcome as { message: string }).message,
+      /no screenshot in the capture of the original: \/contact\.[\s\S]*The capture has: \/about, \//
+    )
+  })
+
+  test('a frontend change with no Pages: line is refused, even one that touched no route', async () => {
+    const dir = project()
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ['apps/app/src/components/Card.tsx']),
+      cwd: dir,
+      env: {},
+      frontend: true,
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match(
+      (outcome as { message: string }).message,
+      /is a frontend change[\s\S]*names no pages/
+    )
+    // a build change that touched no page is still untouched
+    assert.strictEqual(
+      (
+        await checkPageGate({
+          git: fakeGit(dir, ['packages/functions/src/a.ts']),
+          cwd: dir,
+          env: {},
+        })
+      ).kind,
+      'skip'
+    )
+  })
+})
+
 describe('touchedFiles', () => {
   test('diffs against the nearest branch point, skipping branches that contain HEAD', async () => {
     const near = 'd'.repeat(40)

@@ -189,12 +189,30 @@ describe('a plan for a clone of an existing site', () => {
     const plan = recipeBox() as any[]
     assert.match(
       clone(plan)[0]!,
-      /change 2 \("list"\): this project rebuilds an existing site, so a frontend change lists the pages it builds in "pages"/
+      /change 2 \("list"\): this project rebuilds an existing site, so a change that builds pages \(a frontend change[^)]*\) lists the pages it builds in "pages"/
     )
     plan[1].pages = ['/recipes']
     assert.deepStrictEqual(clone(plan), [])
     // the build changes need no pages
     assert.strictEqual(plan[0].pages, undefined)
+  })
+
+  test('a page change filed with another specialist still lists its pages', () => {
+    const plan = recipeBox() as any[]
+    plan[1].pages = ['/recipes']
+    plan.push({
+      ref: 'about',
+      title: 'About page with the team photos',
+      body: 'Build the about page layout as the original has it. Done when you can open /about and see the team.',
+      specialist: 'build',
+      dependsOn: [plan[0].ref],
+    })
+    assert.match(
+      clone(plan).join('\n'),
+      /change \d+ \("about"\): this project rebuilds an existing site, so a change that builds pages/
+    )
+    plan[plan.length - 1].pages = ['/about']
+    assert.deepStrictEqual(clone(plan), [])
   })
 
   test('a frontend change over five pages is refused: split them into changes of at most five', () => {

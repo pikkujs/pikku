@@ -10,7 +10,7 @@ import {
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { planRefusal } from '../lib/plan-gate.js'
 import { refuseUntilPagesCompared } from '../lib/page-gate.js'
-import { declaredPages } from '../lib/change-plan.js'
+import { buildsPages, declaredPages } from '../lib/change-plan.js'
 import { refuseUntilChecked } from '../lib/check-gate.js'
 import { changesetSlug, changesetWorktrees } from '../lib/changeset-worktree.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
@@ -79,14 +79,15 @@ export const ChangesDone = pikkuSessionlessFunc({
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
       })
       // the pages its plan named (a `Pages:` line), which it is held to
-      const pages = await rpc
+      const change = await rpc
         .invoke('getChange', changeRef(projectId, input.changeId))
-        .then(({ change }) => declaredPages(change.body))
-        .catch(() => [])
+        .then(({ change }) => change)
+        .catch(() => null)
       const gate = await refuseUntilPagesCompared({
         git: (args) => git(args),
         waive: input.waive,
-        pages,
+        pages: declaredPages(change?.body),
+        frontend: change ? buildsPages(change) : false,
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
       })
       if (gate.note) note = note ? `${note}\n\n${gate.note}` : gate.note

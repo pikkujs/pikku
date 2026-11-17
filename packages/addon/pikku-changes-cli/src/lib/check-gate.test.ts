@@ -28,6 +28,7 @@ const gitFor =
     args[0] === 'rev-parse' ? `${top}\n` : status
 afterEach(() => {
   delete process.env.PIKKU_CHANGES_CHECK_GATE
+  delete process.env.PIKKU_CHANGES_BUILDER
   while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true })
 })
 
@@ -81,6 +82,20 @@ describe('refuseUntilChecked', () => {
       label: '#1',
       check: () => assert.fail('must not run'),
     })
+  })
+
+  test('a builder cannot turn it off', async () => {
+    const top = repo('pikku.config.json')
+    process.env.PIKKU_CHANGES_CHECK_GATE = 'off'
+    process.env.PIKKU_CHANGES_BUILDER = '1'
+    await assert.rejects(
+      refuseUntilChecked({
+        git: gitFor(top),
+        label: '#1',
+        check: () => ({ code: 2, output: 'error TS1' }),
+      }),
+      /does not pass/
+    )
   })
 
   test('finds a config at the root or one level down', () => {
