@@ -86,6 +86,27 @@ export const createLinePrefixer = (
   }
 }
 
+/**
+ * Runs `fn` (synchronously) when this process exits or is ended by SIGTERM,
+ * SIGINT or SIGHUP, which then go on to end it as they would have. Returns
+ * the call that takes the hooks off again.
+ */
+export const onProcessEnd = (fn: () => void): (() => void) => {
+  const signals = ['SIGTERM', 'SIGINT', 'SIGHUP'] as const
+  const onSignal = (signal: NodeJS.Signals) => {
+    off()
+    fn()
+    process.kill(process.pid, signal)
+  }
+  const off = () => {
+    process.removeListener('exit', fn)
+    for (const signal of signals) process.removeListener(signal, onSignal)
+  }
+  process.once('exit', fn)
+  for (const signal of signals) process.once(signal, onSignal)
+  return off
+}
+
 /** Any HTTP answer below 500 means the dev server is up and routing. */
 export const waitForHealth = async (
   url: string,
@@ -115,7 +136,8 @@ export const waitForHealth = async (
 export type RunningFrontends = {
   /** Resolves with the first failure; never resolves while everything runs. */
   failure: Promise<{ name: string; reason: string }>
-  stop: () => void
+  /** With `group`, resolves once every process group is gone. */
+  stop: () => void | Promise<void>
   urls: Array<{ name: string; url: string; primary: boolean }>
 }
 
@@ -127,6 +149,11 @@ export type StartFrontendsOptions = {
   host?: string
   healthTimeoutMs?: number
   spawnImpl?: typeof spawn
+  /**
+   * Each dev server in its own process group, stopped as a group (SIGTERM,
+   * SIGKILL after a grace), so what it started (bun run → vite) goes too.
+   */
+  group?: boolean
 }
 
 /**
@@ -142,6 +169,7 @@ export const startDevFrontends = async ({
   host = 'localhost',
   healthTimeoutMs,
   spawnImpl = spawn,
+  group = false,
 }: StartFrontendsOptions): Promise<RunningFrontends> => {
   for (const frontend of frontends) {
     await assertPortFree(frontend.port)
@@ -154,11 +182,37 @@ export const startDevFrontends = async ({
     reportFailure = resolve
   })
 
-  const stop = () => {
-    stopped = true
+  const killGroups = (signal: NodeJS.Signals) => {
     for (const child of children) {
-      if (child.exitCode === null && !child.killed) child.kill('SIGTERM')
+      try {
+        if (child.pid) process.kill(-child.pid, signal)
+      } catch {}
     }
+  }
+  const offEnd = group ? onProcessEnd(() => killGroups('SIGKILL')) : () => {}
+  const stop = (): void | Promise<void> => {
+    stopped = true
+    if (!group) {
+      for (const child of children) {
+        if (child.exitCode === null && !child.killed) child.kill('SIGTERM')
+      }
+      return
+    }
+    offEnd()
+    killGroups('SIGTERM')
+    const gone = Promise.all(
+      children.map(
+        (child) =>
+          new Promise<void>((done) => {
+            if (child.exitCode !== null || child.signalCode !== null) done()
+            else child.once('exit', () => done())
+          })
+      )
+    )
+    return Promise.race([
+      gone,
+      new Promise((done) => setTimeout(done, 5000).unref()),
+    ]).then(() => killGroups('SIGKILL'))
   }
 
   for (const frontend of frontends) {
@@ -168,6 +222,7 @@ export const startDevFrontends = async ({
       cwd: frontend.cwd,
       env: envFor(frontend) as NodeJS.ProcessEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
+      ...(group ? { detached: true } : {}),
     })
     children.push(child)
     const out = createLinePrefixer(prefix, write)
@@ -219,7 +274,7 @@ export const startDevFrontends = async ({
       }),
     ])
   } catch (error) {
-    stop()
+    await stop()
     throw error
   }
   return { failure, stop, urls }

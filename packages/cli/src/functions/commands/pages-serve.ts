@@ -1,9 +1,12 @@
 import { createServer } from 'node:net'
 import { resolve } from 'node:path'
+import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process'
 import type { spawn } from 'node:child_process'
 import {
   selectDevFrontends,
+  onProcessEnd,
   startDevFrontends,
+  waitForHealth,
   type DevFrontend,
 } from './dev-frontends.js'
 import type { Env } from './dev-env.js'
@@ -17,10 +20,17 @@ import type { Env } from './dev-env.js'
  * compared as served, so with no API running it is photographed without its
  * data, and the result says so.
  *
- * `isolate` (a changeset worktree): whatever answers on the configured port
- * may be another checkout's code, so it is never used. The dev command is
- * started on a free port (`--port <n>` appended, PORT set) and stopped after.
+ * `isolate` (a changeset worktree of a parallel loop): whatever answers on the
+ * configured ports may be another checkout's code, so it is never used. This
+ * tree's backend (`backend`, `pikku dev --serveOnly`) is started on a free
+ * port, the dev command on another (`--port <n>` appended, PORT set) with
+ * VITE_API_PROXY pointing at that backend, and both are stopped after, each
+ * as its whole process group. With no backend to start, data pages go to
+ * whatever answers on the API's configured port, and the result says so.
  */
+
+/** How this tree's own backend is started: the command, `--port <n>` is appended. */
+export type OwnBackend = { cwd: string; command: string[] }
 
 /** A port nothing is listening on right now. */
 export const findFreePort = (): Promise<number> =>
@@ -44,7 +54,68 @@ export type Served = {
   command: string | null
   /** Set when the API the frontend proxies to did not answer. */
   apiNote: string | null
-  stop: () => void
+  stop: () => void | Promise<void>
+}
+
+type Group = { child: ChildProcess; stop: () => Promise<void> }
+
+/**
+ * A process started in its own group, so stopping it takes whatever it
+ * started too (bun run → vite, pikku dev → its runner): SIGTERM to the group,
+ * SIGKILL after `graceMs`. If this process exits first, the group is killed.
+ */
+export const spawnGroup = (
+  command: string[],
+  options: {
+    cwd: string
+    env: NodeJS.ProcessEnv
+    write: (line: string) => void
+  },
+  spawnImpl: typeof spawn = nodeSpawn,
+  graceMs = 5000
+): Group => {
+  const [cmd, ...args] = command
+  const child = spawnImpl(cmd!, args, {
+    cwd: options.cwd,
+    env: options.env,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    detached: true,
+  })
+  for (const stream of [child.stdout, child.stderr])
+    stream?.on('data', (d) =>
+      String(d)
+        .split('\n')
+        .filter(Boolean)
+        .forEach((line) => options.write(line))
+    )
+  child.on('error', () => {})
+  const kill = (signal: NodeJS.Signals) => {
+    if (!child.pid) return
+    try {
+      process.kill(-child.pid, signal)
+    } catch {}
+  }
+  const offEnd = onProcessEnd(() => kill('SIGKILL'))
+  const exited = new Promise<void>((done) => {
+    if (child.exitCode !== null || child.signalCode !== null) done()
+    child.once('exit', () => done())
+    child.once('error', () => done())
+  })
+  const stop = async () => {
+    offEnd()
+    kill('SIGTERM')
+    const timer = new Promise<'late'>((done) =>
+      setTimeout(() => done('late'), graceMs).unref()
+    )
+    if (
+      (await Promise.race([exited.then(() => 'gone' as const), timer])) ===
+      'late'
+    )
+      kill('SIGKILL')
+    // the leader is gone; anything it left in the group goes too
+    kill('SIGKILL')
+  }
+  return { child, stop }
 }
 
 /** The frontend whose directory is `appDir`, among those with a dev command. */
@@ -98,6 +169,7 @@ export const serveFrontend = async ({
   spawnImpl,
   isolate = false,
   freePort = findFreePort,
+  backend,
 }: {
   frontend: DevFrontend
   /** The API the frontend proxies to (VITE_API_PROXY), as `pikku dev` sets it. */
@@ -110,7 +182,52 @@ export const serveFrontend = async ({
   /** Never reuse a server on the configured port; start one on a free port. */
   isolate?: boolean
   freePort?: () => Promise<number>
+  /** With `isolate`: this tree's backend, started on its own free port. */
+  backend?: OwnBackend | null
 }): Promise<Served> => {
+  let ownBackend: Group | null = null
+  let isolateNote: string | null = null
+  if (isolate && backend) {
+    const apiPort = await freePort()
+    const tail: string[] = []
+    const command = [...backend.command, '--port', String(apiPort)]
+    write(
+      `Starting this tree's backend (${command.join(' ')}) on port ${apiPort} for the compare...`
+    )
+    const group = spawnGroup(
+      command,
+      {
+        cwd: backend.cwd,
+        env: { ...process.env, PIKKU_NO_LOGO: '1' },
+        write: (line) => {
+          tail.push(line)
+          if (tail.length > 20) tail.shift()
+        },
+      },
+      spawnImpl
+    )
+    let gone = false
+    group.child.once('exit', () => {
+      gone = true
+    })
+    try {
+      await waitForHealth(`http://localhost:${apiPort}/`, {
+        timeoutMs: healthTimeoutMs,
+        aborted: () => gone,
+        fetchImpl,
+      })
+      ownBackend = group
+    } catch (error) {
+      await group.stop()
+      // never another checkout's API: pages that load data go without it
+      isolateNote = `This tree's backend did not start for the compare (${command.join(' ')} in ${backend.cwd}: ${error instanceof Error ? error.message : String(error)}), so pages that load data were photographed without their data.${tail.length ? `\n${tail.slice(-8).join('\n')}` : ''}`
+    }
+    // the proxy goes to this tree's backend, or to nothing at all
+    apiUrl = `http://localhost:${apiPort}`
+  } else if (isolate) {
+    isolateNote = `This changeset worktree's backend was not started (no backends.<name> in pikku.config.json), so pages that load data were photographed against ${apiUrl ?? 'whatever answers on the API port'}, which may be another checkout's backend.`
+  }
+  const proxy = isolate && backend ? apiUrl : undefined
   if (isolate) {
     const port = await freePort()
     frontend = {
@@ -123,9 +240,10 @@ export const serveFrontend = async ({
   }
   const baseUrl = `http://localhost:${frontend.port}`
   const apiNote =
-    apiUrl && !(await answersAtAll(apiUrl, fetchImpl))
+    isolateNote ??
+    (apiUrl && !(await answersAtAll(apiUrl, fetchImpl))
       ? `The API at ${apiUrl} did not answer, so pages that load data were photographed without it. Run \`pikku dev\` first to compare them with their data.`
-      : null
+      : null)
   if (
     !isolate &&
     (await answersOk(`${baseUrl}${frontend.healthPath}`, fetchImpl))
@@ -144,9 +262,11 @@ export const serveFrontend = async ({
       frontends: [frontend],
       envFor: (f) => {
         const env = envFor(f)
-        if (apiUrl) env.VITE_API_PROXY ??= apiUrl
+        if (proxy) env.VITE_API_PROXY = proxy
+        else if (apiUrl) env.VITE_API_PROXY ??= apiUrl
         return env
       },
+      group: isolate,
       write: (line) => {
         tail.push(line)
         if (tail.length > 20) tail.shift()
@@ -155,9 +275,22 @@ export const serveFrontend = async ({
       ...(spawnImpl ? { spawnImpl } : {}),
     })
   } catch (error) {
+    await ownBackend?.stop()
     throw new Error(
       `Could not start ${frontend.name} for the compare (${command} in ${frontend.cwd}): ${error instanceof Error ? error.message : String(error)}${tail.length ? `\n${tail.join('\n')}` : ''}\n${isolate ? `In a changeset worktree the compare starts its own server on a free port (${command}); the dev command has to accept --port. ` : ''}Start it yourself, or pass --baseUrl.`
     )
   }
-  return { baseUrl, started: true, command, apiNote, stop: running.stop }
+  const stopFrontend = running.stop
+  return {
+    baseUrl,
+    started: true,
+    command: ownBackend
+      ? `${command} (API: this tree's backend at ${apiUrl})`
+      : command,
+    apiNote,
+    stop: async () => {
+      await stopFrontend()
+      await ownBackend?.stop()
+    },
+  }
 }
