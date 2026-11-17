@@ -52,7 +52,7 @@ export const auth = Object.assign(
 const { loadAuthOptions } = await import(${JSON.stringify(moduleUrl)})
 const options = await loadAuthOptions({
   rootDir: ${JSON.stringify(root)},
-  srcDirectories: ['src'],
+  sourceDirs: ['src'],
   kysely: {},
   logger: { error: (m) => { console.error(m); process.exit(2) } },
 })
@@ -125,7 +125,7 @@ export const auth = Object.assign(
 
     const options = await loadAuthOptions({
       rootDir: root,
-      srcDirectories: ['src'],
+      sourceDirs: ['src'],
       kysely: {} as never,
       logger: { error: () => {} } as never,
     })

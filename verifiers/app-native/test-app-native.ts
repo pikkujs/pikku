@@ -70,7 +70,6 @@ function scaffold() {
   writeJson('tsconfig.json', {})
   writeJson('pikku.config.json', {
     tsconfig: './tsconfig.json',
-    srcDirectories: ['src'],
     frontends: {
       shop: { cwd: 'apps/shop', kind: 'spa' },
       desk: { cwd: 'apps/desk' },

@@ -1,5 +1,5 @@
 {
-  "srcDirectories": ["./src-off", "./types"],
+  "ignoreFiles": ["src/**", "type-tests/**"],
   "tsconfig": "./tsconfig.json",
   "backends": {
     "api": {

@@ -17,7 +17,6 @@ export type VerifyProject = {
 
 type PikkuConfigFile = {
   outDir?: string
-  srcDirectories?: string[]
   tsconfig?: string
   frontends?: Record<string, { cwd?: string; deploy?: boolean }>
   i18n?: { ignore?: string[] }
@@ -79,9 +78,7 @@ export function readVerifyProject(
     rootDir,
     workspaceRoot,
     outDir: resolve(rootDir, config.outDir ?? '.pikku'),
-    srcDirectories: (config.srcDirectories ?? ['src']).map((d) =>
-      resolve(rootDir, d)
-    ),
+    srcDirectories: [rootDir],
     tsconfig: resolve(rootDir, config.tsconfig ?? 'tsconfig.json'),
     frontends,
     i18nIgnore: (config.i18n?.ignore ?? [])

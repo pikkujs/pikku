@@ -24,7 +24,7 @@ describe('writeDevContributors', () => {
     ({
       rootDir: root,
       outDir: root,
-      srcDirectories: ['src'],
+      sourceDirs: ['src'],
       devContributorsFile: file,
       packageMappings: {},
     }) as never

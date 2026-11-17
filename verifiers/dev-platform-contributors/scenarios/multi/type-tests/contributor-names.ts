@@ -1,6 +1,6 @@
 // Type-level checks for the names `wireAddon({ contributors })` accepts. This
 // file is compiled by tsc only (tsconfig.type-tests.json); it sits outside
-// srcDirectories because the inspector would otherwise read the deliberately
+// the inspected source because the inspector would otherwise read the deliberately
 // wrong calls below and fail the build with PKU363, which is the backstop and
 // not what is under test here. It never runs, and the wirings sit at the top
 // level because a wire call inside a function is a build error.

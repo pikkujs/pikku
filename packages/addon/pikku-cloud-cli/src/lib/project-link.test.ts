@@ -135,7 +135,7 @@ describe('resolveLinkedProject', () => {
     })
     await writeFile(
       join(dir, 'pikku.config.json'),
-      '{\n  "srcDirectories": ["src"]\n}\n'
+      '{\n  "pikkuDirectories": ["src"]\n}\n'
     )
     const { rpc } = fakeRpc([row('shop', 'https://github.com/acme/shop')])
     await resolveLinkedProject({ rpc, cwd: dir })

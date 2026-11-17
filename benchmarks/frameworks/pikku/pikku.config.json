@@ -1,6 +1,5 @@
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["./src", "./types"],
   "backends": {
     "api": {
       "filter": {}

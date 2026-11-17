@@ -38,7 +38,7 @@ const NO_OXLINT = {
 
 async function makeValidProject(root: string) {
   await writeJson(join(root, 'pikku.config.json'), {
-    srcDirectories: ['packages/functions/src'],
+    pikkuDirectories: ['packages/functions'],
     outDir: 'packages/functions/.pikku',
     scaffold: {
       rpc: true,
@@ -284,33 +284,12 @@ describe('project checks', () => {
   })
 
   describe('pikku.config.json', () => {
-    test('missing srcDirectories → error', async () => {
-      const tmp = await makeTmp()
-      try {
-        await makeValidProject(tmp)
-        await writeJson(join(tmp, 'pikku.config.json'), {
-          outDir: 'packages/functions/.pikku',
-          clientFiles: {
-            rpcMapDeclarationFile:
-              'packages/functions-sdk/src/pikku/rpc-map.gen.d.ts',
-          },
-        })
-        const result = await runValidate(tmp)
-        assert.strictEqual(result.ok, false)
-        assert.ok(
-          result.findings.some((f) => f.id === 'pikku-config-no-src-dirs')
-        )
-      } finally {
-        await rm(tmp, { recursive: true, force: true })
-      }
-    })
-
     test('empty scaffold → error for rpc/agent/workflow, warn for events', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'pikku.config.json'), {
-          srcDirectories: ['packages/functions/src'],
+          pikkuDirectories: ['packages/functions'],
           outDir: 'packages/functions/.pikku',
           scaffold: {
             pikkuDir: 'packages/functions/src/scaffold',
@@ -362,7 +341,7 @@ describe('project checks', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'pikku.config.json'), {
-          srcDirectories: ['packages/functions/src'],
+          pikkuDirectories: ['packages/functions'],
           outDir: 'packages/functions/.pikku',
           scaffold: {
             rpc: true,

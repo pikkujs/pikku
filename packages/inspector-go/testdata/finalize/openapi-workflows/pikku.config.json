@@ -1,7 +1,4 @@
 {
-  "srcDirectories": [
-    "./src"
-  ],
   "tsconfig": "./tsconfig.json",
   "openAPI": {
     "outputFile": ".pikku/openapi.json",

@@ -1,6 +1,5 @@
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
   "backends": {
     "all": {
       "filter": {},

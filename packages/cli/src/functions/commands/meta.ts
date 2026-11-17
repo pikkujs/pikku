@@ -560,14 +560,14 @@ export const pikkuMetaContext = pikkuSessionlessFunc<{ full?: boolean }, void>({
     }
 
     const cfg = config as any
-    const srcDirectories: string[] = cfg.srcDirectories ?? []
+    const sourceDirs: string[] = cfg.sourceDirs ?? []
     // If the project doesn't declare scaffold dirs, fall back to standard
-    // conventions rooted at the first src directory. Agents need a concrete
+    // conventions rooted at `src`. Agents need a concrete
     // target dir to emit `targetFile` against — null is not actionable.
-    const srcRoot = srcDirectories[0] ?? 'src'
+    const srcRoot = 'src'
     const layout = {
       rootDir: cfg.rootDir ?? null,
-      srcDirectories,
+      sourceDirs,
       configFile: cfg.configFile ?? null,
       scaffold: {
         functionDir: cfg.scaffold?.functionDir ?? `${srcRoot}/functions`,

@@ -40,7 +40,7 @@ Consequences that matter, and bite if ignored:
 - **Every effect runs as somebody, or as a declared step.** `scenario.do(...)` without `{ virtualUser }` throws `Scenario tried to run '<rpc>' as an internal step…` — there is no bare internal-RPC step. The other way to do work is `scenario.given/when/then`, which runs a `pikkuScenarioStep`; its virtual user is optional (setup steps have none) unless it declares `browser: true`.
 - **Virtual users must be configured and signed in**, or the scenario cannot run.
 
-Scenarios live in `srcDirectories` like any other function — by convention `*.scenario.ts`.
+Scenarios live in the project like any other function — by convention `*.scenario.ts`.
 
 ## Writing one
 

@@ -102,7 +102,6 @@ function scaffold() {
     'pikku.config.json',
     JSON.stringify(
       {
-        srcDirectories: ['./src', './types'],
         tsconfig: './tsconfig.json',
         backends: { api: { filter: {} } },
       },

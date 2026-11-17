@@ -109,7 +109,7 @@ describe('loadInspectorStateFile', () => {
     )
     const services = await createSingletonServices({
       rootDir: dir,
-      srcDirectories: [],
+      sourceDirs: [],
       filters: {},
     } as any)
     await services.loadInspectorStateFile(file)

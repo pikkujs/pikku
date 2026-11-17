@@ -36,7 +36,7 @@ export const pikkuAuth = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
         authTypesFile &&
         (await projectDeclaresBetterAuth(
           config.rootDir,
-          config.srcDirectories,
+          config.sourceDirs,
           config.ignoreFiles
         ))
       ) {

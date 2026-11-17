@@ -237,26 +237,27 @@ const walk = async (dir: string, base = ''): Promise<string[]> => {
 
 /**
  * The directory the project's scaffold is generated into: `scaffold.pikkuDir`
- * from pikku.config.json, or beside the first source directory when it is not
- * set (the CLI's own default). Read from the config rather than assumed, because
+ * from pikku.config.json, or `src/scaffold` when it is not set (the CLI's own
+ * default). Read from the config rather than assumed, because
  * a project can move it.
  */
 const scaffoldDirOf = async (root: string): Promise<string> => {
   const config = (await readJson(join(root, 'pikku.config.json'))) as {
     scaffold?: { pikkuDir?: unknown }
-    srcDirectories?: unknown
   } | null
   const configured = config?.scaffold?.pikkuDir
   if (typeof configured === 'string') return resolve(root, configured)
-  const first = Array.isArray(config?.srcDirectories)
-    ? config.srcDirectories[0]
-    : undefined
-  return resolve(root, typeof first === 'string' ? first : 'src', 'scaffold')
+  return resolve(root, 'src', 'scaffold')
 }
 
 const isInside = (dir: string, file: string): boolean => {
   const rel = relative(dir, resolve(file))
-  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel) && !rel.startsWith(sep)
+  return (
+    rel !== '' &&
+    !rel.startsWith('..') &&
+    !isAbsolute(rel) &&
+    !rel.startsWith(sep)
+  )
 }
 
 /**
@@ -285,7 +286,9 @@ export const collectPlatformResources = async (
     const ids = Object.entries(functions as Record<string, unknown>)
       .filter(([, meta]) => {
         const file = (meta as { sourceFile?: unknown } | null)?.sourceFile
-        return typeof file === 'string' && isInside(scaffold, resolve(root, file))
+        return (
+          typeof file === 'string' && isInside(scaffold, resolve(root, file))
+        )
       })
       .map(([id]) => id)
     if (ids.length > 0) platform.set('func', new Set(ids))
@@ -297,7 +300,8 @@ export const collectPlatformResources = async (
   if (Array.isArray(schema?.tables)) {
     const ids = schema.tables
       .filter(
-        (table) => typeof table?.name === 'string' && typeof table.source === 'string'
+        (table) =>
+          typeof table?.name === 'string' && typeof table.source === 'string'
       )
       .map((table) => table.name as string)
     if (ids.length > 0) platform.set('table', new Set(ids))
@@ -372,7 +376,9 @@ export const collectKnownResources = async (
   put('scope', scopeIds(functions, roles))
   put(
     'virtualUser',
-    virtualUsers && typeof virtualUsers === 'object' ? Object.keys(virtualUsers) : []
+    virtualUsers && typeof virtualUsers === 'object'
+      ? Object.keys(virtualUsers)
+      : []
   )
 
   return known

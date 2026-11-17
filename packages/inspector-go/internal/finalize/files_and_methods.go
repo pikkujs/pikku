@@ -49,7 +49,7 @@ func getMetaTypes(typ string, m *state.PathToNameAndType, desired string, errs *
 				"  return {}\n" +
 				"})\n\n" +
 				"Possible issues:\n" +
-				"- srcDirectories in pikku.config.json doesn't include the file with the createConfig method"
+				"- the directories pikku.config.json inspects don't include the file with the createConfig method"
 		}
 		if errs != nil {
 			errs.Set(msg, *m)

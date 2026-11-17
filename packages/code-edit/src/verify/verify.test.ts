@@ -912,7 +912,7 @@ describe('runVerify', () => {
   test('runs the static checks over discovered apps and records the result', async () => {
     const root = project({
       'package.json': JSON.stringify({ workspaces: ['apps/*'] }),
-      'pikku.config.json': JSON.stringify({ srcDirectories: ['src'] }),
+      'pikku.config.json': JSON.stringify({}),
       'apps/web/tsconfig.json': '{}',
       'apps/web/src/routes/app.tsx': 'export const Route = {}',
       'apps/web/src/routes/app.home.tsx': 'export const Route = {}',

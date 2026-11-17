@@ -57,10 +57,9 @@ func goldenFixtures(t *testing.T) []string {
 func goldenRequest(t *testing.T, root string) protocol.Request {
 	t.Helper()
 	var config struct {
-		SrcDirectories []string `json:"srcDirectories"`
-		Tsconfig       string   `json:"tsconfig"`
-		Addon          bool     `json:"addon"`
-		OpenAPI        *struct {
+		Tsconfig string `json:"tsconfig"`
+		Addon    bool   `json:"addon"`
+		OpenAPI  *struct {
 			AdditionalInfo json.RawMessage `json:"additionalInfo"`
 		} `json:"openAPI"`
 	}
@@ -94,7 +93,7 @@ func goldenRequest(t *testing.T, root string) protocol.Request {
 	if m, err := os.ReadFile(filepath.Join(root, "versions.pikku.json")); err == nil {
 		opts.Manifest = m
 	}
-	return protocol.Request{RouteFiles: findSourceFiles(filepath.ToSlash(root), config.SrcDirectories), Options: opts}
+	return protocol.Request{RouteFiles: findSourceFiles(filepath.ToSlash(root), []string{"."}), Options: opts}
 }
 
 // golden is the part of a Response a golden file holds: everything but the

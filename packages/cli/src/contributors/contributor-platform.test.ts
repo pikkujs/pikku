@@ -36,7 +36,7 @@ const build = (
   buildContributorPlatform({
     projectDir,
     pikkuDir,
-    srcDirectories: ['src'],
+    sourceDirs: ['src'],
     logger,
     serviceNames: [],
     ...extra,

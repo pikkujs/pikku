@@ -33,11 +33,7 @@ const makeApp = async (
   } = {}
 ) => {
   const root = await mkdtemp(join(tmpdir(), 'pikku-enable-oxlint-'))
-  await write(
-    root,
-    'pikku.config.json',
-    JSON.stringify({ srcDirectories: ['src'] })
-  )
+  await write(root, 'pikku.config.json', JSON.stringify({}))
   await write(
     root,
     'package.json',

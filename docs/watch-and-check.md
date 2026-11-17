@@ -8,7 +8,7 @@ the project is sound without running `pikku all` and `tsc` again.
 
 After a change it runs:
 
-1. `pikku all`, when a file in `srcDirectories` or the email templates changed.
+1. `pikku all`, when a file in the project's source directories or the email templates changed.
 2. Each frontend's message compile, when one of its `messages/*.json` files
    changed and at startup. This is the frontend's own `paraglide` or
    `i18n:compile` script, the step its `tsc` script runs first.
@@ -55,7 +55,7 @@ pikku check --timeout 30
 The watcher does not trust file events alone. After each run it looks again for files newer than the run's start, and runs again if it finds any, so an idle watcher does not sit behind its own files. It does this at most five times in a row, each after the debounce, and then publishes the result it has, so a file that changes behind each run cannot keep it busy. While files keep changing faster than the debounce the watcher does no work and `pikku check` fails at `--timeout` with the file it saw last, then answers normally once the writing stops.
 | No watcher running | One full `pikku all`, message compile and `tsc`, under the same limit |
 
-Watched files are those in `srcDirectories`, the email templates and each
+Watched files are those in the project's source directories, the email templates and each
 frontend's directory. Anything else a project compiles, such as a shared workspace
 package, is not watched, and neither are the root `tsconfig.json` and
 `pikku.config.json`. A frontend's `tsconfig.json` is.

@@ -47,7 +47,7 @@ function stateWithAgent(agentKey: string, humanName: string): InspectorState {
 }
 
 /**
- * A project whose scenarios live under `srcDirectories` — one application
+ * A project whose scenarios live under `sourceDirs` — one application
  * function wired to HTTP, one scenario made of one step.
  */
 function stateWithScenario(): InspectorState {

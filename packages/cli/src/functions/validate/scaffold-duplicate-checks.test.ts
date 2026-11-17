@@ -30,43 +30,29 @@ const project = async (scaffold: Record<string, unknown> = {}) => {
     root,
     'pikku.config.json',
     JSON.stringify({
-      srcDirectories: ['packages/functions/src'],
-      outDir: 'packages/functions/.pikku',
       scaffold: {
-        pikkuDir: 'packages/functions/src/scaffold',
+        pikkuDir: 'src/scaffold',
         admin: true,
         rpc: true,
         ...scaffold,
       },
     })
   )
-  await write(
-    root,
-    'packages/functions/src/scaffold/admin/admin.gen.ts',
-    ADMIN_WIRING
-  )
-  await write(
-    root,
-    'packages/functions/src/scaffold/rpc/rpc-public.gen.ts',
-    'export {}\n'
-  )
+  await write(root, 'src/scaffold/admin/admin.gen.ts', ADMIN_WIRING)
+  await write(root, 'src/scaffold/rpc/rpc-public.gen.ts', 'export {}\n')
   return root
 }
 
 describe('scaffold duplicate checks', () => {
   test('a clean app passes', async () => {
     const root = await project()
-    await write(root, 'packages/functions/src/todo.function.ts', 'export {}\n')
+    await write(root, 'src/todo.function.ts', 'export {}\n')
     assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
   })
 
   test('errors on a stale scaffold copy outside the scaffold dir', async () => {
     const root = await project()
-    await write(
-      root,
-      'packages/functions/src/pikku/admin/admin.gen.ts',
-      ADMIN_WIRING
-    )
+    await write(root, 'src/pikku/admin/admin.gen.ts', ADMIN_WIRING)
 
     const findings = await runScaffoldDuplicateChecks(root)
     const stray = findings.filter(
@@ -81,11 +67,7 @@ describe('scaffold duplicate checks', () => {
 
   test('errors on a stale copy of a feature that is no longer enabled', async () => {
     const root = await project({ virtualUser: false })
-    await write(
-      root,
-      'packages/functions/src/old/virtual-user/virtual-user.gen.ts',
-      'export {}\n'
-    )
+    await write(root, 'src/old/virtual-user/virtual-user.gen.ts', 'export {}\n')
     const findings = await runScaffoldDuplicateChecks(root)
     assert.equal(findings.length, 1)
     assert.equal(findings[0]!.id, 'scaffold-output-outside-scaffold-dir')
@@ -95,7 +77,7 @@ describe('scaffold duplicate checks', () => {
     const root = await project()
     await write(
       root,
-      'packages/functions/src/wiring.ts',
+      'src/wiring.ts',
       `import { wireAddon } from '#pikku/addon'\nwireAddon({ name: 'admin', package: '@pikku/addon-admin' })\n`
     )
 
@@ -109,17 +91,13 @@ describe('scaffold duplicate checks', () => {
 
   test('errors on a hand-written wireAddon even before the scaffold is generated', async () => {
     const root = await project()
-    await mkdir(join(root, 'packages/functions/src/scaffold'), {
+    await mkdir(join(root, 'src/scaffold'), {
       recursive: true,
     })
+    await write(root, 'src/scaffold/admin/admin.gen.ts', 'export {}\n')
     await write(
       root,
-      'packages/functions/src/scaffold/admin/admin.gen.ts',
-      'export {}\n'
-    )
-    await write(
-      root,
-      'packages/functions/src/wiring.ts',
+      'src/wiring.ts',
       `wireAddon({ name: 'admin', package: '@pikku/addon-admin' })\n`
     )
     const findings = await runScaffoldDuplicateChecks(root)
@@ -133,7 +111,7 @@ describe('scaffold duplicate checks', () => {
     const root = await project()
     await write(
       root,
-      'packages/functions/src/roles.ts',
+      'src/roles.ts',
       `import { defineRoles } from '#pikku/roles'\n` +
         `defineRoles({ operator: { grants: ['admin'] } })\n` +
         `// wireAddon({ name: 'admin', package: '@pikku/addon-admin' })\n`
@@ -145,7 +123,7 @@ describe('scaffold duplicate checks', () => {
     const root = await project()
     await write(
       root,
-      'packages/functions/src/wiring.ts',
+      'src/wiring.ts',
       `wireAddon({ name: 'graph', package: '@pikku/addon-graph' })\n`
     )
     assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
@@ -153,13 +131,9 @@ describe('scaffold duplicate checks', () => {
 
   test('honours an explicit scaffold path override', async () => {
     const root = await project({
-      admin: { path: 'packages/functions/src/custom/admin.gen.ts' },
+      admin: { path: 'src/custom/admin.gen.ts' },
     })
-    await write(
-      root,
-      'packages/functions/src/custom/admin.gen.ts',
-      ADMIN_WIRING
-    )
+    await write(root, 'src/custom/admin.gen.ts', ADMIN_WIRING)
     // the default location is now the stray copy
     const findings = await runScaffoldDuplicateChecks(root)
     assert.deepEqual(
@@ -170,7 +144,7 @@ describe('scaffold duplicate checks', () => {
   })
 
   test('errors by default when the scaffold dir is not <srcDirectory>/scaffold', async () => {
-    const root = await project({ pikkuDir: 'packages/functions/src/pikku' })
+    const root = await project({ pikkuDir: 'src/pikku' })
     const findings = await runScaffoldDuplicateChecks(root)
     const f = findings.find((x) => x.id === 'scaffold-dir-noncanonical')
     assert.equal(f?.severity, 'error')
@@ -180,12 +154,12 @@ describe('scaffold duplicate checks', () => {
   })
 
   test('an explicit pikkuDir equal to the default passes', async () => {
-    const root = await project({ pikkuDir: 'packages/functions/src/scaffold' })
+    const root = await project({ pikkuDir: 'src/scaffold' })
     assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
   })
 
   test("validate.rules 'warn' downgrades and 'off' suppresses", async () => {
-    const root = await project({ pikkuDir: 'packages/functions/src/pikku' })
+    const root = await project({ pikkuDir: 'src/pikku' })
     const setRules = async (rules: Record<string, string>) => {
       const cfg = JSON.parse(
         await readFile(join(root, 'pikku.config.json'), 'utf8')
@@ -208,18 +182,13 @@ describe('scaffold duplicate checks', () => {
 
   test('validate.rules applies to the other scaffold-duplicates rules', async () => {
     const root = await project()
-    await write(
-      root,
-      'packages/functions/src/pikku/admin/admin.gen.ts',
-      ADMIN_WIRING
-    )
+    await write(root, 'src/pikku/admin/admin.gen.ts', ADMIN_WIRING)
     await write(
       root,
       'pikku.config.json',
       JSON.stringify({
-        srcDirectories: ['packages/functions/src'],
         scaffold: {
-          pikkuDir: 'packages/functions/src/scaffold',
+          pikkuDir: 'src/scaffold',
           admin: true,
         },
         validate: { rules: { 'scaffold-output-outside-scaffold-dir': 'off' } },
@@ -230,12 +199,8 @@ describe('scaffold duplicate checks', () => {
 
   test('ignores generated output under .pikku and node_modules', async () => {
     const root = await project()
-    await write(root, 'packages/functions/src/.pikku/admin/admin.gen.ts', 'x')
-    await write(
-      root,
-      'packages/functions/src/node_modules/x/admin/admin.gen.ts',
-      'x'
-    )
+    await write(root, 'src/.pikku/admin/admin.gen.ts', 'x')
+    await write(root, 'src/node_modules/x/admin/admin.gen.ts', 'x')
     assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
   })
 })
@@ -249,7 +214,6 @@ describe('SCAFFOLD_OUTPUTS', () => {
       'pikku.config.json',
       JSON.stringify({
         rootDir: '.',
-        srcDirectories: ['src'],
         packageMappings: {},
         tsconfig: 'tsconfig.json',
         backends: { api: { filter: {} } },

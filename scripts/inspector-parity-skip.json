@@ -5,7 +5,7 @@
   },
   {
     "project": "verifiers/binary",
-    "reason": "a config for `pikku binary` alone (srcDirectories is empty), so `pikku all` has no project to generate"
+    "reason": "a config for `pikku binary` alone (every source file is ignored), so `pikku all` has no project to generate"
   },
   {
     "project": "verifiers/db-vectors/pglite",

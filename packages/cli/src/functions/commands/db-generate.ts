@@ -83,7 +83,7 @@ export const dbGenerate = pikkuSessionlessFunc<
       generateMigrations(
         resolved,
         config.rootDir,
-        config.srcDirectories,
+        config.sourceDirs,
         logger,
         addons,
         state.serviceAggregation.requiredServices,

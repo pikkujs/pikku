@@ -1266,7 +1266,7 @@ async function postgresDatabaseToMap(
 async function desiredPostgresAuthSchema(
   context: PGliteExtensionContext,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void }
 ): Promise<DesiredAuthSchema | null> {
   return withScratchPostgresDatabase(context, async (scratchDb) => {
@@ -1282,7 +1282,7 @@ async function desiredPostgresAuthSchema(
     try {
       const options = await loadAuthOptions({
         rootDir,
-        srcDirectories,
+        sourceDirs,
         kysely,
         logger,
       })
@@ -1305,7 +1305,7 @@ async function desiredPostgresAuthSchema(
 async function desiredMysqlAuthSchema(
   resolved: ResolvedMysqlDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void }
 ): Promise<DesiredAuthSchema | null> {
   return withScratchMysqlDatabase(resolved, async (scratchDb) => {
@@ -1313,7 +1313,7 @@ async function desiredMysqlAuthSchema(
     try {
       const options = await loadAuthOptions({
         rootDir,
-        srcDirectories,
+        sourceDirs,
         kysely,
         logger,
       })
@@ -1336,7 +1336,7 @@ async function desiredMysqlAuthSchema(
 export async function desiredAuthSchema(
   resolved: ResolvedDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void }
 ): Promise<DesiredAuthSchema | null> {
   const runtime = await loadSqliteRuntime()
@@ -1345,7 +1345,7 @@ export async function desiredAuthSchema(
     const kysely = createSqliteKysely({ db, camelCase: true })
     const options = await loadAuthOptions({
       rootDir,
-      srcDirectories,
+      sourceDirs,
       kysely,
       logger,
     })
@@ -1355,7 +1355,7 @@ export async function desiredAuthSchema(
     // path (see getAuthMigrations). A factory that declares a server dialect the
     // project is not on is still an error.
     if (resolved.dialect === 'mysql') {
-      return desiredMysqlAuthSchema(resolved, rootDir, srcDirectories, logger)
+      return desiredMysqlAuthSchema(resolved, rootDir, sourceDirs, logger)
     }
     if (isMysqlAuthDatabase(options)) {
       throw new Error(
@@ -1363,12 +1363,7 @@ export async function desiredAuthSchema(
       )
     }
     if (resolved.dialect === 'postgres') {
-      return desiredPostgresAuthSchema(
-        resolved,
-        rootDir,
-        srcDirectories,
-        logger
-      )
+      return desiredPostgresAuthSchema(resolved, rootDir, sourceDirs, logger)
     }
     if (isPostgresAuthDatabase(options)) {
       throw new Error(
@@ -1399,13 +1394,13 @@ export async function desiredAuthSchema(
 async function applyAuthSchema(
   kysely: Kysely<any>,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void },
   dialect: 'sqlite' | 'postgres' | 'mysql'
 ): Promise<{ userTable: string } | null> {
   const options = await loadAuthOptions({
     rootDir,
-    srcDirectories,
+    sourceDirs,
     kysely,
     logger,
   })
@@ -1461,7 +1456,7 @@ export interface DesiredRuntimeSchema extends DesiredSchema {
 export async function desiredRuntimeSchema(
   resolved: ResolvedDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void },
   services?: ReadonlySet<string>
 ): Promise<DesiredRuntimeSchema> {
@@ -1479,7 +1474,7 @@ export async function desiredRuntimeSchema(
     const auth = await applyAuthSchema(
       db,
       rootDir,
-      srcDirectories,
+      sourceDirs,
       logger,
       resolved.dialect
     )
@@ -1764,7 +1759,7 @@ export interface SchemaDriftResult {
 export async function computeSchemaDrift(
   resolved: ResolvedDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void }
 ): Promise<SchemaDriftResult> {
   const covered = await coveredSchema(resolved)
@@ -1789,7 +1784,7 @@ export async function computeSchemaDrift(
   const runtime = await desiredRuntimeSchema(
     resolved,
     rootDir,
-    srcDirectories,
+    sourceDirs,
     logger
   )
   const runtimeTables = unrecorded.filter((t) =>
@@ -1828,15 +1823,10 @@ export type BaselineResult =
 export async function baseline(
   resolved: ResolvedDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void }
 ): Promise<BaselineResult> {
-  const drift = await computeSchemaDrift(
-    resolved,
-    rootDir,
-    srcDirectories,
-    logger
-  )
+  const drift = await computeSchemaDrift(resolved, rootDir, sourceDirs, logger)
   if (!drift.inSync) return { status: 'behind', drift }
 
   if (resolved.dialect === 'sqlite') {
@@ -1882,15 +1872,10 @@ export interface AuthDriftResult {
 export async function computeAuthDrift(
   resolved: ResolvedDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void }
 ): Promise<AuthDriftResult> {
-  const desired = await desiredAuthSchema(
-    resolved,
-    rootDir,
-    srcDirectories,
-    logger
-  )
+  const desired = await desiredAuthSchema(resolved, rootDir, sourceDirs, logger)
   if (!desired) {
     return {
       hasAuth: false,
@@ -2610,18 +2595,13 @@ export async function computeDeclaredTablesDrift(
 export async function schemaSources(
   resolved: ResolvedDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void },
   services?: ReadonlySet<string>
 ): Promise<SchemaSource[]> {
   const sources: SchemaSource[] = []
 
-  const auth = await desiredAuthSchema(
-    resolved,
-    rootDir,
-    srcDirectories,
-    logger
-  )
+  const auth = await desiredAuthSchema(resolved, rootDir, sourceDirs, logger)
   if (auth) {
     sources.push({
       name: 'better-auth',
@@ -2633,7 +2613,7 @@ export async function schemaSources(
   const runtime = await desiredRuntimeSchema(
     resolved,
     rootDir,
-    srcDirectories,
+    sourceDirs,
     logger,
     services
   )
@@ -2962,7 +2942,7 @@ export async function writeSourceMigrations(
 export async function generateMigrations(
   resolved: ResolvedDb,
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: { error: (msg: string) => void },
   addons: AddonDeclaration[] = [],
   services?: ReadonlySet<string>,
@@ -2974,7 +2954,7 @@ export async function generateMigrations(
   const sources = await schemaSources(
     resolved,
     rootDir,
-    srcDirectories,
+    sourceDirs,
     logger,
     services
   )

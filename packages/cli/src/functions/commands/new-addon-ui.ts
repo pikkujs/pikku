@@ -61,7 +61,7 @@ export const addonUiFiles = (name: string): Record<string, string> => {
         $schema:
           'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
         tsconfig: './tsconfig.json',
-        srcDirectories: ['src', 'types'],
+        sourceDirs: ['src', 'types'],
         outDir: './.pikku',
         addon: { displayName: title, description: `${title} for Pikku Studio` },
       },

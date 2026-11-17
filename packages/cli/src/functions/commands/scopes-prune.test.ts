@@ -37,7 +37,7 @@ const config = () => ({
   rootDir: root,
   outDir: join(root, '.pikku'),
   runtimeDir: join(root, '.pikku-runtime'),
-  srcDirectories: ['src'],
+  sourceDirs: ['src'],
   scopesMetaJsonFile: join(root, '.pikku', 'scopes', 'meta.gen.json'),
 })
 

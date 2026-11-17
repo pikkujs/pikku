@@ -10,9 +10,9 @@ import {
 } from './services.js'
 
 /**
- * `scaffold.pikkuDir` is load-bearing: it puts the generated wire outside
- * `srcDirectories`, where a real project keeps it and where the inspector does
- * not look. A wire that is emitted but not registered 404s every test below.
+ * `scaffold.pikkuDir` is load-bearing: it puts the generated wire where the
+ * server imports it. A wire that is emitted but not registered 404s every test
+ * below.
  */
 const post = (body: unknown) =>
   fetch(

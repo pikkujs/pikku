@@ -13,7 +13,6 @@ export interface PikkuViteProject {
 
 type RawConfig = {
   rootDir?: string
-  srcDirectories?: string[]
   scaffold?: { pikkuDir?: string }
   clientFiles?: { envFile?: string }
 }
@@ -34,15 +33,14 @@ const absolute = (base: string, path: string): string =>
   isAbsolute(path) ? path : join(base, path)
 
 /**
- * Where the CLI writes the Better Auth wiring: `scaffold.pikkuDir`, or `scaffold/`
- * beside the first source directory. Its presence is the project saying it uses
+ * Where the CLI writes the Better Auth wiring: `scaffold.pikkuDir`, or `src/scaffold`. Its presence is the project saying it uses
  * Better Auth, the same signal `pikku all` acts on.
  */
 const authWiringFile = (config: RawConfig, configDir: string): string => {
   const rootDir = absolute(configDir, config.rootDir ?? '.')
   const scaffoldDir = config.scaffold?.pikkuDir
     ? absolute(rootDir, config.scaffold.pikkuDir)
-    : absolute(rootDir, join(config.srcDirectories?.[0] ?? 'src', 'scaffold'))
+    : absolute(rootDir, join('src', 'scaffold'))
   return join(scaffoldDir, 'auth', 'auth.gen.ts')
 }
 

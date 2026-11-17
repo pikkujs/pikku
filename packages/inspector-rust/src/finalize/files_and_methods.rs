@@ -41,7 +41,7 @@ fn get_meta_types(
             let mut msg = format!("No {typ} found");
             if typ == "CoreConfig" {
                 msg = format!(
-                    "No {typ} found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {{\n  return {{}}\n}})\n\nPossible issues:\n- srcDirectories in pikku.config.json doesn't include the file with the createConfig method"
+                    "No {typ} found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {{\n  return {{}}\n}})\n\nPossible issues:\n- the directories pikku.config.json inspects don't include the file with the createConfig method"
                 );
             }
             if let Some(errs) = errs {

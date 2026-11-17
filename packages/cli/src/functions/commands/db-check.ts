@@ -45,7 +45,7 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
     const drift = await computeSchemaDrift(
       resolved,
       config.rootDir,
-      config.srcDirectories,
+      config.sourceDirs,
       logger
     )
 

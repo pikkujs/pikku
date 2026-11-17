@@ -37,7 +37,6 @@ package that declared them, and the extra segment is what stops a linked addon's
 ```json
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src", "types"],
   "addon": {
     "displayName": "My Addon",
     "description": "What this addon does",

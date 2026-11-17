@@ -31,7 +31,7 @@ const project = (config: object, options: { betterAuth: boolean }) => {
 
 const config = {
   rootDir: '.',
-  srcDirectories: ['packages/functions/src'],
+  scaffold: { pikkuDir: 'packages/functions/src/scaffold' },
   clientFiles: { envFile: 'apps/app/src/pikku/env.gen.ts' },
 }
 

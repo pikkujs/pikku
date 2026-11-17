@@ -1,8 +1,22 @@
 import path from 'node:path'
-import { glob } from 'tinyglobby'
+import { escapePath, glob } from 'tinyglobby'
+import { CONFIG_FILE, SKIP_DIRS } from './pikku-directories.js'
 
 /**
- * Every `.ts` file under each of `srcDirectories`, as absolute paths.
+ * Patterns for what a project never inspects. `ignoreFiles` from the config
+ * replaces the loader's defaults, so these are added on top of it rather than
+ * left to it: a user's `ignoreFiles` must not make a project walk into its
+ * `node_modules` or into the package next door.
+ */
+const skippedPatterns = (): string[] => [
+  ...[...SKIP_DIRS].map((name) => `**/${name}/**`),
+  '**/.*/**',
+]
+
+/**
+ * Every `.ts` file under each of `sourceDirs`, as absolute paths, leaving out
+ * what a project never inspects: dependencies, build output, its generated
+ * tree, and any directory that holds its own pikku.config.json.
  *
  * The directory goes in `cwd`, never into the pattern: a path is not a glob.
  * On Windows every separator is a backslash, which a glob reads as an escape,
@@ -10,17 +24,25 @@ import { glob } from 'tinyglobby'
  */
 export const findSourceFiles = async (
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   ignoreFiles: string[]
 ): Promise<string[]> =>
   (
     await Promise.all(
-      srcDirectories.map((dir) =>
-        glob('**/*.ts', {
-          cwd: path.join(rootDir, dir),
-          ignore: ignoreFiles,
+      sourceDirs.map(async (dir) => {
+        const cwd = path.join(rootDir, dir)
+        const skipped = skippedPatterns()
+        const nested = (
+          await glob(`**/${CONFIG_FILE}`, { cwd, ignore: skipped })
+        )
+          .map((file) => path.posix.dirname(file.split(path.sep).join('/')))
+          .filter((nestedDir) => nestedDir !== '.')
+          .map((nestedDir) => `${escapePath(nestedDir)}/**`)
+        return glob('**/*.ts', {
+          cwd,
+          ignore: [...ignoreFiles, ...skipped, ...nested],
           absolute: true,
         })
-      )
+      })
     )
   ).flat()

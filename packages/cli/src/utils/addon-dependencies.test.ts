@@ -232,7 +232,7 @@ describe('syncing an addon', () => {
     const asked: unknown[] = []
     await assert.rejects(
       runAddonSync({
-        config: { rootDir: billing, srcDirectories: ['src'], addon: {} },
+        config: { rootDir: billing, sourceDirs: ['src'], addon: {} },
         logger: { debug() {}, info() {}, diagnostic() {} },
         resolveSdk: async (request) => {
           asked.push(request)
@@ -252,7 +252,7 @@ describe('syncing an addon', () => {
     mkdirSync(join(billing, 'src'))
     const diagnostics: { code: string }[] = []
     await runAddonSync({
-      config: { rootDir: billing, srcDirectories: ['src'], addon: {} },
+      config: { rootDir: billing, sourceDirs: ['src'], addon: {} },
       logger: {
         debug() {},
         info() {},

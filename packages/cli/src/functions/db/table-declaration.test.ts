@@ -1220,7 +1220,7 @@ describe('database context', () => {
     const context = await databaseContext({
       rootDir: root,
       outDir: join(root, '.pikku'),
-      srcDirectories: ['src'],
+      sourceDirs: ['src'],
     })
     assert.equal(context.tables.file, 'db/tables.ts')
     assert.equal(context.tables.exists, true)
@@ -1239,7 +1239,7 @@ describe('database context', () => {
     const context = await databaseContext({
       rootDir: root,
       outDir: join(root, '.pikku'),
-      srcDirectories: ['src'],
+      sourceDirs: ['src'],
     })
     assert.deepEqual(context.tables.declared, ['item'])
     assert.deepEqual(context.tables.declareOnly, ['user_profile'])
@@ -1250,7 +1250,7 @@ describe('database context', () => {
     const context = await databaseContext({
       rootDir: root,
       outDir: join(root, '.pikku'),
-      srcDirectories: ['src'],
+      sourceDirs: ['src'],
     })
     assert.equal(context.tables.exists, false)
     assert.deepEqual(context.tables.declared, [])

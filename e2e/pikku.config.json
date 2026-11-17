@@ -1,12 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "rootDir": ".",
+  "ignoreFiles": ["bin/**", "tests/**", "packages/web/**"],
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": [
-    "src",
-    "packages/functions/src",
-    "packages/functions/tests"
-  ],
   "packageMappings": {
     ".": "@pikku/e2e",
     "packages/functions": "@pikku/e2e-functions"

@@ -61,7 +61,7 @@ const SHAPE: Shape = obj({
   rootDir: 'any',
   runtimeDir: 'any',
   content: obj({ contentPath: 'any', sizeLimit: 'any', buckets: 'any' }),
-  srcDirectories: 'any',
+  pikkuDirectories: 'any',
   ignoreFiles: 'any',
   packageMappings: 'any',
   addon: obj({
@@ -207,6 +207,8 @@ const MOVED_TOP_LEVEL: Record<
   string,
   string | ((value: unknown, file: string) => string)
 > = {
+  srcDirectories:
+    'was renamed to pikkuDirectories, and each entry is now a directory with its own pikku.config.json (an addon or a functions package), not a source folder. Delete it',
   outDir:
     'is no longer a config key: generated files always go to `.pikku/` beside pikku.config.json. Delete it (`--outDir` stays as an internal flag for per-unit codegen)',
   dev: (value) => {
@@ -250,6 +252,7 @@ const MOVED_TOP_LEVEL: Record<
   resolvedScaffoldDir: 'is derived by the CLI; delete it',
   addonName: 'is derived from package.json; delete it',
   configDir: 'is derived by the CLI; delete it',
+  sourceDirs: 'is derived by the CLI; delete it',
   clientAuthFile: UNREAD,
 }
 

@@ -126,7 +126,7 @@ ${
  * needs a service — migrations, seeding, starting a queue consumer — belongs
  * here rather than in the services factory.
  *
- * Export exactly one, from anywhere in \`srcDirectories\`. Only \`pikku dev\` and
+ * Export exactly one, from anywhere in \`sourceDirs\`. Only \`pikku dev\` and
  * \`pikku serve\` run these hooks; a runtime that owns its own entrypoint does
  * not.
  *

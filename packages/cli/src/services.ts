@@ -355,7 +355,7 @@ export const createSingletonServices: CreateSingletonServices<
   Config,
   SingletonServices
 > = async (config) => {
-  const { rootDir, srcDirectories, filters, stateOutput } = config
+  const { rootDir, sourceDirs, filters, stateOutput } = config
   let preloadedInspectorState = config.preloadedInspectorState
   const variables = new LocalVariablesService()
 
@@ -434,7 +434,7 @@ export const createSingletonServices: CreateSingletonServices<
       // Run inspector WITHOUT filters to get full state
       const wiringFiles = await findSourceFiles(
         rootDir,
-        srcDirectories,
+        sourceDirs,
         config.ignoreFiles || []
       )
 
@@ -462,7 +462,7 @@ export const createSingletonServices: CreateSingletonServices<
         config.featureFlagsFile,
         // The auth scaffold (catch-all routes + session middleware) and its
         // sibling secrets file (defineSecret per provider) are generated into the
-        // scaffold dir, which may live outside srcDirectories (e.g. a project's
+        // scaffold dir, which may live outside sourceDirs (e.g. a project's
         // `pikku/` dir). Add them explicitly so their wirings are inspected.
         config.authFile,
         config.authFile

@@ -1,6 +1,10 @@
 import { existsSync } from 'node:fs'
-import { readdir, readFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import {
+  listProjectFiles,
+  projectSourceDirs,
+} from '../../utils/pikku-directories.js'
 
 export type ValidateSeverity = 'critical' | 'error' | 'warn' | 'info'
 
@@ -15,41 +19,13 @@ export type ValidateFinding = {
 }
 
 export type VirtualUserCheckConfig = {
-  srcDirectories?: unknown
+  pikkuDirectories?: unknown
   outDir?: unknown
   virtualUsersMetaJsonFile?: unknown
   environments?: unknown
 }
 
 const lines = (...parts: string[]): string => parts.join('\n')
-
-const stringArray = (value: unknown): string[] =>
-  Array.isArray(value)
-    ? value.filter((v): v is string => typeof v === 'string')
-    : []
-
-/**
- * Source files under one directory, flat list, generated files included.
- *
- * A virtual user declaration is `defineVirtualUsers({ … })` written by hand, but the
- * virtual user plugin is routinely wired in a file the auth scaffold generated, so
- * `.gen.ts` cannot be skipped the way the undeclared-import walk skips it.
- */
-const listSourceFiles = async (dir: string): Promise<string[]> => {
-  if (!existsSync(dir)) return []
-  try {
-    return (await readdir(dir, { recursive: true }))
-      .filter(
-        (f): f is string =>
-          typeof f === 'string' &&
-          (f.endsWith('.ts') || f.endsWith('.tsx')) &&
-          !f.includes('node_modules')
-      )
-      .map((f) => join(dir, f))
-  } catch {
-    return []
-  }
-}
 
 const readTextSafe = async (path: string): Promise<string | null> => {
   if (!existsSync(path)) return null
@@ -152,13 +128,8 @@ export const runVirtualUserChecks = async (
     findings.push({ id, severity: 'warn', message, path, fixHint })
   }
 
-  const srcDirectories = stringArray(config?.srcDirectories)
-  const searchDirs = srcDirectories.length
-    ? srcDirectories
-    : [join('packages', 'functions', 'src')]
-  const sourceFiles = (
-    await Promise.all(searchDirs.map((dir) => listSourceFiles(join(root, dir))))
-  ).flat()
+  const searchDirs = projectSourceDirs(config ?? {})
+  const sourceFiles = await listProjectFiles(root, searchDirs, ['.ts', '.tsx'])
 
   const virtualUsers = await countVirtualUsers(root, config ?? {}, sourceFiles)
   const pikkuConfigPath = join(root, 'pikku.config.json')

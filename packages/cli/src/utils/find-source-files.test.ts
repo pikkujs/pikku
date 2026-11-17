@@ -25,7 +25,7 @@ const project = async (name: string) => {
 }
 
 describe('findSourceFiles', () => {
-  test('finds every .ts file under each source directory, minus the ignored ones', async () => {
+  test('finds every .ts file under each source directory, minus the ignored ones and build output', async () => {
     const root = await project('shop')
 
     const files = await findSourceFiles(root, ['src'], ['**/dist/**'])
@@ -43,6 +43,6 @@ describe('findSourceFiles', () => {
 
     const files = await findSourceFiles(root, ['src'], [])
 
-    assert.equal(files.length, 3)
+    assert.equal(files.length, 2)
   })
 })

@@ -52,7 +52,7 @@ export const writeDevContributors = async (
   const built = await buildContributorPlatform({
     projectDir: config.rootDir,
     pikkuDir: config.outDir,
-    srcDirectories: config.srcDirectories,
+    sourceDirs: config.sourceDirs,
     logger: { debug: (msg) => logger.debug(msg) },
     serviceNames: visitState.serviceAggregation.requiredServices,
     subject: 'pikku dev',

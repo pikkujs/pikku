@@ -173,17 +173,6 @@ export function cleanPikkuConfig(
 
   delete pikkuConfig.extends
 
-  // Fix srcDirectories paths that reference ../functions/src (from templates designed for multi-template use)
-  if (pikkuConfig.srcDirectories && Array.isArray(pikkuConfig.srcDirectories)) {
-    const hasFunctionsRef = pikkuConfig.srcDirectories.some(
-      (dir: string) => dir === '../functions/src'
-    )
-    if (hasFunctionsRef) {
-      // Replace with both ./src and ./types (matching functions template structure)
-      pikkuConfig.srcDirectories = ['./src', './types']
-    }
-  }
-
   // A recipe in the monorepo points rootDir and tsconfig at the shared
   // ../functions project. A scaffolded copy has no ../functions beside it, so
   // codegen would scan a directory that does not exist (and the scaffold checks

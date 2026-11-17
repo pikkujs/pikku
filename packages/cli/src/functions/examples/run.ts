@@ -33,7 +33,7 @@ import { snakeCase as snakeTable } from '../db/snake-case.js'
 export interface ExampleProject {
   rootDir: string
   outDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
 }
 
 const summary = (example: PikkuExample) => ({
@@ -54,12 +54,13 @@ export function runExamplesList(group?: string): ExamplesListResult {
 
 /** The project's own source directory a backend recipe's files are rebased onto. */
 function functionsDirOf(project: ExampleProject): string {
-  const first = project.srcDirectories[0]
+  const first = project.sourceDirs[0]
   if (!first) return 'src'
   const rel = first.startsWith(project.rootDir)
     ? first.slice(project.rootDir.length).replace(/^[/\\]/, '')
     : first
-  return rel.replace(/\\/g, '/').replace(/^\.\//, '') || 'src'
+  const dir = rel.replace(/\\/g, '/').replace(/^\.\//, '')
+  return dir === '.' || !dir ? 'src' : dir
 }
 
 export function runExamplesShow(
@@ -82,7 +83,7 @@ export function runExamplesShow(
 
   const from = found.entity ? entityNames(found.entity) : null
   const to = entity ? entityNames(entity) : null
-  const cast = virtualUserCast(project.srcDirectories)
+  const cast = virtualUserCast(project.sourceDirs)
   const applyRename = (body: string) =>
     renameVirtualUsersInCode(
       from && to ? renameEntityInCode(body, from, to) : body,
@@ -176,7 +177,7 @@ export function runExamplesAdd(
   if (found.deferUntil === 'entity-write') {
     const { required, uncovered } = entityWriteCoverage(
       project.rootDir,
-      project.srcDirectories
+      project.sourceDirs
     )
     if (required.length > 0 && uncovered.length === required.length) {
       return refuse(
@@ -215,7 +216,7 @@ export function runExamplesAdd(
 
   const from = found.entity ? entityNames(found.entity) : null
   const to = entity ? entityNames(entity) : null
-  const cast = virtualUserCast(project.srcDirectories)
+  const cast = virtualUserCast(project.sourceDirs)
   const renameCode = (body: string) =>
     renameVirtualUsersInCode(
       from && to ? renameEntityInCode(body, from, to) : body,

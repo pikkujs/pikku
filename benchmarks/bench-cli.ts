@@ -91,7 +91,6 @@ function setupProject() {
       {
         $schema:
           'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
-        srcDirectories: ['./src', './types'],
         backends: { api: { filter: {} } },
         tsconfig: './tsconfig.json',
         // The generated graphs are built from pikkuWorkflowComplexFunc.

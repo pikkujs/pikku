@@ -14,7 +14,6 @@ export interface ScaffoldOptions {
 }
 
 const PIKKU_CONFIG = {
-  srcDirectories: ['./src'],
   outDir: './.pikku',
   tsconfig: './tsconfig.json',
 }

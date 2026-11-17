@@ -874,7 +874,6 @@ describe('cleanPikkuConfig', () => {
     const out = run({
       rootDir: '../functions',
       tsconfig: '../functions/tsconfig.json',
-      srcDirectories: ['./src', './types'],
     })
     assert.equal(out.rootDir, undefined)
     assert.equal(out.tsconfig, './tsconfig.json')
