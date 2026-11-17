@@ -174,6 +174,7 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'changes.reply',
   'changes.shot',
   'changes.merge',
+  'changes.release',
   'changes.done',
   'changes.start',
   'changes.backlog',
