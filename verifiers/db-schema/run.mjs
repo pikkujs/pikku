@@ -821,6 +821,33 @@ check(
   `\`${REMOTE_TABLE}\` is not in this database — the remote addon reads it on another one`
 )
 
+// The same annotations must survive the two commands that regenerate them
+// without generating a migration: `db codegen` and `db reset` each rebuild the
+// sidecar and the Zod schema, so each must read the wired addon.
+const addonOutputs = () => ({
+  sidecar: JSON.parse(
+    readFileSync(join(here, 'db', 'annotations.gen.json'), 'utf8')
+  ),
+  zod: readFileSync(join(here, '.pikku', 'db', 'zod.gen.ts'), 'utf8'),
+})
+const addonCarried = ({ sidecar, zod }) =>
+  sidecar.labels_label?.owner?.security === 'pii' &&
+  sidecar.labels_label?.weight?.max === 10 &&
+  /weight: z\.number\(\)\.int\(\)\.min\(0\)\.max\(10\)/.test(zod)
+for (const sub of ['codegen', 'reset']) {
+  rmSync(join(here, 'db', 'annotations.gen.json'), { force: true })
+  rmSync(join(here, '.pikku', 'db', 'zod.gen.ts'), { force: true })
+  run(`app: pikku db ${sub}`, 'node', [PIKKU, 'db', sub])
+  check(
+    addonCarried(addonOutputs()),
+    `db ${sub} writes the addon’s annotations into the sidecar and the Zod schema`
+  )
+}
+check(
+  await store.hasTable('labels_label'),
+  'db reset recreated the addon’s table from its declaration'
+)
+
 // 10b. A tarball packed on macOS carries an AppleDouble `._<name>.sql` beside
 //      every file. Extracted on Linux it is a real file that sorts before the
 //      migrations, and it is binary: Bun's sqlite refuses it and fails the whole
@@ -1044,6 +1071,48 @@ check(
     oldArtifact.output.includes('Rebuild or upgrade the addon'),
   'an artifact in the old SQL-per-dialect shape is refused'
 )
+
+// An old addon's migration created `labels_legacy`; the addon now declares it.
+// The table is adopted — nothing is created — and a column the addon adds later
+// is added to it, on this engine's real introspection.
+const adoptSql = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.includes('app-tables'))
+  .map((f) => sqlOf(f))
+  .join('\n')
+  .split('\n')
+  .filter((line) => !line.startsWith('--'))
+  .join('\n')
+  .replaceAll('labels_label', 'labels_legacy')
+const legacyFile = join(MIGRATIONS_DIR, '0999-labels-legacy.sql')
+writeFileSync(legacyFile, `${adoptSql}\n`)
+knownMigrations.add('0999-labels-legacy.sql')
+publish({
+  labelsLabel: published.labelsLabel,
+  labelsLegacy: published.labelsLabel,
+})
+const adopted = generateWith('app: pikku db generate (addon adopts a table)')
+check(
+  adopted.status === 0 && !/create table/i.test(adopted.sqlAdded),
+  'a table an old addon migration created is adopted, not created again'
+)
+publish({
+  labelsLabel: published.labelsLabel,
+  labelsLegacy: {
+    columns: { ...published.labelsLabel.columns, shade: { type: 'text' } },
+  },
+})
+const adoptedGrown = generateWith(
+  'app: pikku db generate (adopted table gains a column)'
+)
+check(
+  adoptedGrown.status === 0 &&
+    new RegExp(
+      `alter table ${q('labels_legacy')} add column ${q('shade')}`,
+      'i'
+    ).test(adoptedGrown.sqlAdded),
+  'a column added to an adopted table is added with ALTER TABLE'
+)
+rmSync(legacyFile)
 writeFileSync(linkedArtifact, savedArtifact)
 
 // 16. The app's own declaration, from the real binary. `user` is Better Auth's:
