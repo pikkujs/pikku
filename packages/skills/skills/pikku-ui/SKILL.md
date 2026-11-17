@@ -13,7 +13,7 @@ A screen drawn without the project's design rules comes out generic and gets rej
 
 1. Find the design rules for this project: `DESIGN.md` and the UI section of `AGENTS.md` at the
    repo root, and the shared component package the screens are built from. If a project has
-   none, say so and stop. Do not invent a look.
+   none, work from the closest existing screen and, for a rebuild of a live site, the reference screenshots. Do not stop, and do not invent a look.
 2. Build the screen yourself, in the checkout you were given, under these rules. If you have a tool named `subagent` you may hand a screen to a
    subagent instead; if you do not, never stop or ask: build it. Either way the work follows these rules:
    - the screen and its route or file, and the content it has to show or do;
