@@ -13,6 +13,7 @@ import type {
   EventHubSubscription,
   StoredSubscription,
 } from './event-hub.types.js'
+import { OTLP_RUNS_TOPIC } from '../../../otlp/runs/live.js'
 import { getDeclaredEventHubTopics } from './runtime.js'
 import { matchesTopicPattern, topicPatternsOverlap } from './topic-pattern.js'
 
@@ -45,6 +46,9 @@ const createMessage = (
     },
   }
 }
+
+/** Topics that never leave this process: no relay carries them out, and none may deliver them in. */
+const isLocalOnly = (topic: string): boolean => topic === OTLP_RUNS_TOPIC
 
 interface Attached {
   handler: PikkuChannelHandler
@@ -338,6 +342,11 @@ export class EventHubDistributor {
     event: EventHubInboundEvent
   ): Promise<void> {
     try {
+      if (isLocalOnly(event.topic)) {
+        throw new Error(
+          `Event hub dropped an inbound event on "${event.topic}": that topic is local to this process`
+        )
+      }
       if (
         !relayTopics.some((pattern) =>
           matchesTopicPattern(pattern, event.topic)
@@ -386,6 +395,7 @@ export class EventHubDistributor {
   }
 
   private async forward(message: EventHubMessage): Promise<void> {
+    if (isLocalOnly(message.topic)) return
     await Promise.all(
       [...this.relays.values()]
         .filter(({ topics }) =>

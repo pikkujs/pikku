@@ -215,6 +215,15 @@ describe('getPikkuCLIConfig', () => {
     assert.equal(config.analyticsFile, undefined)
   })
 
+  test('liveRuns must be a boolean: the string "false" is refused, not truthy', async () => {
+    const root = await writeConfig({ liveRuns: 'false' })
+    await assert.rejects(
+      () =>
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /liveRuns .* must be true or false/
+    )
+  })
+
   test('rejects the old startServerFnsFile key by name', async () => {
     const root = await writeConfig({
       clientFiles: { startServerFnsFile: './src/lib/pikku-start.gen.ts' },

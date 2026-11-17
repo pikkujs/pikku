@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, describe, test } from 'node:test'
-import { fetchData } from '@pikku/core/http'
+import { fetchData, wireHTTP } from '@pikku/core/http'
 import { addGlobalMiddleware, pikkuMiddleware } from '@pikku/core/middleware'
 import { createOtlpSinks, type OtlpSinkBase } from '@pikku/core/otlp'
 import { OTLP_RUNS_TOPIC, type RunSnapshot } from '@pikku/core/otlp/runs'
@@ -141,22 +141,30 @@ describe('registerOtlpRuns', () => {
     assert.equal(distributor.subscriptionCount(), 0)
   })
 
-  test('a session without otlp:runs is 403 on both routes', async () => {
+  test('a session without pikku:otlp:runs is 403 on both routes', async () => {
     register()
-    session = { userId: 'u', scopes: ['admin', 'otlp:other'] }
+    session = {
+      userId: 'u',
+      scopes: ['admin', 'otlp:runs', 'otlp', 'otlp:*', 'pikku:other'],
+    }
     assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 403)
     const stream = await call(OTLP_RUNS_STREAM_ROUTE)
     assert.equal(stream.status_, 403)
     assert.equal(distributor.subscriptionCount(), 0)
   })
 
-  test('otlp:runs, or a grant above it, reads the snapshot and opens the stream', async () => {
+  test('pikku:otlp:runs, or a grant above it, reads the snapshot and opens the stream', async () => {
     register()
-    for (const scopes of [['otlp:runs'], ['otlp:*'], ['*']]) {
+    for (const scopes of [
+      ['pikku:otlp:runs'],
+      ['pikku:otlp:*'],
+      ['pikku'],
+      ['*'],
+    ]) {
       session = { userId: 'u', scopes }
       assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 200)
     }
-    session = { userId: 'u', scopes: ['otlp:runs'] }
+    session = { userId: 'u', scopes: ['pikku:otlp:runs'] }
     const stream = await call(OTLP_RUNS_STREAM_ROUTE)
     assert.equal(stream.status_, 200)
     assert.equal(stream.mode, 'stream')
@@ -164,9 +172,36 @@ describe('registerOtlpRuns', () => {
     assert.equal(distributor.subscriptions()[0].topic, OTLP_RUNS_TOPIC)
   })
 
+  test('another subscribe function cannot read the live runs topic', async () => {
+    register()
+    const meta = pikkuState(null, 'function', 'meta') as any
+    meta.otherSubscribe = {
+      pikkuFuncId: 'otherSubscribe',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      subscribe: { topicPattern: 'order:${string}' },
+    }
+    const httpMeta = pikkuState(null, 'http', 'meta') as any
+    httpMeta.get['/other/stream'] = {
+      pikkuFuncId: 'otherSubscribe',
+      route: '/other/stream',
+      method: 'get',
+      sse: true,
+    }
+    wireHTTP({
+      route: '/other/stream',
+      method: 'get',
+      sse: true,
+      func: { func: async () => OTLP_RUNS_TOPIC },
+    } as any)
+    session = { userId: 'u', scopes: [] }
+    await call('/other/stream')
+    assert.equal(distributor.subscriptionCount(), 0)
+  })
+
   test('the snapshot lists the run and its seq matches what the stream carries', async () => {
     const live = register()
-    session = { userId: 'u', scopes: ['otlp:runs'] }
+    session = { userId: 'u', scopes: ['pikku:otlp:runs'] }
     const stream = await call(OTLP_RUNS_STREAM_ROUTE)
 
     finishRun(otlpSinks.list()[0], 'a', Date.now())
@@ -198,20 +233,20 @@ describe('registerOtlpRuns', () => {
       options: {},
     } as any)
     register()
-    session = { userId: 'u', scopes: ['otlp:runs'] }
+    session = { userId: 'u', scopes: ['pikku:otlp:runs'] }
     assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 200)
     assert.equal(otlpSinks.list().length, 1)
   })
 })
 
 describe('withOtlpRunsScope', () => {
-  test('adds the otlp tree once and leaves a project that declares it alone', () => {
+  test('adds the pikku tree once and leaves a project that declares it alone', () => {
     const added = withOtlpRunsScope([])
     assert.deepEqual(
       added.map((scope) => scope.name),
-      ['otlp']
+      ['pikku']
     )
-    const own = [{ name: 'otlp', origin: { kind: 'app' as const } }]
+    const own = [{ name: 'pikku', origin: { kind: 'app' as const } }]
     assert.deepEqual(withOtlpRunsScope(own), own)
   })
 })

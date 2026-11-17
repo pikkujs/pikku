@@ -398,6 +398,43 @@ describe('relays', () => {
     assert.equal(pg.forwarded.length, 0)
   })
 
+  test('the live runs topic is never forwarded to a relay, even one carrying every topic', async () => {
+    const errors: unknown[] = []
+    const distributor = createEventHubDistributor({
+      topics: () => ['otlp.runs', 'order:${string}'],
+      onError: (error) => errors.push(error),
+    })
+    distributor.registerDelivery(createLocalDeliveryBackend())
+    const all = makeRelay('all')
+    distributor.registry().add(all.relay, { topics: ['${string}'] })
+    await distributor.publish('otlp.runs', { v: 1, events: [] })
+    await distributor.publish('order:1', {})
+    assert.deepEqual(
+      all.forwarded.map((m) => m.topic),
+      ['order:1']
+    )
+  })
+
+  test('a live runs message arriving from a relay is not delivered to local subscribers', async () => {
+    const errors: unknown[] = []
+    const distributor = createEventHubDistributor({
+      topics: () => ['otlp.runs'],
+      onError: (error) => errors.push(error),
+    })
+    const backend = createLocalDeliveryBackend()
+    distributor.registerDelivery(backend)
+    const all = makeRelay('all')
+    distributor.registry().add(all.relay, { topics: ['${string}'] })
+    const a = makeChannel('a')
+    distributor.attach(a.handler, backend, undefined)
+    distributor.addSubscription('a', 'otlp.runs', subscription())
+
+    await all.receive({ topic: 'otlp.runs', data: { v: 1 }, isBinary: false })
+
+    assert.deepEqual(a.sent, [])
+    assert.match(String(errors[0]), /local to this process/)
+  })
+
   test('an inbound topic outside the relay map or the declared topics is dropped', async () => {
     const errors: unknown[] = []
     const distributor = createEventHubDistributor({

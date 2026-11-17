@@ -11,6 +11,7 @@ import {
 import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { InspectorState } from '@pikku/inspector'
+import { withOtlpRunsScope } from '../otlp/register-otlp-runs.js'
 import type { Config } from '../../../../types/application-types.js'
 
 /**
@@ -64,13 +65,16 @@ export const withAddonOrigin = (
  */
 export const projectScopeDefinitions = (
   state: Pick<InspectorState, 'scopes' | 'virtualUsers'>,
-  config: Pick<Config, 'addonName' | 'addon'>
-): ScopeDefinitions =>
-  withAddonOrigin(
+  config: Pick<Config, 'addonName' | 'addon'>,
+  liveRuns = true
+): ScopeDefinitions => {
+  const scopes = withAddonOrigin(
     withAppScopes(state.scopes.definitions, state.virtualUsers.definitions),
     config.addonName,
     config.addon
   )
+  return liveRuns ? withOtlpRunsScope(scopes) : scopes
+}
 
 export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
   func: async ({ logger, config, getInspectorState }, data) => {

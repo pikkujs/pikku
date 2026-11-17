@@ -132,10 +132,62 @@ describe('registerOtlpLive', () => {
   })
 })
 
+describe('failure reporting', () => {
+  const logged: string[] = []
+  const logger = { warn: (m: unknown) => void logged.push(String(m)) }
+
+  test('a publish failure is logged once, then at most once a minute with its count', () => {
+    logged.length = 0
+    const otlpSinks = createOtlpSinks()
+    const clock = manualClock()
+    registerOtlpLive({
+      otlpSinks,
+      serviceName: 't',
+      publish: () => {
+        throw new Error('hub down')
+      },
+      clock,
+      logger,
+    })
+    const sink = otlpSinks.list()[0]!
+    finish(sink, 'a')
+    clock.tick()
+    assert.equal(logged.length, 1)
+    assert.match(logged[0]!, /publish failed \(hub down\)/)
+    finish(sink, 'b')
+    clock.tick()
+    assert.equal(logged.length, 1)
+    clock.at += 61_000
+    finish(sink, 'c')
+    clock.tick()
+    assert.equal(logged.length, 2)
+    assert.match(logged[1]!, /\d+ since the last report/)
+  })
+
+  test('dropped frames are logged', () => {
+    logged.length = 0
+    const otlpSinks = createOtlpSinks()
+    const clock = manualClock()
+    registerOtlpLive({
+      otlpSinks,
+      serviceName: 't',
+      publish: () => {},
+      clock,
+      logger,
+      maxQueue: 1,
+    })
+    const sink = otlpSinks.list()[0]!
+    finish(sink, 'a')
+    finish(sink, 'b')
+    clock.tick()
+    assert.ok(logged.some((m) => /queue full/.test(m)))
+  })
+})
+
 describe('otlpRunsScopeDefinition', () => {
-  test('declares otlp:runs', () => {
+  test('declares pikku:otlp:runs', () => {
     const def = otlpRunsScopeDefinition()
-    assert.equal(`${def.name}:runs`, OTLP_RUNS_SCOPE)
-    assert.ok(def.scopes?.runs)
+    assert.equal(`${def.name}:otlp:runs`, OTLP_RUNS_SCOPE)
+    assert.ok(def.scopes?.otlp?.scopes?.runs)
   })
 })

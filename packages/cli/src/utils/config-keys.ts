@@ -9,6 +9,7 @@ import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 
 type Shape =
   | 'any'
+  | 'boolean'
   | { keys: Record<string, Shape>; each?: never }
   | { each: Shape; keys?: never }
 
@@ -83,7 +84,7 @@ const SHAPE: Shape = obj({
     }),
   }),
   allowShadowedServices: 'any',
-  liveRuns: 'any',
+  liveRuns: 'boolean',
   metaLocale: 'any',
   tsconfig: 'any',
   clientFiles: obj({
@@ -297,6 +298,14 @@ const check = (
   path: string[],
   file: string
 ): void => {
+  if (shape === 'boolean') {
+    if (typeof value !== 'boolean') {
+      throw new PikkuCLIConfigError(
+        `${path.join('.')} in ${file} must be true or false, not ${JSON.stringify(value)}.`
+      )
+    }
+    return
+  }
   if (shape === 'any' || !isRecord(value)) return
 
   if (shape.each) {
