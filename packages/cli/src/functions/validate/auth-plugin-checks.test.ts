@@ -7,7 +7,7 @@ import { runAuthPluginChecks } from './auth-plugin-checks.js'
 
 const makeTmp = async () => mkdtemp(join(tmpdir(), 'pikku-auth-plugin-checks-'))
 
-const config = { pikkuDirectories: ['packages/functions'] }
+const config = { base: 'packages/functions' }
 
 const writeSource = async (
   root: string,

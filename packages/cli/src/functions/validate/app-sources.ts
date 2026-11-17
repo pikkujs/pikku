@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import {
   isNestedProject,
   isSkippedDirectory,
-} from '../../utils/pikku-directories.js'
+} from '../../utils/project-packages.js'
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
 

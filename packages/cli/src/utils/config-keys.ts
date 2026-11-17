@@ -61,7 +61,8 @@ const SHAPE: Shape = obj({
   rootDir: 'any',
   runtimeDir: 'any',
   content: obj({ contentPath: 'any', sizeLimit: 'any', buckets: 'any' }),
-  pikkuDirectories: 'any',
+  addons: 'any',
+  base: 'any',
   namespace: 'any',
   ignoreFiles: 'any',
   packageMappings: 'any',
@@ -209,7 +210,9 @@ const MOVED_TOP_LEVEL: Record<
   string | ((value: unknown, file: string) => string)
 > = {
   srcDirectories:
-    'was renamed to pikkuDirectories, and each entry is now a directory with its own pikku.config.json (an addon or a functions package), not a source folder. Delete it',
+    'is gone: a project inspects its own directory. Name the package that owns the wirings and services with `base`, and list addon directories in `addons`. Delete it',
+  pikkuDirectories:
+    'is gone. Name the package that owns the wirings and services with `base`, and list addon directories (each with its own pikku.config.json and a namespace) in `addons`. Delete it',
   outDir:
     'is no longer a config key: generated files always go to `.pikku/` beside pikku.config.json. Delete it (`--outDir` stays as an internal flag for per-unit codegen)',
   dev: (value) => {
@@ -219,8 +222,6 @@ const MOVED_TOP_LEVEL: Record<
     }
     return 'has moved to backends.<name>.dev, which takes `port` only (`dev.db` and `dev.contributors` are gone). Delete it and set backends.<name>.dev.port'
   },
-  addons:
-    'is not a config key yet: wire an addon in code with wireAddon. Delete it',
   supportsImportAttributes: 'is now schema.supportsImportAttributes',
   entrypoint: UNREAD,
   showcase: UNREAD,
@@ -254,8 +255,8 @@ const MOVED_TOP_LEVEL: Record<
   addonName: 'is derived from package.json; delete it',
   configDir: 'is derived by the CLI; delete it',
   sourceDirs: 'is derived by the CLI; delete it',
-  pikkuPackages: 'is derived by the CLI; delete it',
-  pikkuPackagesFile: 'is derived by the CLI; delete it',
+  addonPackages: 'is derived by the CLI; delete it',
+  basePackage: 'is derived by the CLI; delete it',
   clientAuthFile: UNREAD,
 }
 

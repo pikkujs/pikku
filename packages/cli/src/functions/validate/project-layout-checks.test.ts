@@ -29,7 +29,7 @@ const goodProject = async () => {
     workspaces: ['packages/*', 'apps/*'],
   })
   await write(root, 'pikku.config.json', {
-    pikkuDirectories: ['packages/server'],
+    base: 'packages/server',
     emailTemplatesDir: 'emails',
   })
   await mkdir(join(root, 'db', 'sqlite'), { recursive: true })
@@ -162,7 +162,7 @@ describe('project layout', () => {
     )
   })
 
-  test('a package listed in pikkuDirectories is not a second config', async () => {
+  test('the base package is not a second config', async () => {
     await withProject(
       async (root) => {
         await write(root, 'packages/server/pikku.config.json', {})
@@ -231,7 +231,7 @@ describe('project layout', () => {
     await withProject(
       async (root) => {
         await write(root, 'pikku.config.json', {
-          pikkuDirectories: ['packages/server'],
+          base: 'packages/server',
           emailTemplatesDir: 'packages/server/emails',
         })
         await mkdir(join(root, 'packages', 'server', 'emails'), {

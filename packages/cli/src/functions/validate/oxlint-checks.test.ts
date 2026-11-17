@@ -52,7 +52,7 @@ const makeApp = async (opts: AppOptions = {}) => {
     root,
     'pikku.config.json',
     JSON.stringify({
-      pikkuDirectories: ['packages/functions'],
+      base: 'packages/functions',
       ...pikkuConfig,
     })
   )
@@ -966,7 +966,7 @@ describe('oxlint run', () => {
   test('runs read-only, type-aware, JSON, over the project source directories minus generated output', async () => {
     const root = await makeApp({
       pikkuConfig: {
-        pikkuDirectories: ['packages/functions'],
+        base: 'packages/functions',
         outDir: 'packages/functions/.pikku',
         scaffold: { pikkuDir: 'packages/functions/src/scaffold' },
       },

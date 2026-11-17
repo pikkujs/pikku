@@ -12,7 +12,7 @@ import type { ValidateFinding } from './virtual-user-checks.js'
  *   resolves to;
  * - `db/` and `emails/` beside the config (db under `rootDir`, emails under
  *   `emailTemplatesDir`), never inside a functions package;
- * - the code in the packages `pikkuDirectories` lists.
+ * - the code in the project's base package.
  *
  * A warning by default and an error with `--strict`, so a project moved into
  * the wrong shape is caught before it is released.
@@ -32,7 +32,8 @@ const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', 'out'])
 
 type LayoutConfig = {
   rootDir?: unknown
-  pikkuDirectories?: unknown
+  addons?: unknown
+  base?: unknown
   emailTemplatesDir?: unknown
 }
 
@@ -278,36 +279,38 @@ export async function runProjectLayoutChecks(
         severity,
         message: `pikku.config.json is inside the package ${relative(top, configDir)}; it belongs at the project top level (${top}), beside the workspace package.json`,
         path: join(configDir, CONFIG),
-        fixHint: `Move pikku.config.json, db/ and emails/ to ${top}, rewrite its paths (pikkuDirectories, emailTemplatesDir, ...) relative to it, and point #pikku/* at ${join(top, '.pikku')}.`,
+        fixHint: `Move pikku.config.json, db/ and emails/ to ${top}, rewrite its paths (base, addons, emailTemplatesDir, ...) relative to it, and point #pikku/* at ${join(top, '.pikku')}.`,
       })
     }
   }
 
-  // 2. Exactly one config in the project, apart from the packages it lists.
+  // 2. Exactly one config in the project, apart from its base and its addons.
+  const listed = [
+    ...(Array.isArray(config.addons) ? config.addons : []),
+    ...(typeof config.base === 'string' ? [config.base] : []),
+  ].filter((d): d is string => typeof d === 'string')
   const listedConfigs = new Set(
-    (Array.isArray(config.pikkuDirectories) ? config.pikkuDirectories : [])
-      .filter((d): d is string => typeof d === 'string')
-      .map((d) =>
-        join(
-          resolve(
-            typeof config.rootDir === 'string'
-              ? resolve(configDir, config.rootDir)
-              : configDir,
-            d
-          ),
-          CONFIG
-        )
+    listed.map((d) =>
+      join(
+        resolve(
+          typeof config.rootDir === 'string'
+            ? resolve(configDir, config.rootDir)
+            : configDir,
+          d
+        ),
+        CONFIG
       )
+    )
   )
   for (const extra of await findNestedConfigs(configDir)) {
     if (listedConfigs.has(extra)) continue
     findings.push({
       id: LAYOUT_CONFIG_DUPLICATE,
       severity,
-      message: `a second pikku.config.json at ${rel(extra)}; a project has exactly one, at its top level (${join(configDir, CONFIG)}), plus one in each package its pikkuDirectories lists`,
+      message: `a second pikku.config.json at ${rel(extra)}; a project has exactly one, at its top level (${join(configDir, CONFIG)}), plus one in its base and in each addon it lists`,
       path: extra,
       fixHint:
-        'Merge what it sets into the top-level pikku.config.json and delete it, or list its directory in pikkuDirectories there. An addon keeps its own config only beside types/application-types.d.ts.',
+        'Merge what it sets into the top-level pikku.config.json and delete it, or name its directory as base or in addons there. An addon keeps its own config only beside types/application-types.d.ts.',
     })
   }
 
@@ -315,12 +318,11 @@ export async function runProjectLayoutChecks(
     typeof config.rootDir === 'string'
       ? resolve(configDir, config.rootDir)
       : configDir
-  const pikkuDirectories = Array.isArray(config.pikkuDirectories)
-    ? config.pikkuDirectories.filter((d): d is string => typeof d === 'string')
-    : []
   const packages = [
     ...new Set(
-      pikkuDirectories.map((d) => packageOf(resolve(rootDir, d), configDir))
+      (typeof config.base === 'string' ? [config.base] : []).map((d) =>
+        packageOf(resolve(rootDir, d), configDir)
+      )
     ),
   ]
   const nestedPackages = packages.filter((p) => p !== configDir)

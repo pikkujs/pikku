@@ -25,12 +25,12 @@ import {
 import { blankComments } from '../../utils/blank-comments.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
 import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
-import { projectSourceDirs } from '../../utils/pikku-directories.js'
+import { projectSourceDirs } from '../../utils/project-packages.js'
 
 export type Finding = ValidateFinding
 
 export type SharedPikkuConfig = {
-  pikkuDirectories?: unknown
+  base?: unknown
   outDir?: unknown
   environments?: unknown
   clientFiles?: unknown
@@ -594,7 +594,7 @@ export async function runSharedProjectChecks(
         'Create `pikku.config.json` at the repo root.',
         'Minimum useful shape:',
         '{',
-        '  "pikkuDirectories": ["packages/functions"],',
+        '  "base": "packages/functions",',
         '  "backends": { "api": { "filter": {} } }',
         '}'
       )

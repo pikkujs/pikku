@@ -447,8 +447,6 @@ export const createSingletonServices: CreateSingletonServices<
         config.workflowRoutesFile,
         config.publicRpcFile,
         config.publicAgentFile,
-        // The wiring that makes each pikkuDirectories package a wired addon.
-        config.pikkuPackagesFile,
         // The analytics ingest is generated into the scaffold dir and nothing
         // imports it — it is a wiring, not a module anyone calls — so without
         // this the route is written and never registered: no HTTP wiring, no

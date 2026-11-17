@@ -1,5 +1,5 @@
 import { relative } from 'node:path'
-import { listProjectFiles } from '../../utils/pikku-directories.js'
+import { listProjectFiles } from '../../utils/project-packages.js'
 import { readTextSafe } from './shared-checks.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 
