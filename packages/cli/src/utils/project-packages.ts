@@ -309,6 +309,26 @@ export const resolveBasePackage = async (
 }
 
 /**
+ * An addon in `addons` runs its own pass and joins the root's SDK, but the
+ * base is what wires it: a `wireAddon` in the base's source names it, with the
+ * addon's `namespace`. One the base never wires is dead weight, or a typo.
+ */
+export const assertAddonsWired = (
+  configFile: string,
+  addons: readonly { entry: string; namespace: string }[],
+  wired: Iterable<string>
+): void => {
+  const names = new Set(wired)
+  for (const addon of addons) {
+    if (!names.has(addon.namespace)) {
+      throw new PikkuCLIConfigError(
+        `addons in ${configFile} lists "${addon.entry}", but no wireAddon names its namespace "${addon.namespace}" in the base package's source. Add wireAddon({ name: '${addon.namespace}', package: ... }) there, or remove it from addons.`
+      )
+    }
+  }
+}
+
+/**
  * The packages in the order they must be built: a package after every listed
  * package it depends on. Kahn's algorithm, with ties kept in the order the
  * entries were listed. A dependency on a package that is not listed is not an

@@ -11,6 +11,7 @@ import {
   projectSourceDirs,
   resolveAddonPackages,
   resolveBasePackage,
+  assertAddonsWired,
   type AddonPackage,
 } from './project-packages.js'
 
@@ -327,6 +328,23 @@ describe('resolveBasePackage', () => {
     await assert.rejects(
       resolveBasePackage(file, root, 'packages/app', addons),
       /also listed in addons/
+    )
+  })
+})
+
+describe('assertAddonsWired', () => {
+  const tools = { entry: 'packages/tools', namespace: 'tools' }
+
+  test('accepts an addon the base wires under its namespace', () => {
+    assert.doesNotThrow(() =>
+      assertAddonsWired('pikku.config.json', [tools], ['tools'])
+    )
+  })
+
+  test('names an addon the base never wires', () => {
+    assert.throws(
+      () => assertAddonsWired('pikku.config.json', [tools], ['other']),
+      /lists "packages\/tools", but no wireAddon names its namespace "tools"/
     )
   })
 })

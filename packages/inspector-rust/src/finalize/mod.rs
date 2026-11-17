@@ -120,6 +120,7 @@ pub fn run(log: &mut Logger, st: &mut State, opts: &Options) -> Result<(), Strin
         addons::validate_variable_overrides(log, st);
         addons::validate_credential_overrides(log, st);
         addons::validate_addon_uses(log, st);
+        addons::validate_addon_parent_services(log, st);
         rpc_targets::validate_rpc_targets(log, st, opts);
         addons::validate_addon_content_grants(log, st);
         addons::validate_remote_addon_dependencies(log, st);

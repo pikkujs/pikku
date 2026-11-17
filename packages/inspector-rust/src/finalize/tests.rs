@@ -279,6 +279,39 @@ fn subscribe_function_requires_the_event_hub() {
     assert!(!plain.service_aggregation.required_services.has("eventHub"));
 }
 
+fn parent_services_state(declared: &[&str]) -> State {
+    let mut st = admin_addon_state(false);
+    st.service_types = Some(crate::state::ServiceTypes {
+        singleton_services: Some(Strings::from(declared.iter().map(|s| s.to_string()).collect::<Vec<_>>())),
+        services: Some(Strings::from(Vec::<String>::new())),
+        ..Default::default()
+    });
+    services::aggregate_required_services(&mut st);
+    st
+}
+
+#[test]
+fn addon_function_services_must_be_declared_by_the_project() {
+    let mut log = crate::diag::Logger::new();
+    addons::validate_addon_parent_services(&mut log, &parent_services_state(&["scopeService"]));
+    assert!(log.entries().is_empty(), "{:?}", log.entries());
+
+    let mut log = crate::diag::Logger::new();
+    addons::validate_addon_parent_services(&mut log, &parent_services_state(&[]));
+    let found: Vec<_> = log.entries().into_iter().filter(|d| d.code.as_deref() == Some("PKU368")).collect();
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].message.contains("'admin:listScopes'") && found[0].message.contains("'scopeService'"));
+}
+
+#[test]
+fn addon_parent_services_are_skipped_when_the_types_are_unresolved() {
+    let mut st = admin_addon_state(false);
+    services::aggregate_required_services(&mut st);
+    let mut log = crate::diag::Logger::new();
+    addons::validate_addon_parent_services(&mut log, &st);
+    assert!(log.entries().is_empty());
+}
+
 fn grant_state(decl: &str, with_auth: bool) -> State {
     let mut st = State::default();
     st.rpc.wire_addon_declarations.set("auth-addon", raw(decl));

@@ -132,13 +132,19 @@ What an app sees:
 - Local content no longer reads files stored outside `private/` and `public/` under `localFileUploadPath`: move any old `<bucket>/<key>` files into `private/<bucket>/<key>`. `resolveContentRequestTarget(basePath, key)` is synchronous and takes no `mode`.
 - A column with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
 
-### `srcDirectories` is now `pikkuDirectories`
+### `srcDirectories` is now `base` and `addons`
 
-**What:** a project inspects its own directory, so `srcDirectories` is gone and a config that still sets it is rejected. `pikkuDirectories` lists the packages a root project assembles. Each entry is a directory with its own `pikku.config.json` and a `package.json` name (an addon or a functions package). Folders of source are no longer listed.
+**What:** a project inspects its own directory, so `srcDirectories` is gone and a config that still sets it (or `pikkuDirectories`) is rejected. Two keys replace it:
 
-- The project skips `node_modules`, `dist`, `build`, `.pikku`, dot-directories and any directory with its own `pikku.config.json`. Source that sat outside the project directory, or that the old list excluded by omission, is now inspected unless `ignoreFiles` names it.
-- `pikku all` at the root runs `pikku all` in each listed package, dependencies first (the four dependency fields and `pikku.uses` order them; a cycle is an error), then wires each package as an addon under the `namespace` its own `pikku.config.json` declares, and builds the backends. The SDKs land in the root `.pikku/sdk/<backend>/exposed`.
-- A listed package needs no `backends` or `frontends`. It needs `exports` for `./.pikku/*`, as any addon does, and a required `namespace` in its `pikku.config.json` (lowercase letter first, then lowercase alphanumerics, hyphens or underscores; unique among the listed packages). A missing or duplicate namespace is an error. Every function the package declares `expose: true` is exposed as `<namespace>:<function>`.
+- `base`: one directory that owns all wirings and services, with its own `pikku.config.json` and a `package.json` name. The root inspects the base's source in place, takes `createConfig` and `createSingletonServices` from it, and wires nothing of its own. Without `base`, a config is its own base.
+- `addons`: directories of addons, each with its own `pikku.config.json` (an `addon` section) and a required `namespace`.
+
+- The project skips `node_modules`, `dist`, `build`, `.pikku`, dot-directories and any directory with its own `pikku.config.json`, except its `base`. Source that sat outside the project directory, or that the old list excluded by omission, is now inspected unless `ignoreFiles` names it.
+- `pikku all` at the root runs `pikku all` in each addon, dependencies first (the four dependency fields and `pikku.uses` order them; a cycle is an error), then in the base, then builds the backends from the root. The SDKs land in the root `.pikku/sdk/<backend>/exposed`: the base's exposed functions un-namespaced, an addon's as `<namespace>:<function>`.
+- The base keeps its own `wireAddon` calls in its source: that is where an `expose` allowlist is declared, and the SDK carries a function only when the addon marks it `expose` and the `wireAddon` exposes it. The root errors when an addon in `addons` has no `wireAddon` naming its `namespace` in the base's source.
+- An addon needs `exports` for `./.pikku/*`, as any addon does, and a required `namespace` in its `pikku.config.json` (lowercase letter first, then lowercase alphanumerics, hyphens or underscores; unique among `addons`). A missing or duplicate namespace, or an entry that is not an addon, is an error. The base needs no `backends` or `frontends`.
+- Each function an addon uses must find the services it needs from its project in the base's `SingletonServices` (PKU368).
+- The root's tsconfig must include the base's source, and the root has no `types/application-types.d.ts` of its own: the base declares `Config`, `UserSession`, `SingletonServices` and `Services`.
 - Release order: publish the new `@pikku/cli` before any config, the cli's own included, drops `srcDirectories`. The build bootstraps with the published CLI, which still requires the key, and fails otherwise.
 - A backend filter selects an addon's functions with `names: ["<namespace>:*"]`.
 
@@ -147,13 +153,19 @@ What an app sees:
 { "srcDirectories": ["src", "packages/billing"] }
 
 // after, at the root
-{ "pikkuDirectories": ["packages/billing"] }
+{ "base": "packages/functions", "addons": ["packages/billing"] }
+
+// packages/functions/pikku.config.json: the base's own config, no keys needed
+{}
 
 // packages/billing/pikku.config.json
-{ "namespace": "billing" }
+{ "addon": { "displayName": "Billing" }, "namespace": "billing" }
+
+// packages/functions/src/wirings.ts
+wireAddon({ name: 'billing', package: '@acme/billing', expose: true })
 ```
 
-**Find:** `rg -n '"srcDirectories"' --glob pikku.config.json`
+**Find:** `rg -n '"(srcDirectories|pikkuDirectories)"' --glob pikku.config.json`
 
 ### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
 
@@ -496,8 +508,8 @@ A string `disabled` on a wiring (`wireHTTP({ disabled: 'reason', ... })`) now di
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `layout-config-not-at-root`    | `pikku.config.json` is inside a package (a directory with its own `package.json`) below a workspace root, and that workspace holds no other project                                                                  |
 | `layout-config-duplicate`      | another file named exactly `pikku.config.json` is below the config (addons, `node_modules` and dot-directories such as `.pikku` are skipped)                                                                         |
-| `layout-db-in-package`         | a package listed in `srcDirectories` has a `db/` and there is none at `<rootDir>/db`                                                                                                                                 |
-| `layout-emails-in-package`     | a package listed in `srcDirectories` has an `emails/` and there is none at `emailTemplatesDir` (default `emails/` beside the config), or `emailTemplatesDir` points into the package                                 |
+| `layout-db-in-package`         | the base package has a `db/` and there is none at `<rootDir>/db`                                                                                                                                 |
+| `layout-emails-in-package`     | the base package has an `emails/` and there is none at `emailTemplatesDir` (default `emails/` beside the config), or `emailTemplatesDir` points into the package                                 |
 | `layout-pikku-import-not-root` | a `#pikku/*` entry in the `paths` of the tsconfig that governs a package (its own or the nearest one above it) or in its `package.json` `imports` points at a `.pikku` other than the one beside `pikku.config.json` |
 
 The layout they enforce: `pikku.config.json`, `db/` and `emails/` at the project top level, generated output in `<config dir>/.pikku`, and the code in the packages `srcDirectories` lists, whatever those packages are called. To fix a project that moved them into its functions package, move them back to the top level, rewrite the config's paths relative to it, and point `#pikku/*` at `<top level>/.pikku` (for example `"#pikku/*": ["../../.pikku/*/index.ts"]` in `packages/functions/tsconfig.json`).
