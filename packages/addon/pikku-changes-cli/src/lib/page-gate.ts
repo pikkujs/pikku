@@ -39,7 +39,8 @@ import {
  * PIKKU_COMPARE_THRESHOLD or the base branch's pikku.config.json (not the one
  * it can edit in its worktree), and `done` runs the compare itself instead of
  * reading a report from disk. A change that declares pages with no reference
- * screenshot, or a frontend change that declares none, is refused in a clone.
+ * screenshot, or a frontend change that declares none and touched no page
+ * file, is refused in a clone (one that touched pages is held to those).
  *
  * In a clone project (see `isCloneProject`) the gate fails closed: a change
  * that touched pages is refused while the reference is not a capture made by
@@ -453,11 +454,6 @@ export async function checkPageGate({
     : Number.isFinite(configured)
       ? configured
       : DEFAULT_THRESHOLD
-  if (clone && frontend && !declaredPages.length)
-    return {
-      kind: 'refuse',
-      message: `${label} is a frontend change of a site rebuilt from an original, and it names no pages (no \`Pages:\` line in its body), so nothing holds it to the original and it cannot be finished. File the work again with \`pikku changes file --plan <file>\` giving its "pages" (at most 5 route paths), or ask with \`pikku changes ask\`.`,
-    }
   const pages = await discover(workspaceRoot)
   const asPath = (page: string) =>
     (page.startsWith('/') ? page : routeFor(page)).replace(/\/+$/, '') || '/'
@@ -480,6 +476,14 @@ export async function checkPageGate({
         workspaceRoot,
         files.map((f) => resolve(top, f))
       )
+  // a frontend change filed with no `Pages:` line (the plan was filed before
+  // the project was a clone) is held to the pages whose files it touched;
+  // only one that touched none is refused
+  if (!touched.length && clone && frontend && !declared.length)
+    return {
+      kind: 'refuse',
+      message: `${label} is a frontend change of a site rebuilt from an original, it names no pages (no \`Pages:\` line in its body) and it touched no page or route file${base ? ` since ${base}` : ' in HEAD'}, so nothing holds it to the original and it cannot be finished. If it builds pages, commit their route files and run done again (the pages it touched are compared with the original); if it builds none, ask with \`pikku changes ask\`.`,
+    }
   if (!touched.length && clone && declared.length)
     return {
       kind: 'refuse',
