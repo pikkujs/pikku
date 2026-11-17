@@ -27,7 +27,7 @@ import {
   syncWithUpstream,
   type MergeOutcome,
 } from '../lib/changeset-merge.js'
-import { currentBranch, git } from '@pikku/cli/addon-support'
+import { currentBranch, git, isAncestor } from '@pikku/cli/addon-support'
 import { NextInput, NextOutput } from './next.schemas.js'
 import { LIST_CHANGES_MAX } from '../lib/list-limit.js'
 import { megabytes } from '../lib/changeset-worktree.js'
@@ -158,7 +158,8 @@ export async function pick(
     : []
   const unblocked = runnable(
     open as Array<(typeof open)[number] & { dependsOn?: string[] }>,
-    blockers
+    blockers,
+    parallel ? await doneNotMerged(root, blockers) : undefined
   )
   const specialist = nextSpecialist(unblocked)
   const ready = unblocked.filter((c) => specialistOf(c) === specialist)
@@ -201,6 +202,25 @@ export async function pick(
       running.length || parallel ? WORKING_ALONGSIDE : WORKING_THEM,
     ].join('\n'),
   }
+}
+
+/**
+ * With --parallel a change marked done keeps its lease until its builder
+ * exits, and is merged on a later fill. Until its commit is in HEAD (the
+ * branch a new worktree is cut from) a change that depends on it waits.
+ */
+async function doneNotMerged(
+  root: string,
+  changes: Array<{ changeId: string; status: string; headCommit?: unknown }>
+): Promise<Set<string>> {
+  const unmerged = new Set<string>()
+  for (const change of changes) {
+    const sha = typeof change.headCommit === 'string' ? change.headCommit : ''
+    if (change.status !== 'done' || !sha) continue
+    const merged = await isAncestor(sha, 'HEAD', root).catch(() => true)
+    if (!merged) unmerged.add(change.changeId)
+  }
+  return unmerged
 }
 
 const reclaimedLine = (

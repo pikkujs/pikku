@@ -32,9 +32,20 @@ export function assertDependencies(
   }
 }
 
-export function runnable<T extends Node>(ready: T[], all: Stateful[]): T[] {
+/**
+ * The ready changes whose dependencies are all finished. `unmerged` names
+ * changes that are done but not yet in the branch a new worktree is cut from:
+ * they still block, or the dependent would be built without them.
+ */
+export function runnable<T extends Node>(
+  ready: T[],
+  all: Stateful[],
+  unmerged: ReadonlySet<string> = new Set()
+): T[] {
   const open = new Set(
-    all.filter((c) => !FINISHED.has(c.status)).map((c) => c.changeId)
+    all
+      .filter((c) => !FINISHED.has(c.status) || unmerged.has(c.changeId))
+      .map((c) => c.changeId)
   )
   return ready.filter((c) => !(c.dependsOn ?? []).some((id) => open.has(id)))
 }
