@@ -75,6 +75,16 @@ A column or a table that left `db/tables.ts` used to be refused. It is now writt
 
 To keep a column's rows through a rename, declare the column under the new name with `renamedFrom: 'old_name'`; `generate` writes `RENAME COLUMN` and needs no approval. Delete `renamedFrom` once the migration is applied. A table rename is not supported: it is a drop and a create. Changing an existing column's type or making it `NOT NULL` is still refused.
 
+### An addon declares its tables in `db/tables.ts`; the SQL per dialect is gone
+
+An addon that ships tables now declares them with `defineTables` from `@pikku/core/db` in its own `db/tables.ts`. `pikku all` and `pikku db export` publish the declaration as plain JSON in `.pikku/db/pikku-db-meta.gen.json`, with no database and no `db.mysqlUrl`, and the app's `pikku db generate` adds it to its own declaration. The artifact that carried SQL per dialect (`{ sqlite, postgres, mysql }`), and the per-addon migration it produced, are gone.
+
+- **Addon authors:** replace `db/sqlite|postgres|mysql` with one `db/tables.ts`, and give every table the wired addon name as prefix (`wireAddon({ name: 'labels' })` owns `labelsLabel`, physically `labels_label`). Export fails for an addon that still ships SQL and no `db/tables.ts`. `declareOnly` is refused in an addon. Rebuild and republish.
+- **App authors:** an addon built the old way is refused by `pikku db generate` with "rebuild or upgrade the addon". Tables its old migration created are adopted by name; only a prefixless or renamed table shows as a drop (which needs `--allowDestructive`) and a create.
+- `pikku db migrate`, `check`, `codegen` and `reset` now run the inspector to read the wired addons; run them where `pikku all` works.
+
+**Find:** `rg -n "db/(sqlite|postgres|mysql)" --glob '!node_modules' <addon>`
+
 ### Better Auth's tables and the runtime's secret columns come annotated
 
 `pikku db migrate` now gives the tables `pikku db generate` created for Better Auth (`user`, `session`, `account`, `verification`) and for the runtime (`secrets`, `credentials`) built-in column annotations, with or without a `db/tables.ts`. A table of your own that merely shares a name is untouched.

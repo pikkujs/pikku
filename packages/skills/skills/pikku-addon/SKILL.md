@@ -83,21 +83,21 @@ Discover first (`pikku meta … --json`, `pikku info functions --verbose`, `pikk
 
 ## Database tables
 
-An addon may **ship** tables. It must never **create** them: it runs inside the consumer, against the consumer's database, so a boot-time `CREATE TABLE` puts a second authority on a schema the consumer's migrations own. It declares instead, and the consumer's migration history absorbs the declaration.
+An addon may **ship** tables. It must never **create** them: it runs inside the consumer, against the consumer's database, so a boot-time `CREATE TABLE` puts a second authority on a schema the consumer's migrations own. It declares instead, and the consumer's `pikku db generate` creates them with its own.
 
-- Author the DDL per dialect: `db/sqlite/0001-labels.sql`, `db/postgres/…`, `db/mysql/…`.
-- `db/mysql` needs a server to publish: MySQL has no embedded engine, so `pikku all` applies the SQL to a scratch database on the server named by `db.mysqlUrl` in the addon's `pikku.config.json`, and refuses to build without one. Use `varchar(n)` for a key column; MySQL rejects `TEXT` there.
-- `pikku all` publishes `<outDir>/db/pikku-db-meta.gen.json` on every build, per dialect, the SQL verbatim plus a table/column map, and writes it **empty** when the addon has no tables, because a consumer reads an absent file as a package that cannot say. (`pikku db export` writes the same file on demand.)
+- Declare them in the addon's `db/tables.ts`, with `defineTables` from `@pikku/core/db`: the same columns, constraints and annotations an app uses. No SQL per dialect, and no database is needed to publish.
+- **Every table name starts with the name the consumer wires the addon under**, snake-cased (`wireAddon({ name: 'labels' })` owns `labelsLabel`, which is `labels_label`). `pikku db generate` refuses an addon table without its prefix, and a table name declared twice (by the app and an addon, or by two addons).
+- `declareOnly` is refused in an addon: an addon creates what it declares. A reference to a table the consumer owns (`user.id`) is allowed.
+- `pikku all` publishes the declaration as plain JSON in `<outDir>/db/pikku-db-meta.gen.json` on every build, and writes `{}` when the addon has no tables, because a consumer reads an absent file as a package that cannot say. (`pikku db export` writes the same file on demand.) An addon that still ships `db/postgres|sqlite|mysql` SQL and no `db/tables.ts` fails the export, in one line.
 - The consumer resolves it **through the package name**, so it must be exported and packed: `"exports": { "./.pikku/db/pikku-db-meta.gen.json": "./dist/.pikku/addon/db/pikku-db-meta.gen.json" }, "files": ["dist"]`.
-- **An unresolvable artifact stops `db generate`.** Absence means the package was built with an older CLI, or `exports`/`files` do not carry it; the error names both causes. An addon with genuinely no tables publishes `{}` and is waved through.
-- A malformed artifact (missing the SQL for a dialect it claims) is rejected rather than half-applied, and an addon publishing only a dialect the consumer does not use gets an error naming what it supports.
-- `verifiers/db-schema` runs this end to end on both dialects. Copy its addon `package.json` when wiring a new one.
+- **An unresolvable artifact stops `db generate`.** Absence means the package was built with an older CLI, or `exports`/`files` do not carry it; the error names both causes. An artifact in the old SQL-per-dialect shape is refused too: rebuild or upgrade the addon.
+- `verifiers/db-schema` runs this end to end on sqlite, postgres and mysql. Copy its addon `package.json` and `db/tables.ts` when wiring a new one.
 
 ## Consuming an addon
 
 - After `wireAddon`, run `yarn pikku all` to generate types for its functions.
 - In a workspace, add the addon to the dependencies of the package whose file calls `wireAddon`, not the repo root. Codegen resolves from the package that wires it first and the project root second, and a remote addon's `devDependencies` check reads that same manifest. If codegen reports PKU340, the dependency is missing from the package its message names: do not add it at the root to paper over it. `verifiers/addon-workspace` is that layout.
-- If the addon ships tables, `pikku db generate` writes one migration per addon, named after the package and carrying its own SQL, after Better Auth's and the runtime's, so an addon table may reference `user` or a runtime table. `pikku db migrate` applies it. Re-running `generate` writes nothing once covered, and only the delta after an upgrade. A `wireRemoteAddon` addon contributes no schema: its tables belong to the deployment that runs its functions.
+- If the addon ships tables, `pikku db generate` adds them to the app's own declaration and writes them into the `app-tables` migrations, after Better Auth's and the runtime's, so an addon table may reference `user` or a runtime table. `pikku db migrate` applies them. Re-running `generate` writes nothing once covered, and only the delta after an upgrade; a column or table the addon drops waits for `--allowDestructive`, like the app's own. A `wireRemoteAddon` addon contributes no schema: its tables belong to the deployment that runs its functions.
 - A `wireRemoteAddon` whose `package` carries a range (`'@scope/name@^1.4.0'`) is not installed at all: `pikku all` downloads its SDK into `.pikku/remote` and pins it in `pikku-addons.lock` (commit the lock). If codegen reports PKU338 for one, run `pikku all`, not an install. To move to a newer SDK, edit the range by hand (`pikku update` prints the file:line and the new literal; it never rewrites source), then run `pikku all`.
 
 ## Studio screens

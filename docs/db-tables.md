@@ -307,6 +307,42 @@ Generate refuses when the target does not exist yet. A table owned by Better Aut
 the Pikku runtime or an addon cannot be generated from here, but it can be declared
 with `declareOnly`.
 
+## Addons
+
+An addon declares its own tables the same way, in its `db/tables.ts`, and `pikku db
+export` (run by `pikku all`) publishes the declaration as plain JSON. `pikku db
+generate` reads the declaration of each wired addon, adds it to the app's, and plans
+the result once, so an addon's tables get everything the app's do: derived SQL,
+column annotations and constraints in the sidecar and the generated Zod, and
+approval for drops and renames. `pikku db migrate`, `check`, `codegen` and `reset`
+read the same list.
+
+```ts
+// the addon's db/tables.ts, wired as `wireAddon({ name: 'labels', ... })`
+export const tables = defineTables({
+  labelsLabel: {
+    columns: {
+      id: { type: 'key', primaryKey: true },
+      name: { type: 'text', required: true, unique: true },
+    },
+  },
+})
+```
+
+- Every table starts with the wired name, snake-cased (`labels_label`). A table
+  without it is an error, so two addons cannot collide.
+- A table name has one owner: the app and each addon. Declaring it twice is an error.
+- `declareOnly` is refused in an addon. An addon may reference a table the app
+  owns, such as `user.id`.
+- A `wireRemoteAddon` addon contributes nothing: its tables belong to the host.
+- An addon built before it declared tables (artifact holds SQL per dialect) is
+  refused with "rebuild or upgrade the addon"; there is no fallback.
+- Tables an addon's older migration already created are adopted, not created again.
+
+`pikku all` writes `db/schema.gen.ts` before any command has inspected the project
+(`ensureDbTypes`), so it knows no addons: until the next `pikku db migrate`, the
+sidecar and generated types are the app's alone.
+
 ## `declareOnly` tables
 
 A table something else creates can still be declared, for its types and
