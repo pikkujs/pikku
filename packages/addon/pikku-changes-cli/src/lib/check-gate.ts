@@ -7,7 +7,8 @@ import { CloudPreconditionError } from '@pikku/cli/addon-support'
  * The check gate on `pikku changes done`. A change's commit is what a person goes back to, so it
  * has to pass `pikku check` (codegen and the typecheck): a change is done only when the tree is
  * committed and `pikku check` passes at HEAD. The refusal carries the errors so the agent fixes them
- * instead of parking the change. PIKKU_CHANGES_CHECK_GATE=off turns it off; a repository with no
+ * instead of parking the change. PIKKU_CHANGES_CHECK_GATE=off turns it off, except for a builder
+ * (PIKKU_CHANGES_BUILDER=1), which cannot turn off its own gate; a repository with no
  * pikku.config.json has nothing to check and passes.
  *
  * `artifacts/tmp/` (the compare reports and diff images `pikku ui pages compare` writes) is
@@ -64,7 +65,12 @@ export async function refuseUntilChecked({
   label: string
   check?: CheckRun
 }): Promise<void> {
-  if (process.env.PIKKU_CHANGES_CHECK_GATE === 'off') return
+  // a builder (PIKKU_CHANGES_BUILDER=1) cannot switch the gate off for itself
+  if (
+    process.env.PIKKU_CHANGES_CHECK_GATE === 'off' &&
+    process.env.PIKKU_CHANGES_BUILDER !== '1'
+  )
+    return
   const top = (await git(['rev-parse', '--show-toplevel'])).trim()
   if (!top || !hasPikkuProject(top)) return
   if (uncommitted(await git(['status', '--porcelain', '-uall'])).length)

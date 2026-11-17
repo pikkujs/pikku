@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
-import { SPECIALISTS } from './specialists.js'
+import { SPECIALISTS, inferSpecialist } from './specialists.js'
 
 /**
  * A whole plan filed in one call. The structure a cheap model forgets when it
@@ -56,6 +56,20 @@ export const declaredPages = (body: string | null | undefined): string[] =>
     .split(',')
     .map((page) => page.trim())
     .filter(Boolean)
+
+/**
+ * A change that builds pages: filed for the frontend specialist, or reading
+ * like a page change whatever specialist it was filed with. In a clone such a
+ * change names its pages, so a page change cannot escape the compare by being
+ * filed as \`build\`.
+ */
+export const buildsPages = (change: {
+  specialist?: string | null
+  title?: string | null
+  body?: string | null
+}): boolean =>
+  change.specialist === 'frontend' ||
+  inferSpecialist(change.title, change.body) === 'frontend'
 
 const hasOutcome = (body: string): boolean => {
   const text = body.toLowerCase()
@@ -128,11 +142,11 @@ export function planProblems(
           `${label(change, index)}: dependsOn names "${dep}", which is not a ref in this plan. Refs are: ${[...refs.keys()].join(', ')}.`
         )
     }
-    if (clone && change.specialist === 'frontend') {
+    if (clone && buildsPages(change)) {
       const pages = change.pages ?? []
       if (!pages.length)
         problems.push(
-          `${label(change, index)}: this project rebuilds an existing site, so a frontend change lists the pages it builds in "pages", e.g. ["/", "/about"], at most ${MAX_CLONE_PAGES}. Each listed page must match the original before the change is done.`
+          `${label(change, index)}: this project rebuilds an existing site, so a change that builds pages (a frontend change, or one whose title or body is about pages, screens or layout) lists the pages it builds in "pages", e.g. ["/", "/about"], at most ${MAX_CLONE_PAGES}. Each listed page must match the original before the change is done.`
         )
       else if (pages.length > MAX_CLONE_PAGES)
         problems.push(

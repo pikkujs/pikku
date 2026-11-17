@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
@@ -26,6 +27,13 @@ import {
  * (1000 px or more) is refused even with a waiver, with its numbers and the
  * compare's style differences, so it gets fixed. PIKKU_COMPARE_GATE=off turns
  * the gate off for labs.
+ *
+ * A builder (PIKKU_CHANGES_BUILDER=1) is held harder, since it is the one that
+ * wants to finish: it cannot turn the gate off, the threshold is
+ * PIKKU_COMPARE_THRESHOLD or the base branch's pikku.config.json (not the one
+ * it can edit in its worktree), and `done` runs the compare itself instead of
+ * reading a report from disk. A change that declares pages with no reference
+ * screenshot, or a frontend change that declares none, is refused in a clone.
  *
  * In a clone project (see `isCloneProject`) the gate fails closed: a change
  * that touched pages is refused while the reference is not a capture made by
@@ -64,6 +72,73 @@ export interface PageGateInput {
    * `$slug` route then answers for its own pages, not for every page.
    */
   pages?: string[]
+  /** The change is a frontend change: in a clone it has to declare its pages. */
+  frontend?: boolean
+  /** Runs `pikku ui pages compare` (a builder's done runs it itself). */
+  compare?: CompareRun
+}
+
+export type CompareRun = (args: {
+  cwd: string
+  reference: string
+  app: string
+  ids: string[]
+  out: string
+}) => { code: number; output: string }
+
+const runCompare: CompareRun = ({ cwd, reference, app, ids, out }) => {
+  const bin = process.env.PIKKU_CLI_BIN ?? process.argv[1]!
+  const result = spawnSync(
+    process.execPath,
+    [
+      bin,
+      'ui',
+      'pages',
+      'compare',
+      '--reference',
+      reference,
+      '--app',
+      app,
+      '--page',
+      ids.join(','),
+      '--out',
+      out,
+    ],
+    {
+      cwd,
+      encoding: 'utf8',
+      timeout: 900_000,
+      env: { ...process.env, PIKKU_NO_LOGO: '1' },
+      maxBuffer: 32 * 1024 * 1024,
+    }
+  )
+  return {
+    code: result.status ?? 1,
+    output: `${result.stdout ?? ''}${result.stderr ?? ''}${result.error ? `\n${result.error.message}` : ''}`,
+  }
+}
+
+/**
+ * The threshold a builder is held to: PIKKU_COMPARE_THRESHOLD, else the
+ * base branch's pikku.config.json, else the default. Never the worktree's
+ * own config, which the builder can raise and commit.
+ */
+async function builderThreshold(
+  git: Git,
+  env: NodeJS.ProcessEnv,
+  base: string | null,
+  configPath: string | null
+): Promise<number> {
+  const fromEnv = Number(env.PIKKU_COMPARE_THRESHOLD)
+  if (env.PIKKU_COMPARE_THRESHOLD && Number.isFinite(fromEnv)) return fromEnv
+  if (base && configPath) {
+    try {
+      const config = JSON.parse(await git(['show', `${base}:${configPath}`]))
+      const configured = Number(config?.pagesCompare?.threshold)
+      if (Number.isFinite(configured)) return configured
+    } catch {}
+  }
+  return DEFAULT_THRESHOLD
 }
 
 interface Report {
@@ -334,8 +409,11 @@ export async function checkPageGate({
   label = 'This change',
   discover = (root) => discoverPages(root),
   pages: declaredPages = [],
+  frontend = false,
+  compare = runCompare,
 }: PageGateInput): Promise<PageGateOutcome> {
-  if (env.PIKKU_COMPARE_GATE === 'off') return { kind: 'off' }
+  const builder = env.PIKKU_CHANGES_BUILDER === '1'
+  if (env.PIKKU_COMPARE_GATE === 'off' && !builder) return { kind: 'off' }
   const reason = waive?.trim()
   if (waive !== undefined && (reason?.length ?? 0) < MIN_WAIVER_LENGTH)
     return {
@@ -351,11 +429,29 @@ export async function checkPageGate({
 
   const found = findConfig(top, cwd)
   const configDir = found?.dir ?? top
-  const configured = Number(found?.config?.pagesCompare?.threshold)
-  const threshold = Number.isFinite(configured) ? configured : DEFAULT_THRESHOLD
   const workspaceRoot = findWorkspaceRoot(configDir)
 
   const { base, files } = await touchedFiles(git)
+  const configured = Number(found?.config?.pagesCompare?.threshold)
+  const threshold = builder
+    ? await builderThreshold(
+        git,
+        env,
+        base,
+        found
+          ? relative(top, join(found.dir, 'pikku.config.json'))
+              .split(sep)
+              .join('/')
+          : null
+      )
+    : Number.isFinite(configured)
+      ? configured
+      : DEFAULT_THRESHOLD
+  if (clone && frontend && !declaredPages.length)
+    return {
+      kind: 'refuse',
+      message: `${label} is a frontend change of a site rebuilt from an original, and it names no pages (no \`Pages:\` line in its body), so nothing holds it to the original and it cannot be finished. File the work again with \`pikku changes file --plan <file>\` giving its "pages" (at most 5 route paths), or ask with \`pikku changes ask\`.`,
+    }
   const pages = await discover(workspaceRoot)
   const asPath = (page: string) =>
     (page.startsWith('/') ? page : routeFor(page)).replace(/\/+$/, '') || '/'
@@ -378,6 +474,11 @@ export async function checkPageGate({
         workspaceRoot,
         files.map((f) => resolve(top, f))
       )
+  if (!touched.length && clone && declared.length)
+    return {
+      kind: 'refuse',
+      message: `${label} names pages (${declared.join(', ')}), and no frontend page was found under ${workspaceRoot} to compare them on.`,
+    }
   if (!touched.length)
     return {
       kind: 'skip',
@@ -406,9 +507,12 @@ export async function checkPageGate({
       ),
     ]),
   ]
+  // a builder's done runs the compare itself; what it wrote is all it reads
+  const ran = new Map<string, { path: string; report: Report } | null>()
   const latestReport = (
     app: string
   ): { path: string; report: Report } | null => {
+    if (builder) return ran.get(app) ?? null
     let best: { path: string; report: Report } | null = null
     for (const path of reportPaths(app)) {
       try {
@@ -428,6 +532,7 @@ export async function checkPageGate({
     latestReport(app)?.report ?? null
   // the site the app's report was made against, else the first
   const siteFor = (app: string): Site => {
+    if (builder) return sites[0]!
     const ref = readReport(app)?.reference
     return (ref && sites.find((s) => s.name === basename(ref))) || sites[0]!
   }
@@ -446,6 +551,18 @@ export async function checkPageGate({
         needs.push({ app: page.app, site, shot, page })
     }
   })
+  const unmatched = declared.filter(
+    (path, i) => !needs.some((n) => n.page === touched[i])
+  )
+  if (clone && unmatched.length) {
+    const ids = [
+      ...new Set(sites.flatMap((s) => s.shots.map((shot) => shot.id))),
+    ]
+    return {
+      kind: 'refuse',
+      message: `${label} names pages that have no screenshot in the capture of the original: ${unmatched.join(', ')}. Each page a clone change names is compared with the original, so it has to be a page of the original. The capture has: ${ids.map((id) => asPath(routeFor(id, sites[0]?.map))).join(', ')}. If a page is missing from the capture, capture it (pikku ui pages capture <url> --page <path> --out <reference>); if the change names the wrong path, ask with \`pikku changes ask\`.`,
+    }
+  }
   if (!needs.length)
     return {
       kind: 'skip',
@@ -477,6 +594,30 @@ export async function checkPageGate({
     const appNeeds = needs.filter((n) => n.app === app)
     const site = appNeeds[0]!.site
     const ids = [...new Set(appNeeds.map((n) => n.shot.id))]
+    if (builder) {
+      const out = defaultCompareDir(workspaceRoot, app)
+      const started = new Date().toISOString()
+      const { output } = compare({
+        cwd: configDir,
+        reference: site.dir,
+        app,
+        ids,
+        out,
+      })
+      const path = join(out, 'report.json')
+      let report: Report | null = null
+      try {
+        report = JSON.parse(readFileSync(path, 'utf8'))
+      } catch {}
+      if (!report || (report.generatedAt ?? '') < started) {
+        const tail = output.trim().split('\n').slice(-20).join('\n')
+        return {
+          kind: 'refuse',
+          message: `${label}: done ran \`pikku ui pages compare\` for ${ids.join(', ')} and it wrote no report, so the pages cannot be judged. Fix what it says below, commit, and run done again.\n\n${tail}`,
+        }
+      }
+      ran.set(app, { path, report })
+    }
     const report = readReport(app)
     const where = rel(reportPath(app))
     const reportDir = dirname(reportPath(app))
