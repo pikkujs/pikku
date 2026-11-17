@@ -15,13 +15,13 @@ a screen is handed to a subagent that is told the rules and designs with `impecc
 1. Find the design rules for this project: `DESIGN.md` and the UI section of `AGENTS.md` at the
    repo root, and the shared component package the screens are built from. If a project has
    none, say so and stop. Do not invent a look.
-2. Start one subagent per screen with the `subagent` tool (up to three at once; each editing subagent works in its own
+2. Start one subagent per screen by calling the tool named `subagent` (it is already in your tool list: call it, do not search for it; up to three at once; each editing subagent works in its own
    worktree, which is merged back and deleted when it reports; commit your own work first). Its prompt must contain:
    - the screen and its route or file, and the content it has to show or do;
    - an instruction to read `DESIGN.md` in full and the UI section of `AGENTS.md` before drawing;
    - an instruction to build only from the shared components, and to copy the closest existing screen;
-   - an instruction to invoke the `impeccable` skill and run its design workflow before writing code,
-     with the output landing in the existing theme tokens and variants, never new styles;
+   - an instruction to use only the existing theme tokens and variants, never new styles (and, when an `impeccable`
+     skill is installed, to run its design workflow before writing code);
    - who the audience is, and that jargon is a defect;
    - the checks to run (typecheck), and how to commit (path-scoped, never sweep other work in).
 3. A redesign refines what is there. The subagent keeps the hero, imagery, illustrations, copy tone
