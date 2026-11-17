@@ -15,7 +15,8 @@ a screen is handed to a subagent that is told the rules and designs with `impecc
 1. Find the design rules for this project: `DESIGN.md` and the UI section of `AGENTS.md` at the
    repo root, and the shared component package the screens are built from. If a project has
    none, say so and stop. Do not invent a look.
-2. Start one subagent per screen. Its prompt must contain:
+2. Start one subagent per screen with the `subagent` tool (up to three at once; each editing subagent works in its own
+   worktree, which is merged back and deleted when it reports; commit your own work first). Its prompt must contain:
    - the screen and its route or file, and the content it has to show or do;
    - an instruction to read `DESIGN.md` in full and the UI section of `AGENTS.md` before drawing;
    - an instruction to build only from the shared components, and to copy the closest existing screen;
@@ -32,14 +33,6 @@ a screen is handed to a subagent that is told the rules and designs with `impecc
 5. When the subagent reports, look at the screen before telling the user it is done (one render or DOM
    check; `pikku ui pages list` names the route and `pikku ui pages screenshot --base-url <url>` photographs it). Check that it did what it was told. If it only loaded `impeccable`
    and skipped its workflow, send it back. Tell the user what changed and what it decided.
-
-## No subagent tool
-
-If you have no tool to start a subagent, do not stop and do not ask. Build the screen yourself, under the same rules:
-read `DESIGN.md` and the UI section of `AGENTS.md` in full first, read the `impeccable` skill and follow its
-design workflow before writing code, build only from the shared components, copy the closest existing screen, and
-keep to the existing theme tokens. Then do step 5: photograph the screen with `pikku ui pages screenshot` and look at it.
-Step 4 does not apply when you are the only agent.
 
 ## What stays in the main thread
 
