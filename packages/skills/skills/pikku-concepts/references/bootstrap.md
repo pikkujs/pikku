@@ -23,7 +23,7 @@ export const lifecycle = pikkuServerLifecycle({
 })
 ```
 
-Export exactly one `pikkuServerLifecycle` from anywhere in `srcDirectories` — the inspector finds it by the wrapper call. Every hook is optional and receives the already-created singleton services. See pikku-services for the ordering and the `afterStop` caveat.
+Export exactly one `pikkuServerLifecycle` from anywhere in the project source — the inspector finds it by the wrapper call. Every hook is optional and receives the already-created singleton services. See pikku-services for the ordering and the `afterStop` caveat.
 
 **Only `pikku dev` and `pikku serve` invoke these hooks.** No deploy runtime does, so anything a Workers or serverless stage needs done cannot live here — put it on the request path that needs it, guarded by a cheap check.
 

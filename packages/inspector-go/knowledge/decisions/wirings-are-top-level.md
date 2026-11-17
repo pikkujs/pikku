@@ -34,5 +34,5 @@ because: The rule is about the callee, not about what any one wiring reads. A
 
 > [!WARNING]
 > Files the CLI ignores (`ignoreFiles`, `**/*.test.ts`) and files outside
-> `srcDirectories` are never read, so a wrapped call there is not refused. That
+> Source directories are never read, so a wrapped call there is not refused. That
 > is why a recipe that must be a function lives outside `src/`.

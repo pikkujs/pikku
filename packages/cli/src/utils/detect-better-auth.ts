@@ -16,10 +16,10 @@ const PIKKU_BETTER_AUTH_CALL = /\bpikkuBetterAuth\s*\(/
  */
 export async function projectDeclaresBetterAuth(
   rootDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   ignoreFiles: string[] = []
 ): Promise<boolean> {
-  const files = await findSourceFiles(rootDir, srcDirectories, ignoreFiles)
+  const files = await findSourceFiles(rootDir, sourceDirs, ignoreFiles)
 
   for (const file of files) {
     if (relative(rootDir, file).split(sep).includes('.pikku')) continue

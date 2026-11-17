@@ -23,12 +23,12 @@ interface DebugLogger {
  */
 export async function loadConfiguredDb(
   projectDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: DebugLogger
 ): Promise<UserConfigShape | null> {
   try {
     return await loadUserConfigForDb({
-      config: { rootDir: projectDir, srcDirectories },
+      config: { rootDir: projectDir, sourceDirs },
       logger: {
         error: (msg) => logger.debug(msg),
         warn: (msg) => logger.debug(msg),
@@ -60,7 +60,7 @@ export const listAll = (names: string[]): string =>
  */
 export async function detectDatabaseDialect(
   projectDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: DebugLogger,
   subject = 'the build'
 ): Promise<DatabaseDialect | undefined> {
@@ -74,7 +74,7 @@ export async function detectDatabaseDialect(
     )
   }
 
-  const userConfig = await loadConfiguredDb(projectDir, srcDirectories, logger)
+  const userConfig = await loadConfiguredDb(projectDir, sourceDirs, logger)
 
   const configured = (
     [
@@ -103,7 +103,7 @@ export interface ContributorPlatformFacts {
   projectDir: string
   /** Where `db/coercion.gen.ts` lives (`<pikkuDir>/db/coercion.gen.ts`). */
   pikkuDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
   logger: DebugLogger
   /** Service names the app (dev) or the unit (deploy) requires. */
   serviceNames: Iterable<string>
@@ -129,7 +129,7 @@ export async function buildContributorPlatform(
   const serviceNames = [...facts.serviceNames]
   const dialect = await detectDatabaseDialect(
     facts.projectDir,
-    facts.srcDirectories,
+    facts.sourceDirs,
     facts.logger,
     facts.subject
   )

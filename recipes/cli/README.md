@@ -109,7 +109,7 @@ The key to this template is the `pikku.config.json` file:
 
 ```json
 {
-  "srcDirectories": ["../functions/src"],
+  "rootDir": "../functions",
   "cli": {
     "entrypoints": {
       "my-cli": [
@@ -132,7 +132,7 @@ The key to this template is the `pikku.config.json` file:
 
 **Key points:**
 
-- `srcDirectories`: Points to `../functions/src` to reuse existing CLI functions
+- `rootDir`: Points to `../functions` to reuse existing CLI functions
 - `entrypoints`: Maps the program name (`my-cli`) to both CLI and channel configurations
 - Both approaches share the same functions from recipes/functions
 

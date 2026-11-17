@@ -180,7 +180,7 @@ export const backendState = (
 export const buildBackend = (args: {
   config: DeployConfig & {
     globalHTTPPrefix?: string
-    srcDirectories?: string[]
+    sourceDirs?: string[]
     db?: { sqliteExtensions?: string[] }
     frontends?: Parameters<typeof servedFrontend>[0]
   }
@@ -223,7 +223,7 @@ export const buildBackend = (args: {
     deployDir: backend.deployDir,
     outDir: config.outDir,
     backendDir: backend.backendDir,
-    srcDirectories: config.srcDirectories,
+    sourceDirs: config.sourceDirs,
     sqliteExtensions: config.db?.sqliteExtensions,
     embed: resolved.embed,
     debugArtifacts: args.debugArtifacts,

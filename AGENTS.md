@@ -174,7 +174,7 @@ path needs `tsc6`: it stays installed only for the `typescript` alias.
 
 `pikku.config.json` is the main configuration file:
 
-- `srcDirectories` — where your function definitions live
+- `pikkuDirectories` — optional: packages this project builds from, each with its own `pikku.config.json` (an addon or a functions package); `pikku all` runs in each in dependency order, then assembles the backends. Without it the project inspects its own directory
 - `backends` — each deployable server, with a `filter` and `dev.port` (optional: declare `backends`, `frontends` or both; neither is an error unless the project is an addon); clients are generated per backend at `.pikku/sdk/<backend>/exposed/`
 - `packageMappings` — map local packages to published names
 - `openAPI` — OpenAPI generation settings
@@ -182,7 +182,6 @@ path needs `tsc6`: it stays installed only for the `typescript` alias.
 ```json
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
   "backends": { "api": { "filter": {}, "dev": { "port": 4000 } } }
 }
 ```

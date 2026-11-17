@@ -32,7 +32,7 @@ describe('loadUserConfigForDb', () => {
       )
       process.env.PIKKU_TEST_SQLITE_FILE = 'from-variables.db'
       const config = await loadUserConfigForDb({
-        config: { rootDir: root, srcDirectories: ['src'] },
+        config: { rootDir: root, sourceDirs: ['src'] },
         logger: { error: () => {}, warn: () => {} },
       })
       assert.equal(config?.sqliteDb, 'from-variables.db')

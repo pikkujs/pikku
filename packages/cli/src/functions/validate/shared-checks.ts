@@ -25,11 +25,12 @@ import {
 import { blankComments } from '../../utils/blank-comments.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
 import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
+import { projectSourceDirs } from '../../utils/pikku-directories.js'
 
 export type Finding = ValidateFinding
 
 export type SharedPikkuConfig = {
-  srcDirectories?: unknown
+  pikkuDirectories?: unknown
   outDir?: unknown
   environments?: unknown
   clientFiles?: unknown
@@ -593,20 +594,12 @@ export async function runSharedProjectChecks(
         'Create `pikku.config.json` at the repo root.',
         'Minimum useful shape:',
         '{',
-        '  "srcDirectories": ["packages/functions/src"],',
+        '  "pikkuDirectories": ["packages/functions"],',
         '  "backends": { "api": { "filter": {} } }',
         '}'
       )
     )
   } else {
-    if (!pikkuConfig.srcDirectories) {
-      e(
-        'pikku-config-no-src-dirs',
-        'pikku.config.json missing "srcDirectories"',
-        pikkuConfigPath,
-        'Add "srcDirectories": ["packages/functions/src"] to pikku.config.json'
-      )
-    }
     if (!pikkuConfig.clientFiles) {
       info(
         'pikku-config-no-client-files',
@@ -642,14 +635,9 @@ export async function runSharedProjectChecks(
   // builds no kysely, and the deploy build's platform contributors then fail.
   // Reuses the detection every host uses, so the rules are not restated here.
   if (pikkuConfig && !pikkuConfig.db) {
-    const srcDirectories = Array.isArray(pikkuConfig.srcDirectories)
-      ? pikkuConfig.srcDirectories.filter(
-          (d): d is string => typeof d === 'string'
-        )
-      : []
     const declared = await detectDatabaseDialect(
       root,
-      srcDirectories,
+      projectSourceDirs(pikkuConfig),
       { debug: () => {} },
       'validate'
     ).catch(() => undefined)
@@ -1075,12 +1063,9 @@ export async function runSharedProjectChecks(
   findings.push(...(await runVirtualUserChecks(root, pikkuConfig)))
   findings.push(...(await runAuthPluginChecks(root, pikkuConfig)))
 
-  const srcDirectories = Array.isArray(pikkuConfig?.srcDirectories)
-    ? pikkuConfig.srcDirectories.filter(
-        (d): d is string => typeof d === 'string'
-      )
-    : []
-  findings.push(...(await runScenarioFileChecks(root, srcDirectories)))
+  findings.push(
+    ...(await runScenarioFileChecks(root, projectSourceDirs(pikkuConfig ?? {})))
+  )
 
   const knowledge = await runKnowledgeValidate(
     root,

@@ -107,7 +107,7 @@ describe('scenario and virtual-user file placement', () => {
     }
   })
 
-  test('virtual-users.ts is the scaffold\'s own file and is fine', async () => {
+  test("virtual-users.ts is the scaffold's own file and is fine", async () => {
     const tmp = await makeTmp()
     try {
       await write(tmp, 'virtual-users.ts', VIRTUAL_USERS)

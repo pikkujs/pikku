@@ -234,7 +234,7 @@ export async function resolveStandaloneDb(
   projectDir: string,
   pikkuDir: string,
   unitDir: string,
-  srcDirectories: string[],
+  sourceDirs: string[],
   logger: BuildLogger,
   sqliteExtensions?: string[],
   {
@@ -252,7 +252,7 @@ export async function resolveStandaloneDb(
 > {
   const chosen = await detectDatabaseDialect(
     projectDir,
-    srcDirectories,
+    sourceDirs,
     logger,
     'a standalone build'
   )
@@ -364,7 +364,7 @@ export async function runBuildPipeline(options: {
    * The project's source roots, for finding the `createConfig` that declares
    * which database a standalone artifact has to open.
    */
-  srcDirectories?: string[]
+  sourceDirs?: string[]
   /**
    * `db.sqliteExtensions` from pikku.config.json: the loadable extensions a
    * SQLite standalone ships and opens its database with. Defaults apply when
@@ -486,7 +486,7 @@ export async function runBuildPipeline(options: {
         projectDir,
         pikkuDir,
         unitDir,
-        options.srcDirectories ?? ['src'],
+        options.sourceDirs ?? ['src'],
         logger,
         options.sqliteExtensions,
         {
@@ -503,7 +503,7 @@ export async function runBuildPipeline(options: {
       contributorPlatform: await buildContributorPlatform({
         projectDir,
         pikkuDir,
-        srcDirectories: options.srcDirectories ?? ['src'],
+        sourceDirs: options.sourceDirs ?? ['src'],
         logger,
         serviceNames: inspectorState.serviceAggregation.requiredServices,
         subject: 'a standalone build',
@@ -717,7 +717,7 @@ export async function runBuildPipeline(options: {
         contributorPlatform: await buildContributorPlatform({
           projectDir,
           pikkuDir: options.outDir ?? join(projectDir, '.pikku'),
-          srcDirectories: options.srcDirectories ?? ['src'],
+          sourceDirs: options.sourceDirs ?? ['src'],
           logger,
           serviceNames: unit.services.map((s) => s.sourceServiceName),
           needs: {

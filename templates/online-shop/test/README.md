@@ -2,7 +2,7 @@
 
 Scenarios run against the **live app** — the sandbox dev server, or a local
 `bun run dev`. They are discovered by `pikku` because `packages/functions/test`
-is in `srcDirectories`, so a `*.feature.ts` here needs no registration.
+is in the project directory, so a `*.feature.ts` here needs no registration.
 
 Run them:
 

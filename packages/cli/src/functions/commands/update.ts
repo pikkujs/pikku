@@ -98,7 +98,7 @@ export type UpdateInput = {
 export type RemoteAddonUpdateOptions = {
   /** The pikku project root: where pikku-addons.lock and .pikku/remote live. */
   rootDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
   ignoreFiles?: string[]
   /** Answers `{ name, range: '*' }` with the highest published SDK. */
   resolveSdk: ResolveSdk
@@ -359,7 +359,7 @@ const collectRemoteAddonEntries = async (
 }> => {
   const files = await findSourceFiles(
     options.rootDir,
-    options.srcDirectories,
+    options.sourceDirs,
     options.ignoreFiles ?? []
   )
   const found: {
@@ -751,7 +751,7 @@ export const pikkuUpdate = pikkuSessionlessFunc<UpdateInput, UpdateResult>({
         'https://registry.npmjs.org',
       remoteAddons: {
         rootDir: config.rootDir,
-        srcDirectories: config.srcDirectories,
+        sourceDirs: config.sourceDirs,
         ignoreFiles: config.ignoreFiles,
         resolveSdk: (request) =>
           (rpc.invoke as RegistryInvoke)('registry:resolveSdk', request),

@@ -142,7 +142,7 @@ wireRemoteAddon({
 })
 ${extra}`
   )
-  return { rootDir, file, config: { rootDir, srcDirectories: ['src'] } }
+  return { rootDir, file, config: { rootDir, sourceDirs: ['src'] } }
 }
 
 const silentLogger = () => {
@@ -544,7 +544,7 @@ describe('the registry remote addon', () => {
     try {
       const registry = fakeRegistry({ '0.12.0': fixtureTgz() })
       const result = await runAddonSync({
-        config: { rootDir, srcDirectories: ['src'] },
+        config: { rootDir, sourceDirs: ['src'] },
         logger: { debug: () => {}, diagnostic: () => {} },
         resolveSdk: registry.resolveSdk,
         download: registry.download,
@@ -582,7 +582,7 @@ describe('the registry remote addon', () => {
       await assert.rejects(
         () =>
           runAddonSync({
-            config: { rootDir, srcDirectories: ['src'] },
+            config: { rootDir, sourceDirs: ['src'] },
             logger: { debug: () => {}, diagnostic: () => {} },
             resolveSdk: registry.resolveSdk,
             download: registry.download,

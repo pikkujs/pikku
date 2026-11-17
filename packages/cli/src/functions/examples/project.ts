@@ -69,8 +69,8 @@ function sourceFiles(dir: string): string[] {
  * an example's virtual user has to substitute the CURRENT one or it writes a scenario naming
  * somebody who no longer exists.
  */
-export function virtualUserCast(srcDirectories: string[]): string[] {
-  for (const dir of srcDirectories) {
+export function virtualUserCast(sourceDirs: string[]): string[] {
+  for (const dir of sourceDirs) {
     for (const file of sourceFiles(dir)) {
       let body: string
       try {
@@ -344,11 +344,11 @@ const normalizeTable = (name: string): string =>
   name.toLowerCase().replace(/_/g, '')
 
 /** Tables with at least one `insertInto`/`updateTable` reachable from the app's source. */
-export function coveredEntities(srcDirectories: string[]): Set<string> {
+export function coveredEntities(sourceDirs: string[]): Set<string> {
   const covered = new Set<string>()
   const writeRe =
     /\.(?:insertInto|updateTable)\(\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]/g
-  for (const dir of srcDirectories) {
+  for (const dir of sourceDirs) {
     for (const file of sourceFiles(dir)) {
       let body: string
       try {
@@ -376,11 +376,11 @@ export interface EntityWriteCoverage {
  */
 export function entityWriteCoverage(
   rootDir: string,
-  srcDirectories: string[]
+  sourceDirs: string[]
 ): EntityWriteCoverage {
   const required = requiredEntities(rootDir)
   if (required.length === 0) return { required: [], uncovered: [] }
-  const covered = coveredEntities(srcDirectories)
+  const covered = coveredEntities(sourceDirs)
   return {
     required,
     uncovered: required.filter((t) => !covered.has(normalizeTable(t))),

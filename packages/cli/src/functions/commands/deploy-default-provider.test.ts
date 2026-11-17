@@ -66,7 +66,6 @@ beforeEach(() => {
     join(root, 'pikku.config.json'),
     JSON.stringify({
       tsconfig: 'tsconfig.json',
-      srcDirectories: ['src'],
       backends: { api: { filter: {} } },
       deploy: {
         providers: {
@@ -114,7 +113,6 @@ describe('deploy.provider', () => {
       join(root, 'pikku.config.json'),
       JSON.stringify({
         tsconfig: 'tsconfig.json',
-        srcDirectories: ['src'],
         backends: { api: { filter: {} } },
         deploy: { providers: { standalone: '@vendor/deploy-standalone' } },
       })

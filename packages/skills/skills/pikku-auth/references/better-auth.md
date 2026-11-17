@@ -414,7 +414,7 @@ export const auth = pikkuBetterAuth(async ({ secrets, kysely }) => {
 
 ### 3. Configure `pikku.config.json`
 
-If you place `auth.ts` under `srcDirectories` it is inspected automatically. The generated `auth.gen.ts` + `auth-secrets.gen.ts` land in the scaffold dir (`scaffold.pikkuDir`, default `src/scaffold`). No extra config is required for auth in the common case.
+If you place `auth.ts` in the project it is inspected automatically. The generated `auth.gen.ts` + `auth-secrets.gen.ts` land in the scaffold dir (`scaffold.pikkuDir`, default `src/scaffold`). No extra config is required for auth in the common case.
 
 ---
 

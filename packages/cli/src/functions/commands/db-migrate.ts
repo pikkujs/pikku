@@ -68,7 +68,7 @@ export const dbMigrate = pikkuSessionlessFunc<
     const drift = await computeAuthDrift(
       resolved,
       config.rootDir,
-      config.srcDirectories,
+      config.sourceDirs,
       logger
     )
     if (drift.hasAuth && !drift.inSync) {

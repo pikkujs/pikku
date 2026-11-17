@@ -54,7 +54,7 @@ export const projectInput = async (
   const rootDir: string = config.rootDir
   const routeFiles = (
     await Promise.all(
-      (config.srcDirectories ?? []).map((dir: string) =>
+      ['.'].map((dir: string) =>
         glob('**/*.ts', {
           cwd: join(rootDir, dir),
           ignore: config.ignoreFiles ?? DEFAULT_IGNORE,

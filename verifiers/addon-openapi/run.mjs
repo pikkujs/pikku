@@ -263,7 +263,6 @@ try {
     join(appDir, 'pikku.config.json'),
     JSON.stringify(
       {
-        srcDirectories: ['src'],
         tsconfig: './tsconfig.json',
         backends: { api: { filter: {} } },
       },

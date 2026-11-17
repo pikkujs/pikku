@@ -29,7 +29,7 @@ const goodProject = async () => {
     workspaces: ['packages/*', 'apps/*'],
   })
   await write(root, 'pikku.config.json', {
-    srcDirectories: ['packages/server/src'],
+    pikkuDirectories: ['packages/server'],
     emailTemplatesDir: 'emails',
   })
   await mkdir(join(root, 'db', 'sqlite'), { recursive: true })
@@ -97,7 +97,7 @@ describe('project layout', () => {
         name: 'solo',
         imports: { '#pikku/*': './.pikku/*/index.ts' },
       })
-      await write(root, 'pikku.config.json', { srcDirectories: ['src'] })
+      await write(root, 'pikku.config.json', {})
       await write(root, 'tsconfig.json', {
         compilerOptions: { paths: { '#pikku/*': ['./.pikku/*/index.ts'] } },
       })
@@ -113,9 +113,7 @@ describe('project layout', () => {
     await withProject(
       async (root) => {
         await rm(join(root, 'pikku.config.json'))
-        await write(root, 'packages/server/pikku.config.json', {
-          srcDirectories: ['src'],
-        })
+        await write(root, 'packages/server/pikku.config.json', {})
         return join(root, 'packages', 'server')
       },
       async (configDir, root) => {
@@ -134,13 +132,9 @@ describe('project layout', () => {
       async (root) => {
         await rm(join(root, 'pikku.config.json'))
         await write(root, 'examples/a/package.json', { name: 'a' })
-        await write(root, 'examples/a/pikku.config.json', {
-          srcDirectories: ['src'],
-        })
+        await write(root, 'examples/a/pikku.config.json', {})
         await write(root, 'examples/b/package.json', { name: 'b' })
-        await write(root, 'examples/b/pikku.config.json', {
-          srcDirectories: ['src'],
-        })
+        await write(root, 'examples/b/pikku.config.json', {})
         return join(root, 'examples', 'a')
       },
       async (configDir) => {
@@ -156,15 +150,28 @@ describe('project layout', () => {
   test('a second pikku.config.json below the top level is flagged', async () => {
     await withProject(
       async (root) => {
-        await write(root, 'packages/server/pikku.config.json', {
-          srcDirectories: ['src'],
-        })
+        await write(root, 'packages/stray/pikku.config.json', {})
       },
       async (configDir) => {
         const finding = await assertFlagged(configDir, LAYOUT_CONFIG_DUPLICATE)
         assert.equal(
           finding.path,
-          join(configDir, 'packages', 'server', 'pikku.config.json')
+          join(configDir, 'packages', 'stray', 'pikku.config.json')
+        )
+      }
+    )
+  })
+
+  test('a package listed in pikkuDirectories is not a second config', async () => {
+    await withProject(
+      async (root) => {
+        await write(root, 'packages/server/pikku.config.json', {})
+      },
+      async (configDir) => {
+        const found = await runProjectLayoutChecks(configDir, { strict: true })
+        assert.equal(
+          found.some((f) => f.id === LAYOUT_CONFIG_DUPLICATE),
+          false
         )
       }
     )
@@ -224,7 +231,7 @@ describe('project layout', () => {
     await withProject(
       async (root) => {
         await write(root, 'pikku.config.json', {
-          srcDirectories: ['packages/server/src'],
+          pikkuDirectories: ['packages/server'],
           emailTemplatesDir: 'packages/server/emails',
         })
         await mkdir(join(root, 'packages', 'server', 'emails'), {

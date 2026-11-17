@@ -148,12 +148,12 @@ export type RemoteAddonSdkSpec = {
  */
 export const collectRemoteAddonSdkSpecs = async (config: {
   rootDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
   ignoreFiles: string[]
 }): Promise<RemoteAddonSdkSpec[]> => {
   const files = await findSourceFiles(
     config.rootDir,
-    config.srcDirectories,
+    config.sourceDirs,
     config.ignoreFiles
   )
   const candidates: { file: string; text: string }[] = []
@@ -419,7 +419,7 @@ export const syncRemoteAddonSdks = async ({
 
 export type AddonSyncConfig = {
   rootDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
   ignoreFiles?: string[]
   /** Set when the project is an addon: its `pikku.uses` dependencies are synced too. */
   addon?: unknown

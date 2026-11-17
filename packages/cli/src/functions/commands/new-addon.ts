@@ -286,7 +286,7 @@ export function getAddonFiles(
       $schema:
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
       tsconfig: './tsconfig.json',
-      srcDirectories: ['src', 'types'],
+      sourceDirs: ['src', 'types'],
       addon: {
         displayName,
         description,
@@ -857,7 +857,7 @@ export function getTestFiles(vars: AddonVars): Record<string, string> {
     {
       $schema:
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
-      srcDirectories: ['./src', './types'],
+      sourceDirs: ['./src', './types'],
       tsconfig: './tsconfig.json',
     },
     null,
@@ -1242,9 +1242,7 @@ function findAppProject(
   if (!root || config.addon || !existsSync(join(root, 'pikku.config.json'))) {
     return undefined
   }
-  const src = config.srcDirectories?.[0]
-  if (!src) return undefined
-  return { root, srcDir: join(root, src) }
+  return { root, srcDir: join(root, 'src') }
 }
 
 export type NewAddonInput = {

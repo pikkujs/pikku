@@ -7,7 +7,7 @@
  *
  * This addon declares `["Utility"]`, and `src/functions/hello.functions.ts`
  * covers the accepted case on a real registered node. The rejected case lives
- * here rather than under `srcDirectories`, because `pikkuNodesMeta` also fails
+ * here rather than under `src`, because `pikkuNodesMeta` also fails
  * codegen on an undeclared category — the inspector would kill `pikku all`
  * before tsc ever ran.
  */

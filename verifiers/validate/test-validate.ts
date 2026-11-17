@@ -65,7 +65,6 @@ test('the lint key lowers the severity', async () => {
   await withConfig(
     {
       tsconfig: './tsconfig.json',
-      srcDirectories: ['src'],
       outDir: '.pikku',
       lint: { coreImport: 'warn' },
     },
@@ -144,7 +143,6 @@ test('the lint key switches the rule off', async () => {
   await withConfig(
     {
       tsconfig: './tsconfig.json',
-      srcDirectories: ['src'],
       outDir: '.pikku',
       lint: { coreImport: 'off' },
     },
@@ -289,7 +287,6 @@ test('turning a key off stops requiring and reporting its rules', async () => {
   await withConfig(
     {
       tsconfig: './tsconfig.json',
-      srcDirectories: ['src'],
       outDir: '.pikku',
       lint: {
         enforceContentService: 'off',
@@ -329,7 +326,6 @@ const withStrictApp = async (oxlint: unknown, body: () => Promise<void>) => {
   await withConfig(
     {
       tsconfig: './tsconfig.json',
-      srcDirectories: ['src'],
       outDir: '.pikku',
       lint: { strict: true },
     },

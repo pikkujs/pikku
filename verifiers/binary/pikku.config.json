@@ -1,6 +1,6 @@
 {
+  "ignoreFiles": ["fixture.ts"],
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
-  "srcDirectories": [],
   "tsconfig": "./tsconfig.json",
   "binary": {
     "entrypoint": "./fixture.ts",

@@ -25,7 +25,6 @@ describe('createConfig --config', () => {
       join(root, 'backend', 'pikku.config.json'),
       JSON.stringify({
         rootDir: '.',
-        srcDirectories: ['src'],
         packageMappings: {},
         tsconfig: 'tsconfig.json',
         backends: { api: { filter: {} } },

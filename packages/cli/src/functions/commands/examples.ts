@@ -22,11 +22,11 @@ import {
 const projectOf = (config: {
   rootDir: string
   outDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
 }): ExampleProject => ({
   rootDir: config.rootDir,
   outDir: config.outDir,
-  srcDirectories: config.srcDirectories,
+  sourceDirs: config.sourceDirs,
 })
 
 export const examplesList = pikkuSessionlessFunc({

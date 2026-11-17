@@ -11,6 +11,7 @@ import {
 import { blankComments } from '../../utils/blank-comments.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 import { applyRuleSeverity } from './rule-severity.js'
+import { projectSourceDirs } from '../../utils/pikku-directories.js'
 
 /**
  * Everything `pikku all` writes into the scaffold directory, keyed the way
@@ -110,7 +111,7 @@ const SCAFFOLD_ADDONS: Record<string, { name: string; package: string }> = {
 
 type ScaffoldCheckConfig = {
   rootDir?: unknown
-  srcDirectories?: unknown
+  pikkuDirectories?: unknown
   scaffold?: Record<string, unknown>
   validate?: { rules?: Record<string, unknown> }
   [field: string]: unknown
@@ -207,13 +208,8 @@ export const runScaffoldDuplicateChecks = async (
   const abs = (p: string) => (isAbsolute(p) ? p : resolve(configRoot, p))
   const rel = (p: string) => relative(root, p) || '.'
 
-  const srcDirs = (
-    Array.isArray(config.srcDirectories) ? config.srcDirectories : []
-  ).filter((d): d is string => typeof d === 'string')
   const scaffold = (config.scaffold ?? {}) as Record<string, unknown>
-  const defaultScaffoldDir = srcDirs[0]
-    ? join(srcDirs[0], 'scaffold')
-    : 'src/scaffold'
+  const defaultScaffoldDir = 'src/scaffold'
   const scaffoldDir = abs(
     stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir
   )
@@ -241,7 +237,7 @@ export const runScaffoldDuplicateChecks = async (
   }
 
   const files = new Set<string>()
-  for (const dir of srcDirs) {
+  for (const dir of projectSourceDirs(config)) {
     for (const f of await listTsFiles(abs(dir))) files.add(resolve(f))
   }
 
@@ -336,10 +332,8 @@ export const runScaffoldDuplicateChecks = async (
   }
 
   // The scaffold dir is not where tooling looks
-  const canonical = srcDirs[0]
-    ? resolve(abs(srcDirs[0]), 'scaffold')
-    : undefined
-  if (canonical && resolve(scaffoldDir) !== canonical) {
+  const canonical = resolve(abs(defaultScaffoldDir))
+  if (resolve(scaffoldDir) !== canonical) {
     findings.push({
       id: 'scaffold-dir-noncanonical',
       severity: 'error',

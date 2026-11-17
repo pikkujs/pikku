@@ -108,7 +108,7 @@ overwrite uncommitted work.
 ## Stage 4 — Implement
 
 Write the code as a normal human contributor would. Use the project's
-existing conventions (look at neighbour files in `srcDirectories[0]/functions/`
+existing conventions (look at neighbour files in `src/functions/`
 and `.../wirings/` for style).
 
 ### RPC is the default transport

@@ -36,7 +36,7 @@ const config = () => ({
   rootDir: root,
   outDir: join(root, '.pikku'),
   runtimeDir: join(root, '.pikku-runtime'),
-  srcDirectories: ['src'],
+  sourceDirs: ['src'],
 })
 
 /** The services a reset is handed; `wired` stands in for the inspector's wired addons. */

@@ -1,6 +1,5 @@
-import { existsSync } from 'node:fs'
-import { readdir } from 'node:fs/promises'
-import { join, relative } from 'node:path'
+import { relative } from 'node:path'
+import { listProjectFiles } from '../../utils/pikku-directories.js'
 import { readTextSafe } from './shared-checks.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 
@@ -28,7 +27,8 @@ const SCENARIO_DECLARATIONS = [
  * them, and `.step.ts` / `.steps.ts` the steps they call — the starter
  * template's `test/features/*.feature.ts` and `test/steps/*.step.ts`.
  */
-const SCENARIO_FILE = /\.(scenario|scenarios|feature|features|step|steps)\.tsx?$/
+const SCENARIO_FILE =
+  /\.(scenario|scenarios|feature|features|step|steps)\.tsx?$/
 
 /**
  * The declarations that make up a virtual user, and where they live.
@@ -38,7 +38,10 @@ const SCENARIO_FILE = /\.(scenario|scenarios|feature|features|step|steps)\.tsx?$
  * users become its identities. So the thing a project actually writes is the
  * virtual user list, and that is what has to be findable by filename.
  */
-const VIRTUAL_USER_DECLARATIONS = ['defineVirtualUsers', 'runVirtualUser'] as const
+const VIRTUAL_USER_DECLARATIONS = [
+  'defineVirtualUsers',
+  'runVirtualUser',
+] as const
 
 /**
  * `virtual-users.ts` is the one file the scaffold reads and edits
@@ -61,22 +64,6 @@ const SCORER_FILE = /\.scorers?\.tsx?$/
 const isGenerated = (path: string): boolean =>
   path.includes('.gen.') || path.includes(`${'/'}.pikku${'/'}`)
 
-const listSourceFiles = async (dir: string): Promise<string[]> => {
-  if (!existsSync(dir)) return []
-  try {
-    return (await readdir(dir, { recursive: true }))
-      .filter(
-        (f): f is string =>
-          typeof f === 'string' &&
-          (f.endsWith('.ts') || f.endsWith('.tsx')) &&
-          !f.includes('node_modules')
-      )
-      .map((f) => join(dir, f))
-  } catch {
-    return []
-  }
-}
-
 /**
  * Scenarios, features and steps live in files named for what they are.
  *
@@ -94,16 +81,11 @@ const listSourceFiles = async (dir: string): Promise<string[]> => {
  */
 export const runScenarioFileChecks = async (
   root: string,
-  srcDirectories: string[]
+  dirs: string[]
 ): Promise<ValidateFinding[]> => {
   const findings: ValidateFinding[] = []
-  const dirs = srcDirectories.length
-    ? srcDirectories
-    : [join('packages', 'functions', 'src')]
 
-  const files = (
-    await Promise.all(dirs.map((dir) => listSourceFiles(join(root, dir))))
-  ).flat()
+  const files = await listProjectFiles(root, dirs, ['.ts', '.tsx'])
 
   for (const file of files) {
     if (SCENARIO_FILE.test(file) || isGenerated(file)) continue

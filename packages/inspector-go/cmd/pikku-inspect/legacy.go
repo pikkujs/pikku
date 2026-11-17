@@ -22,7 +22,6 @@ import (
 type pikkuConfig struct {
 	RootDir          string   `json:"rootDir"`
 	Tsconfig         string   `json:"tsconfig"`
-	SrcDirectories   []string `json:"srcDirectories"`
 	IgnoreFiles      []string `json:"ignoreFiles"`
 	SchemasFromTypes []string `json:"schemasFromTypes"`
 }
@@ -54,7 +53,7 @@ func runLegacy(args []string) error {
 	if len(cfg.IgnoreFiles) > 0 {
 		fmt.Fprintln(os.Stderr, "warning: custom ignoreFiles are not supported in legacy mode; using defaults")
 	}
-	files := findSourceFiles(rootDir, cfg.SrcDirectories)
+	files := findSourceFiles(rootDir, []string{"."})
 	if *filesOut != "" {
 		sorted := append([]string(nil), files...)
 		sort.Strings(sorted)

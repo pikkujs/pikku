@@ -33,7 +33,6 @@ describe('getPikkuCLIConfig', () => {
       join(root, 'pikku.config.json'),
       JSON.stringify({
         rootDir: '.',
-        srcDirectories: ['src'],
         packageMappings: {},
         tsconfig: 'tsconfig.json',
         backends: { api: { filter: {} } },
@@ -511,7 +510,6 @@ describe('getPikkuCLIConfig', () => {
       JSON.stringify(
         {
           rootDir: '.',
-          srcDirectories: ['src'],
           packageMappings: {},
           tsconfig: 'tsconfig.json',
           db: {
@@ -902,7 +900,6 @@ describe('tryGetPikkuCLIConfig', () => {
       join(root, 'pikku.config.json'),
       JSON.stringify({
         rootDir: '.',
-        srcDirectories: ['src'],
         packageMappings: {},
         tsconfig: 'tsconfig.json',
         backends: { api: { filter: {} } },
@@ -911,7 +908,7 @@ describe('tryGetPikkuCLIConfig', () => {
 
     process.chdir(root)
     const config = await tryGetPikkuCLIConfig(silentLogger, undefined, [])
-    assert.deepEqual(config?.srcDirectories, ['src'])
+    assert.deepEqual(config?.sourceDirs, ['.'])
   })
 
   test('still throws when a config exists but cannot be loaded', async () => {

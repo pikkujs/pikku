@@ -1,18 +1,9 @@
-import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join } from 'node:path'
-
-const SKIP_DIRS = new Set([
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.pikku',
-  '.pikku-runtime',
-  'coverage',
-  '.next',
-  '.yarn',
-])
+import {
+  isNestedProject,
+  isSkippedDirectory,
+} from '../../utils/pikku-directories.js'
 
 const SOURCE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts']
 
@@ -39,7 +30,7 @@ export const collectAppSources = async (
   root = dir
 ): Promise<string[]> => {
   // A nested Pikku project (a workspace addon) is validated as its own project.
-  if (dir !== root && existsSync(join(dir, 'pikku.config.json'))) return out
+  if (isNestedProject(dir, root)) return out
   let entries
   try {
     entries = await readdir(dir, { withFileTypes: true })
@@ -49,7 +40,7 @@ export const collectAppSources = async (
   for (const entry of entries) {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue
+      if (isSkippedDirectory(entry.name)) continue
       await collectAppSources(path, out, root)
     } else if (
       SOURCE_EXTENSIONS.some((ext) => entry.name.endsWith(ext)) &&

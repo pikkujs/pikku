@@ -301,8 +301,8 @@ fn check_fixture(name: &str) {
     let root = testdata().join(name).canonicalize().unwrap();
     let config: Value = serde_json::from_slice(&std::fs::read(root.join("pikku.config.json")).unwrap()).unwrap();
     let mut files = Vec::new();
-    for d in config["srcDirectories"].as_array().unwrap() {
-        let base = root.join(d.as_str().unwrap());
+    for d in ["."] {
+        let base = root.join(d);
         walk(&base, &base, &mut files);
     }
     let root_s = root.to_string_lossy().to_string();

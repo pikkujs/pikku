@@ -52,7 +52,7 @@ const makeApp = async (opts: AppOptions = {}) => {
     root,
     'pikku.config.json',
     JSON.stringify({
-      srcDirectories: ['packages/functions/src'],
+      pikkuDirectories: ['packages/functions'],
       ...pikkuConfig,
     })
   )
@@ -803,11 +803,7 @@ describe('oxlint setup checks', () => {
       await write(root, 'node_modules/oxlint-tsgolint/package.json', '{}')
       await write(root, '.oxlintrc.json', '{}')
       await write(root, 'apps/site/package.json', '{"name":"site"}')
-      await write(
-        root,
-        'apps/site/pikku.config.json',
-        JSON.stringify({ srcDirectories: ['src'] })
-      )
+      await write(root, 'apps/site/pikku.config.json', JSON.stringify({}))
       const { exec, calls } = fakeExec(() => reply(resolvedConfig()))
       assert.deepEqual(
         await runOxlintSetupChecks(join(root, 'apps/site'), exec),
@@ -967,10 +963,10 @@ describe('oxlint run', () => {
     }
   })
 
-  test('runs read-only, type-aware, JSON, over srcDirectories minus generated output', async () => {
+  test('runs read-only, type-aware, JSON, over the project source directories minus generated output', async () => {
     const root = await makeApp({
       pikkuConfig: {
-        srcDirectories: ['packages/functions/src', 'packages/functions/test'],
+        pikkuDirectories: ['packages/functions'],
         outDir: 'packages/functions/.pikku',
         scaffold: { pikkuDir: 'packages/functions/src/scaffold' },
       },
@@ -1003,10 +999,7 @@ describe('oxlint run', () => {
       ]) {
         assert.ok(patterns.includes(p), `ignores ${p}`)
       }
-      assert.deepEqual(call.args.slice(-2), [
-        'packages/functions/src',
-        'packages/functions/test',
-      ])
+      assert.deepEqual(call.args.slice(-1), ['.'])
     } finally {
       await cleanup(root)
     }
@@ -1196,11 +1189,7 @@ describe('oxlint run', () => {
       await write(root, '.oxlintrc.json', '{}')
       await write(root, 'apps/site/package.json', '{"name":"site"}')
       await write(root, 'apps/site/src/a.ts', 'export {}\n')
-      await write(
-        root,
-        'apps/site/pikku.config.json',
-        JSON.stringify({ srcDirectories: ['src'] })
-      )
+      await write(root, 'apps/site/pikku.config.json', JSON.stringify({}))
       const { exec, calls } = fakeExec(() =>
         reply({
           number_of_files: 1,
@@ -1215,7 +1204,7 @@ describe('oxlint run', () => {
       )
       const findings = await runOxlintRun(join(root, 'apps/site'), exec)
       assert.equal(calls[0]!.cwd, root)
-      assert.equal(calls[0]!.args.at(-1), 'apps/site/src')
+      assert.equal(calls[0]!.args.at(-1), 'apps/site')
       assert.equal(findings[0]!.path, join(root, 'apps/site/src/a.ts'))
       assert.match(findings[0]!.message, /^src\/a\.ts:3:7 /)
     } finally {
@@ -1438,11 +1427,7 @@ describe('oxlint run against the real oxlint', { skip: !realInstall }, () => {
         include: ['src'],
       })
     )
-    await write(
-      root,
-      'pikku.config.json',
-      JSON.stringify({ srcDirectories: ['src'] })
-    )
+    await write(root, 'pikku.config.json', JSON.stringify({}))
     await write(root, '.oxlintrc.json', JSON.stringify(newOxlintConfig()))
     await write(
       root,
@@ -1535,7 +1520,7 @@ describe('oxlint run against the real oxlint', { skip: !realInstall }, () => {
       await write(
         root,
         'pikku.config.json',
-        JSON.stringify({ srcDirectories: ['src'], lint: { strict: true } })
+        JSON.stringify({ lint: { strict: true } })
       )
       const loop = [
         'declare function f(n: number): Promise<number>',

@@ -125,7 +125,7 @@ Check that:
 1. Wirings have the correct tags
 2. Filter syntax is correct (comma-separated for multiple values)
 3. The generated `.pikku/pikku-services.gen.ts` file was regenerated
-4. Type definitions are in the srcDirectories
+4. Type definitions are in the project directory
 
 ### Too Many Services Included
 

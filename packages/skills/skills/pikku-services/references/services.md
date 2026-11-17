@@ -86,7 +86,7 @@ Every hook is optional. Order is `beforeStart` → server starts → `afterStart
 
 **`afterStop` runs after the singleton services have been stopped.** It still receives the services object, but the services inside it are shut down — using one there is a use-after-close bug. Anything that needs a live service goes in `beforeStop`.
 
-Export **exactly one** `pikkuServerLifecycle` from anywhere in `srcDirectories`; the inspector finds it by the wrapper call, so the filename is free (`src/lifecycle.ts` by convention). It must be an exported `const` initialized with a direct call to `pikkuServerLifecycle` — a re-export or a conditional wrapper is invisible to the inspector.
+Export **exactly one** `pikkuServerLifecycle` from anywhere in the project source; the inspector finds it by the wrapper call, so the filename is free (`src/lifecycle.ts` by convention). It must be an exported `const` initialized with a direct call to `pikkuServerLifecycle` — a re-export or a conditional wrapper is invisible to the inspector.
 
 **Only `pikku dev` and `pikku serve` run these hooks.** If you bootstrap your own server (Express, Fastify, uWS, Lambda, Cloudflare, Next.js), no runtime adapter invokes them — put the work in your entrypoint instead.
 

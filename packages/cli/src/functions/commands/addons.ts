@@ -164,14 +164,8 @@ export const pikkuAddonsAdd = pikkuSessionlessFunc<
 >({
   func: async ({ logger, config }, input) => {
     const root: string = config.rootDir
-    const srcDir = config.srcDirectories?.[0]
-      ? join(root, config.srcDirectories[0])
-      : undefined
-    if (
-      !srcDir ||
-      config.addon ||
-      !existsSync(join(root, 'pikku.config.json'))
-    ) {
+    const srcDir = join(root, 'src')
+    if (config.addon || !existsSync(join(root, 'pikku.config.json'))) {
       logger.error(
         'pikku addons add runs inside a pikku app (a pikku.config.json that is not an addon)'
       )

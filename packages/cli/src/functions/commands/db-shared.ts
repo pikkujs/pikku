@@ -12,7 +12,7 @@ export interface UserConfigShape {
 }
 
 interface LoadOptions {
-  config: { rootDir: string; srcDirectories: string[] }
+  config: { rootDir: string; sourceDirs: string[] }
   logger: { error: (msg: string) => void; warn: (msg: string) => void }
   /** Called when the config could not be read and a default stood in for it. */
   onFallback?: () => void
@@ -20,9 +20,9 @@ interface LoadOptions {
 
 function findUserConfigFactoryFile(
   rootDir: string,
-  srcDirectories: string[]
+  sourceDirs: string[]
 ): string | null {
-  for (const srcDir of srcDirectories) {
+  for (const srcDir of sourceDirs) {
     for (const name of ['config.ts', 'config.js']) {
       const candidate = resolve(rootDir, srcDir, name)
       if (existsSync(candidate)) return candidate
@@ -56,7 +56,7 @@ export async function loadUserConfigForDb(
 
   const configFactoryFile = findUserConfigFactoryFile(
     config.rootDir,
-    config.srcDirectories
+    config.sourceDirs
   )
   if (!configFactoryFile) {
     if (hasConventionalDbAssets) {

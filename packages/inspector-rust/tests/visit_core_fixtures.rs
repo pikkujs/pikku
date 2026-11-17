@@ -90,8 +90,7 @@ fn strip(state: &mut Value) {
 fn check_fixture(name: &str, skip: &[&str]) {
     let root = testdata().join(name).canonicalize().unwrap();
     let config: Value = serde_json::from_slice(&std::fs::read(root.join("pikku.config.json")).unwrap()).unwrap();
-    let src: Vec<String> =
-        config["srcDirectories"].as_array().unwrap().iter().map(|v| v.as_str().unwrap().to_string()).collect();
+    let src: Vec<String> = vec![".".to_string()];
     let tsconfig = root.join(config["tsconfig"].as_str().unwrap());
     let root_s = root.to_string_lossy().to_string();
     let req = Request {

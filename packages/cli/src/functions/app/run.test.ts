@@ -32,7 +32,7 @@ const newProject = async (
   tempDirs.push(root)
   await writeJson(join(root, 'package.json'), { name: '@acme/shop' })
   await writeJson(join(root, 'pikku.config.json'), {
-    srcDirectories: ['src'],
+    sourceDirs: ['src'],
     frontends,
   })
   for (const name of Object.keys(frontends)) {

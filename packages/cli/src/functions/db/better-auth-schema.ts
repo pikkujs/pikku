@@ -54,7 +54,7 @@ const SKIP_DIRS = new Set([
 
 function findAuthSourceFile(
   rootDir: string,
-  srcDirectories: string[]
+  sourceDirs: string[]
 ): string | null {
   const walk = (dir: string): string | null => {
     let entries: string[]
@@ -89,7 +89,7 @@ function findAuthSourceFile(
     return null
   }
 
-  for (const srcDir of srcDirectories) {
+  for (const srcDir of sourceDirs) {
     const found = walk(join(rootDir, srcDir))
     if (found) return found
   }
@@ -170,9 +170,9 @@ function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
 
 function findUserConfigFactoryFile(
   rootDir: string,
-  srcDirectories: string[]
+  sourceDirs: string[]
 ): string | null {
-  for (const srcDir of srcDirectories) {
+  for (const srcDir of sourceDirs) {
     for (const name of ['config.ts', 'config.js']) {
       const candidate = join(rootDir, srcDir, name)
       if (existsSync(candidate)) return candidate
@@ -189,11 +189,11 @@ function findUserConfigFactoryFile(
 
 async function loadAuthConfig(opts: {
   rootDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
 }): Promise<unknown | undefined> {
   const configFactoryFile = findUserConfigFactoryFile(
     opts.rootDir,
-    opts.srcDirectories
+    opts.sourceDirs
   )
   if (!configFactoryFile) return undefined
 
@@ -267,11 +267,11 @@ function debugInitRejection(message: string): void {
 
 export async function loadAuthOptions(opts: {
   rootDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
   kysely: Kysely<any>
   logger: { error: (msg: string) => void }
 }): Promise<BetterAuthOptionsLike | null> {
-  const sourceFile = findAuthSourceFile(opts.rootDir, opts.srcDirectories)
+  const sourceFile = findAuthSourceFile(opts.rootDir, opts.sourceDirs)
   if (!sourceFile) return null
 
   const factory = await loadAuthFactory(sourceFile)

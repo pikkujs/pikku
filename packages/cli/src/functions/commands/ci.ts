@@ -202,7 +202,7 @@ export const pikkuCi = pikkuSessionlessFunc({
           scaffoldDir: moved(
             config.resolvedScaffoldDir ?? join(rootDir, 'scaffold')
           ),
-          srcDirectories: config.srcDirectories.map((src) =>
+          sourceDirs: config.sourceDirs.map((src) =>
             moved(resolve(rootDir, src))
           ),
         }

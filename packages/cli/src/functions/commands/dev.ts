@@ -273,7 +273,7 @@ export const dev = pikkuSessionlessFunc<
     const enableHmr = hmr !== false
     const watchDirectories = [
       ...new Set(
-        [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
+        [config.emailTemplatesDir, ...config.sourceDirs].filter(Boolean)
       ),
     ] as string[]
     const workflowService = new InMemoryWorkflowService()

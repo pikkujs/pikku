@@ -27,7 +27,7 @@ export const watch = pikkuSessionlessFunc<{ hmr?: boolean }, void>({
   func: async ({ logger, config }, { hmr }) => {
     const watchDirectories = [
       ...new Set(
-        [config.emailTemplatesDir, ...config.srcDirectories].filter(Boolean)
+        [config.emailTemplatesDir, ...config.sourceDirs].filter(Boolean)
       ),
     ] as string[]
 

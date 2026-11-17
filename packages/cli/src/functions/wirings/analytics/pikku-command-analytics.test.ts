@@ -25,7 +25,7 @@ const project = async () => {
 const config = (root: string, extra: Record<string, unknown> = {}) =>
   ({
     rootDir: root,
-    srcDirectories: ['src'],
+    sourceDirs: ['src'],
     outDir: join(root, '.pikku'),
     packageMappings: {},
     scaffold: { analytics: true },

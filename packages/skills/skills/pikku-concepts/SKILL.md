@@ -115,7 +115,6 @@ Config lives in `pikku.config.json`:
 ```json
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["src"],
   "backends": { "api": { "filter": {}, "dev": { "port": 4000 } } }
 }
 ```

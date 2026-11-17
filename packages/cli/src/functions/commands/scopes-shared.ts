@@ -91,7 +91,7 @@ export const openScopeService = async (
       rootDir: string
       outDir: string
       runtimeDir?: string
-      srcDirectories: string[]
+      sourceDirs: string[]
       db?: { schema?: string; defaultSchema?: string }
     }
     logger: Logger

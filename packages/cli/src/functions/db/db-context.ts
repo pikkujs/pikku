@@ -30,7 +30,7 @@ async function declaredTables(rootDir: string): Promise<{
 export async function databaseContext(config: {
   rootDir: string
   outDir: string
-  srcDirectories: string[]
+  sourceDirs: string[]
   runtimeDir?: string
   db?: Parameters<typeof resolveDb>[4]
 }) {

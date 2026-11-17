@@ -533,6 +533,7 @@ const _getPikkuCLIConfig = async (
       configDir,
       packageMappings: config.packageMappings || {},
       rootDir: config.rootDir ? resolve(configDir, config.rootDir) : configDir,
+      sourceDirs: ['.'],
       registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
       ignoreFiles: config.ignoreFiles ?? [
         '**/*.test.ts',
@@ -786,13 +787,9 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // Scaffold directory for auto-generated wiring files. Default it beside the
-    // first source directory (so a monorepo's scaffold lands in the functions
-    // package where its deps — e.g. zod — resolve), not rootDir-relative
-    // `src/scaffold`, which silently mis-places it in a monorepo layout.
-    const defaultScaffoldDir = result.srcDirectories?.[0]
-      ? join(result.srcDirectories[0], 'scaffold')
-      : 'src/scaffold'
+    // Scaffold directory for auto-generated wiring files. A project inspects
+    // its own directory, so the scaffold lands in it, under `src/scaffold`.
+    const defaultScaffoldDir = 'src/scaffold'
     const scaffoldDir = result.scaffold?.pikkuDir ?? defaultScaffoldDir
     const resolvedScaffoldDir = isAbsolute(scaffoldDir)
       ? scaffoldDir

@@ -3,6 +3,7 @@ import { cp, mkdir, readdir } from 'node:fs/promises'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { readTsconfigOutDir } from '../../inspector-helpers.js'
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { listProjectFiles } from '../../utils/pikku-directories.js'
 
 /**
  * Carry into the build output the files `tsc` compiles around but never emits.
@@ -67,7 +68,7 @@ export const planDistCopies = (
 
 export const pikkuDist = pikkuSessionlessFunc<{ distDir?: string }, void>({
   func: async ({ logger, config }, data) => {
-    const { rootDir, outDir, srcDirectories, tsconfig } = config as any
+    const { rootDir, outDir, sourceDirs, tsconfig } = config as any
 
     const distDir = data.distDir
       ? resolve(rootDir, data.distDir)
@@ -83,10 +84,8 @@ export const pikkuDist = pikkuSessionlessFunc<{ distDir?: string }, void>({
     const copies = planDistCopies(rootDir, distDir, [
       ...(await walk(outDir)),
       ...(
-        await Promise.all(
-          srcDirectories.map((dir: string) => walk(resolve(rootDir, dir)))
-        )
-      ).flat(),
+        await listProjectFiles(rootDir, sourceDirs, ['.d.ts', '.json'])
+      ).filter((file) => dirname(file) !== resolve(rootDir)),
     ])
 
     for (const { from, to } of copies) {

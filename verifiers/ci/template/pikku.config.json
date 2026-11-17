@@ -1,6 +1,5 @@
 {
   "tsconfig": "./tsconfig.json",
-  "srcDirectories": ["packages/functions/src"],
   "db": {
     "engine": "sqlite"
   },

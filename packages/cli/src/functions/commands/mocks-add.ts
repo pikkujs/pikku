@@ -50,7 +50,7 @@ export interface MocksAddResult {
 const flagSourceFile = (
   rootDir: string,
   pikkuDir: string,
-  srcDirectories: string[] = []
+  sourceDirs: string[] = []
 ): string | undefined => {
   const inside = (file: string) => {
     const rel = relative(rootDir, file)
@@ -70,7 +70,7 @@ const flagSourceFile = (
   } catch {
     // no flags declared yet
   }
-  for (const dir of srcDirectories) {
+  for (const dir of sourceDirs) {
     candidates.push(join(dir, 'flags.ts'), join(dir, 'definitions', 'flags.ts'))
   }
   candidates.push(join(rootDir, 'packages/functions/src/flags.ts'))
@@ -165,7 +165,7 @@ export const mocksAdd = pikkuSessionlessFunc<
       if (readDeclaredFlags(pikkuDir).includes(flag)) {
         result.flag = { name: flag, status: 'declared' }
       } else {
-        const file = flagSourceFile(rootDir, pikkuDir, config.srcDirectories)
+        const file = flagSourceFile(rootDir, pikkuDir, config.sourceDirs)
         const snippet = flagEntry(flag, description).trimEnd()
         const source = file ? await readFile(file, 'utf8') : undefined
         const next =

@@ -48,7 +48,6 @@ beforeEach(() => {
     join(root, 'pikku.config.json'),
     JSON.stringify({
       tsconfig: 'tsconfig.json',
-      srcDirectories: ['src'],
       backends: { api: { filter: {} } },
     })
   )

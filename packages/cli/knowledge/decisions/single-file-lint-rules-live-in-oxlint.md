@@ -7,7 +7,7 @@ tags: cli, validate, lint, inspector
 
 # Single-file lint rules live in oxlint, the inspector keeps the rules that need pikku's analysis
 
-A rule that needs only one file's syntax (an import, a `process.env` read, an empty block) is an oxlint rule. `pikku validate` requires it in the app's oxlint config and runs oxlint over `srcDirectories`. A rule that needs pikku's analysis (which call is a pikku function, wirings, types, other files) stays an inspector diagnostic with a `PKU` code.
+A rule that needs only one file's syntax (an import, a `process.env` read, an empty block) is an oxlint rule. `pikku validate` requires it in the app's oxlint config and runs oxlint over the project's source directories. A rule that needs pikku's analysis (which call is a pikku function, wirings, types, other files) stays an inspector diagnostic with a `PKU` code.
 
 `lint.enforceContentService` and `lint.enforceVariablesService` were `PKU412` and `PKU413`; `enforceSupervisor` and `enforceCliCommands` joined them later (see [the four code-policy keys](code-policy-lint-keys-share-two-oxlint-rules.md)). Each inspector engine needed its own walk for them, the Rust engine never got one, and the findings only appeared in `pikku all`. They are now `OXLINT_POLICY_RULES` in `oxlint-checks.ts`: the key sets the level validate requires (`no-restricted-imports` on the `fs` modules plus `typescript/no-require-imports`, and a `no-restricted-properties` entry for `process.env`; it first used `node/no-process-env`), and `'off'` stops requiring them. The codes are retired, not free.
 

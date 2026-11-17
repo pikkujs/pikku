@@ -52,7 +52,7 @@ const ciRun = (overrides: Partial<CiRun> = {}): CiRun => ({
   configFile: join(dir, 'pikku.config.json'),
   outDir: join(dir, '.pikku'),
   scaffoldDir: join(dir, 'src', 'scaffold'),
-  srcDirectories: [join(dir, 'src')],
+  sourceDirs: [join(dir, 'src')],
   ...overrides,
 })
 
@@ -402,7 +402,7 @@ describe('worktreeOwnsConfiguredDatabase', () => {
   const project = (config: string) => {
     mkdirSync(join(dir, 'src'), { recursive: true })
     writeFileSync(join(dir, 'src', 'config.ts'), config)
-    return { rootDir: dir, srcDirectories: ['src'] } as any
+    return { rootDir: dir, sourceDirs: ['src'] } as any
   }
   const withEnv = async (
     env: Record<string, string | undefined>,

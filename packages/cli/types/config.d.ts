@@ -498,7 +498,14 @@ export type PikkuCLIInput = {
     /** Every bucket the project uses. */
     buckets: string[]
   }
-  srcDirectories: string[]
+  /**
+   * Directories of packages this project builds from, relative to `rootDir`.
+   * Each is a Pikku project of its own (an addon or a functions package) with a
+   * pikku.config.json and a package.json name beside it. `pikku all` here runs
+   * in each of them, in dependency order, then assembles the backends from what
+   * they generated. Leave it out and the project inspects its own directory.
+   */
+  pikkuDirectories?: string[]
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
   addon?:
@@ -679,7 +686,7 @@ export type PikkuCLIInput = {
   /**
    * Path to write the generated Better Auth wiring file (auth.gen.ts).
    * The CLI inspects this file and its generated siblings (auth-secrets.gen.ts,
-   * auth-middleware.gen.ts) explicitly, so they may sit outside srcDirectories.
+   * auth-middleware.gen.ts) explicitly, so they may sit outside sourceDirs.
    * Example: "src/auth.gen.ts"
    */
   authFile?: string
@@ -1277,6 +1284,12 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
     clientFiles?: PikkuClientSdkFiles
     filters: InspectorFilters
     configDir: string
+    /**
+     * The directories whose source is inspected, relative to `rootDir`: the
+     * project's own directory, minus dependencies, build output, its generated
+     * tree and any directory holding its own pikku.config.json.
+     */
+    sourceDirs: string[]
     addonName?: string
     stateOutput?: string
     stateInput?: string

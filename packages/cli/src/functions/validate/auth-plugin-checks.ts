@@ -1,10 +1,13 @@
 import { existsSync } from 'node:fs'
-import { readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import {
+  listProjectFiles,
+  projectSourceDirs,
+} from '../../utils/pikku-directories.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 
 export type AuthPluginCheckConfig = {
-  srcDirectories?: unknown
+  pikkuDirectories?: unknown
 }
 
 const lines = (...parts: string[]): string => parts.join('\n')
@@ -16,31 +19,6 @@ const readTextSafe = async (path: string): Promise<string | null> => {
     return await readFile(path, 'utf8')
   } catch {
     return null
-  }
-}
-
-const stringArray = (value: unknown): string[] =>
-  Array.isArray(value)
-    ? value.filter((v): v is string => typeof v === 'string')
-    : []
-
-/**
- * Source files under one directory, generated files included — better-auth is
- * routinely configured in a file the auth scaffold wrote.
- */
-const listSourceFiles = async (dir: string): Promise<string[]> => {
-  if (!existsSync(dir)) return []
-  try {
-    return (await readdir(dir, { recursive: true }))
-      .filter(
-        (f): f is string =>
-          typeof f === 'string' &&
-          (f.endsWith('.ts') || f.endsWith('.tsx')) &&
-          !f.includes('node_modules')
-      )
-      .map((f) => join(dir, f))
-  } catch {
-    return []
   }
 }
 
@@ -142,13 +120,8 @@ export const runAuthPluginChecks = async (
 ): Promise<ValidateFinding[]> => {
   const findings: ValidateFinding[] = []
 
-  const srcDirectories = stringArray(config?.srcDirectories)
-  const searchDirs = srcDirectories.length
-    ? srcDirectories
-    : [join('packages', 'functions', 'src')]
-  const sourceFiles = (
-    await Promise.all(searchDirs.map((dir) => listSourceFiles(join(root, dir))))
-  ).flat()
+  const searchDirs = projectSourceDirs(config ?? {})
+  const sourceFiles = await listProjectFiles(root, searchDirs, ['.ts', '.tsx'])
 
   let bansAnywhere = false
   const adminFiles: string[] = []

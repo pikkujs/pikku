@@ -4,6 +4,7 @@ import { readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type { ValidateFinding } from './virtual-user-checks.js'
 import { applyRuleSeverity } from './rule-severity.js'
+import { projectSourceDirs } from '../../utils/pikku-directories.js'
 
 /**
  * Rules `pikku validate` insists are on, at `error`, with type information.
@@ -497,7 +498,7 @@ export const defaultExec: OxlintExec = (file, args, { cwd, timeoutMs }) =>
 
 type OxlintConfigShape = {
   rootDir?: unknown
-  srcDirectories?: unknown
+  pikkuDirectories?: unknown
   outDir?: unknown
   scaffold?: Record<string, unknown>
   lint?: Record<string, unknown>
@@ -561,15 +562,18 @@ export const loadProject = async (root: string): Promise<Project | null> => {
     ? resolve(root, config.rootDir as string)
     : root
   const abs = (p: string) => (isAbsolute(p) ? p : resolve(configRoot, p))
-  const srcDirs = (
-    Array.isArray(config.srcDirectories) ? config.srcDirectories : []
+  // Linting a directory covers the directories inside it.
+  const allDirs = projectSourceDirs(config).map(abs)
+  const srcDirs = allDirs.filter(
+    (d) =>
+      !allDirs.some(
+        (o) =>
+          o !== d && relative(o, d) !== '' && !relative(o, d).startsWith('..')
+      )
   )
-    .filter((d): d is string => typeof d === 'string')
-    .map(abs)
   const scaffold = (config.scaffold ?? {}) as Record<string, unknown>
   const scaffoldDir = abs(
-    stringOrUndefined(scaffold.pikkuDir) ??
-      (srcDirs[0] ? join(srcDirs[0], 'scaffold') : 'src/scaffold')
+    stringOrUndefined(scaffold.pikkuDir) ?? 'src/scaffold'
   )
 
   // Every package.json that could carry the dependency or the lint script: the
@@ -1106,8 +1110,8 @@ export const oxlintRunArgs = (
     // (symlink-resolved) working directory to decide which config is the root,
     // and an absolute path through a symlink (/var -> /private/var) breaks it.
     ...project.srcDirs.map((dir) => {
-      const r = relative(cwd, dir)
-      return r && !r.startsWith('..') && !isAbsolute(r) ? r : dir
+      const r = relative(cwd, dir) || '.'
+      return !r.startsWith('..') && !isAbsolute(r) ? r : dir
     }),
   ]
 }
@@ -1117,7 +1121,7 @@ const rank = (f: ValidateFinding, required: Set<string>): number =>
   (required.has(f.id) ? 0 : 1)
 
 /**
- * Check 2 — run the app's own oxlint, type-aware, over `srcDirectories`.
+ * Check 2 — run the app's own oxlint, type-aware, over the project's source directories.
  *
  * Runs last. Skipped (with an info finding saying why) when check 1 found
  * oxlint or oxlint-tsgolint not installed, since there is nothing to run.
@@ -1162,7 +1166,7 @@ export const runOxlintRun = async (
     )
   }
   const srcDirs = project.srcDirs.filter((d) => existsSync(d))
-  if (srcDirs.length === 0) return skip('no srcDirectories exist on disk')
+  if (srcDirs.length === 0) return skip('no source directories exist on disk')
 
   const cwd = findOxlintConfig(project)?.dir ?? project.configRoot
   const timeoutSeconds =
@@ -1292,7 +1296,7 @@ export const runOxlintRun = async (
             message: `oxlint linted 0 files under ${srcDirs.map((d) => rel(root, d)).join(', ')} — an ignorePatterns entry or an unmatched path is hiding the app source, so nothing was checked`,
             path: pkgPath,
             fixHint:
-              'Check "ignorePatterns" in the oxlint config (and anything it extends) and the srcDirectories in pikku.config.json.',
+              'Check "ignorePatterns" in the oxlint config (and anything it extends) and the pikkuDirectories in pikku.config.json.',
           },
         ],
         rules

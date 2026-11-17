@@ -37,7 +37,7 @@ export const dbBaseline = pikkuSessionlessFunc<{}, void>({
     const result = await baseline(
       resolved,
       config.rootDir,
-      config.srcDirectories,
+      config.sourceDirs,
       logger
     )
 
