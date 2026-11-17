@@ -40,7 +40,12 @@ import {
   resolveScenarioBrowserProvider,
 } from './scenario-browser.js'
 import { primaryFrontendName, resolveEnvironment } from './environment.js'
-import { devFrontendFor, serveFrontend, type Served } from './pages-serve.js'
+import {
+  devFrontendFor,
+  serveFrontend,
+  type OwnBackend,
+  type Served,
+} from './pages-serve.js'
 import { frontendEnv, readEnvFile } from './dev-env.js'
 import { resolveVirtualUsers } from '../../utils/resolve-virtual-users.js'
 import {
@@ -267,6 +272,49 @@ export const renderPagesScreenshot = (
     )
     for (const page of skipped)
       process.stdout.write(`  ${page.path} ${dim(page.params.join(', '))}\n`)
+  }
+}
+
+/**
+ * The compare starts its own servers on free ports only for a builder of a
+ * parallel loop (PIKKU_CHANGES_PARALLEL=1) working in a linked worktree;
+ * otherwise it uses what answers on the configured ports, as before.
+ */
+export const isolatedCompare = async (
+  cwd: string,
+  env: NodeJS.ProcessEnv = process.env
+): Promise<boolean> =>
+  env.PIKKU_CHANGES_PARALLEL === '1' && (await inLinkedWorktree(cwd))
+
+/**
+ * How this tree's backend is started for an isolated compare: `pikku dev
+ * --serveOnly` (no codegen, so nothing in the tree is rewritten; it serves the
+ * generated code the tree already has), from the config's directory; with
+ * more than one backend, the first declared, which the frontends proxy to.
+ * Null when the config declares no backend.
+ */
+export const ownBackend = (
+  config: {
+    configDir?: string
+    rootDir: string
+    backends?: Record<string, unknown>
+  },
+  bin: string | undefined = process.env.PIKKU_CLI_BIN || process.argv[1]
+): OwnBackend | null => {
+  const names = Object.keys(config.backends ?? {})
+  if (!names.length || !bin) return null
+  return {
+    cwd: config.configDir ?? config.rootDir,
+    command: [
+      process.execPath,
+      bin,
+      'dev',
+      ...(names.length > 1 ? ['--backend', names[0]!] : []),
+      '--serveOnly',
+      '--no-watch',
+      '--no-frontends',
+      '--no-hmr',
+    ],
   }
 }
 
@@ -533,9 +581,10 @@ export const pagesCompare = pikkuSessionlessFunc({
         )?.dev?.port
         served = await serveFrontend({
           frontend,
-          // in a changeset worktree the configured port may be serving
-          // another checkout's code: start this tree's own server
-          isolate: await inLinkedWorktree(frontend.cwd),
+          // in a parallel loop's changeset worktree the configured ports may
+          // be serving another checkout's code: start this tree's own servers
+          isolate: await isolatedCompare(frontend.cwd),
+          backend: ownBackend(config),
           apiUrl: apiPort ? `http://localhost:${apiPort}` : undefined,
           envFor: (f) =>
             frontendEnv(
@@ -549,8 +598,8 @@ export const pagesCompare = pikkuSessionlessFunc({
       const { session, close } = await openSession(
         { config, getInspectorState, variables },
         { baseUrl: url, as, environment, backend }
-      ).catch((error) => {
-        served?.stop()
+      ).catch(async (error) => {
+        await served?.stop()
         throw error
       })
       try {
@@ -666,7 +715,7 @@ export const pagesCompare = pikkuSessionlessFunc({
         }
       } finally {
         await close()
-        served?.stop()
+        await served?.stop()
       }
     }
 

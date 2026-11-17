@@ -2,7 +2,12 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { execFileSync } from 'node:child_process'
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { answersOk, devFrontendFor, serveFrontend } from './pages-serve.js'
+import { isolatedCompare, ownBackend } from './pages.js'
 import type { DevFrontend } from './dev-frontends.js'
 
 const listen = (status: number): Promise<{ server: Server; port: number }> =>
@@ -115,7 +120,7 @@ describe('serveFrontend', () => {
       /did not answer, so pages that load data/
     )
     assert.equal(await answersOk(`${served.baseUrl}/`), true)
-    served.stop()
+    await served.stop()
     for (let i = 0; i < 40 && (await answersOk(`${served.baseUrl}/`)); i++)
       await new Promise((r) => setTimeout(r, 50))
     assert.equal(await answersOk(`${served.baseUrl}/`), false)
@@ -157,10 +162,190 @@ describe('serveFrontend', () => {
         const body = await (await fetch(`${served.baseUrl}/`)).text()
         assert.equal(body, 'mine')
       } finally {
-        served.stop()
+        await served.stop()
       }
     } finally {
       await close(other.server)
     }
+  })
+
+  test("isolated with a backend: this tree's backend on its own free port, the frontend proxied to it, both stopped as process groups", async () => {
+    // what answers on the configured ports belongs to another checkout
+    const otherApp = await listen(200)
+    // the backend starts a grandchild that holds its port, as `pikku dev` does
+    // with its runner: only a process-group stop takes that one down
+    const grandchild =
+      "const p=+process.argv[1];require('http').createServer((q,s)=>s.end('this tree api')).listen(p,'127.0.0.1');setInterval(()=>{},1000)"
+    const backendScript = `const a=process.argv;const p=a[a.lastIndexOf('--port')+1];require('child_process').spawn(process.execPath,['-e',${JSON.stringify(grandchild)},p],{stdio:'inherit'});setInterval(()=>{},1000)`
+    // the frontend says where its API proxy points
+    const frontendScript =
+      "const a=process.argv;const p=+a[a.lastIndexOf('--port')+1];require('http').createServer((q,s)=>s.end(process.env.VITE_API_PROXY||'none')).listen(p,'127.0.0.1');setInterval(()=>{},1000)"
+    try {
+      const served = await serveFrontend({
+        frontend: frontend(otherApp.port, [
+          process.execPath,
+          '-e',
+          frontendScript,
+          '--',
+        ]),
+        apiUrl: 'http://localhost:3000',
+        envFor: () => ({ ...process.env, VITE_API_PROXY: 'http://other:1' }),
+        write: () => {},
+        healthTimeoutMs: 15_000,
+        isolate: true,
+        backend: {
+          cwd: process.cwd(),
+          command: [process.execPath, '-e', backendScript, '--'],
+        },
+      })
+      let api = ''
+      try {
+        assert.equal(served.apiNote, null)
+        api = await (await fetch(`${served.baseUrl}/`)).text()
+        assert.match(api, /^http:\/\/localhost:\d+$/)
+        assert.notEqual(api, 'http://localhost:3000')
+        assert.equal(await (await fetch(`${api}/`)).text(), 'this tree api')
+        assert.match(served.command ?? '', /this tree's backend/)
+      } finally {
+        await served.stop()
+      }
+      assert.equal(await answersOk(`${api}/`), false, 'backend group gone')
+      assert.equal(
+        await answersOk(`${served.baseUrl}/`),
+        false,
+        'frontend group gone'
+      )
+    } finally {
+      await close(otherApp.server)
+    }
+  })
+
+  test('isolated, a backend that does not come up: the frontend proxies to nothing (never another checkout), and the result says so', async () => {
+    const otherApi = await listen(200)
+    const frontendScript =
+      "const a=process.argv;const p=+a[a.lastIndexOf('--port')+1];require('http').createServer((q,s)=>s.end(process.env.VITE_API_PROXY||'none')).listen(p,'127.0.0.1');setInterval(()=>{},1000)"
+    try {
+      const served = await serveFrontend({
+        frontend: frontend(await freePort(), [
+          process.execPath,
+          '-e',
+          frontendScript,
+          '--',
+        ]),
+        apiUrl: `http://localhost:${otherApi.port}`,
+        envFor: () => ({ ...process.env }),
+        write: () => {},
+        healthTimeoutMs: 15_000,
+        isolate: true,
+        backend: {
+          cwd: process.cwd(),
+          command: [
+            process.execPath,
+            '-e',
+            "console.error('no .pikku'); process.exit(1)",
+            '--',
+          ],
+        },
+      })
+      try {
+        const api = await (await fetch(`${served.baseUrl}/`)).text()
+        assert.notEqual(api, `http://localhost:${otherApi.port}`)
+        assert.match(
+          served.apiNote ?? '',
+          /backend did not start[\s\S]*without their data[\s\S]*no \.pikku/
+        )
+      } finally {
+        await served.stop()
+      }
+    } finally {
+      await close(otherApi.server)
+    }
+  })
+
+  test('isolated with no backend in the config: the old behaviour, said in the result', async () => {
+    const script =
+      "const a=process.argv;const p=+a[a.lastIndexOf('--port')+1];require('http').createServer((q,s)=>s.end('x')).listen(p,'127.0.0.1');setInterval(()=>{},1000)"
+    const served = await serveFrontend({
+      frontend: frontend(await freePort(), [
+        process.execPath,
+        '-e',
+        script,
+        '--',
+      ]),
+      apiUrl: 'http://localhost:3000',
+      envFor: () => ({ ...process.env }),
+      write: () => {},
+      healthTimeoutMs: 15_000,
+      isolate: true,
+      backend: null,
+    })
+    try {
+      assert.match(
+        served.apiNote ?? '',
+        /backend was not started \(no backends[\s\S]*http:\/\/localhost:3000/
+      )
+    } finally {
+      await served.stop()
+    }
+  })
+})
+
+describe('isolatedCompare / ownBackend', () => {
+  test('only a parallel loop (PIKKU_CHANGES_PARALLEL=1) isolates, and only in a linked worktree', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pikku-isolate-'))
+    const main = join(dir, 'main')
+    const sh = (args: string[], cwd: string) =>
+      execFileSync('git', args, { cwd, stdio: 'pipe' })
+    mkdirSync(main)
+    sh(['init', '-q'], main)
+    sh(
+      [
+        '-c',
+        'user.name=t',
+        '-c',
+        'user.email=t@t',
+        'commit',
+        '-q',
+        '--allow-empty',
+        '-m',
+        'x',
+      ],
+      main
+    )
+    sh(['worktree', 'add', '-q', join(dir, 'wt'), '-b', 'changeset/x'], main)
+    const parallel = { PIKKU_CHANGES_PARALLEL: '1' }
+    try {
+      assert.equal(await isolatedCompare(join(dir, 'wt'), parallel), true)
+      assert.equal(await isolatedCompare(join(dir, 'wt'), {}), false)
+      assert.equal(
+        await isolatedCompare(join(dir, 'wt'), { PIKKU_CHANGES_BUILDER: '1' }),
+        false
+      )
+      assert.equal(await isolatedCompare(main, parallel), false)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('the backend command: pikku dev --serveOnly from the config dir; the first backend named when there are several; none without backends', () => {
+    const one = ownBackend(
+      { configDir: '/p/fn', rootDir: '/p/fn', backends: { api: {} } },
+      '/bin/pikku.js'
+    )
+    assert.equal(one?.cwd, '/p/fn')
+    assert.deepEqual(one?.command.slice(1), [
+      '/bin/pikku.js',
+      'dev',
+      '--serveOnly',
+      '--no-watch',
+      '--no-frontends',
+      '--no-hmr',
+    ])
+    const two = ownBackend(
+      { rootDir: '/p', backends: { api: {}, admin: {} } },
+      '/bin/pikku.js'
+    )
+    assert.deepEqual(two?.command.slice(2, 5), ['dev', '--backend', 'api'])
+    assert.equal(ownBackend({ rootDir: '/p' }, '/bin/pikku.js'), null)
   })
 })
