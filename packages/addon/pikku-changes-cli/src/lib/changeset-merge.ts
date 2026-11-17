@@ -1,6 +1,7 @@
+import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import type { ListChangesOutput } from './types.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { releaseChangeset } from './changes-local.js'
@@ -123,8 +124,11 @@ export async function mergeChangeset(
         )
       throw error
     }
-    await git(['merge', '--abort'])
-    return { kind: 'conflict', group, branch, into, files, worktree }
+    if (!lockfilesOnly(files)) {
+      await git(['merge', '--abort'])
+      return { kind: 'conflict', group, branch, into, files, worktree }
+    }
+    await healLockfiles(files, branch)
   }
   if (storePath) await releaseChangeset(storePath, group.groupId)
   const commit = await git(['rev-parse', 'HEAD'])
@@ -166,6 +170,50 @@ async function clearScratchCollisions(branch: string): Promise<void> {
     .filter((file) => file && SCRATCH_PATH.test(file))
   for (const file of added)
     if (existsSync(join(top, file))) await rm(join(top, file), { force: true })
+}
+
+const LOCKFILES = new Set(['bun.lock', 'bun.lockb'])
+
+/** A conflict only in bun lockfiles, which `bun install` regenerates (PIKKU_CHANGES_LOCK_HEAL=off keeps it a conflict). */
+export const lockfilesOnly = (
+  files: string[],
+  env: NodeJS.ProcessEnv = process.env
+): boolean =>
+  env.PIKKU_CHANGES_LOCK_HEAL !== 'off' &&
+  files.length > 0 &&
+  files.every((file) => LOCKFILES.has(basename(file)))
+
+/**
+ * Both sides changed a bun lockfile and nothing else conflicts (package.json
+ * merged cleanly): take this checkout's lockfile, let `bun install` rewrite it
+ * from the merged package.json files, and finish the merge commit. When the
+ * install fails the merge is aborted, saying why.
+ */
+async function healLockfiles(files: string[], branch: string): Promise<void> {
+  const top = (await git(['rev-parse', '--show-toplevel'])).trim()
+  await git(['checkout', '--ours', '--', ...files])
+  for (const dir of [...new Set(files.map((file) => dirname(file)))]) {
+    const result = spawnSync('bun', ['install'], {
+      cwd: join(top, dir),
+      encoding: 'utf8',
+      timeout: 600_000,
+      maxBuffer: 32 * 1024 * 1024,
+    })
+    if (result.status !== 0) {
+      await git(['merge', '--abort'])
+      const why =
+        `${result.stdout ?? ''}${result.stderr ?? ''}${result.error ? result.error.message : ''}`
+          .trim()
+          .split('\n')
+          .slice(-15)
+          .join('\n')
+      throw new CloudPreconditionError(
+        `${branch} conflicts only in ${files.join(', ')}, and \`bun install\` in ${join(top, dir)} failed while regenerating it, so the merge was aborted:\n${why}`
+      )
+    }
+  }
+  await git(['add', '--', ...files])
+  await git(['commit', '--no-edit', '--quiet'])
 }
 
 /** The paths git names when untracked files would be overwritten by a merge. */
