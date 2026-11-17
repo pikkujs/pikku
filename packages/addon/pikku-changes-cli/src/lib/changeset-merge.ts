@@ -1,6 +1,7 @@
 import type { ListChangesOutput } from './types.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { releaseChangeset } from './changes-local.js'
+import { removeChangesetWorktree } from './changeset-worktree.js'
 import {
   currentBranch,
   git,
@@ -24,6 +25,11 @@ export type MergeOutcome =
       into: string
       commit: string
       removedWorktree: string | null
+      /** Bytes the removed worktree held, ignored files included. */
+      freedBytes: number
+      branchDeleted: boolean
+      /** Why the worktree could not be removed, when it could not. */
+      cleanupError?: string
     }
   | {
       kind: 'conflict'
@@ -109,14 +115,28 @@ export async function mergeChangeset(
     return { kind: 'conflict', group, branch, into, files, worktree }
   }
   if (storePath) await releaseChangeset(storePath, group.groupId)
-  if (worktree) await git(['worktree', 'remove', worktree])
+  const commit = await git(['rev-parse', 'HEAD'])
+  // A changeset built in its own worktree leaves nothing behind once merged:
+  // the directory with its ignored files, and the branch. One built in the
+  // main checkout keeps its branch, as it always has.
+  let reclaimed = { freedBytes: 0, branchDeleted: false }
+  let cleanupError: string | undefined
+  if (worktree) {
+    try {
+      reclaimed = await removeChangesetWorktree(worktree, branch)
+    } catch (error) {
+      cleanupError = error instanceof Error ? error.message : String(error)
+    }
+  }
   return {
     kind: 'merged',
     group,
     branch,
     into,
-    commit: await git(['rev-parse', 'HEAD']),
+    commit,
     removedWorktree: worktree,
+    ...reclaimed,
+    ...(cleanupError ? { cleanupError } : {}),
   }
 }
 

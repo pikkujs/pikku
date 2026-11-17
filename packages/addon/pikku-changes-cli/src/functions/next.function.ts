@@ -30,6 +30,7 @@ import {
 import { currentBranch, git } from '@pikku/cli/addon-support'
 import { NextInput, NextOutput } from './next.schemas.js'
 import { LIST_CHANGES_MAX } from '../lib/list-limit.js'
+import { megabytes } from '../lib/changeset-worktree.js'
 import { markFiling } from '../lib/filing-guard.js'
 
 type Route = z.infer<typeof NextOutput>
@@ -85,12 +86,23 @@ async function route(
 ): Promise<Route> {
   const { rpc, projectId, storePath } = await changesContext(undefined)
   const merged: string[] = []
-  const finished = await finishedChangesets(
-    await rpc.invoke('listChanges', {
-      projectId: projectId!,
-      includeDone: true,
-      pickupOnly: false,
-    })
+  const now = Date.now()
+  // With --parallel a builder may mark its changes done before it has ended;
+  // its lease is live until it ends (the loop driving it releases it), and
+  // its worktree is not merged out from under it.
+  const finished = (
+    await finishedChangesets(
+      await rpc.invoke('listChanges', {
+        projectId: projectId!,
+        includeDone: true,
+        pickupOnly: false,
+      })
+    )
+  ).filter(
+    ({ group }) =>
+      !parallel ||
+      !group.claimExpiresAt ||
+      new Date(group.claimExpiresAt).getTime() <= now
   )
   if (finished.length) await syncWithUpstream()
   for (const changeset of finished) {
@@ -101,7 +113,7 @@ async function route(
     const outcome = await mergeChangeset(changeset, storePath)
     if (outcome.kind === 'conflict') return resolve(outcome, merged)
     merged.push(
-      `${outcome.group.title} → ${outcome.into} @ ${outcome.commit.slice(0, 7)}`
+      `${outcome.group.title} → ${outcome.into} @ ${outcome.commit.slice(0, 7)}${reclaimedLine(outcome)}`
     )
   }
   if (merged.length && push) await git(['push'])
@@ -190,6 +202,15 @@ export async function pick(
     ].join('\n'),
   }
 }
+
+const reclaimedLine = (
+  outcome: Extract<MergeOutcome, { kind: 'merged' }>
+): string =>
+  outcome.cleanupError
+    ? `, worktree ${outcome.removedWorktree} not removed: ${outcome.cleanupError}`
+    : outcome.removedWorktree
+      ? `, worktree removed (${megabytes(outcome.freedBytes)} freed)${outcome.branchDeleted ? `, ${outcome.branch} deleted` : ''}`
+      : ''
 
 const resolve = (
   outcome: Extract<MergeOutcome, { kind: 'conflict' }>,

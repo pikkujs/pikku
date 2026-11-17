@@ -1,0 +1,193 @@
+import { describe, test } from 'node:test'
+import assert from 'node:assert'
+import { existsSync, realpathSync } from 'node:fs'
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { git } from '@pikku/cli/addon-support'
+import {
+  addChangesetWorktree,
+  assertWorktreeRoom,
+  changesetWorktrees,
+  maxChangesetWorktrees,
+} from './changeset-worktree.js'
+import { mergeChangeset } from './changeset-merge.js'
+import { localChangesRPC, releaseChangeset } from './changes-local.js'
+import { claimable } from './changes-next.js'
+import { board } from './changes-board.js'
+
+const ID = ['-c', 'user.email=t@example.com', '-c', 'user.name=t']
+
+const repo = async () => {
+  const dir = realpathSync(await mkdtemp(join(tmpdir(), 'pikku-wt-')))
+  await git(['init', '-q', '-b', 'main'], dir)
+  await writeFile(join(dir, '.gitignore'), 'node_modules/\ndist/\n.pikku/\n')
+  await git(['add', '.gitignore'], dir)
+  await git([...ID, 'commit', '-q', '-m', 'init'], dir)
+  return dir
+}
+
+describe('changeset worktrees', () => {
+  test('the cap is 3 unless PIKKU_CHANGES_MAX_WORKTREES says otherwise', () => {
+    assert.strictEqual(maxChangesetWorktrees({}), 3)
+    assert.strictEqual(
+      maxChangesetWorktrees({ PIKKU_CHANGES_MAX_WORKTREES: '5' }),
+      5
+    )
+    assert.strictEqual(
+      maxChangesetWorktrees({ PIKKU_CHANGES_MAX_WORKTREES: 'x' }),
+      3
+    )
+  })
+
+  test('a fourth worktree is refused while three are live, naming them', async () => {
+    const dir = await repo()
+    for (const title of ['One', 'Two', 'Three'])
+      await addChangesetWorktree(title, { cwd: dir }, 3)
+    assert.strictEqual((await changesetWorktrees(dir)).length, 3)
+    await assert.rejects(
+      addChangesetWorktree('Four', { cwd: dir }, 3),
+      (e: Error) =>
+        /3 changeset worktrees are live and the cap is 3: changeset\/one, changeset\/three, changeset\/two/.test(
+          e.message
+        )
+    )
+    await assert.rejects(assertWorktreeRoom(dir, 3), /cap is 3/)
+    assert.ok(!existsSync(join(`${dir}-changesets`, 'four')))
+  })
+
+  test('the worktrees sit beside the repo, also when claimed from inside one', async () => {
+    const dir = await repo()
+    const one = await addChangesetWorktree('One', { cwd: dir })
+    assert.strictEqual(one, join(`${dir}-changesets`, 'one'))
+    const two = await addChangesetWorktree('Two', { cwd: one })
+    assert.strictEqual(two, join(`${dir}-changesets`, 'two'))
+  })
+
+  test('picking a changeset up again gets its worktree back, without counting against the cap', async () => {
+    const dir = await repo()
+    const one = await addChangesetWorktree('One', { cwd: dir }, 1)
+    await writeFile(join(one, 'half-done.txt'), 'kept')
+    assert.strictEqual(
+      await addChangesetWorktree('One', { cwd: dir, reuse: true }, 1),
+      one
+    )
+    assert.ok(existsSync(join(one, 'half-done.txt')))
+  })
+
+  test('a new changeset whose branch exists is refused, not handed that checkout', async () => {
+    const dir = await repo()
+    await addChangesetWorktree('One', { cwd: dir })
+    await assert.rejects(
+      addChangesetWorktree('One', { cwd: dir }),
+      /changeset\/one already exists/
+    )
+  })
+
+  test('a branch whose worktree was removed is checked out again on re-pickup', async () => {
+    const dir = await repo()
+    const one = await addChangesetWorktree('One', { cwd: dir })
+    await git([...ID, 'commit', '-q', '--allow-empty', '-m', 'work'], one)
+    await git(['worktree', 'remove', one], dir)
+    const again = await addChangesetWorktree('One', { cwd: dir, reuse: true })
+    assert.strictEqual(
+      (await git(['log', '-1', '--format=%s'], again)).trim(),
+      'work'
+    )
+  })
+})
+
+describe('merging a changeset built in a worktree', () => {
+  test('removes the directory with its ignored files and the branch, and says how much it freed', async () => {
+    const dir = await repo()
+    const tree = await addChangesetWorktree('Add login', { cwd: dir })
+    await writeFile(join(tree, 'login.ts'), 'export const login = 1\n')
+    await git(['add', 'login.ts'], tree)
+    await git([...ID, 'commit', '-q', '-m', '#1 Add login'], tree)
+    // What a build leaves behind: ignored, so never committed and never merged.
+    await mkdir(join(tree, 'node_modules', 'big'), { recursive: true })
+    await writeFile(
+      join(tree, 'node_modules', 'big', 'blob'),
+      Buffer.alloc(200_000)
+    )
+    await mkdir(join(tree, '.pikku'), { recursive: true })
+    await writeFile(join(tree, '.pikku', 'gen.ts'), 'x')
+    await writeFile(join(tree, 'stray.txt'), 'untracked')
+
+    const cwd = process.cwd()
+    process.chdir(dir)
+    try {
+      const store = join(dir, '.git', 'pikku-changes.json')
+      const outcome = await mergeChangeset(
+        {
+          group: { groupId: 'g1', title: 'Add login' } as any,
+          branch: 'changeset/add-login',
+        },
+        store
+      )
+      assert.strictEqual(outcome.kind, 'merged')
+      if (outcome.kind !== 'merged') return
+      assert.strictEqual(outcome.removedWorktree, tree)
+      assert.ok(outcome.freedBytes >= 200_000, `freed ${outcome.freedBytes}`)
+      assert.strictEqual(outcome.branchDeleted, true)
+      assert.strictEqual(outcome.cleanupError, undefined)
+    } finally {
+      process.chdir(cwd)
+    }
+    assert.ok(!existsSync(tree))
+    assert.deepStrictEqual(await changesetWorktrees(dir), [])
+    assert.strictEqual(
+      (await git(['branch', '--list', 'changeset/*'], dir)).trim(),
+      ''
+    )
+    assert.ok(existsSync(join(dir, 'login.ts')))
+    assert.match(await git(['log', '-1', '--format=%B'], dir), /Changeset: g1/)
+  })
+})
+
+describe('releasing a lease', () => {
+  test('makes the change claimable at once, and the group can be claimed again', async () => {
+    const path = join(await mkdtemp(join(tmpdir(), 'changes-')), 'q.json')
+    const rpc = localChangesRPC(path)
+    await rpc.invoke('createChange', { stageId: 'local', title: 'A' })
+    const { group } = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      changeIds: ['1'],
+      claimedBy: 'builder-1',
+      leaseMinutes: 30,
+    })
+    await rpc.invoke('moveChange', { changeId: '1', to: 'in_progress' })
+    const list = async () =>
+      board(
+        await rpc.invoke('listChanges', {
+          projectId: 'local',
+          includeDone: true,
+        })
+      )
+    assert.deepStrictEqual(claimable(await list(), Date.now()), [])
+    await assert.rejects(
+      rpc.invoke('claimChanges', {
+        projectId: 'local',
+        changeIds: ['1'],
+        claimedBy: 'builder-2',
+      }),
+      /Already taken/
+    )
+
+    await releaseChangeset(path, group.groupId)
+
+    assert.deepStrictEqual(
+      claimable(await list(), Date.now() + 1).map((c) => c.shortId),
+      ['1']
+    )
+    const again = await rpc.invoke('claimChanges', {
+      projectId: 'local',
+      groupId: group.groupId,
+      changeIds: ['1'],
+      claimedBy: 'builder-2',
+    })
+    assert.strictEqual(again.group.groupId, group.groupId)
+    assert.strictEqual(again.group.title, 'A')
+    assert.strictEqual(again.changes[0]!.status, 'in_progress')
+  })
+})
