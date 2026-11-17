@@ -26,6 +26,11 @@ import {
  * (1000 px or more) is refused even with a waiver, with its numbers and the
  * compare's style differences, so it gets fixed. PIKKU_COMPARE_GATE=off turns
  * the gate off for labs.
+ *
+ * In a clone project (see `isCloneProject`) the gate fails closed: a change
+ * that touched pages is refused while the reference is not a capture made by
+ * `pikku ui pages capture` (no screenshots, no style.json, or the original's
+ * pictures not downloaded), with the command to run.
  */
 
 export type Git = (args: string[]) => Promise<string>
@@ -35,6 +40,8 @@ export const MIN_WAIVER_LENGTH = 30
 /** A waiver covers only widths under this: a desktop page has no excuse not to match. */
 export const WAIVABLE_BELOW = 1000
 export const REFERENCES_DIR = join('artifacts', 'references')
+/** The archaeology notes of a site being rebuilt (the pikku-site-archaeology skill). */
+export const SITE_NOTES = join('knowledge', 'site', 'index.md')
 
 export type PageGateOutcome =
   | { kind: 'off' }
@@ -90,6 +97,88 @@ export function referenceSites(top: string): Site[] {
     sites.push({ name, dir, shots, map })
   }
   return sites
+}
+
+/**
+ * A project rebuilding an existing site: it has a folder under
+ * `artifacts/references/` or the archaeology notes `knowledge/site/index.md`.
+ */
+export function isCloneProject(top: string): boolean {
+  if (existsSync(join(top, SITE_NOTES))) return true
+  const root = join(top, REFERENCES_DIR)
+  try {
+    return readdirSync(root).some((name) =>
+      statSync(join(root, name)).isDirectory()
+    )
+  } catch {
+    return false
+  }
+}
+
+/** The original's address: from the capture's `<id>.json` or pages.txt, else the archaeology notes, else the folder name. */
+function originalUrl(top: string, site?: string): string {
+  const dir = site ? join(top, REFERENCES_DIR, site) : null
+  // the site's root: the capture starts from it and finds every page
+  const first = (text: string) => {
+    const found = text.match(/https?:\/\/[^\s)"'<>\]]+/)?.[0]
+    return found ? `${new URL(found).origin}/` : undefined
+  }
+  if (dir) {
+    for (const name of ['index.json', 'pages.txt']) {
+      try {
+        const found = first(readFileSync(join(dir, name), 'utf8'))
+        if (found) return found
+      } catch {}
+    }
+  }
+  try {
+    const found = first(readFileSync(join(top, SITE_NOTES), 'utf8'))
+    if (found) return found
+  } catch {}
+  return site ? `https://${site}/` : '<url of the original>'
+}
+
+/**
+ * Why the clone's reference is not one the gate can hold pages to, or null:
+ * no screenshots, screenshots without a style.json (not made by the capture),
+ * or pictures listed by the capture and none downloaded.
+ */
+export function referenceProblem(top: string, sites: Site[]): string | null {
+  const root = join(top, REFERENCES_DIR)
+  if (!sites.length) {
+    let folders: string[] = []
+    try {
+      folders = readdirSync(root).filter((name) =>
+        statSync(join(root, name)).isDirectory()
+      )
+    } catch {}
+    const site = folders[0]
+    return `There is no capture of the original: ${site ? `${join(REFERENCES_DIR, site)} has` : `${REFERENCES_DIR}/<site> holds`} no <id>-<width>.jpg|png screenshots.\nRun: pikku ui pages capture ${originalUrl(top, site)} --out ${join(REFERENCES_DIR, site ?? '<site>')}`
+  }
+  for (const site of sites) {
+    const out = join(REFERENCES_DIR, site.name)
+    const again = `Run: pikku ui pages capture ${originalUrl(top, site.name)} --out ${out}`
+    if (!site.shots.some((shot) => shot.style))
+      return `${out} was not made by pikku ui pages capture: it has no <id>-<width>.style.json (the original's colours and fonts), so a page cannot be held to the original.\n${again}`
+    let listed = false
+    for (const name of readdirSync(site.dir)) {
+      if (!name.endsWith('.json')) continue
+      try {
+        const doc = JSON.parse(readFileSync(join(site.dir, name), 'utf8'))
+        if (doc?.images?.length || doc?.pictures?.length) listed = true
+      } catch {}
+      if (listed) break
+    }
+    let downloaded = false
+    try {
+      downloaded = readdirSync(join(site.dir, 'pictures')).some(
+        (name) => name !== 'index.json'
+      )
+    } catch {}
+    if (listed && !downloaded)
+      return `The original has pictures, and none were downloaded into ${join(out, 'pictures')}: the clone cannot show them.\n${again}`
+  }
+  return null
 }
 
 /** The nearest pikku.config.json from `cwd` up to `top`, else the first one with frontends below `top`. */
@@ -249,7 +338,8 @@ export async function checkPageGate({
 
   const top = resolve((await git(['rev-parse', '--show-toplevel'])).trim())
   const sites = referenceSites(top)
-  if (!sites.length)
+  const clone = isCloneProject(top)
+  if (!sites.length && !clone)
     return { kind: 'skip', why: `no reference under ${REFERENCES_DIR}` }
 
   const found = findConfig(top, cwd)
@@ -269,6 +359,12 @@ export async function checkPageGate({
     return {
       kind: 'skip',
       why: `no page file touched${base ? ` since ${base}` : ' in HEAD'}`,
+    }
+  const problem = clone ? referenceProblem(top, sites) : null
+  if (problem)
+    return {
+      kind: 'refuse',
+      message: `${label} touched pages of a site rebuilt from an original (${touched.map((p) => p.path).join(', ')}), and it is done only when they are compared with a capture of the original.\n${problem}\nThen build the pages from that capture: its <page>.json, its style.json colours and fonts, and its pictures. Compare, commit, and run done again.`,
     }
 
   // where pages compare writes (artifacts/tmp/compare/<app>), and where it
