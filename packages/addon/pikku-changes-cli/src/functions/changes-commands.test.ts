@@ -367,6 +367,30 @@ describe('changes file', () => {
     assert.strictEqual(data.body, undefined)
   })
 
+  test('a builder files to the backlog unless PIKKU_CHANGES_BUILDER_FILE_READY=1', async () => {
+    projectId = 'local'
+    process.env.PIKKU_CHANGES_BUILDER = '1'
+    try {
+      const { data } = await sent(() =>
+        ChangesFile.func({} as any, { title: 'Add a blog' } as any)
+      )
+      assert.strictEqual(data.backlog, true)
+      process.env.PIKKU_CHANGES_BUILDER_FILE_READY = '1'
+      const { data: ready } = await sent(() =>
+        ChangesFile.func({} as any, { title: 'Add a blog' } as any)
+      )
+      assert.strictEqual(ready.backlog, undefined)
+    } finally {
+      projectId = 'proj_linked'
+      delete process.env.PIKKU_CHANGES_BUILDER
+      delete process.env.PIKKU_CHANGES_BUILDER_FILE_READY
+    }
+    const { data } = await sent(() =>
+      ChangesFile.func({} as any, { title: 'Add a blog' } as any)
+    )
+    assert.strictEqual(data.backlog, undefined)
+  })
+
   test('reads the body from a file', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'pikku-file-'))
     const path = join(dir, 'body.md')
