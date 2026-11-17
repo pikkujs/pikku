@@ -28,9 +28,14 @@ test('a source file edited after codegen started counts as a change', () => {
 
 test('generated files and node_modules do not count as changes', () => {
   const dir = project()
-  mkdirSync(join(dir, 'node_modules'))
+  for (const d of ['node_modules', 'dist', '.pikku']) mkdirSync(join(dir, d))
   const later = new Date(Date.now() + 5000)
-  for (const name of ['x.gen.ts', 'node_modules/y.ts']) {
+  for (const name of [
+    'x.gen.ts',
+    'node_modules/y.ts',
+    'dist/z.js',
+    '.pikku/m.gen.json',
+  ]) {
     const file = join(dir, name)
     writeFileSync(file, 'export {}')
     utimesSync(file, later, later)

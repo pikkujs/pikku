@@ -254,6 +254,7 @@ const MOVED_TOP_LEVEL: Record<
   configDir: 'is derived by the CLI; delete it',
   sourceDirs: 'is derived by the CLI; delete it',
   pikkuPackages: 'is derived by the CLI; delete it',
+  pikkuPackagesFile: 'is derived by the CLI; delete it',
   clientAuthFile: UNREAD,
 }
 

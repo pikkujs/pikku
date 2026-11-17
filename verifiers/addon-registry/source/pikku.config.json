@@ -1,5 +1,5 @@
 {
-  "ignoreFiles": ["type-tests/**"],
+  "ignoreFiles": ["type-tests/**", "**/*.test.ts", "**/*.spec.ts"],
   "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
   "tsconfig": "./tsconfig.json",
   "addon": {

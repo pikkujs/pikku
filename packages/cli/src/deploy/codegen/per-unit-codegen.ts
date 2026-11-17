@@ -79,27 +79,37 @@ export interface PerUnitCodegenResult {
  * Since deploy-apply runs inside the pikku process, we can find the binary
  * by looking at process.argv[1] (the script being executed).
  */
-function resolvePikkuBin(): string {
+export function resolvePikkuBin(): string {
   return process.argv[1]
 }
 
 /**
  * Re-executes `pikku all` as a child that writes a filtered tree elsewhere.
  * PIKKU_DEPLOY_CODEGEN keeps the child from rewriting the developer's
- * scaffold sources or looping into further child runs.
+ * scaffold sources or looping into further child runs. A pass over one of the
+ * packages a root lists in `pikkuDirectories` is the developer's own run, so
+ * it sets neither the deploy flag nor the time limit.
  */
-async function runPikkuAllChild(
+export async function runPikkuAllChild(
   pikkuBin: string,
   projectDir: string,
-  args: string[]
+  args: string[],
+  options: {
+    deployCodegen?: boolean
+    timeoutMs?: number
+    env?: Record<string, string>
+  } = {}
 ): Promise<void> {
+  const { deployCodegen = true, timeoutMs = 60_000, env = {} } = options
   await execFileAsync(process.execPath, [pikkuBin, 'all', ...args], {
     cwd: projectDir,
-    timeout: 60_000,
+    timeout: timeoutMs,
+    maxBuffer: 64 * 1024 * 1024,
     env: {
       ...process.env,
+      ...env,
       // Prevent recursive deploy or watch behavior
-      PIKKU_DEPLOY_CODEGEN: '1',
+      ...(deployCodegen && { PIKKU_DEPLOY_CODEGEN: '1' }),
     },
   })
 }

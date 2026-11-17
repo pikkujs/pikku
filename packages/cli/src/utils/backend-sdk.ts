@@ -21,6 +21,7 @@ import {
 } from './addon-sdk.js'
 import { serializeSdkSources } from './addon-sdk-sources.js'
 import { packTarGz } from './sdk-tarball.js'
+import { addonExposedIds } from './addon-exposed.js'
 
 /**
  * A backend's SDKs.
@@ -198,7 +199,7 @@ export const writeBackendPassSdk = (
   logger: Logger,
   state: Pick<
     InspectorState,
-    'functions' | 'rpc' | 'resolvedIOTypes' | 'workflows'
+    'functions' | 'rpc' | 'resolvedIOTypes' | 'workflows' | 'addonFunctions'
   >,
   config: PikkuCLIConfig,
   backend: string
@@ -206,7 +207,10 @@ export const writeBackendPassSdk = (
   const passSdk = backendPassSdkDir(config.outDir)
   rmSync(join(passSdk, REMOTE), { recursive: true, force: true })
   const summary: PassSummary = {
-    exposed: Object.keys(state.rpc.exposedMeta).sort(),
+    exposed: [
+      ...Object.keys(state.rpc.exposedMeta),
+      ...addonExposedIds(state),
+    ].sort(),
     remote: Object.keys(state.rpc.remoteMeta).sort(),
   }
   const publish = config.backends?.[backend]?.publish === true

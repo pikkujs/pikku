@@ -28,7 +28,13 @@ export const serializeTypedRPCMap = (
   workflowMapPath?: string,
   agentMapPath?: string,
   /** The project root, where a versioned remote addon's SDK is found. */
-  rootDir?: string
+  rootDir?: string,
+  /**
+   * Per namespace, the addon functions the map carries. Set for the exposed
+   * map, which must not type a function the host does not expose; unset, a
+   * namespace brings its whole map.
+   */
+  addonExposed?: Record<string, string[]>
 ) => {
   const requiredTypes = new Set<string>()
   const serializedRPCs = generateRPCs(rpcMeta, resolvedIOTypes, requiredTypes)
@@ -61,7 +67,7 @@ export const serializeTypedRPCMap = (
     rootDir
   )
 
-  const mergedRPCMap = generateMergedRPCMap(wireAddonDeclarations)
+  const mergedRPCMap = generateMergedRPCMap(wireAddonDeclarations, addonExposed)
 
   const customTypesImport = serializeCustomTypesImport(
     relativeToPath,
@@ -208,7 +214,8 @@ function generateAddonImports(
 }
 
 function generateMergedRPCMap(
-  wireAddonDeclarations: WireAddonDeclarations | undefined
+  wireAddonDeclarations: WireAddonDeclarations | undefined,
+  addonExposed: Record<string, string[]> | undefined
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return `
@@ -236,7 +243,7 @@ export type FlattenedRPCMap =
   RPCMap${Array.from(wireAddonDeclarations.keys())
     .map(
       (namespace) =>
-        ` & PrefixKeys<${toPascalCase(namespace)}RPCMap, '${namespace}'>`
+        ` & PrefixKeys<${addonMapType(namespace, addonExposed)}, '${namespace}'>`
     )
     .join('')}
 
@@ -249,6 +256,18 @@ type IsVoidishInput<T> = IsAny<T> extends true
 `
 
   return utilityTypes
+}
+
+/** The addon's map, narrowed to `names` when the caller lists them. */
+function addonMapType(
+  namespace: string,
+  addonExposed: Record<string, string[]> | undefined
+): string {
+  const map = `${toPascalCase(namespace)}RPCMap`
+  const names = addonExposed?.[namespace]
+  if (!names) return map
+  if (names.length === 0) return '{}'
+  return `Pick<${map}, Extract<keyof ${map}, ${names.map((n) => `'${n}'`).join(' | ')}>>`
 }
 
 function toPascalCase(str: string): string {

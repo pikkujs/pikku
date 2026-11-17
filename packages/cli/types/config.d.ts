@@ -147,6 +147,10 @@ export interface PikkuCLICoreOutputFiles {
   // Optional: a hand-built config in a test never goes through that resolution.
   resolvedScaffoldDir?: string
 
+  // The generated wiring that makes each package in pikkuDirectories a wired addon of this project.
+  // Optional: left undefined when pikkuDirectories is empty.
+  pikkuPackagesFile?: string
+
   // Virtual user run/read RPCs (derived from scaffold.pikkuDir when scaffold.virtualUser is enabled).
   // Optional: left undefined when scaffold.virtualUser is not enabled, so consumers must guard.
   virtualUserFunctionsFile?: string

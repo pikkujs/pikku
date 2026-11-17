@@ -4,6 +4,7 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { serializeTypedRPCMap } from './serialize-typed-rpc-map.js'
 import { writeCustomTypesFile } from '../../../utils/custom-types-file.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { addonExposedFunctions } from '../../../utils/addon-exposed.js'
 import { withAddonDependencies } from '../../../utils/addon-dependencies.js'
 
 export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
@@ -59,7 +60,8 @@ export const pikkuRPCInternalMap = pikkuSessionlessFunc<void, void>({
 
 export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config, getInspectorState }) => {
-    const { functions, rpc, resolvedIOTypes } = await getInspectorState()
+    const state = await getInspectorState()
+    const { functions, rpc, resolvedIOTypes } = state
     const {
       rpcMapDeclarationFile,
       packageMappings,
@@ -90,7 +92,8 @@ export const pikkuRPCExposedMap = pikkuSessionlessFunc<void, void>({
       rpc.wireAddonDeclarations,
       workflowMapPath,
       agentMapPath,
-      config.rootDir
+      config.rootDir,
+      addonExposedFunctions(state)
     )
     await writeCustomTypesFile(
       logger,

@@ -31,7 +31,15 @@ const isFunctionConfig = (
   )
 }
 
+const SKIPPED_DIRECTORIES = new Set(['node_modules', 'dist', 'build'])
+
 const isWatchedTsFile = (filename: string): boolean => {
+  const directories = filename.split(/[\\/]/).slice(0, -1)
+  if (
+    directories.some((d) => SKIPPED_DIRECTORIES.has(d) || d.startsWith('.'))
+  ) {
+    return false
+  }
   return (
     filename.endsWith('.ts') &&
     !filename.endsWith('.test.ts') &&

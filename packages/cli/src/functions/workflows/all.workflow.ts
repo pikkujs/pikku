@@ -17,6 +17,12 @@ import {
   removeRetiredScaffoldFiles,
 } from '../../utils/remove-legacy-scaffold-file.js'
 import { backendBuckets } from '../../utils/content-buckets.js'
+import {
+  PACKAGE_PASS_ENV,
+  runPikkuPackagePasses,
+  serializePikkuPackages,
+} from '../../utils/pikku-package-passes.js'
+import { writeFileInDir } from '../../utils/file-writer.js'
 import { generateBackendCodegen } from '../../deploy/codegen/per-unit-codegen.js'
 import {
   assembleBackendSdk,
@@ -133,6 +139,30 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await refreshScaffoldsImportingRemovedEntryPoints(config)
     await removeRetiredScaffoldFiles(config)
     await removeDisabledOriginScaffolds(config)
+
+    // A root project's listed packages are generated first, in dependency
+    // order: the wiring below reads each one's metadata the way a host reads
+    // an installed addon. A run inside a package, or a deploy pass, has none.
+    if (
+      config.pikkuPackages.length > 0 &&
+      config.pikkuPackagesFile &&
+      process.env.PIKKU_DEPLOY_CODEGEN !== '1'
+    ) {
+      const { pikkuPackagesFile } = config
+      await workflow.do('Packages', async () => {
+        await runPikkuPackagePasses(config.pikkuPackages, (pkg) =>
+          logger.info(`• pikku all in ${pkg.entry}`)
+        )
+        await writeFileInDir(
+          logger,
+          pikkuPackagesFile,
+          serializePikkuPackages(
+            config.pikkuPackages,
+            join(config.configDir, 'pikku.config.json')
+          )
+        )
+      })
+    }
 
     // Before the first inspection: codegen imports the remote addons' types
     // from their SDKs, and the inspector refuses an SDK that does not match
@@ -895,6 +925,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     const backendNames = Object.keys(config.backends ?? {})
     if (
       process.env.PIKKU_DEPLOY_CODEGEN !== '1' &&
+      process.env[PACKAGE_PASS_ENV] !== '1' &&
       !config.addon &&
       backendNames.length > 0
     ) {
