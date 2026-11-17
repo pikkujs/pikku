@@ -186,7 +186,7 @@ export function cleanPikkuConfig(
 
   // A recipe in the monorepo points rootDir and tsconfig at the shared
   // ../functions project. A scaffolded copy has no ../functions beside it, so
-  // codegen would scan a directory that does not exist (and scaffold.console
+  // codegen would scan a directory that does not exist (and the scaffold checks
   // would report no pikkuBetterAuth(...) in a project that has one). The copy
   // carries those sources itself, so the project root is the project.
   const sharedFunctions = /^(?:\.\.\/)+functions\/?$/

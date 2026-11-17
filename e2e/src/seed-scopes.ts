@@ -50,12 +50,10 @@ const userIdByEmail = async (
  * - `admin@e2e.test` also gets `audit-reader`, the only grant of
  *   `admin:audit:read`. That leaves `staff@e2e.test` — an admin holding
  *   no audit scope — as the audit console suite's refused case.
- * - `admin@e2e.test` and `staff@e2e.test` get `platform-admin`, which is the
- *   whole `pikku:console` tree plus every `admin` area except scope
- *   administration and the audit trail. The console grant is what lets them
- *   reach the console at all; the `admin` leaves are what lets
- *   them impersonate (`admin:impersonate`) and what lets them read the user
- *   directory (`admin:users:list`). It is deliberately a *separate* role from `console-admin`
+ * - `admin@e2e.test` and `staff@e2e.test` get `platform-admin`, which is every
+ *   `admin` area except scope administration and the audit trail. The `admin`
+ *   leaves are what let them impersonate (`admin:impersonate`) and read the
+ *   user directory (`admin:users:list`). It is deliberately a *separate* role from `console-admin`
  *   so that staff stays what the scopes-console-permissions suite needs it to
  *   be: an admin holding no scope role, and therefore refused by the
  *   self-hosting scope RPCs. `guest@e2e.test` gets none of it.
@@ -68,7 +66,7 @@ const userIdByEmail = async (
  *   expresses "an admin without a scope role", "a caller holding reports:read"
  *   and "a caller holding nothing" through the virtual user registry rather than by
  *   signing in with a fixture password. The `admin` virtual user mirrors
- *   `admin@e2e.test` exactly — `platform-admin` to reach the console, plus `console-admin` to drive the scope-admin RPCs and
+ *   `admin@e2e.test` exactly — `platform-admin`, plus `console-admin` to drive the scope-admin RPCs and
  *   `audit-reader` to read the trail, neither of which the `admin` root
  *   reaches. `target` declares nothing.
  *

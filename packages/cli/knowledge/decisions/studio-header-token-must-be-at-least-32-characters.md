@@ -12,7 +12,7 @@ returns `false` and registers nothing when the token is missing or shorter than 
 characters (`register-studio-session.ts:23-24`). The token defaults to `PIKKU_STUDIO_TOKEN`
 (`register-studio-session.ts:23`).
 
-When a token passes, the global middleware sets a `pikku:console` session only if the
+When a token passes, the global middleware sets an `admin` session only if the
 request has no session already and its `x-pikku-studio` header matches the token
 (`register-studio-session.ts:14-18`). The comparison is constant-time, using
 `timingSafeEqual` on equal-length buffers (`register-studio-session.ts:8-12`).

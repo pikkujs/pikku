@@ -18,10 +18,9 @@ defineSystemRole({
    * refused by the scope-admin RPCs and the audit trail, because those two
    * areas are granted by `console-admin` and `audit-reader` alone.
    *
-   * `pikku:console` is granted whole — everything under it is the console's own
-   * surface. The `admin` tree is spelled out leaf by leaf instead, because it is
-   * where `admin:scopes:*` and `admin:audit:read` now live: a bare `admin` would
-   * cover both and collapse the seam.
+   * The `admin` tree is spelled out leaf by leaf, because it is where
+   * `admin:scopes:*` and `admin:audit:read` live: a bare `admin` would cover
+   * both and collapse the seam.
    */
   'platform-admin': {
     displayName: 'Platform administrator',
@@ -37,7 +36,6 @@ defineSystemRole({
       'admin:credentials:link',
       'admin:credentials:read',
       'admin:credentials:manage',
-      'pikku:console',
     ],
   },
   /**

@@ -54,13 +54,6 @@ defineScope({
 // @snippet end defineScopes
 
 /**
- * There is deliberately no console scope here.
- *
- * `@pikku/addon-console` already declares the whole `pikku:console` tree, and
- * scopes sharing a name must declare the same tree, so a second declaration is
- * a build error rather than a silent merge. The shop only declares what is
- * genuinely its own.
- *
- * This is the normal case, not a special one: an app composes its scopes with
- * whatever its addons bring.
+ * The shop only declares the scopes that are genuinely its own; an app
+ * composes its scopes with whatever its addons bring.
  */

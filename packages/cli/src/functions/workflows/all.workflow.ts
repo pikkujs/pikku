@@ -44,7 +44,6 @@ type ScaffoldGenerator =
   | 'pikkuCors'
   | 'pikkuFeatureFlagsScaffold'
   | 'pikkuAdminFunctions'
-  | 'pikkuConsoleFunctions'
   | 'pikkuVirtualUserFunctions'
   | 'pikkuPublicAgent'
   | 'pikkuEventsScaffold'
@@ -76,11 +75,6 @@ const scaffoldFiles = (
     files.push({
       file: config.adminFunctionsFile,
       generator: 'pikkuAdminFunctions',
-    })
-  if (config.scaffold?.console && config.consoleFunctionsFile)
-    files.push({
-      file: config.consoleFunctionsFile,
-      generator: 'pikkuConsoleFunctions',
     })
   if (config.scaffold?.virtualUser && config.virtualUserFunctionsFile)
     files.push({
@@ -326,13 +320,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
               null
             )
             break
-          case 'pikkuConsoleFunctions':
-            await workflow.do(
-              'Scaffold pikkuConsoleFunctions',
-              'pikkuConsoleFunctions',
-              null
-            )
-            break
           case 'pikkuVirtualUserFunctions':
             await workflow.do(
               'Scaffold pikkuVirtualUserFunctions',
@@ -472,7 +459,6 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
       workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
       workflow.do('Admin functions', 'pikkuAdminFunctions', null),
-      workflow.do('Console functions', 'pikkuConsoleFunctions', null),
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),
       workflow.do('Emails', 'pikkuEmails', null),

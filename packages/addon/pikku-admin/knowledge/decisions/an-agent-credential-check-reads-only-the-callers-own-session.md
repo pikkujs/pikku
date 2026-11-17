@@ -9,8 +9,7 @@ tags: admin, agents, credentials
 
 `agentCredentialCheck` (`packages/addon/pikku-admin/src/functions/agent-credential-check.function.ts`)
 reports which OAuth credentials an agent needs and whether they are connected. It
-is gated by `admin:credentials:read`, beside `credentialStatus`. It moved here from
-`@pikku/addon-console`, which keeps a deprecated copy until the console is removed.
+is gated by `admin:credentials:read`, beside `credentialStatus`.
 
 The user id comes from the session (`session?.userId`) and the input is only
 `{ agentName: string }`, so a caller cannot probe another user's connected

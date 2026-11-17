@@ -8,7 +8,7 @@ import type { CredentialOverrideMeta } from '@pikku/inspector'
 
 /**
  * A credential's mode is the addon author's default until a `wireAddon`
- * overrides it, and the console reads the mode from this file rather than from
+ * overrides it, and Studio reads the mode from this file rather than from
  * runtime state — so the override has to be resolved here, at generation time,
  * or the connect flow stays hidden for a credential the deployment made
  * per-user.

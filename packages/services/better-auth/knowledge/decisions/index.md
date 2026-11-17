@@ -7,6 +7,7 @@ description: Rules chosen in @pikku/better-auth, and what each one rules out
 # Decisions
 
 <!-- pikku:knowledge-index -->
+
 - [The Better Auth browser glue lives in the package and takes its URLs as arguments](the-browser-glue-lives-in-the-package-and-takes-its-urls-as-arguments.md) — @pikku/better-auth/client and /vite hold the sign-in client, cookie refresh, route gates and the cross-site session relay, parameterised by apiUrl, paths and the session fetcher, with the relay's header names defined once
 
 - [A banned user is refused at session creation and the ban lapses on expiry](a-banned-user-is-refused-at-session-creation-and-lapses-on-expiry.md) — The pikku ban plugin refuses a session for a banned user at creation, clears an expired ban only when that happens, and a ban written by an admin ends existing sessions at once
@@ -31,7 +32,7 @@ description: Rules chosen in @pikku/better-auth, and what each one rules out
 - [Impersonation is opt-in and gated by the admin impersonate scope](impersonation-is-opt-in-and-gated-by-the-admin-impersonate-scope.md) — The impersonation header is ignored unless the app passes the option, and the default gate admits only a caller whose ScopeService grants admin:impersonate
 - [Only pikku dev may create virtual user accounts](only-pikku-dev-may-create-virtual-user-accounts.md) — A deployed stage that opens virtual user sign-in can sign in only as virtual users already provisioned there, because minting a new virtual user row is allowed only under pikku dev
 - [Provisioning a returning virtual user lifts its ban](provisioning-a-returning-virtual-user-lifts-its-ban.md) — When a virtual user is declared again and its account is banned, provisioning unbans it, so a re-declared virtual user is not left unusable with no visible reason
-- [The console scope root is separate from the admin root](the-console-scope-root-is-separate-from-the-admin-root.md) — auth-scopes.ts declares the console's own root, pikku:console, beside admin, so holding the admin grant never opens the console
+- [The console scope root is separate from the admin root](the-console-scope-root-is-separate-from-the-admin-root.md) — auth-scopes.ts names the console operator root, pikku:console, beside admin, so holding the admin grant never implies it
 - [The OAuth proxy is all or nothing and never overrides the app's own providers](the-oauth-proxy-is-all-or-nothing-and-never-overrides-the-apps-own-providers.md) — A stage that carries part of the OAuth proxy configuration fails at boot, and a provider the app configures itself cannot also be routed through the proxy
 - [The stateless middleware is told how the cookie was written](the-stateless-middleware-is-told-how-the-cookie-was-written.md) — betterAuthStatelessSession never builds the auth instance, so a custom cookie prefix and a cookie-cache version are passed to it, a jwe or jwt strategy is recognised from the cookie's shape, and pikkuBetterAuth reports a mismatch
 - [The stateless session cookie gets a one-day lifetime unless the app sets one](the-stateless-session-cookie-gets-a-one-day-lifetime-unless-the-app-sets-one.md) — With betterAuthStatelessSession in use, a cookie cache left at better-auth's 300 seconds would sign users out five minutes after login, so pikku inserts a day or a stage variable's value

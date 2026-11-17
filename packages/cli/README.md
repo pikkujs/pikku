@@ -27,15 +27,15 @@ Configuration lives in `pikku.config.json` — `srcDirectories`, `backends`,
 The CLI reads your source with an inspector binary from `@pikku/inspector-go`.
 Two engines speak the same protocol:
 
-| engine | binary | built on | binary override |
-| --- | --- | --- | --- |
-| `go` | `pikku-inspect` | typescript-go (the reference) | `PIKKU_INSPECTOR_GO_BIN` |
-| `rs` | `pikku-inspect-rs` | tsrs, a Rust port of typescript-go | `PIKKU_INSPECTOR_RS_BIN` |
+| engine | binary             | built on                           | binary override          |
+| ------ | ------------------ | ---------------------------------- | ------------------------ |
+| `go`   | `pikku-inspect`    | typescript-go (the reference)      | `PIKKU_INSPECTOR_GO_BIN` |
+| `rs`   | `pikku-inspect-rs` | tsrs, a Rust port of typescript-go | `PIKKU_INSPECTOR_RS_BIN` |
 
 Pick one with, in this order: `pikku all --inspector rs`, the `PIKKU_INSPECTOR`
 environment variable (`go` or `rs`), the `"inspector": "rs"` key of
 `pikku.config.json`, then the package default (`rs`). The helpers other tools
-call (code-edit, the console's type diagnostics) follow the same choice.
+call (code-edit and the type diagnostics) follow the same choice.
 
 Each binary ships for your platform inside `@pikku/inspector-go` under
 `prebuilt/`. If the selected engine has none, `pikku` stops at inspection and

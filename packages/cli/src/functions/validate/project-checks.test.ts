@@ -41,7 +41,6 @@ async function makeValidProject(root: string) {
     srcDirectories: ['packages/functions/src'],
     outDir: 'packages/functions/.pikku',
     scaffold: {
-      console: true,
       rpc: true,
       agent: true,
       workflow: true,
@@ -82,7 +81,6 @@ async function makeValidProject(root: string) {
     dependencies: {
       '@pikku/schema-cfworker': '^0.12.0',
       '@pikku/kysely': '^0.12.0',
-      '@pikku/addon-console': '^0.12.0',
       '@pikku/better-auth': '^0.12.0',
       zod: '^4',
     },
@@ -307,7 +305,7 @@ describe('project checks', () => {
       }
     })
 
-    test('empty scaffold → error for console/rpc/agent/workflow, warn for events', async () => {
+    test('empty scaffold → error for rpc/agent/workflow, warn for events', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -316,7 +314,7 @@ describe('project checks', () => {
           outDir: 'packages/functions/.pikku',
           scaffold: {
             pikkuDir: 'packages/functions/src/scaffold',
-            // console/rpc/agent/workflow/events all omitted
+            // rpc/agent/workflow/events all omitted
           },
           clientFiles: {
             rpcMapDeclarationFile:
@@ -326,7 +324,7 @@ describe('project checks', () => {
         const result = await runLiveValidate(tmp)
         assert.strictEqual(result.ok, false)
         const byId = (id: string) => result.findings.find((f) => f.id === id)
-        for (const key of ['console', 'rpc', 'agent', 'workflow']) {
+        for (const key of ['rpc', 'agent', 'workflow']) {
           const f = byId(`pikku-config-no-scaffold-${key}`)
           assert.ok(f, `expected error for scaffold.${key}`)
           assert.strictEqual(f!.severity, 'error')
@@ -342,7 +340,7 @@ describe('project checks', () => {
     test('full canonical scaffold → no scaffold findings', async () => {
       const tmp = await makeTmp()
       try {
-        await makeValidProject(tmp) // console/rpc/agent/workflow/events all set
+        await makeValidProject(tmp) // rpc/agent/workflow/events all set
         const result = await runLiveValidate(tmp)
         assert.ok(
           !result.findings.some((f) =>
@@ -367,7 +365,6 @@ describe('project checks', () => {
           srcDirectories: ['packages/functions/src'],
           outDir: 'packages/functions/.pikku',
           scaffold: {
-            console: true,
             rpc: true,
             agent: true,
             workflow: true,
@@ -589,7 +586,6 @@ describe('project checks', () => {
             '@pikku/cloudflare': '^0.12.19',
             '@pikku/schema-cfworker': '^0.12.0',
             '@pikku/kysely': '^0.12.0',
-            '@pikku/addon-console': '^0.12.0',
             '@pikku/better-auth': '^0.12.0',
             zod: '^4',
           },
@@ -703,7 +699,6 @@ describe('project checks', () => {
       '@pikku/cloudflare': '^0.12.20',
       '@pikku/schema-cfworker': '^0.12.0',
       '@pikku/kysely': '^0.12.0',
-      '@pikku/addon-console': '^0.12.0',
       '@pikku/better-auth': '^0.12.0',
       zod: '^4',
     }
@@ -773,7 +768,6 @@ describe('project checks', () => {
             '@pikku/cloudflare': '^0.12.20',
             '@pikku/schema-cfworker': '^0.12.0',
             '@pikku/kysely': '^0.12.0',
-            '@pikku/addon-console': '^0.12.0',
             '@pikku/better-auth': '^0.12.0',
             zod: '^4',
           },

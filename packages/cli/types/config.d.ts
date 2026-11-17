@@ -140,8 +140,6 @@ export interface PikkuCLICoreOutputFiles {
   // scaffold.pikkuDir when scaffold.admin is enabled).
   // Optional: left undefined when scaffold.admin is not enabled, so consumers must guard.
   adminFunctionsFile?: string
-  consoleFunctionsFile: string
-  consoleSchemasFile?: string
   scenariosFunctionsFile: string
   scenariosSchemasFile?: string
 
@@ -953,7 +951,6 @@ export type PikkuCLIInput = {
      * so this is safe in a deployed stage.
      */
     admin?: PikkuScaffoldFeature
-    console?: PikkuScaffoldFeature
     scenarios?: PikkuScaffoldFeature
     /**
      * Start a virtual user against this application over RPC and read back what

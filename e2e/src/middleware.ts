@@ -3,9 +3,6 @@ import { pikkuMiddleware } from '@pikku/core/middleware'
 import type { CoreSingletonServices } from '@pikku/core/types'
 import type { CorePikkuMiddleware } from '@pikku/core/middleware'
 import { betterAuthSession } from '@pikku/better-auth'
-// Registers the console addon's admin gate (a global permission). Imported here
-// so it runs at bootstrap alongside the global middleware registrations.
-import './console-authz.js'
 
 const setSessionFromHeader: CorePikkuMiddleware = async (
   services,

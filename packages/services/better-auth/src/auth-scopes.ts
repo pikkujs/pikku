@@ -7,11 +7,12 @@ import type { CoreServices } from '@pikku/core/types'
 export const ADMIN_SCOPE_ROOT = 'admin'
 
 /**
- * The console's own root, declared by `@pikku/addon-console`.
+ * The console operator root, held by sessions Pikku Studio signs for an app.
  *
  * A separate tree from `admin` on purpose: administering the application and
- * being allowed to open the console are different questions, so holding one
- * never implies the other. Anything that wants both has to grant both.
+ * operating it from Studio are different questions, so holding one never
+ * implies the other. Nothing in this repository declares the tree; it is
+ * treated as an operator scope wherever operators are told apart from users.
  */
 export const CONSOLE_SCOPE_ROOT = 'pikku:console'
 

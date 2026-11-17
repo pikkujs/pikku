@@ -774,10 +774,9 @@ type PackageManifest = {
  * quiet in a way the remote one is not — an absent package makes the metadata
  * load fail, which is caught and downgraded to a warning, so every
  * `ref('<namespace>:…')` resolves against nothing and the surface is dead at
- * runtime. The generated console is the common case: `scaffold.console` emits
- * `wireAddon({ package: '@pikku/addon-console' })` and refs into it, and a
- * project that never installed the package gets a console that 404s with
- * nothing in the build output saying why.
+ * runtime. A generated scaffold that wires an addon, such as `scaffold.admin`
+ * with `@pikku/addon-admin`, is the common case: a project that never installed
+ * the package gets refs that 404 with nothing in the build output saying why.
  *
  * Deliberately a resolution check and not a `package.json` one. An addon is
  * discovered because it is *wired*, not because it is a declared dependency —

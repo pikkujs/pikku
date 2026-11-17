@@ -31,7 +31,6 @@
     "pikkuDir": "packages/functions/src/pikku",
     "addonDir": "packages",
     "rpc": true,
-    "console": true,
     "scenarios": true,
     "agent": true,
     "workflow": true,

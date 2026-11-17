@@ -827,7 +827,6 @@ const _getPikkuCLIConfig = async (
       featureFlags: 'featureFlagsFile',
       agent: 'publicAgentFile',
       admin: 'adminFunctionsFile',
-      console: 'consoleFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
       virtualUser: 'virtualUserFunctionsFile',
       workflow: 'workflowRoutesFile',
@@ -979,20 +978,6 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'admin',
         'admin.gen.ts'
-      )
-    }
-    if (result.scaffold?.console && !result.consoleFunctionsFile) {
-      result.consoleFunctionsFile = join(
-        resolvedScaffoldDir,
-        'console',
-        'console.gen.ts'
-      )
-    }
-    if (result.scaffold?.console && !result.consoleSchemasFile) {
-      result.consoleSchemasFile = join(
-        resolvedScaffoldDir,
-        'console',
-        'console.schemas.gen.ts'
       )
     }
     if (result.scaffold?.virtualUser && !result.virtualUserFunctionsFile) {

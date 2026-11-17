@@ -358,59 +358,9 @@ describe('serializeAuthGen', () => {
     })
   })
 
-  describe('console bearer token (scaffold.console enabled)', () => {
-    const statelessDef = def({ cookieCache: true })
-    const genConsole = (d: AuthDefinition = def()) =>
-      serializeAuthGen(d, ['github'], AUTH_FILE, leaf, {}, true)
-
-    // The token rides in whichever file carries the session registration. That
-    // is safe only because the session registration is now always emitted: it
-    // used to be skipped when the app supplied its own session middleware, and
-    // the token vanished with it, 403ing every console:* RPC.
-    test('rides alongside the session registration on both paths', () => {
-      const stateless = genConsole(statelessDef).middleware!
-      const stateful = genConsole().wiring
-      for (const file of [stateless, stateful]) {
-        assert.match(file, /authBearer \} from '@pikku\/core\/middleware'/)
-        assert.match(
-          file,
-          /addGlobalMiddleware\(\[[\s\S]*?authBearer\(\{[\s\S]*?secretId: 'PIKKU_CONSOLE_TOKEN'[\s\S]*?\}\),\s*\]\)/
-        )
-        assert.doesNotMatch(file, /process\.env/)
-      }
-      assert.match(stateless, /betterAuthStatelessSession/)
-      assert.match(stateful, /betterAuthSession/)
-    })
-
-    // `wireAddon({ name: 'console', ..., scopes: ['pikku:console'] })` gates
-    // every console:* RPC under the `pikku` root, and the console also calls
-    // the `admin:*` RPCs @pikku/addon-admin ships. The two grants are
-    // independent — `pikku:console` authorizes the console RPCs, the matching
-    // `admin:*` scope authorizes each admin one — so a token session holding
-    // neither authenticates but authorizes nothing, which reads as a broken
-    // console rather than a missing grant.
-    test('the token session holds the scope roots the console addon gates on', () => {
-      for (const emitted of [
-        genConsole(statelessDef).middleware!,
-        genConsole().wiring,
-      ]) {
-        assert.match(emitted, /userId: 'pikku-console-token'/)
-        assert.match(emitted, /scopes: \['admin', 'pikku'\]/)
-      }
-    })
-
-    test('without scaffold.console no authBearer is emitted', () => {
-      assert.doesNotMatch(gen(['github']).wiring, /authBearer/)
-      assert.doesNotMatch(
-        gen(['github'], statelessDef).middleware ?? '',
-        /authBearer/
-      )
-    })
-  })
-
   // pikkujs/pikku#754: two session middlewares used to be reconciled by having
   // the CLI detect the app's own registration and generate nothing — a silent
-  // drop that also took the console token with it. `lowest` orders the
+  // drop. `lowest` orders the
   // generated one after the app's `medium` default, so the app resolves the
   // session first and the generated one short-circuits.
   describe('generated session middleware is deprioritised, never skipped', () => {

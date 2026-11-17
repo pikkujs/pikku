@@ -31,8 +31,6 @@ const scaffoldFiles = (config: PikkuCLIConfig): (string | undefined)[] => {
     remoteJobsSchemasFile(config.remoteJobsFile),
     config.publicAgentFile,
     config.publicAgentSchemasFile,
-    config.consoleFunctionsFile,
-    config.consoleSchemasFile,
     config.scenariosFunctionsFile,
     config.scenariosSchemasFile,
     config.eventsChannelFile,

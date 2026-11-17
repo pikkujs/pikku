@@ -23,11 +23,7 @@ import { resolveDb } from '../db/local-db.js'
 import { worktreeOwnsConfiguredDatabase } from './ownership.js'
 import { CiStage } from './schemas.js'
 import { assertCloudflareDeployReady } from './deploy-guard.js'
-import {
-  assertConsoleRemoved,
-  PikkuCiFailedError,
-  removeConsoleScaffold,
-} from './console-removal.js'
+import { PikkuCiFailedError } from './errors.js'
 import {
   assertWorktreeReady,
   createWorktree,
@@ -49,7 +45,6 @@ const ciRun = (overrides: Partial<CiRun> = {}): CiRun => ({
   runTests: true,
   hasDb: false,
   hasEmails: false,
-  hasConsole: true,
   migrationsApplied: false,
   secretsSet: false,
   skipDeployChecks: false,
@@ -57,7 +52,6 @@ const ciRun = (overrides: Partial<CiRun> = {}): CiRun => ({
   configFile: join(dir, 'pikku.config.json'),
   outDir: join(dir, '.pikku'),
   scaffoldDir: join(dir, 'src', 'scaffold'),
-  consoleFiles: [],
   srcDirectories: [join(dir, 'src')],
   ...overrides,
 })
@@ -353,87 +347,6 @@ describe('assertCloudflareDeployReady', () => {
 
   test('refuses when there is no infra.json to check', () => {
     assert.throws(() => assertCloudflareDeployReady(dir), /No infra\.json/)
-  })
-})
-
-describe('console removal', () => {
-  const project = (scopes: string) => {
-    write(
-      join(dir, 'pikku.config.json'),
-      JSON.stringify({ scaffold: { console: true, rpc: true } })
-    )
-    write(join(dir, 'src', 'scopes.ts'), scopes)
-    write(join(dir, 'src', 'scaffold', 'console', 'console.gen.ts'), 'x')
-    write(join(dir, 'src', 'scaffold', 'auth-secrets.gen.ts'), 'x')
-  }
-
-  test('turns the console off and removes only its scaffold', () => {
-    project('export const roles = {}')
-    removeConsoleScaffold(ciRun())
-    const config = JSON.parse(
-      readFileSync(join(dir, 'pikku.config.json'), 'utf-8')
-    )
-    assert.deepEqual(config.scaffold, { console: false, rpc: true })
-    assert.equal(existsSync(join(dir, 'src', 'scaffold', 'console')), false)
-    assert.ok(existsSync(join(dir, 'src', 'scaffold', 'auth-secrets.gen.ts')))
-  })
-
-  test('edits the config the run was given, wherever it lives', () => {
-    project('export const roles = {}')
-    const configFile = join(dir, 'config', 'pikku.json')
-    write(configFile, JSON.stringify({ scaffold: { console: true } }))
-    removeConsoleScaffold(ciRun({ configFile }))
-    assert.deepEqual(JSON.parse(readFileSync(configFile, 'utf-8')).scaffold, {
-      console: false,
-    })
-    assert.deepEqual(
-      JSON.parse(readFileSync(join(dir, 'pikku.config.json'), 'utf-8'))
-        .scaffold,
-      { console: true, rpc: true }
-    )
-  })
-
-  test('refuses a pikku:console grant nothing declares, before changing anything', () => {
-    project("export const roles = { admin: ['pikku:console'] }")
-    assert.throws(() => removeConsoleScaffold(ciRun()), /declareScopes/)
-    assert.ok(existsSync(join(dir, 'src', 'scaffold', 'console')))
-  })
-
-  test('accepts the grant once the app declares the scope', () => {
-    project(
-      "declareScopes(['pikku:console'])\nexport const roles = { admin: ['pikku:console'] }"
-    )
-    removeConsoleScaffold(ciRun())
-  })
-
-  test('removes and checks a console scaffold at a custom path, which declares nothing', () => {
-    project("export const roles = { admin: ['pikku:console'] }")
-    const consoleFile = join(dir, 'src', 'admin', 'console.gen.ts')
-    write(
-      consoleFile,
-      "import '@pikku/addon-console'\ndeclareScopes(['pikku:console'])"
-    )
-    const run = ciRun({ consoleFiles: [consoleFile] })
-    assert.throws(() => removeConsoleScaffold(run), /declareScopes/)
-    assert.throws(
-      () => assertConsoleRemoved(run),
-      /src\/admin\/console\.gen\.ts/
-    )
-
-    write(join(dir, 'src', 'scopes.ts'), "declareScopes(['pikku:console'])")
-    removeConsoleScaffold(run)
-    assert.equal(existsSync(consoleFile), false)
-    assertConsoleRemoved(run)
-  })
-
-  test('fails when console wiring is left behind', () => {
-    write(join(dir, '.pikku', 'addons.gen.ts'), "import '@pikku/addon-console'")
-    assert.throws(
-      () => assertConsoleRemoved(ciRun()),
-      /\.pikku\/addons\.gen\.ts/
-    )
-    rmSync(join(dir, '.pikku'), { recursive: true })
-    assertConsoleRemoved(ciRun())
   })
 })
 

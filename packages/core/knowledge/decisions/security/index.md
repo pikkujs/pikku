@@ -9,6 +9,7 @@ description: Who may do what in core — gates, defaults, and the failures they 
 A rule about who may do what, and which way it fails when it is unsure.
 
 <!-- pikku:knowledge-index -->
+
 - [A bearer token checked against a secret is read per request, and an unreadable secret means no session](a-bearer-token-checked-against-a-secret-reads-it-per-request.md) — The secretId form of authBearer reads the secret on every request; a missing or failing read leaves the request without a session rather than raising an error
 - [A call without a session raises MissingSessionError, and a missing scope raises MissingScopeError](a-call-without-a-session-raises-missing-session-not-forbidden.md) — The function runner separates the no-session refusal from the scope and permission refusals, so a caller can tell a missing login from a denied grant
 - [A cookie the caller sets wins over the jar's copy of the same name](a-caller-cookie-wins-over-the-jar-for-the-same-name.md) — createCookieJar sends the caller's cookie for a name and drops the jar's copy of that name, so one request never carries the same cookie twice
@@ -80,7 +81,6 @@ A rule about who may do what, and which way it fails when it is unsure.
 - [auth false on a session-required function warns and still requires a session](auth-false-on-a-session-function-warns-and-still-requires-one.md) — Writing auth: false on a function that is not sessionless does not open it; the runner logs a warning and still throws MissingSessionError without a session
 - [Bearer token hashes are unpeppered SHA-256](bearer-token-hashes-are-unpeppered-sha256.md) — hashToken stores bearer tokens as plain SHA-256 hex because they are high-entropy random values; a low-entropy secret is not a hashed column
 - [Consent is read from a cookie, and a recognised denial value counts as a refusal](consent-is-read-from-a-cookie-and-a-recognised-denial-counts-as-refusal.md) — cookieAnalyticsIdentity grants a consent purpose only when its cookie is present and not one of a fixed set of denial values, and resolves no identity off a non-HTTP wire
-- [The console addon's privileged functions gate themselves](console-addon-privileged-functions-gate-themselves.md) — Thread listing is owner-scoped unless the caller holds admin, and addon installation requires an admin session, rather than trusting the host to register a global permission
 - [Core's SSRF guard matches host literals because edge runtimes have no DNS](core-safe-fetch-blocks-ssrf-by-host-literal-not-dns.md) — safeFetch rejects internal address literals and re-validates every redirect hop; it cannot stop DNS rebinding
 - [Core secrets are encrypted with a per-secret DEK wrapped by a KEK](core-secrets-use-a-per-secret-dek-wrapped-by-a-kek.md) — Envelope encryption keeps ciphertext untouched during key rotation, at the cost of storing two blobs per secret
 - [CORS defaults to any origin and refuses the wildcard when credentials are on](cors-defaults-to-any-origin-and-refuses-the-wildcard-with-credentials.md) — The cors middleware's origin defaults to *, and a resolved wildcard origin combined with credentials throws when the middleware is built
@@ -141,6 +141,7 @@ A rule about who may do what, and which way it fails when it is unsure.
 - [A scenario step is never registered as a callable RPC and never dispatched on the queue](workflow-scenario-steps-are-never-network-invocable.md) — A step drives a browser and holds a virtual user's session, so exposing it as an RPC would put that reach on the network
 - [A scenario virtual user step always goes over the real transport and never through internal dispatch](workflow-virtual-user-steps-always-use-the-real-transport.md) — Internal dispatch would bypass auth middleware and permissions, turning a scenario into a green health check that proves nothing
 - [Writing a virtual user schedule is gated by its own scope, separate from running one](writing-a-virtual-user-schedule-is-gated-by-its-own-scope.md) — setVirtualUserSchedule carries virtualUser:schedule, because a schedule write spends money on every future tick while a run spends it once with a caller watching
+
 <!-- /pikku:knowledge-index -->
 
 - [A channel peer's traceparent is a claim](a-channel-peers-traceparent-is-a-claim.md) — The responder ignores it unless `trustInboundTraceparent` is set.

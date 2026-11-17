@@ -7,18 +7,17 @@ tags: admin, scopes, variables, addons, sessions
 
 # Secrets, variables and the addon reads carry their own admin scopes, and the session-only reads declare none
 
-Nine functions moved here from `@pikku/addon-console`. Each keeps the gate it had; only
-the scope id changed, from the `pikku:console` tree to the `admin` tree declared in
-`src/scopes.ts` (and mirrored by `ADMIN_SCOPE_TREE` in `@pikku/better-auth`).
+Nine functions sit under the `admin` tree declared in `src/scopes.ts` (and mirrored by
+`ADMIN_SCOPE_TREE` in `@pikku/better-auth`).
 
-| Function | Old scope | New scope |
-| --- | --- | --- |
-| `secretGet`, `secretHas` | `pikku:console:secrets:read` | `admin:secrets:read` |
-| `secretSet` | `pikku:console:secrets:write` | `admin:secrets:write` |
-| `variableGet` | `pikku:console:variables:read` | `admin:variables:read` |
-| `variableSet` | `pikku:console:variables:write` | `admin:variables:write` |
-| `getInstalledAddons`, `getAddonInstances` | `pikku:console:addons:read` | `admin:addons:read` |
-| `getScorers`, `getMyAccess` | none | none |
+| Function                                  | Scope                   |
+| ----------------------------------------- | ----------------------- |
+| `secretGet`, `secretHas`                  | `admin:secrets:read`    |
+| `secretSet`                               | `admin:secrets:write`   |
+| `variableGet`                             | `admin:variables:read`  |
+| `variableSet`                             | `admin:variables:write` |
+| `getInstalledAddons`, `getAddonInstances` | `admin:addons:read`     |
+| `getScorers`, `getMyAccess`               | none                    |
 
 Each leaf is its own grant, so reading a variable does not admit writing one, and a
 secrets grant does not admit variables. A single `admin` grant covers all of them.

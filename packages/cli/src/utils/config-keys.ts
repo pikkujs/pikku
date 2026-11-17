@@ -28,7 +28,6 @@ const SCAFFOLD = obj({
   cors: 'any',
   featureFlags: 'any',
   admin: 'any',
-  console: 'any',
   scenarios: 'any',
   virtualUser: 'any',
   agent: 'any',

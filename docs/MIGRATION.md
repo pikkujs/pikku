@@ -21,13 +21,12 @@ Version numbers in brackets are the release of the named package that shipped th
 
 ## Licence change: CLI and inspectors are AGPL-3.0-only
 
-`@pikku/cli`, `@pikku/inspector` and `@pikku/inspector-go` (and the unpublished Rust inspector) move from the Business Source License 1.1 to **AGPL-3.0-only**. The packages that depend on or import them move from MIT to **AGPL-3.0-only** as well: `@pikku/addon-console`, `@pikku/code-edit`, and the unpublished `@pikku/addon-changes-cli` and `@pikku/addon-cloud-cli`. Every other package (`@pikku/core`, the runtimes, services, clients, the other addons and skills) stays **MIT**.
+`@pikku/cli`, `@pikku/inspector` and `@pikku/inspector-go` (and the unpublished Rust inspector) move from the Business Source License 1.1 to **AGPL-3.0-only**. The packages that depend on or import them move from MIT to **AGPL-3.0-only** as well: `@pikku/code-edit`, and the unpublished `@pikku/addon-changes-cli` and `@pikku/addon-cloud-cli`. Every other package (`@pikku/core`, the runtimes, services, clients, the other addons and skills) stays **MIT**.
 
 - **What changes for you:** usually nothing. You run the CLI to build your app; your app depends on the MIT packages. The AGPL matters if you modify the CLI or the inspectors and distribute them, or let others use a modified version over a network: then you must share your changes under the AGPL. The old BUSL ban on commercial visual Pikku tools is gone.
 - **Generated code:** _[LAWYER: draft, not yet reviewed]_ the code, types and files the CLI generates into your project are not meant to be covered by the AGPL. See [LICENSE](../LICENSE).
 - **Older versions:** releases published before this change keep the BUSL-1.1 terms they were published under, including `@pikku/console`.
 - **If the AGPL does not work for you:** other licensing is available. See [LICENSE-COMMERCIAL.md](../LICENSE-COMMERCIAL.md).
-- **The console addon:** `@pikku/addon-console` (and `@pikku/code-edit`, which it uses) is now AGPL-3.0-only. With `scaffold.console` on, it is wired into your app by codegen. `pikku ci` removes it from deployed bundles; if you build and ship your app another way with `scaffold.console` on, you ship AGPL code. Turn `scaffold.console` off for production builds.
 - **How to find affected code:** if you vendor or fork `packages/cli`, `packages/inspector`, `packages/inspector-go`, `packages/inspector-rust` or one of the AGPL packages above, those copies are now AGPL-3.0-only. Run `bun run check:licenses` in a fork: it fails when an MIT package depends on or imports an AGPL one.
 
 ## 0.13.0 changes
@@ -41,6 +40,22 @@ Version numbers in brackets are the release of the named package that shipped th
 `WiringService`, `readAllMeta` and the `AllMeta` types now live in `@pikku/core/services/wiring-service` (MIT). `@pikku/addon-console` no longer exports them and the `@pikku/addon-console/services` entry is removed; import from `@pikku/core/services/wiring-service` instead.
 
 The console's `agentCredentialCheck` (scope `pikku:console:credentials:read`) was removed. `@pikku/addon-admin` has `agentCredentialCheck` under `admin:credentials:read`; call `admin:agentCredentialCheck` instead and grant `admin:credentials:read`. It reads the agent from the running app, not from `.pikku` files, so it works in a deployed stage.
+
+### `@pikku/addon-console` is removed
+
+**What:** the package is deleted and no longer published. The functions that a deployed stage needs moved to `@pikku/addon-admin` (see the two `admin:*` entries under [`@pikku/cli` and `pikku.config.json`](#pikkucli-and-pikkuconfigjson), and `admin:agentCredentialCheck` above); the rest (source editing, project meta, knowledge, scenarios, addon installation, design) moves to Pikku Studio, which is not part of this repository.
+
+**Config and CLI:**
+
+- `scaffold.console` is no longer a config key. Delete it from `pikku.config.json`; an unknown scaffold key is rejected. Delete the generated `console/console.gen.ts` and `console.schemas.gen.ts` from your scaffold directory, and the `@pikku/addon-console` dependency from your functions package.
+- `pikku enable console` is gone.
+- The generated auth wiring no longer adds the `authBearer` middleware for `PIKKU_CONSOLE_TOKEN`. If something still calls your app with that bearer token, add `authBearer({ token: { secretId, userSession } })` to your own global middleware, with the scopes it needs.
+- `pikku dev` installs the studio header session (`PIKKU_STUDIO_TOKEN`) with the scope `['admin']` only; `pikku:console` is no longer granted.
+- `pikku ci` no longer removes a console scaffold, and its `console` step is gone.
+- `pikku knowledge plan show|progress|set` no longer return or print a `/console/knowledge` link.
+- Roles and functions that grant or require `pikku:console` or `pikku:console:*` reference scopes nothing in this repository declares any more. Grant the matching `admin:*` scope instead, or drop the grant.
+
+**Find:** `rg -n "addon-console|scaffold.*console|pikku:console|PIKKU_CONSOLE_TOKEN|console:[a-zA-Z]+"`
 
 ### The event hub is publish-only; a subscribe function decides the topic
 

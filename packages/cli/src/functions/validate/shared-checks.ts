@@ -34,7 +34,6 @@ export type SharedPikkuConfig = {
   environments?: unknown
   clientFiles?: unknown
   scaffold?: {
-    console?: unknown
     rpc?: unknown
     agent?: unknown
     workflow?: unknown
@@ -504,9 +503,8 @@ export const WIRES_ADMIN_ADDON =
  * Whether any source file actually wires `@pikku/addon-admin`.
  *
  * Matched against the `wireAddon({ ... })` call itself, over comment-blanked
- * text: the scaffolded console wiring carries a comment naming this package to
- * explain why it is NOT the console's scope root, and a per-file search for the
- * two words reports every app that copied that comment as already wired.
+ * text: a comment naming this package would otherwise make a per-file search
+ * for the two words report an app as already wired.
  */
 const wiresAdminAddon = async (srcDir: string): Promise<boolean> => {
   if (!existsSync(srcDir)) return false
@@ -530,23 +528,16 @@ const wiresAdminAddon = async (srcDir: string): Promise<boolean> => {
 }
 
 /**
- * Scaffold flags that gate a generated surface the pikku console calls.
+ * Scaffold flags that gate a generated surface Pikku Studio calls.
  *
- * `console` gates app introspection, so nothing renders without it;
- * `rpc`/`agent`/`workflow` gate endpoints the console hits directly; `events`
+ * `rpc`/`agent`/`workflow` gate endpoints Studio hits directly; `events`
  * gates the realtime channel, which no template ships yet — hence the warning.
  */
 const REQUIRED_SCAFFOLD: Array<{
-  key: 'console' | 'rpc' | 'agent' | 'workflow' | 'events'
+  key: 'rpc' | 'agent' | 'workflow' | 'events'
   severity: 'error' | 'warn'
   surface: string
 }> = [
-  {
-    key: 'console',
-    severity: 'error',
-    surface:
-      'app introspection (console:getFunctionsMeta and friends) — the console shows no functions',
-  },
   { key: 'rpc', severity: 'error', surface: 'the generic /rpc/:name endpoint' },
   {
     key: 'agent',
@@ -632,7 +623,7 @@ export async function runSharedProjectChecks(
       const report = s.severity === 'error' ? e : w
       report(
         `pikku-config-no-scaffold-${s.key}`,
-        `pikku.config.json scaffold is missing "${s.key}" — ${s.surface} is never generated, so the console 404s for it`,
+        `pikku.config.json scaffold is missing "${s.key}" — ${s.surface} is never generated, so Studio 404s for it`,
         pikkuConfigPath,
         lines(
           `Add "${s.key}" to the scaffold block in pikku.config.json:`,
@@ -865,7 +856,7 @@ export async function runSharedProjectChecks(
     if (authEnabled && !(await wiresAdminAddon(join(fnDir, 'src')))) {
       e(
         'admin-addon-not-wired',
-        '@pikku/addon-admin is not wired — the app exposes no admin:* RPCs, so the console Users and Scopes pages have nothing to call',
+        '@pikku/addon-admin is not wired — the app exposes no admin:* RPCs, so the Studio Users and Scopes pages have nothing to call',
         join(fnDir, 'src'),
         lines(
           'Install it and wire it once, anywhere under packages/functions/src:',

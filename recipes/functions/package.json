@@ -3,7 +3,6 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@pikku/addon-console": "workspace:*",
     "@pikku/addon-graph": "workspace:*",
     "@pikku/better-auth": "^0.12.66",
     "@pikku/code-edit": "workspace:*",

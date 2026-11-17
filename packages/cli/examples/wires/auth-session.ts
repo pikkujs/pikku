@@ -39,12 +39,6 @@
 //~  • Do NOT try to thread mapSession through pikkuBetterAuth in auth.ts. There is NO
 //~    such option on the wrapper; mapSession exists ONLY on betterAuthStatelessSession.
 //~
-//~ ⚠️ CARRY OVER the authBearer(PIKKU_CONSOLE_TOKEN) block too. The generated file
-//~ you're replacing had it in the SAME addHTTPMiddleware array — and because #754
-//~ removes the WHOLE file, dropping it here silently breaks the Pikku Studio console/agent
-//~ (they read the app with that bearer token, so every console read starts 403'ing).
-//~ Keep it verbatim as the 2nd entry below.
-//~
 //~ The starter uses Better Auth's stateless cookie session, so use
 //~ betterAuthStatelessSession (use betterAuthSession only if you turned cookieCache off).
 //~
@@ -101,7 +95,6 @@
 //
 import { addHTTPMiddleware } from '#pikku/middleware'
 import { betterAuthStatelessSession } from '@pikku/better-auth'
-import { authBearer } from '@pikku/core/middleware'
 
 addHTTPMiddleware('*', [
   betterAuthStatelessSession({
@@ -117,17 +110,6 @@ addHTTPMiddleware('*', [
       organizationId:
         (result.session as { activeOrganizationId?: string }).activeOrganizationId ?? undefined,
     }),
-  }),
-  // Console bridge — carried over verbatim from the generated auth-middleware.gen.ts
-  // that #754 removes when you register your own session above. Do NOT drop it, and do
-  // NOT drop its `scopes`: the Pikku Studio console/agent authenticate to the app with this
-  // bearer token, and the console addon is gated on `pikku:console`. Without the grant
-  // the token authenticates fine and then every console read 403s on a missing scope.
-  authBearer({
-    token: {
-      secretId: 'PIKKU_CONSOLE_TOKEN',
-      userSession: { userId: 'pikku-console-token', scopes: ['admin', 'pikku'] },
-    },
   }),
 ])
 

@@ -12,11 +12,7 @@ import { join, relative, resolve } from 'node:path'
 import type { WorkflowService } from '@pikku/core/workflow'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { CiInput, CiRunInput, CiStepInput, type CiRun } from '../ci/schemas.js'
-import {
-  PikkuCiFailedError,
-  assertConsoleRemoved,
-  removeConsoleScaffold,
-} from '../ci/console-removal.js'
+import { PikkuCiFailedError } from '../ci/errors.js'
 import { assertCloudflareDeployReady } from '../ci/deploy-guard.js'
 import { ciEnv, ciStageCommand, planResultFile } from '../ci/stages.js'
 import { worktreeOwnsConfiguredDatabase } from '../ci/ownership.js'
@@ -73,18 +69,6 @@ export const pikkuCiStep = pikkuSessionlessFunc({
       throw new PikkuCiFailedError(`pikku ci failed at ${failed.join('\n\n')}`)
     }
   },
-})
-
-export const pikkuCiRemoveConsole = pikkuSessionlessFunc({
-  description: 'Take the console scaffold out of the throwaway worktree.',
-  input: CiRunInput,
-  func: async (_services, { run }) => removeConsoleScaffold(run),
-})
-
-export const pikkuCiCheckConsole = pikkuSessionlessFunc({
-  description: 'Fail if console wiring survived its removal.',
-  input: CiRunInput,
-  func: async (_services, { run }) => assertConsoleRemoved(run),
 })
 
 export const pikkuCiCheckDeploy = pikkuSessionlessFunc({
@@ -208,7 +192,6 @@ export const pikkuCi = pikkuSessionlessFunc({
           ),
           hasEmails:
             !!config.emailTemplatesDir && existsSync(config.emailTemplatesDir),
-          hasConsole: !!config.scaffold?.console,
           auditBaseline,
           migrationsApplied: !!data.migrationsApplied,
           secretsSet: !!data.secretsSet,
@@ -219,9 +202,6 @@ export const pikkuCi = pikkuSessionlessFunc({
           scaffoldDir: moved(
             config.resolvedScaffoldDir ?? join(rootDir, 'scaffold')
           ),
-          consoleFiles: [config.consoleFunctionsFile, config.consoleSchemasFile]
-            .filter((file): file is string => !!file)
-            .map(moved),
           srcDirectories: config.srcDirectories.map((src) =>
             moved(resolve(rootDir, src))
           ),

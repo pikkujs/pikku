@@ -7,8 +7,7 @@ import { SecretAdminService } from './services/secret-admin.service.js'
  * and its own `scopeService` would grant roles nothing checks.
  *
  * Nothing here touches a filesystem or a project root, which is what lets this
- * addon be wired into a deployed serverless unit — unlike `@pikku/addon-console`,
- * whose meta, code and knowledge services need a disk.
+ * addon be wired into a deployed serverless unit.
  */
 export const createSingletonServices = pikkuAddonServices(
   async (

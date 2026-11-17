@@ -6,8 +6,8 @@
 // Why this is a gate and not a convention: the repo is deliberately mixed —
 // @pikku/cli, @pikku/inspector, @pikku/inspector-go and the Rust inspector are
 // AGPL-3.0-only, and so is every package that depends on or imports them
-// (@pikku/addon-console, @pikku/code-edit,
-// @pikku/addon-changes-cli, @pikku/addon-cloud-cli). Everything else (core, runtimes, services, clients, addons,
+// (@pikku/code-edit, @pikku/addon-changes-cli,
+// @pikku/addon-cloud-cli). Everything else (core, runtimes, services, clients, addons,
 // @pikku/skills) is MIT. npm renders the `license` field while lawyers read the
 // LICENSE file, so a package where the two disagree is a package whose terms
 // nobody can state. Every LICENSE file must be the canonical text in

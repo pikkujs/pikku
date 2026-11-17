@@ -20,5 +20,5 @@ The serve command does not call it. Its setup calls `disableDevVirtualUserSignIn
 (`packages/cli/src/functions/commands/serve.ts:60`). A search of `packages/cli/src` finds the only
 `registerStudioSession` call in `dev.ts`.
 
-**What this rules out:** a studio header that grants the `pikku:console` scope on a server started with
+**What this rules out:** a studio header that grants the studio session on a server started with
 serve. Registering it there would need a new call, not a change to the token rules.

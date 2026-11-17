@@ -14,7 +14,6 @@ AGPL-3.0-only (GNU Affero General Public License, version 3 only)
   pikku-inspect-rs      packages/inspector-rust   (Rust inspector, not published)
 
   Packages that depend on or import the CLI or the inspectors are AGPL too:
-  @pikku/addon-console      packages/addon/pikku-console
   @pikku/code-edit          packages/code-edit
   @pikku/addon-changes-cli  packages/addon/pikku-changes-cli  (not published)
   @pikku/addon-cloud-cli    packages/addon/pikku-cloud-cli    (not published)

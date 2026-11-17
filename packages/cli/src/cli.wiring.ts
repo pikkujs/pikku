@@ -173,7 +173,6 @@ import {
 } from './functions/commands/info.js'
 import {
   enableRpc,
-  enableConsole,
   enableScenarios,
   enableAgent,
   enableWorkflow,
@@ -394,7 +393,7 @@ wireCLI({
     ci: pikkuCLICommand({
       func: pikkuCi,
       description:
-        'Run the whole path from a commit to a deployable build, non-interactively: codegen, validate, audit, tests and app builds. With -p, in a throwaway worktree, removing the console and producing a deploy plan.',
+        'Run the whole path from a commit to a deployable build, non-interactively: codegen, validate, audit, tests and app builds. With -p, in a throwaway worktree, producing a deploy plan.',
       options: {
         provider: {
           description:
@@ -610,7 +609,7 @@ wireCLI({
         },
         coverage: {
           description:
-            'Collect V8 precise coverage in-process; snapshot/reset via the console coverage RPCs',
+            'Collect V8 precise coverage in-process; snapshot/reset via the scenario coverage RPCs',
           default: false,
         },
         test: {
@@ -1825,10 +1824,6 @@ wireCLI({
         rpc: pikkuCLICommand({
           func: enableRpc,
           description: 'Enable public RPC endpoint',
-        }),
-        console: pikkuCLICommand({
-          func: enableConsole,
-          description: 'Enable console functions',
         }),
         scenarios: pikkuCLICommand({
           func: enableScenarios,

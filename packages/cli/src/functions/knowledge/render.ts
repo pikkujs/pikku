@@ -117,12 +117,6 @@ export const renderKnowledgeIndex = (
   }
 }
 
-type ConsoleUrl = { consoleUrl?: string }
-
-const printConsoleUrl = (url: string | undefined) => {
-  if (url) console.log(`${dim('see it in the console:')} ${url}`)
-}
-
 export const renderKnowledgePlanSchema = (
   _services: unknown,
   { schema }: KnowledgePlanSchemaResult
@@ -132,7 +126,7 @@ export const renderKnowledgePlanSchema = (
 
 export const renderKnowledgePlanShow = (
   _services: unknown,
-  { ok, path, body, consoleUrl }: KnowledgePlanShowResult & ConsoleUrl
+  { ok, path, body }: KnowledgePlanShowResult
 ): void => {
   if (!ok) {
     console.log(`${removed('✗')}  ${body}`)
@@ -141,7 +135,6 @@ export const renderKnowledgePlanShow = (
   }
   console.log(dim(path))
   console.log(body)
-  printConsoleUrl(consoleUrl)
 }
 
 const list = (
@@ -165,8 +158,7 @@ export const renderKnowledgePlanProgress = (
     missing,
     deferred,
     problems,
-    consoleUrl,
-  }: KnowledgePlanProgressResult & ConsoleUrl
+  }: KnowledgePlanProgressResult
 ): void => {
   if (message) {
     console.log(`${removed('✗')}  ${message}`)
@@ -174,7 +166,6 @@ export const renderKnowledgePlanProgress = (
     return
   }
   console.log(dim(path))
-  printConsoleUrl(consoleUrl)
   console.log()
   list('DONE', done, added)
   list('MISSING', missing, removed)
@@ -210,18 +201,11 @@ export const renderKnowledgePlanProgress = (
 
 export const renderKnowledgePlanSet = (
   _services: unknown,
-  {
-    ok,
-    path,
-    problems,
-    schema,
-    consoleUrl,
-  }: KnowledgePlanSetResult & ConsoleUrl
+  { ok, path, problems, schema }: KnowledgePlanSetResult
 ): void => {
   if (ok) {
     console.log(`${added('✓')}  plan written to ${path}`)
     console.log(dim('the build is measured against it'))
-    printConsoleUrl(consoleUrl)
     return
   }
   console.log(`${removed('✗')}  not written:`)
