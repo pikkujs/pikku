@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { escapePath, glob } from 'tinyglobby'
-import { CONFIG_FILE, SKIP_DIRS } from './pikku-directories.js'
+import { CONFIG_FILE, SKIP_DIRS } from './project-packages.js'
 
 /**
  * Patterns for what a project never inspects. `ignoreFiles` from the config

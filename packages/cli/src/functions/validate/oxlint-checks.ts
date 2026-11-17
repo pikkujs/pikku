@@ -4,7 +4,7 @@ import { readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type { ValidateFinding } from './virtual-user-checks.js'
 import { applyRuleSeverity } from './rule-severity.js'
-import { projectSourceDirs } from '../../utils/pikku-directories.js'
+import { projectSourceDirs } from '../../utils/project-packages.js'
 
 /**
  * Rules `pikku validate` insists are on, at `error`, with type information.
@@ -498,7 +498,7 @@ export const defaultExec: OxlintExec = (file, args, { cwd, timeoutMs }) =>
 
 type OxlintConfigShape = {
   rootDir?: unknown
-  pikkuDirectories?: unknown
+  base?: unknown
   outDir?: unknown
   scaffold?: Record<string, unknown>
   lint?: Record<string, unknown>
@@ -1296,7 +1296,7 @@ export const runOxlintRun = async (
             message: `oxlint linted 0 files under ${srcDirs.map((d) => rel(root, d)).join(', ')} — an ignorePatterns entry or an unmatched path is hiding the app source, so nothing was checked`,
             path: pkgPath,
             fixHint:
-              'Check "ignorePatterns" in the oxlint config (and anything it extends) and the pikkuDirectories in pikku.config.json.',
+              'Check "ignorePatterns" in the oxlint config (and anything it extends) and the base in pikku.config.json.',
           },
         ],
         rules

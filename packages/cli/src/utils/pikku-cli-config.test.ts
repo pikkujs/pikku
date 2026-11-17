@@ -50,7 +50,10 @@ describe('getPikkuCLIConfig', () => {
     await mkdir(join(root, dir), { recursive: true })
     await writeFile(
       join(root, dir, 'pikku.config.json'),
-      JSON.stringify({ namespace: dir.replace('packages/', '') })
+      JSON.stringify({
+        namespace: dir.replace('packages/', ''),
+        addon: true,
+      })
     )
     await writeFile(
       join(root, dir, 'package.json'),
@@ -58,12 +61,19 @@ describe('getPikkuCLIConfig', () => {
     )
   }
 
-  test('pikkuDirectories lists packages in dependency order, and the project inspects its own directory', async () => {
+  test('addons are ordered by their dependencies, and a base is inspected in place', async () => {
     const root = await writeConfig({
-      pikkuDirectories: ['packages/app', 'packages/lib'],
+      addons: ['packages/app', 'packages/lib'],
+      base: 'packages/main',
     })
     await writePackage(root, 'packages/app', { lib: '1' })
     await writePackage(root, 'packages/lib')
+    await mkdir(join(root, 'packages/main'), { recursive: true })
+    await writeFile(join(root, 'packages/main/pikku.config.json'), '{}')
+    await writeFile(
+      join(root, 'packages/main/package.json'),
+      JSON.stringify({ name: 'main' })
+    )
 
     const config = await getPikkuCLIConfig(
       silentLogger,
@@ -72,14 +82,26 @@ describe('getPikkuCLIConfig', () => {
     )
 
     assert.deepEqual(
-      config.pikkuPackages.map((p) => p.entry),
+      config.addonPackages.map((p) => p.entry),
       ['packages/lib', 'packages/app']
     )
+    assert.equal(config.basePackage?.entry, 'packages/main')
+    assert.deepEqual(config.sourceDirs, ['.', 'packages/main'])
+  })
+
+  test('a config without base is its own base', async () => {
+    const root = await writeConfig()
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+    assert.equal(config.basePackage, undefined)
     assert.deepEqual(config.sourceDirs, ['.'])
   })
 
-  test('pikkuDirectories naming a directory with no pikku.config.json is an error', async () => {
-    const root = await writeConfig({ pikkuDirectories: ['packages/none'] })
+  test('addons naming a directory with no pikku.config.json is an error', async () => {
+    const root = await writeConfig({ addons: ['packages/none'] })
     await mkdir(join(root, 'packages/none'), { recursive: true })
 
     await assert.rejects(
@@ -88,14 +110,16 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
-  test('srcDirectories is refused and points at pikkuDirectories', async () => {
-    const root = await writeConfig({ srcDirectories: ['src'] })
+  for (const key of ['srcDirectories', 'pikkuDirectories']) {
+    test(`${key} is refused and points at base and addons`, async () => {
+      const root = await writeConfig({ [key]: ['src'] })
 
-    await assert.rejects(
-      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /srcDirectories in .* was renamed to pikkuDirectories/
-    )
-  })
+      await assert.rejects(
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+        new RegExp(`${key} in .* is gone.*\`base\`.*\`addons\``)
+      )
+    })
+  }
 
   test('derives the analytics scaffold outputs and leaves the union in src', async () => {
     const root = await writeConfig({ scaffold: { analytics: true } })
@@ -445,8 +469,11 @@ describe('getPikkuCLIConfig', () => {
       await rejects({ security: true }, /`--security` flag/)
     })
 
-    test('addons is not a collection yet', async () => {
-      await rejects({ addons: {} }, /addons .* wireAddon/)
+    test('addons is a list of directories', async () => {
+      await rejects(
+        { addons: {} },
+        /addons in .* must be a list of directories/
+      )
     })
 
     test('an addon is held to the same keys', async () => {

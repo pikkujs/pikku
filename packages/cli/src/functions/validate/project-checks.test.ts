@@ -38,7 +38,7 @@ const NO_OXLINT = {
 
 async function makeValidProject(root: string) {
   await writeJson(join(root, 'pikku.config.json'), {
-    pikkuDirectories: ['packages/functions'],
+    base: 'packages/functions',
     outDir: 'packages/functions/.pikku',
     scaffold: {
       rpc: true,
@@ -289,7 +289,7 @@ describe('project checks', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'pikku.config.json'), {
-          pikkuDirectories: ['packages/functions'],
+          base: 'packages/functions',
           outDir: 'packages/functions/.pikku',
           scaffold: {
             pikkuDir: 'packages/functions/src/scaffold',
@@ -341,7 +341,7 @@ describe('project checks', () => {
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'pikku.config.json'), {
-          pikkuDirectories: ['packages/functions'],
+          base: 'packages/functions',
           outDir: 'packages/functions/.pikku',
           scaffold: {
             rpc: true,

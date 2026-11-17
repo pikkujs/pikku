@@ -2078,6 +2078,38 @@
         "@types/node": "^26",
       },
     },
+    "verifiers/base-addons": {
+      "name": "@pikku/verifier-pikku-directories",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/verifier-pd-addon": "workspace:*",
+        "@pikku/verifier-pd-plain": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+      },
+    },
+    "verifiers/base-addons/packages/addon": {
+      "name": "@pikku/verifier-pd-addon",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+      },
+    },
+    "verifiers/base-addons/packages/plain": {
+      "name": "@pikku/verifier-pd-plain",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/verifier-pd-addon": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+      },
+    },
     "verifiers/better-auth": {
       "name": "@pikku/verifiers-better-auth",
       "dependencies": {
@@ -2524,38 +2556,6 @@
       "devDependencies": {
         "@types/node": "^26",
         "tsx": "^4.23.15",
-      },
-    },
-    "verifiers/pikku-directories": {
-      "name": "@pikku/verifier-pikku-directories",
-      "dependencies": {
-        "@pikku/core": "workspace:*",
-        "@pikku/verifier-pd-addon": "workspace:*",
-        "@pikku/verifier-pd-plain": "workspace:*",
-      },
-      "devDependencies": {
-        "@pikku/cli": "workspace:*",
-      },
-    },
-    "verifiers/pikku-directories/packages/addon": {
-      "name": "@pikku/verifier-pd-addon",
-      "version": "0.1.0",
-      "dependencies": {
-        "@pikku/core": "workspace:*",
-      },
-      "devDependencies": {
-        "@pikku/cli": "workspace:*",
-      },
-    },
-    "verifiers/pikku-directories/packages/plain": {
-      "name": "@pikku/verifier-pd-plain",
-      "version": "0.1.0",
-      "dependencies": {
-        "@pikku/core": "workspace:*",
-        "@pikku/verifier-pd-addon": "workspace:*",
-      },
-      "devDependencies": {
-        "@pikku/cli": "workspace:*",
       },
     },
     "verifiers/pikku-studio": {
@@ -3855,11 +3855,11 @@
 
     "@pikku/verifier-db-remote-addon": ["@pikku/verifier-db-remote-addon@workspace:verifiers/db-schema/remote-addon"],
 
-    "@pikku/verifier-pd-addon": ["@pikku/verifier-pd-addon@workspace:verifiers/pikku-directories/packages/addon"],
+    "@pikku/verifier-pd-addon": ["@pikku/verifier-pd-addon@workspace:verifiers/base-addons/packages/addon"],
 
-    "@pikku/verifier-pd-plain": ["@pikku/verifier-pd-plain@workspace:verifiers/pikku-directories/packages/plain"],
+    "@pikku/verifier-pd-plain": ["@pikku/verifier-pd-plain@workspace:verifiers/base-addons/packages/plain"],
 
-    "@pikku/verifier-pikku-directories": ["@pikku/verifier-pikku-directories@workspace:verifiers/pikku-directories"],
+    "@pikku/verifier-pikku-directories": ["@pikku/verifier-pikku-directories@workspace:verifiers/base-addons"],
 
     "@pikku/verifier-registry-addon": ["@pikku/verifier-registry-addon@workspace:verifiers/addon-registry/source"],
 

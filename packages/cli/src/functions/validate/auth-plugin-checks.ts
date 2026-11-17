@@ -3,11 +3,11 @@ import { readFile } from 'node:fs/promises'
 import {
   listProjectFiles,
   projectSourceDirs,
-} from '../../utils/pikku-directories.js'
+} from '../../utils/project-packages.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 
 export type AuthPluginCheckConfig = {
-  pikkuDirectories?: unknown
+  base?: unknown
 }
 
 const lines = (...parts: string[]): string => parts.join('\n')

@@ -147,10 +147,6 @@ export interface PikkuCLICoreOutputFiles {
   // Optional: a hand-built config in a test never goes through that resolution.
   resolvedScaffoldDir?: string
 
-  // The generated wiring that makes each package in pikkuDirectories a wired addon of this project.
-  // Optional: left undefined when pikkuDirectories is empty.
-  pikkuPackagesFile?: string
-
   // Virtual user run/read RPCs (derived from scaffold.pikkuDir when scaffold.virtualUser is enabled).
   // Optional: left undefined when scaffold.virtualUser is not enabled, so consumers must guard.
   virtualUserFunctionsFile?: string
@@ -503,16 +499,22 @@ export type PikkuCLIInput = {
     buckets: string[]
   }
   /**
-   * Directories of packages this project builds from, relative to `rootDir`.
-   * Each is a Pikku project of its own (an addon or a functions package) with a
-   * pikku.config.json and a package.json name beside it. `pikku all` here runs
-   * in each of them, in dependency order, then assembles the backends from what
-   * they generated. Leave it out and the project inspects its own directory.
+   * Directories of the addons this project uses, relative to `rootDir`. Each is
+   * an addon with its own pikku.config.json, a package.json name and a
+   * `namespace`. `pikku all` here runs in each of them in dependency order,
+   * then in the base, then assembles the backends. The base wires them with
+   * `wireAddon` in its own source.
    */
-  pikkuDirectories?: string[]
+  addons?: string[]
   /**
-   * In a package a root project lists in `pikkuDirectories`: the namespace the
-   * root wires it under. Required there, and unique among the listed packages.
+   * The one package that owns the project's wirings and services, relative to
+   * `rootDir`, with its own pikku.config.json. Leave it out and the project is
+   * its own base.
+   */
+  base?: string
+  /**
+   * In an addon the root lists in `addons`: the namespace the base wires it
+   * under. Required there, and unique among the listed addons.
    */
   namespace?: string
   ignoreFiles?: string[]
@@ -1295,20 +1297,22 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
     configDir: string
     /**
      * The directories whose source is inspected, relative to `rootDir`: the
-     * project's own directory, minus dependencies, build output, its generated
+     * project's own directory and its base, minus dependencies, build output, its generated
      * tree and any directory holding its own pikku.config.json.
      */
     sourceDirs: string[]
     /**
-     * The packages `pikkuDirectories` lists, ordered so each comes after the
-     * listed packages it depends on. Empty when the project lists none.
+     * The addons `addons` lists, ordered so each comes after the listed addons
+     * it depends on. Empty when the project lists none.
      */
-    pikkuPackages: Array<{
+    addonPackages: Array<{
       entry: string
       dir: string
       name: string
       namespace: string
     }>
+    /** The package `base` names. Undefined when the project is its own base. */
+    basePackage?: { entry: string; dir: string; name: string }
     addonName?: string
     stateOutput?: string
     stateInput?: string

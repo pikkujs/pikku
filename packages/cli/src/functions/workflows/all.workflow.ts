@@ -20,9 +20,7 @@ import { backendBuckets } from '../../utils/content-buckets.js'
 import {
   PACKAGE_PASS_ENV,
   runPikkuPackagePasses,
-  serializePikkuPackages,
-} from '../../utils/pikku-package-passes.js'
-import { writeFileInDir } from '../../utils/file-writer.js'
+} from '../../utils/package-passes.js'
 import { generateBackendCodegen } from '../../deploy/codegen/per-unit-codegen.js'
 import {
   assembleBackendSdk,
@@ -140,23 +138,20 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await removeRetiredScaffoldFiles(config)
     await removeDisabledOriginScaffolds(config)
 
-    // A root project's listed packages are generated first, in dependency
-    // order: the wiring below reads each one's metadata the way a host reads
-    // an installed addon. A run inside a package, or a deploy pass, has none.
+    // A root project's addons are generated first, in dependency order, then
+    // its base, whose own pass needs the addons' output and whose `#pikku`
+    // imports need its own. A run inside one of them, or a deploy pass, has none.
     if (
-      config.pikkuPackages.length > 0 &&
-      config.pikkuPackagesFile &&
+      (config.addonPackages.length > 0 || config.basePackage) &&
       process.env.PIKKU_DEPLOY_CODEGEN !== '1'
     ) {
-      const { pikkuPackagesFile } = config
       await workflow.do('Packages', async () => {
-        await runPikkuPackagePasses(config.pikkuPackages, (pkg) =>
-          logger.info(`• pikku all in ${pkg.entry}`)
-        )
-        await writeFileInDir(
-          logger,
-          pikkuPackagesFile,
-          serializePikkuPackages(config.pikkuPackages)
+        await runPikkuPackagePasses(
+          [
+            ...config.addonPackages,
+            ...(config.basePackage ? [config.basePackage] : []),
+          ],
+          (pkg) => logger.info(`• pikku all in ${pkg.entry}`)
         )
       })
     }

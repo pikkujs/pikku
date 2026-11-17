@@ -39,15 +39,13 @@ export const isNestedProject = (dir: string, root: string): boolean =>
 
 /**
  * The directories of a project that code is read from, as written in a raw
- * pikku.config.json: the project's own directory first, then each package it
- * lists in `pikkuDirectories`. Entries are relative to the config's `rootDir`.
+ * pikku.config.json: the project's own directory first, then its `base`
+ * package when it names one. Entries are relative to the config's `rootDir`.
  */
-export const projectSourceDirs = (config: {
-  pikkuDirectories?: unknown
-}): string[] => [
+export const projectSourceDirs = (config: { base?: unknown }): string[] => [
   '.',
-  ...(Array.isArray(config.pikkuDirectories)
-    ? config.pikkuDirectories.filter((d): d is string => typeof d === 'string')
+  ...(typeof config.base === 'string' && config.base !== ''
+    ? [config.base]
     : []),
 ]
 
@@ -87,8 +85,8 @@ export const listProjectFiles = async (
   return [...found].sort()
 }
 
-/** A package a project lists in `pikkuDirectories`. */
-export type PikkuPackage = {
+/** An addon a project lists in `addons`. */
+export type AddonPackage = {
   /** The entry as written in the config. */
   entry: string
   /** The directory, absolute. */
@@ -141,21 +139,21 @@ export const packageDependencyNames = (
 }
 
 /**
- * Reads each directory a project lists in `pikkuDirectories` and refuses the
+ * Reads each directory a project lists in `addons` and refuses the
  * entries that cannot be built from: not a string, missing, the project's own
  * directory, a directory without its own pikku.config.json or a package.json
- * name, or one that itself lists directories.
+ * name, one that itself lists addons or a base, or one that is not an addon.
  *
  * `configFile` is the project's pikku.config.json; entries resolve against its
  * `rootDir`, which is `rootDir`.
  */
-export const resolvePikkuDirectories = async (
+export const resolveAddonPackages = async (
   configFile: string,
   rootDir: string,
   entries: unknown
-): Promise<PikkuPackage[]> => {
+): Promise<AddonPackage[]> => {
   if (entries === undefined) return []
-  const where = `pikkuDirectories in ${configFile}`
+  const where = `addons in ${configFile}`
   if (
     !Array.isArray(entries) ||
     entries.some((e) => typeof e !== 'string' || e === '')
@@ -165,7 +163,7 @@ export const resolvePikkuDirectories = async (
     )
   }
   const own = resolve(rootDir)
-  const packages: PikkuPackage[] = []
+  const packages: AddonPackage[] = []
   for (const entry of entries as string[]) {
     const dir = resolve(rootDir, entry)
     const label = relative(own, dir) || entry
@@ -186,15 +184,20 @@ export const resolvePikkuDirectories = async (
       )
     }
     const listedConfig = await readJson(configPath)
-    if ('pikkuDirectories' in listedConfig) {
+    if ('addons' in listedConfig || 'base' in listedConfig) {
       throw new PikkuCLIConfigError(
-        `${where} lists "${entry}", whose ${CONFIG_FILE} lists pikkuDirectories itself. List its packages here instead; only one level is supported.`
+        `${where} lists "${entry}", whose ${CONFIG_FILE} sets addons or base itself. List its addons here instead; only one level is supported.`
+      )
+    }
+    if (!listedConfig.addon) {
+      throw new PikkuCLIConfigError(
+        `${where} lists "${entry}", which is not an addon: ${label}/${CONFIG_FILE} has no "addon" section. Each entry is an addon. The package that owns the wirings and services is the project's "base".`
       )
     }
     const namespace = listedConfig.namespace
     if (typeof namespace !== 'string' || namespace === '') {
       throw new PikkuCLIConfigError(
-        `${where} lists "${entry}", whose ${CONFIG_FILE} has no namespace. The root wires the package under that name (\`namespace:function\`). Add "namespace" to ${label}/${CONFIG_FILE}.`
+        `${where} lists "${entry}", whose ${CONFIG_FILE} has no namespace. The base wires the addon under that name (\`namespace:function\`). Add "namespace" to ${label}/${CONFIG_FILE}.`
       )
     }
     if (!NAMESPACE_PATTERN.test(namespace)) {
@@ -239,34 +242,100 @@ export const resolvePikkuDirectories = async (
   return packages
 }
 
+/** The package a project names as its `base`: the one that owns the wirings and services. */
+export type BasePackage = { entry: string; dir: string; name: string }
+
+/**
+ * Reads the directory a project names as its `base` and refuses what cannot
+ * be one: not a single string, missing, the project's own directory, without
+ * its own pikku.config.json or package.json name, an addon, or one that sets
+ * `addons` or `base` itself. `base` is one package, so a list is refused.
+ */
+export const resolveBasePackage = async (
+  configFile: string,
+  rootDir: string,
+  entry: unknown,
+  addons: AddonPackage[]
+): Promise<BasePackage | undefined> => {
+  if (entry === undefined) return undefined
+  const where = `base in ${configFile}`
+  if (typeof entry !== 'string' || entry === '') {
+    throw new PikkuCLIConfigError(
+      `${where} must be one directory, written as a string such as "packages/functions". A project has at most one base.`
+    )
+  }
+  const own = resolve(rootDir)
+  const dir = resolve(rootDir, entry)
+  const label = relative(own, dir) || entry
+  if (dir === own) {
+    throw new PikkuCLIConfigError(
+      `${where} is "${entry}", this project's own directory. A config without base is its own base: leave the key out.`
+    )
+  }
+  if (!existsSync(dir)) {
+    throw new PikkuCLIConfigError(
+      `${where} is "${entry}", which does not exist. Fix the path or remove the key.`
+    )
+  }
+  const configPath = join(dir, CONFIG_FILE)
+  if (!existsSync(configPath)) {
+    throw new PikkuCLIConfigError(
+      `${where} is "${entry}", which has no ${CONFIG_FILE}. The base is a Pikku project of its own: add ${label}/${CONFIG_FILE}.`
+    )
+  }
+  const baseConfig = await readJson(configPath)
+  if ('addons' in baseConfig || 'base' in baseConfig) {
+    throw new PikkuCLIConfigError(
+      `${where} is "${entry}", whose ${CONFIG_FILE} sets addons or base itself. Set them in the root config only.`
+    )
+  }
+  if (baseConfig.addon) {
+    throw new PikkuCLIConfigError(
+      `${where} is "${entry}", which is an addon. The base owns the wirings and services; list an addon in "addons" instead.`
+    )
+  }
+  const pkg = await readJson(join(dir, 'package.json'))
+  if (typeof pkg.name !== 'string' || pkg.name === '') {
+    throw new PikkuCLIConfigError(
+      `${where} is "${entry}", whose package.json has no name. Add a "name" to ${label}/package.json.`
+    )
+  }
+  if (addons.some((a) => a.dir === dir)) {
+    throw new PikkuCLIConfigError(
+      `${where} is "${entry}", which is also listed in addons. A directory is the base or an addon, not both.`
+    )
+  }
+  return { entry, dir, name: pkg.name }
+}
+
 /**
  * The packages in the order they must be built: a package after every listed
  * package it depends on. Kahn's algorithm, with ties kept in the order the
  * entries were listed. A dependency on a package that is not listed is not an
  * ordering constraint.
  */
-export const orderPikkuPackages = (
-  packages: PikkuPackage[],
+export const orderAddonPackages = (
+  packages: AddonPackage[],
   configFile: string
-): PikkuPackage[] => {
+): AddonPackage[] => {
   const byName = new Map(packages.map((p) => [p.name, p]))
-  const pending = new Map<PikkuPackage, Set<PikkuPackage>>(
+  const pending = new Map<AddonPackage, Set<AddonPackage>>(
     packages.map((p) => [
       p,
       new Set(
         p.dependsOn
           .map((name) => byName.get(name))
-          .filter((d): d is PikkuPackage => !!d && d !== p)
+          .filter((d): d is AddonPackage => !!d && d !== p)
       ),
     ])
   )
-  const ordered: PikkuPackage[] = []
+  const ordered: AddonPackage[] = []
   while (pending.size > 0) {
     const next = packages.find((p) => pending.get(p)?.size === 0)
     if (!next) {
       const cycle = findCycle(pending)
       throw new PikkuCLIConfigError(
-        `pikkuDirectories in ${configFile} has a dependency cycle: ${cycle.map((p) => p.entry).join(' -> ')}. Remove one of the dependencies.`
+        `addons in ${configFile} has a dependency cycle: ${cycle.map((p) => p.entry).join(' -> ')}. Remove one of the dependencies.`
       )
     }
     ordered.push(next)
@@ -278,9 +347,9 @@ export const orderPikkuPackages = (
 
 /** A path through the packages still waiting that ends where it began. */
 const findCycle = (
-  pending: Map<PikkuPackage, Set<PikkuPackage>>
-): PikkuPackage[] => {
-  const path: PikkuPackage[] = []
+  pending: Map<AddonPackage, Set<AddonPackage>>
+): AddonPackage[] => {
+  const path: AddonPackage[] = []
   let current = [...pending.keys()][0]!
   while (!path.includes(current)) {
     path.push(current)

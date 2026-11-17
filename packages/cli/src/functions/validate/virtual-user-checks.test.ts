@@ -9,7 +9,7 @@ const makeTmp = async () =>
   mkdtemp(join(tmpdir(), 'pikku-virtual-user-checks-'))
 
 const config = {
-  pikkuDirectories: ['packages/functions'],
+  base: 'packages/functions',
   outDir: 'packages/functions/.pikku',
   environments: { local: { apiUrl: 'http://localhost:4002' } },
 }

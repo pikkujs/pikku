@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import {
   listProjectFiles,
   projectSourceDirs,
-} from '../../utils/pikku-directories.js'
+} from '../../utils/project-packages.js'
 
 export type ValidateSeverity = 'critical' | 'error' | 'warn' | 'info'
 
@@ -19,7 +19,7 @@ export type ValidateFinding = {
 }
 
 export type VirtualUserCheckConfig = {
-  pikkuDirectories?: unknown
+  base?: unknown
   outDir?: unknown
   virtualUsersMetaJsonFile?: unknown
   environments?: unknown

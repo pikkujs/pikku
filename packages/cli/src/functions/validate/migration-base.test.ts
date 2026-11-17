@@ -84,7 +84,7 @@ async function buildTemplate(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'pikku-migguard-template-'))
   await writeFile(
     join(root, 'pikku.config.json'),
-    JSON.stringify({ pikkuDirectories: ['packages/functions'] })
+    JSON.stringify({ base: 'packages/functions' })
   )
   // migration checks only run inside a project that has a functions package
   await mkdir(join(root, 'packages', 'functions', 'src'), { recursive: true })
@@ -277,7 +277,7 @@ describe('where the base comes from', () => {
       await mkdir(join(app, 'db/sqlite'), { recursive: true })
       await writeFile(
         join(app, 'pikku.config.json'),
-        JSON.stringify({ pikkuDirectories: ['packages/functions'] })
+        JSON.stringify({ base: 'packages/functions' })
       )
       await writeFile(join(app, 'packages/functions/src/.gitkeep'), '')
       await writeFile(join(app, 'db/sqlite/0001-init.sql'), 'CREATE TABLE a;')

@@ -94,7 +94,7 @@ async function buildTemplate(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'pikku-migguard-template-'))
   await writeFile(
     join(root, 'pikku.config.json'),
-    JSON.stringify({ pikkuDirectories: ['packages/functions/src'] })
+    JSON.stringify({ base: 'packages/functions/src' })
   )
   // migration checks only run inside a project that has a functions package
   await mkdir(join(root, 'packages', 'functions', 'src'), { recursive: true })
@@ -267,7 +267,7 @@ describe('deploy apply migration guard', () => {
     try {
       await writeFile(
         join(plain, 'pikku.config.json'),
-        JSON.stringify({ pikkuDirectories: ['packages/functions/src'] })
+        JSON.stringify({ base: 'packages/functions/src' })
       )
       await mkdir(join(plain, 'packages/functions/src'), { recursive: true })
       await mkdir(join(plain, 'db/sqlite'), { recursive: true })

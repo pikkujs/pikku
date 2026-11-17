@@ -12,9 +12,11 @@ import {
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import {
-  orderPikkuPackages,
-  resolvePikkuDirectories,
-} from './pikku-directories.js'
+  orderAddonPackages,
+  projectSourceDirs,
+  resolveAddonPackages,
+  resolveBasePackage,
+} from './project-packages.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 import { assertKnownConfigKeys } from './config-keys.js'
 import { assertContentConfig } from './content-buckets.js'
@@ -456,8 +458,8 @@ const assertBackendsDeclared = (
   assertContentConfig(config, file)
 
   // An addon is a package other projects wire, not a server; it builds no backend.
-  // A package a root project lists in pikkuDirectories is run for that root,
-  // which builds the backends from what the package generates.
+  // A package a root project names in base or addons is run for that root,
+  // which builds the backends from what they generate.
   if (config.addon || process.env.PIKKU_PACKAGE_PASS === '1') {
     return
   }
@@ -532,17 +534,20 @@ const _getPikkuCLIConfig = async (
     const rootDir = config.rootDir
       ? resolve(configDir, config.rootDir)
       : configDir
-    const pikkuPackages = orderPikkuPackages(
-      await resolvePikkuDirectories(
-        configFile,
-        rootDir,
-        config.pikkuDirectories
-      ),
+    const addonPackages = orderAddonPackages(
+      await resolveAddonPackages(configFile, rootDir, config.addons),
       configFile
+    )
+    const basePackage = await resolveBasePackage(
+      configFile,
+      rootDir,
+      config.base,
+      addonPackages
     )
     const result: PikkuCLIConfig = {
       ...(config as unknown as PikkuCLIConfig),
-      pikkuPackages,
+      addonPackages,
+      basePackage,
       environments: normalizeEnvironments(
         config,
         `${configDir}/pikku.config.json`
@@ -551,7 +556,7 @@ const _getPikkuCLIConfig = async (
       configDir,
       packageMappings: config.packageMappings || {},
       rootDir,
-      sourceDirs: ['.'],
+      sourceDirs: projectSourceDirs(config),
       registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
       ignoreFiles: config.ignoreFiles ?? [
         '**/*.test.ts',
@@ -813,13 +818,6 @@ const _getPikkuCLIConfig = async (
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)
     result.resolvedScaffoldDir = resolvedScaffoldDir
-    if (result.pikkuPackages.length > 0) {
-      result.pikkuPackagesFile = join(
-        resolvedScaffoldDir,
-        'packages',
-        'packages.gen.ts'
-      )
-    }
 
     // Per-unit deploy codegen re-runs the whole of `pikku all` with `--outDir`
     // pointed at one unit's `.pikku`. It needs the `.pikku` artifacts and

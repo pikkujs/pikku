@@ -6,12 +6,13 @@ import { afterEach, describe, test } from 'node:test'
 import {
   isNestedProject,
   listProjectFiles,
-  orderPikkuPackages,
+  orderAddonPackages,
   packageDependencyNames,
   projectSourceDirs,
-  resolvePikkuDirectories,
-  type PikkuPackage,
-} from './pikku-directories.js'
+  resolveAddonPackages,
+  resolveBasePackage,
+  type AddonPackage,
+} from './project-packages.js'
 
 const roots: string[] = []
 afterEach(async () => {
@@ -29,7 +30,7 @@ const project = async (
     await mkdir(join(root, dir), { recursive: true })
     await writeFile(
       join(root, dir, 'pikku.config.json'),
-      JSON.stringify({ namespace: basename(dir) })
+      JSON.stringify({ namespace: basename(dir), addon: true })
     )
     if (pkg)
       await writeFile(join(root, dir, 'package.json'), JSON.stringify(pkg))
@@ -41,7 +42,7 @@ const pkg = (
   entry: string,
   name: string,
   dependsOn: string[] = []
-): PikkuPackage => ({
+): AddonPackage => ({
   entry,
   dir: `/x/${entry}`,
   name,
@@ -67,9 +68,9 @@ describe('packageDependencyNames', () => {
   })
 })
 
-describe('orderPikkuPackages', () => {
+describe('orderAddonPackages', () => {
   test('puts a package after the listed packages it depends on', () => {
-    const ordered = orderPikkuPackages(
+    const ordered = orderAddonPackages(
       [
         pkg('app', 'app', ['lib']),
         pkg('lib', 'lib', ['base']),
@@ -84,7 +85,7 @@ describe('orderPikkuPackages', () => {
   })
 
   test('keeps the listed order between packages that do not depend on each other', () => {
-    const ordered = orderPikkuPackages(
+    const ordered = orderAddonPackages(
       [pkg('c', 'c'), pkg('a', 'a'), pkg('b', 'b', ['a'])],
       'pikku.config.json'
     )
@@ -95,7 +96,7 @@ describe('orderPikkuPackages', () => {
   })
 
   test('ignores a dependency that is not listed, and a self dependency', () => {
-    const ordered = orderPikkuPackages(
+    const ordered = orderAddonPackages(
       [pkg('a', 'a', ['react', 'a']), pkg('b', 'b')],
       'pikku.config.json'
     )
@@ -108,13 +109,13 @@ describe('orderPikkuPackages', () => {
   test('names the cycle', () => {
     assert.throws(
       () =>
-        orderPikkuPackages(
+        orderAddonPackages(
           [pkg('packages/a', 'a', ['b']), pkg('packages/b', 'b', ['a'])],
           '/p/pikku.config.json'
         ),
       {
         message:
-          'pikkuDirectories in /p/pikku.config.json has a dependency cycle: packages/a -> packages/b -> packages/a. Remove one of the dependencies.',
+          'addons in /p/pikku.config.json has a dependency cycle: packages/a -> packages/b -> packages/a. Remove one of the dependencies.',
       }
     )
   })
@@ -122,7 +123,7 @@ describe('orderPikkuPackages', () => {
   test('a cycle behind a package that can be ordered is still found', () => {
     assert.throws(
       () =>
-        orderPikkuPackages(
+        orderAddonPackages(
           [
             pkg('ok', 'ok'),
             pkg('x', 'x', ['y']),
@@ -136,7 +137,7 @@ describe('orderPikkuPackages', () => {
   })
 })
 
-describe('resolvePikkuDirectories', () => {
+describe('resolveAddonPackages', () => {
   const file = 'pikku.config.json'
 
   test('reads each listed package in the order listed', async () => {
@@ -144,7 +145,7 @@ describe('resolvePikkuDirectories', () => {
       'packages/a': { name: 'a', dependencies: { b: '1' } },
       'packages/b': { name: 'b' },
     })
-    const packages = await resolvePikkuDirectories(file, root, [
+    const packages = await resolveAddonPackages(file, root, [
       'packages/a',
       'packages/b',
     ])
@@ -158,16 +159,16 @@ describe('resolvePikkuDirectories', () => {
   })
 
   test('an absent key lists nothing', async () => {
-    assert.deepEqual(await resolvePikkuDirectories(file, '/x', undefined), [])
+    assert.deepEqual(await resolveAddonPackages(file, '/x', undefined), [])
   })
 
   test('refuses a value that is not a list of strings', async () => {
     await assert.rejects(
-      resolvePikkuDirectories(file, '/x', 'packages/a'),
+      resolveAddonPackages(file, '/x', 'packages/a'),
       /must be a list of directories/
     )
     await assert.rejects(
-      resolvePikkuDirectories(file, '/x', [1]),
+      resolveAddonPackages(file, '/x', [1]),
       /must be a list of directories/
     )
   })
@@ -175,7 +176,7 @@ describe('resolvePikkuDirectories', () => {
   test('refuses the project directory itself', async () => {
     const root = await project({})
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['.']),
+      resolveAddonPackages(file, root, ['.']),
       /which is this project's own directory/
     )
   })
@@ -183,7 +184,7 @@ describe('resolvePikkuDirectories', () => {
   test('refuses a directory that does not exist', async () => {
     const root = await project({})
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['nope']),
+      resolveAddonPackages(file, root, ['nope']),
       /"nope", which does not exist/
     )
   })
@@ -192,41 +193,41 @@ describe('resolvePikkuDirectories', () => {
     const root = await project({})
     await mkdir(join(root, 'plain'))
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['plain']),
+      resolveAddonPackages(file, root, ['plain']),
       /"plain", which has no pikku.config.json/
     )
   })
 
-  test('refuses a listed config that lists directories itself', async () => {
+  test('refuses a listed config that sets addons or base itself', async () => {
     const root = await project({ 'packages/a': { name: 'a' } })
-    await writeFile(
-      join(root, 'packages/a/pikku.config.json'),
-      '{"pikkuDirectories":["x"]}'
-    )
+    await writeFile(join(root, 'packages/a/pikku.config.json'), '{"base":"x"}')
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['packages/a']),
-      /lists pikkuDirectories itself/
+      resolveAddonPackages(file, root, ['packages/a']),
+      /sets addons or base itself/
     )
   })
 
   test('refuses a package.json without a name', async () => {
     const root = await project({ 'packages/a': {} })
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['packages/a']),
+      resolveAddonPackages(file, root, ['packages/a']),
       /package.json has no name/
     )
     const none = await project({ 'packages/a': null })
     await assert.rejects(
-      resolvePikkuDirectories(file, none, ['packages/a']),
+      resolveAddonPackages(file, none, ['packages/a']),
       /package.json has no name/
     )
   })
 
   test('refuses a listed package whose config has no namespace', async () => {
     const root = await project({ 'packages/a': { name: 'a' } })
-    await writeFile(join(root, 'packages/a/pikku.config.json'), '{}')
+    await writeFile(
+      join(root, 'packages/a/pikku.config.json'),
+      '{"addon":true}'
+    )
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['packages/a']),
+      resolveAddonPackages(file, root, ['packages/a']),
       /"packages\/a", whose pikku.config.json has no namespace/
     )
   })
@@ -235,10 +236,10 @@ describe('resolvePikkuDirectories', () => {
     const root = await project({ 'packages/a': { name: 'a' } })
     await writeFile(
       join(root, 'packages/a/pikku.config.json'),
-      '{"namespace":"Bad Name"}'
+      '{"namespace":"Bad Name","addon":true}'
     )
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['packages/a']),
+      resolveAddonPackages(file, root, ['packages/a']),
       /namespace "Bad Name" in packages\/a\/pikku.config.json is not valid/
     )
   })
@@ -251,11 +252,11 @@ describe('resolvePikkuDirectories', () => {
     for (const d of ['a', 'b']) {
       await writeFile(
         join(root, 'packages', d, 'pikku.config.json'),
-        '{"namespace":"shared"}'
+        '{"namespace":"shared","addon":true}'
       )
     }
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['packages/a', 'packages/b']),
+      resolveAddonPackages(file, root, ['packages/a', 'packages/b']),
       /"packages\/a" and "packages\/b", which both declare the namespace "shared"/
     )
   })
@@ -266,16 +267,74 @@ describe('resolvePikkuDirectories', () => {
       'packages/b': { name: 'same' },
     })
     await assert.rejects(
-      resolvePikkuDirectories(file, root, ['packages/a', 'packages/b']),
+      resolveAddonPackages(file, root, ['packages/a', 'packages/b']),
       /both the package "same"/
     )
   })
 })
 
+describe('resolveBasePackage', () => {
+  const file = 'pikku.config.json'
+
+  test('is undefined when the project is its own base', async () => {
+    assert.equal(await resolveBasePackage(file, '/p', undefined, []), undefined)
+  })
+
+  test('reads a package with its own config and name', async () => {
+    const root = await project({ 'packages/app': { name: 'app' } })
+    await writeFile(join(root, 'packages/app/pikku.config.json'), '{}')
+    const base = await resolveBasePackage(file, root, 'packages/app', [])
+    assert.equal(base?.name, 'app')
+    assert.equal(base?.dir, join(root, 'packages/app'))
+  })
+
+  test('refuses a list, an addon, a config that sets addons, and the project itself', async () => {
+    const root = await project({ 'packages/app': { name: 'app' } })
+    await assert.rejects(
+      resolveBasePackage(file, root, ['packages/app'], []),
+      /must be one directory/
+    )
+    await assert.rejects(
+      resolveBasePackage(file, root, 'packages/app', []),
+      /which is an addon/
+    )
+    await writeFile(
+      join(root, 'packages/app/pikku.config.json'),
+      '{"addons":[]}'
+    )
+    await assert.rejects(
+      resolveBasePackage(file, root, 'packages/app', []),
+      /sets addons or base itself/
+    )
+    await assert.rejects(
+      resolveBasePackage(file, root, '.', []),
+      /own directory/
+    )
+  })
+
+  test('refuses a directory that is also an addon', async () => {
+    const root = await project({ 'packages/app': { name: 'app' } })
+    await writeFile(join(root, 'packages/app/pikku.config.json'), '{}')
+    const addons = [
+      {
+        entry: 'packages/app',
+        dir: join(root, 'packages/app'),
+        name: 'app',
+        namespace: 'app',
+        dependsOn: [],
+      },
+    ]
+    await assert.rejects(
+      resolveBasePackage(file, root, 'packages/app', addons),
+      /also listed in addons/
+    )
+  })
+})
+
 describe('project files', () => {
-  test('a project inspects its own directory, plus the packages it lists', () => {
+  test('a project inspects its own directory, plus its base', () => {
     assert.deepEqual(projectSourceDirs({}), ['.'])
-    assert.deepEqual(projectSourceDirs({ pikkuDirectories: ['packages/a'] }), [
+    assert.deepEqual(projectSourceDirs({ base: 'packages/a' }), [
       '.',
       'packages/a',
     ])

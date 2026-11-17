@@ -133,10 +133,7 @@ describe('resolveLinkedProject', () => {
     const dir = await repoWithRemotes({
       origin: 'https://github.com/acme/shop.git',
     })
-    await writeFile(
-      join(dir, 'pikku.config.json'),
-      '{\n  "pikkuDirectories": ["src"]\n}\n'
-    )
+    await writeFile(join(dir, 'pikku.config.json'), '{\n  "base": "src"\n}\n')
     const { rpc } = fakeRpc([row('shop', 'https://github.com/acme/shop')])
     await resolveLinkedProject({ rpc, cwd: dir })
     assert.match(

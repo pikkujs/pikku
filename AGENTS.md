@@ -174,7 +174,7 @@ path needs `tsc6`: it stays installed only for the `typescript` alias.
 
 `pikku.config.json` is the main configuration file:
 
-- `pikkuDirectories` — optional: packages this project builds from, each with its own `pikku.config.json` (an addon or a functions package); `pikku all` runs in each in dependency order, then assembles the backends. Without it the project inspects its own directory
+- `base` and `addons` — optional. `base` is the one package that owns the wirings and services, with its own `pikku.config.json`; `addons` lists addon directories, each with its own `pikku.config.json` and a required `namespace`. `pikku all` runs in each addon in dependency order, then in the base, then assembles the backends from the root. The base keeps its own `wireAddon` calls. Without `base` the project is its own base
 - `backends` — each deployable server, with a `filter` and `dev.port` (optional: declare `backends`, `frontends` or both; neither is an error unless the project is an addon); clients are generated per backend at `.pikku/sdk/<backend>/exposed/`
 - `packageMappings` — map local packages to published names
 - `openAPI` — OpenAPI generation settings

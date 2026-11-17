@@ -87,7 +87,7 @@ export function resolvePikkuBin(): string {
  * Re-executes `pikku all` as a child that writes a filtered tree elsewhere.
  * PIKKU_DEPLOY_CODEGEN keeps the child from rewriting the developer's
  * scaffold sources or looping into further child runs. A pass over one of the
- * packages a root lists in `pikkuDirectories` is the developer's own run, so
+ * package a root names in `base` or `addons` is the developer's own run, so
  * it sets neither the deploy flag nor the time limit.
  */
 export async function runPikkuAllChild(
