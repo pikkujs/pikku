@@ -1,3 +1,24 @@
+## 0.12.11
+
+### Patch Changes
+
+- 9a54796: The event hub is publish-only and owned by the runtime. `services.eventHub` publishes; `pikkuSubscribeFunc` returns the topic a client may follow; the runtime attaches sockets and streams to the hub it created. See docs/MIGRATION.md. Open SSE streams get a heartbeat, open subscriptions are re-checked by a sweeper, and `PgEventHubRelay` replaces `PgEventHubService`.
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+
 ## 0.12.10
 
 ### Patch Changes

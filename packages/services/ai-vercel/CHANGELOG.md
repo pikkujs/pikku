@@ -1,3 +1,24 @@
+## 0.12.17
+
+### Patch Changes
+
+- 7d93a3d: An agent run is now a span of its own, with its tool calls and each model call as children. The run carries `pikku.agent.name` and `pikku.agent.run_id`; a model call is a `chat` client span carrying `gen_ai.request.model`, `gen_ai.provider.name`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.response.finish_reasons` and, when the runner read one, `pikku.ai.cost_usd`. Prompts, replies and tool arguments are never recorded. `AgentStepResult` gains an optional `cost`, which `@pikku/ai-vercel` reads from the `x-litellm-response-cost` response header.
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+
 ## 0.12.16
 
 ### Patch Changes

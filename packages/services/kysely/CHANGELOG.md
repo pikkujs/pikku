@@ -1,3 +1,34 @@
+## 0.13.46
+
+### Patch Changes
+
+- 353bc05: Column constraints in `db/tables.ts` are real. `enum`, `min`, `max`, `minLength` and `maxLength` always reach the generated zod schema, the generated union types and `pikku meta db` / the console schema, and `pattern` reaches zod only. On Postgres and MySQL they also become named inline `CHECK`s on new tables, new columns and existing columns, and the introspectors read checks back on postgres, sqlite and MySQL. Check names are `<table>_<column>_<hash>_<kind>_check`, the hash being of the table and column pair so two tables never collide (MySQL keeps check names schema-wide); a name too long for the engine has its readable front cut and keeps the hash and the ending. The scheme is unreleased, so no deployed names change. MySQL checks are read back as a real MySQL 8.4 stores them (introducers, escapes), a `NOT ENFORCED` check is read as not enforcing, and MariaDB is refused before anything runs against it.
+
+  SQLite gets no generated `CHECK`: it cannot change one without rebuilding the table, so the constraints there are validation only. `pikku db generate` and `pikku db check` print one notice listing each declared constraint with the `CHECK` to add in a hand-written migration, suppressible with `validate.rules["db-sqlite-unenforced-constraints"] = "off"`. A `CHECK` written by hand in a sqlite migration is left alone and still types the column, and the notice leaves out any constraint such a check already enforces.
+
+  Adding, changing or removing a constraint on an existing Postgres or MySQL column is written instead of refused: `ADD`/`DROP CONSTRAINT` on postgres and `ADD CONSTRAINT`/`DROP CHECK` on MySQL 8.0.16+ (older servers, MariaDB and Aurora 2.x are refused up front; Aurora 3.x is accepted), each added check carrying a `-- pikku:check-probe` line that `migrate` runs against the live rows first, through `checkProbeHook` (the MySQL probe is bounded by `max_execution_time`). `migrate` now refuses a pending migration marked `-- pikku:destructive` unless `allowDestructive` is given (`pikku db migrate --allowDestructive`, the standalone bundle's `db migrate --allow-destructive`); `pikku ci` passes it only when its worktree's database is its own (a SQLite file or embedded Postgres inside the worktree) or when `pikku ci --allowDestructive` says so; a worktree that points at a local server does not get it. A generated check the declaration no longer wants is recognised by its name shape (`<...>_<8hex>_<kind>_check`) and dropped even after a hand rename of its table or column, and `db check` reports it as stale; check names are cut by code point to fit the engine. The probe scan also detects `REPLACE`, `CALL`, `COPY ... FROM`, `DO` blocks and `EXPLAIN ANALYZE` of a data change. On bun, `exec` now runs each sqlite statement on its own with a sqlite-specific splitter, because bun:sqlite drops a statement's error whenever anything follows it, which let a failed migration be recorded as applied.
+
+  A declared constraint is enforced at runtime only where a function uses the generated zod (`<Table>InsertZ`, `PatchZ`, `Z`) as its `input`; a Kysely write that skips such a function is guarded only by the DB `CHECK`s on Postgres and MySQL, and on SQLite not at all. Whole-number columns (`integer`, `bigint`, `smallint`, `serial`) are now generated as `z.number().int()`. When a declared `enum` differs from the enum the database holds, the generated union follows the declaration and codegen warns once per column (`PKU488`; on SQLite the advice is to add the `CHECK` by hand, since generate writes none there). A declaration that has both an `enum` and a `pattern`, or a numeric or text `default` its own min/max/length bounds reject, is refused when the file loads; this replaces the database silently winning.
+
+- 9eb082a: Review follow-ups for the plain table declaration: `compileTables` no longer emits `declareOnly` tables, the type check no longer lets `timestamp[]` pass as `timestamp` or `interval` as an integer, a non-boolean `declareOnly` is refused, `pikku db generate` writes nothing when `db/annotations.ts` still exists, and the MIGRATION guide and build skill snippets are corrected.
+- 1ff018a: `@pikku/kysely` adds `KyselyKeyStore`, a `KeyStore` (from `@pikku/core/keypair`) on a new `pikku_key` table, and `keySchema`. The schema is gated on `keyService`, so `pikku db generate` writes the table only for an app whose functions destructure `keyService`; `init()` fails with the usual "run `pikku db generate`" message when it is missing. One active and one pending key per name and scope are unique indexes over two nullable slot columns, `rev` is the compare-and-set token for `updateCustody`, and a call can run inside a caller's transaction with `{ tx }`. `KyselySecretService` now reports `durable = true`. `@pikku/core/testing` gains a `keyStore` entry in `defineServiceTests`, a conformance suite run against the memory, file and Kysely stores; `MemoryKeyStore.firstActivate` now refuses a kid that already exists instead of overwriting that row.
+- 9796787: OTLP and analytics sink registries. Core creates `otlpSinks` and `analyticsSinks` before `createSingletonServices` in `pikku dev`, `pikku serve` and standalone builds; an app registers sinks in plain code with `add(sink, map)`. The tracer is always real (the endpoint only controls the HTTP sink) and spans are skipped while no sink is registered. Removed: the `analyticsService` registration, `AnalyticsSink` with `accepts`, and the exporter-typed tracer, logger and metrics constructors. See docs/MIGRATION.md.
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+
 ## 0.13.45
 
 ### Patch Changes
