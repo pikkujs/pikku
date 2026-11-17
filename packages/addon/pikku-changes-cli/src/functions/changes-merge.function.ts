@@ -8,6 +8,7 @@ import {
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { dim, safe } from '@pikku/cli/addon-support'
 import { mergeChangeset } from '../lib/changeset-merge.js'
+import { megabytes } from '../lib/changeset-worktree.js'
 
 export const ChangesMergeInput = z.object({
   apiUrl: z.string().optional(),
@@ -21,6 +22,9 @@ export const ChangesMergeOutput = z.object({
   into: z.string(),
   commit: z.string(),
   removedWorktree: z.string().nullable(),
+  freedBytes: z.number(),
+  branchDeleted: z.boolean(),
+  cleanupError: z.string().optional(),
 })
 
 /**
@@ -69,6 +73,9 @@ export const ChangesMerge = pikkuSessionlessFunc({
       into: outcome.into,
       commit: outcome.commit,
       removedWorktree: outcome.removedWorktree,
+      freedBytes: outcome.freedBytes,
+      branchDeleted: outcome.branchDeleted,
+      cleanupError: outcome.cleanupError,
     }
   },
 })
@@ -80,6 +87,14 @@ export const renderChangesMerge = (
   console.log(
     `Merged ${safe(result.branch)} into ${safe(result.into)} @ ${result.commit.slice(0, 7)}`
   )
-  if (result.removedWorktree)
-    console.log(dim(`removed worktree ${safe(result.removedWorktree)}`))
+  if (result.cleanupError)
+    console.log(
+      `Could not remove the worktree ${safe(result.removedWorktree ?? '')}: ${safe(result.cleanupError)}`
+    )
+  else if (result.removedWorktree)
+    console.log(
+      dim(
+        `removed worktree ${safe(result.removedWorktree)} (${megabytes(result.freedBytes)} freed)${result.branchDeleted ? `, deleted ${safe(result.branch)}` : ''}`
+      )
+    )
 }

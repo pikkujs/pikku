@@ -11,9 +11,12 @@ import {
 } from '../lib/changes.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { dim, safe } from '@pikku/cli/addon-support'
-import { git } from '@pikku/cli/addon-support'
-import { basename, dirname, join } from 'node:path'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
+import { releaseChangeset } from '../lib/changes-local.js'
+import {
+  addChangesetWorktree,
+  assertWorktreeRoom,
+} from '../lib/changeset-worktree.js'
 import type { ClaimChangesOutput } from '../lib/types.js'
 import { statuses } from '../lib/changes-board.js'
 import { configuredPlanJudge, needsPlan } from '../lib/plan-judge.js'
@@ -46,10 +49,13 @@ export const ChangesClaim = pikkuSessionlessFunc({
   output: ChangesClaimOutput,
   func: async (_services, input) => {
     await refuseWhileFiling('claim')
-    const { rpc, projectId } = await changesContext(
+    const { rpc, projectId, storePath } = await changesContext(
       input.apiUrl,
       input.projectId
     )
+    // Refused before the lease is taken; a claim naming its group may get
+    // the worktree it already has back, and is checked once that is known.
+    if (input.worktree && !input.groupId) await assertWorktreeRoom()
     const project = requireProjectId(projectId)
     const changeIds = idList(input.changeIds)
     const declaration = await declare(rpc, project, changeIds, input)
@@ -72,30 +78,19 @@ export const ChangesClaim = pikkuSessionlessFunc({
     }
     const planWhy = declaration?.why
     if (!input.worktree) return { ...claimed, planWhy }
-    return {
-      ...claimed,
-      planWhy,
-      worktree: await addWorktree(claimed.group.title),
+    let worktree: string
+    try {
+      worktree = await addChangesetWorktree(claimed.group.title, {
+        reuse: !!input.groupId,
+      })
+    } catch (error) {
+      // No checkout to build it in: the lease just taken goes back.
+      if (storePath) await releaseChangeset(storePath, claimed.group.groupId)
+      throw error
     }
+    return { ...claimed, planWhy, worktree }
   },
 })
-
-/**
- * Changesets that run side by side each get their own checkout, next to the
- * repo rather than inside it, on a branch named after the changeset and cut
- * from the branch it will be merged back into.
- */
-async function addWorktree(title: string): Promise<string> {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 48)
-  const top = (await git(['rev-parse', '--show-toplevel'])).trim()
-  const path = join(dirname(top), `${basename(top)}-changesets`, slug)
-  await git(['worktree', 'add', path, '-b', `changeset/${slug}`])
-  return path
-}
 
 const declared = (input: z.infer<typeof ChangesClaimInput>) =>
   Boolean(
