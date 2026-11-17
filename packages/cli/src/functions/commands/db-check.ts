@@ -7,6 +7,7 @@ import {
   computeSchemaDrift,
 } from '../db/local-db.js'
 import { SQLITE_UNENFORCED_RULE } from '../db/sqlite-constraint-notice.js'
+import { wiredAddons } from '../db/addon-declarations.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 /**
@@ -22,7 +23,7 @@ import { loadUserConfigForDb } from './db-shared.js'
  */
 export const dbCheck = pikkuSessionlessFunc<{}, void>({
   remote: true,
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
@@ -40,6 +41,7 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
       throw new Error('no database configured')
     }
 
+    const addons = wiredAddons(await getInspectorState())
     const drift = await computeSchemaDrift(
       resolved,
       config.rootDir,
@@ -85,7 +87,7 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
       }
     }
 
-    const declared = await computeDeclaredTablesDrift(resolved)
+    const declared = await computeDeclaredTablesDrift(resolved, addons)
     if (declared.pending || declared.refusals.length > 0) {
       logger.error('db check: the migrations do not cover db/tables.ts:')
       for (const refusal of declared.refusals) logger.error(`  ${refusal}`)
@@ -102,7 +104,7 @@ export const dbCheck = pikkuSessionlessFunc<{}, void>({
     }
 
     if (config.validate?.rules?.[SQLITE_UNENFORCED_RULE] !== 'off') {
-      const notice = await declaredSqliteConstraintNotice(resolved)
+      const notice = await declaredSqliteConstraintNotice(resolved, addons)
       if (notice) logger.warn(`db check: ${notice}`)
     }
 

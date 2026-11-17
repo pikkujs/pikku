@@ -18,14 +18,11 @@ import {
   resolveDb,
   desiredRuntimeSchema,
   type ResolvedSqliteDb,
-  type SchemaArtifact,
-  addonSchemaSources,
-  addonTablePrefix,
+  type SchemaSource,
+  writeSourceMigrations,
   unprefixedAddonTables,
   computeSchemaDrift,
   baseline,
-  exportSchema,
-  writeSchemaArtifact,
   generateMigrations,
   parseDatabaseUrl,
   migrateAndCodegen,
@@ -994,30 +991,17 @@ test('postgres PGlite migrate, seed, createKysely, and reset work end-to-end', a
   }
 })
 
-describe('the addon schema channel', () => {
-  /** Install a package into the fixture that publishes the given schema. */
-  const publishAddon = (
-    pkg: string,
-    artifact: SchemaArtifact,
-    into: string = root
-  ) => {
-    const dir = join(into, 'node_modules', pkg)
-    mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: pkg, version: '1.0.0' })
-    )
-    writeFileSync(
-      join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-      JSON.stringify(artifact)
-    )
-  }
+test('db generate adds only the columns a partially covered source is missing', async () => {
+  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
 
-  const labels: SchemaArtifact = {
+  // The source claims a table the migrations already create, plus a column on
+  // it they do not. Re-emitting its whole schema would fail on the table that
+  // exists, so the only correct output is the delta.
+  const source = sourceOf('addon-priority', {
     sqlite: {
-      sql: 'CREATE TABLE labels (id INTEGER PRIMARY KEY, name TEXT NOT NULL);',
+      sql: 'CREATE TABLE todos (id INTEGER PRIMARY KEY, priority INTEGER, owner TEXT NOT NULL);',
       tables: {
-        labels: [
+        todos: [
           {
             name: 'id',
             type: 'INTEGER',
@@ -1026,7 +1010,14 @@ describe('the addon schema channel', () => {
             defaultValue: null,
           },
           {
-            name: 'name',
+            name: 'priority',
+            type: 'INTEGER',
+            notNull: false,
+            pk: false,
+            defaultValue: '0',
+          },
+          {
+            name: 'owner',
             type: 'TEXT',
             notNull: true,
             pk: false,
@@ -1035,354 +1026,9 @@ describe('the addon schema channel', () => {
         ],
       },
     },
-  }
-
-  const silent = { error: (msg: string) => assert.fail(`unexpected: ${msg}`) }
-
-  test('an addon publishes the migrations it ships, per dialect', async () => {
-    const artifact = await exportSchema(root)
-    assert.deepEqual(Object.keys(artifact), ['sqlite'])
-    assert.match(artifact.sqlite!.sql, /CREATE TABLE todos/)
-    assert.deepEqual(
-      artifact.sqlite!.tables['todos']?.map((c) => c.name),
-      ['id', 'title', 'done']
-    )
   })
 
-  test('an addon with no tables still publishes, so the file always ships', async () => {
-    const outDir = join(root, 'out-empty')
-    rmSync(join(root, 'db'), { recursive: true, force: true })
-
-    const { file, dialects } = await writeSchemaArtifact(root, outDir)
-
-    assert.deepEqual(dialects, [])
-    assert.equal(existsSync(file), true)
-    assert.deepEqual(JSON.parse(readFileSync(file, 'utf8')), {})
-  })
-
-  test('a wired addon becomes a schema source the consumer can migrate', async () => {
-    publishAddon('addon-labels', labels)
-
-    const sources = await addonSchemaSources(
-      root,
-      'sqlite',
-      [{ package: 'addon-labels' }],
-      silent
-    )
-    assert.equal(sources.length, 1)
-    assert.equal(sources[0]!.name, 'addon-labels')
-    assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
-  })
-
-  test('a ui addon may only create tables under its own name', async () => {
-    publishAddon('addon-labels-ui', labels)
-
-    await assert.rejects(
-      addonSchemaSources(
-        root,
-        'sqlite',
-        [{ package: 'addon-labels-ui', name: 'labels', ui: true }],
-        silent
-      ),
-      /creates tables without its prefix 'labels_': labels/
-    )
-  })
-
-  test('an addon without ui is warned about an unprefixed table, not refused', async () => {
-    publishAddon('addon-plain-labels', labels)
-    const warnings: string[] = []
-
-    const sources = await addonSchemaSources(
-      root,
-      'sqlite',
-      [{ package: 'addon-plain-labels', name: 'plain' }],
-      { ...silent, warn: (message: string) => warnings.push(message) } as never
-    )
-    assert.equal(sources.length, 1)
-    assert.equal(warnings.length, 1)
-    assert.match(warnings[0]!, /'plain_': labels.*will become an error/)
-  })
-
-  test('an addon whose tables are all prefixed is accepted without a warning', async () => {
-    const prefixed: SchemaArtifact = {
-      sqlite: {
-        sql: labels.sqlite!.sql,
-        tables: { invoice_tracker_labels: labels.sqlite!.tables.labels! },
-      },
-    }
-    publishAddon('addon-invoice-tracker', prefixed)
-    const warnings: string[] = []
-
-    const sources = await addonSchemaSources(
-      root,
-      'sqlite',
-      [{ package: 'addon-invoice-tracker', name: 'invoice-tracker', ui: true }],
-      { ...silent, warn: (message: string) => warnings.push(message) } as never
-    )
-    assert.equal(sources.length, 1)
-    assert.deepEqual(warnings, [])
-  })
-
-  test('the prefix is the addon name with separators folded to underscores', () => {
-    assert.equal(addonTablePrefix('invoice-tracker'), 'invoice_tracker_')
-    assert.deepEqual(
-      unprefixedAddonTables(
-        {
-          invoice_tracker_a: [],
-          tracker_x: [],
-          'public.invoice_tracker_b': [],
-        },
-        'invoice-tracker'
-      ),
-      ['tracker_x']
-    )
-  })
-
-  test('an addon installed only in the workspace package that wires it is found', async () => {
-    const member = join(root, 'packages', 'functions')
-    mkdirSync(join(member, 'src'), { recursive: true })
-    writeFileSync(
-      join(member, 'package.json'),
-      JSON.stringify({ name: 'functions' })
-    )
-    publishAddon('addon-member-labels', labels, member)
-
-    const sources = await addonSchemaSources(
-      root,
-      'sqlite',
-      [
-        {
-          package: 'addon-member-labels',
-          file: join(member, 'src', 'addons.wiring.ts'),
-        },
-      ],
-      silent
-    )
-    assert.equal(sources.length, 1)
-    assert.deepEqual([...sources[0]!.desired.tables.keys()], ['labels'])
-  })
-
-  test('a remote addon contributes nothing — its tables live on the host', async () => {
-    publishAddon('addon-labels', labels)
-
-    const sources = await addonSchemaSources(
-      root,
-      'sqlite',
-      [{ package: 'addon-labels', remote: true }],
-      silent
-    )
-    assert.deepEqual(sources, [])
-  })
-
-  test('an addon that publishes no schema at all is not a finding', async () => {
-    // The artifact is always written, so an addon with no tables says so with
-    // an empty one. That is what separates it from an addon whose schema never
-    // shipped, which is a mistake and must not read as this case.
-    publishAddon('addon-quiet', {})
-
-    const sources = await addonSchemaSources(
-      root,
-      'sqlite',
-      [{ package: 'addon-quiet' }],
-      silent
-    )
-    assert.deepEqual(sources, [])
-  })
-
-  test('an addon whose artifact never shipped fails loudly', async () => {
-    const dir = join(root, 'node_modules', 'addon-mispackaged')
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: 'addon-mispackaged', version: '1.0.0' })
-    )
-
-    await assert.rejects(
-      addonSchemaSources(
-        root,
-        'sqlite',
-        [{ package: 'addon-mispackaged' }],
-        silent
-      ),
-      /addon-mispackaged.*pikku-db-meta\.gen\.json/s
-    )
-  })
-
-  test('a remote addon with no artifact is still silent', async () => {
-    const dir = join(root, 'node_modules', 'addon-remote-quiet')
-    mkdirSync(dir, { recursive: true })
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: 'addon-remote-quiet', version: '1.0.0' })
-    )
-
-    const sources = await addonSchemaSources(
-      root,
-      'sqlite',
-      [{ package: 'addon-remote-quiet', remote: true }],
-      silent
-    )
-    assert.deepEqual(sources, [])
-  })
-
-  test('an unparseable artifact names the file it could not read', async () => {
-    const dir = join(root, 'node_modules', 'addon-broken')
-    mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
-    writeFileSync(
-      join(dir, 'package.json'),
-      JSON.stringify({ name: 'addon-broken', version: '1.0.0' })
-    )
-    writeFileSync(
-      join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-      '{ this is not json'
-    )
-
-    await assert.rejects(
-      addonSchemaSources(root, 'sqlite', [{ package: 'addon-broken' }], silent),
-      /addon-broken.*pikku-db-meta\.gen\.json/s
-    )
-  })
-
-  test('an artifact missing the sql it claims to carry is rejected', async () => {
-    publishAddon('addon-hollow', {
-      sqlite: { tables: { labels: [] } },
-    } as unknown as SchemaArtifact)
-
-    await assert.rejects(
-      addonSchemaSources(root, 'sqlite', [{ package: 'addon-hollow' }], silent),
-      /addon-hollow.*sqlite/s
-    )
-  })
-
-  test('an addon with no schema for this dialect is reported, not skipped quietly', async () => {
-    publishAddon('addon-labels', labels)
-    const errors: string[] = []
-
-    const sources = await addonSchemaSources(
-      root,
-      'postgres',
-      [{ package: 'addon-labels' }],
-      { error: (msg) => errors.push(msg) }
-    )
-    assert.deepEqual(sources, [])
-    assert.equal(errors.length, 1)
-    assert.match(errors[0]!, /addon-labels.*not for postgres/)
-  })
-})
-
-test('db generate writes an addon its own migration, in the consumer history', async () => {
-  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
-
-  const dir = join(root, 'node_modules', 'addon-labels')
-  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
-  writeFileSync(
-    join(dir, 'package.json'),
-    JSON.stringify({ name: 'addon-labels', version: '1.0.0' })
-  )
-  writeFileSync(
-    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-    JSON.stringify({
-      sqlite: {
-        sql: 'CREATE TABLE labels (id INTEGER PRIMARY KEY, name TEXT NOT NULL);',
-        tables: {
-          labels: [
-            {
-              name: 'id',
-              type: 'INTEGER',
-              notNull: true,
-              pk: true,
-              defaultValue: null,
-            },
-            {
-              name: 'name',
-              type: 'TEXT',
-              notNull: true,
-              pk: false,
-              defaultValue: null,
-            },
-          ],
-        },
-      },
-    } satisfies SchemaArtifact)
-  )
-
-  const { written } = await generateMigrations(
-    resolved,
-    root,
-    ['src'],
-    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-    [{ package: 'addon-labels' }]
-  )
-
-  const addonMigration = written.find((w) => w.source === 'addon-labels')
-  assert.ok(addonMigration, 'the addon got a migration of its own')
-  const body = readFileSync(addonMigration.file, 'utf8')
-  assert.match(
-    body,
-    /Generated by `pikku db generate` from the 'addon-labels' addon/
-  )
-  assert.match(body, /CREATE TABLE labels/)
-
-  // And it is a real migration: applying it leaves the database matching.
-  await migrateAndCodegen(resolved)
-  const drift = await driftOf(resolved)
-  assert.equal(drift.inSync, true)
-  assert.deepEqual(drift.extraTables, [])
-})
-
-test('db generate adds only the columns a partially covered source is missing', async () => {
-  const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
-
-  // The source claims a table the migrations already create, plus a column on
-  // it they do not. Re-emitting its whole schema would fail on the table that
-  // exists, so the only correct output is the delta.
-  const dir = join(root, 'node_modules', 'addon-priority')
-  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
-  writeFileSync(
-    join(dir, 'package.json'),
-    JSON.stringify({ name: 'addon-priority', version: '1.0.0' })
-  )
-  writeFileSync(
-    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-    JSON.stringify({
-      sqlite: {
-        sql: 'CREATE TABLE todos (id INTEGER PRIMARY KEY, priority INTEGER, owner TEXT NOT NULL);',
-        tables: {
-          todos: [
-            {
-              name: 'id',
-              type: 'INTEGER',
-              notNull: true,
-              pk: true,
-              defaultValue: null,
-            },
-            {
-              name: 'priority',
-              type: 'INTEGER',
-              notNull: false,
-              pk: false,
-              defaultValue: '0',
-            },
-            {
-              name: 'owner',
-              type: 'TEXT',
-              notNull: true,
-              pk: false,
-              defaultValue: null,
-            },
-          ],
-        },
-      },
-    } satisfies SchemaArtifact)
-  )
-
-  const { written } = await generateMigrations(
-    resolved,
-    root,
-    ['src'],
-    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-    [{ package: 'addon-priority' }]
-  )
+  const { written } = await writeSourceMigrations(resolved, [source])
 
   const migration = written.find((w) => w.source === 'addon-priority')
   assert.ok(migration, 'the missing columns were written')
@@ -1409,12 +1055,6 @@ test('db generate drops a required column its source stopped writing, indexes fi
 CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
 `
   )
-  const dir = join(root, 'node_modules', 'addon-auth')
-  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
-  writeFileSync(
-    join(dir, 'package.json'),
-    JSON.stringify({ name: 'addon-auth', version: '1.0.0' })
-  )
   const column = (
     name: string,
     type: string,
@@ -1427,29 +1067,20 @@ CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
     pk,
     defaultValue: null,
   })
-  writeFileSync(
-    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-    JSON.stringify({
-      sqlite: {
-        sql: 'CREATE TABLE todos (id INTEGER PRIMARY KEY, title TEXT NOT NULL);',
-        tables: {
-          todos: [
-            column('id', 'INTEGER', true, true),
-            column('title', 'TEXT', true),
-          ],
-        },
+  const source = sourceOf('addon-auth', {
+    sqlite: {
+      sql: 'CREATE TABLE todos (id INTEGER PRIMARY KEY, title TEXT NOT NULL);',
+      tables: {
+        todos: [
+          column('id', 'INTEGER', true, true),
+          column('title', 'TEXT', true),
+        ],
       },
-    } satisfies SchemaArtifact)
-  )
+    },
+  })
 
   // A nullable orphan is harmless and must be left alone.
-  const untouched = await generateMigrations(
-    resolved,
-    root,
-    ['src'],
-    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-    [{ package: 'addon-auth' }]
-  )
+  const untouched = await writeSourceMigrations(resolved, [source])
   assert.equal(
     untouched.written.find((w) => w.source === 'addon-auth'),
     undefined,
@@ -1473,13 +1104,7 @@ CREATE UNIQUE INDEX todos_issuer_title_uidx ON todos (issuer, title);
 `
   )
 
-  const { written } = await generateMigrations(
-    resolved,
-    root,
-    ['src'],
-    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-    [{ package: 'addon-auth' }]
-  )
+  const { written } = await writeSourceMigrations(resolved, [source])
   const migration = written.find((w) => w.source === 'addon-auth')
   assert.ok(migration, 'the orphaned column got a migration')
   assert.deepEqual(migration.orphaned, ['todos.issuer'])
@@ -1511,35 +1136,25 @@ test('a partially covered source creates a referenced table before the one refer
   // Introspection hands a source's tables back alphabetically, so
   // `basket_items` arrives before the `baskets` it references. Emitting them in
   // that order writes a migration that cannot be applied.
-  publishAddonSchema(
-    'addon-baskets',
-    {
-      sqlite: {
-        sql: [
-          'CREATE TABLE todos (id INTEGER PRIMARY KEY);',
-          'CREATE TABLE baskets (basket_id TEXT NOT NULL PRIMARY KEY);',
-          'CREATE TABLE basket_items (basket_id TEXT NOT NULL REFERENCES baskets (basket_id), sku TEXT NOT NULL);',
-        ].join('\n'),
-        tables: {
-          todos: [column('id', 'INTEGER', { notNull: true, pk: true })],
-          basket_items: [
-            column('basket_id', 'TEXT', { notNull: true }),
-            column('sku', 'TEXT', { notNull: true }),
-          ],
-          baskets: [column('basket_id', 'TEXT', { notNull: true, pk: true })],
-        },
+  const source = sourceOf('addon-baskets', {
+    sqlite: {
+      sql: [
+        'CREATE TABLE todos (id INTEGER PRIMARY KEY);',
+        'CREATE TABLE baskets (basket_id TEXT NOT NULL PRIMARY KEY);',
+        'CREATE TABLE basket_items (basket_id TEXT NOT NULL REFERENCES baskets (basket_id), sku TEXT NOT NULL);',
+      ].join('\n'),
+      tables: {
+        todos: [column('id', 'INTEGER', { notNull: true, pk: true })],
+        basket_items: [
+          column('basket_id', 'TEXT', { notNull: true }),
+          column('sku', 'TEXT', { notNull: true }),
+        ],
+        baskets: [column('basket_id', 'TEXT', { notNull: true, pk: true })],
       },
-    } satisfies SchemaArtifact,
-    root
-  )
+    },
+  })
 
-  const { written } = await generateMigrations(
-    resolved,
-    root,
-    ['src'],
-    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-    [{ package: 'addon-baskets' }]
-  )
+  const { written } = await writeSourceMigrations(resolved, [source])
 
   const migration = written.find((w) => w.source === 'addon-baskets')
   assert.ok(migration, 'the missing tables were written')
@@ -1556,28 +1171,28 @@ test('a partially covered source creates a referenced table before the one refer
   assert.equal((await driftOf(resolved)).inSync, true)
 })
 
-/**
- * Publish an addon's schema artifact under `root/node_modules`, overwriting any
- * earlier one.
- *
- * Republishing is the point: a source growing a table between two `db generate`
- * runs is what enabling a Better Auth plugin or upgrading an addon looks like.
- */
-function publishAddonSchema(
-  pkg: string,
-  artifact: SchemaArtifact,
-  at: string
-): void {
-  const dir = join(at, 'node_modules', pkg)
-  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
-  writeFileSync(
-    join(dir, 'package.json'),
-    JSON.stringify({ name: pkg, version: '1.0.0' })
-  )
-  writeFileSync(
-    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-    JSON.stringify(artifact)
-  )
+/** What a source writes: its own SQL, and the tables that SQL creates. */
+type SourceShape = { sql: string; tables: Record<string, ColumnInfo[]> }
+
+/** A schema source, as Better Auth and the runtime give them to `db generate`. */
+const sourceOf = (
+  name: string,
+  artifact: Record<string, SourceShape>
+): SchemaSource => {
+  const { sql, tables } = Object.values(artifact)[0]!
+  return {
+    name,
+    desired: {
+      sql,
+      tables: new Map(
+        Object.entries(tables).map(([table, columns]) => [
+          table,
+          new Map(columns.map((c) => [c.name, c])),
+        ])
+      ),
+    },
+    origin: `the '${name}' source`,
+  }
 }
 
 const column = (
@@ -1594,7 +1209,7 @@ const column = (
 })
 
 /** The source before the plugin is enabled: one table, and nothing else. */
-const beforePlugin: SchemaArtifact['sqlite'] = {
+const beforePlugin: SourceShape = {
   sql: 'CREATE TABLE person (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL);',
   tables: {
     person: [
@@ -1605,7 +1220,7 @@ const beforePlugin: SchemaArtifact['sqlite'] = {
 }
 
 /** The same source after it: a new table, and a new column on the old one. */
-const afterPlugin: SchemaArtifact['sqlite'] = {
+const afterPlugin: SourceShape = {
   sql:
     'CREATE TABLE person (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, two_factor_enabled INTEGER);\n' +
     'CREATE TABLE two_factor (id TEXT NOT NULL PRIMARY KEY, secret TEXT NOT NULL, person_id TEXT NOT NULL REFERENCES person (id));\n' +
@@ -1626,29 +1241,21 @@ const afterPlugin: SchemaArtifact['sqlite'] = {
 
 test('db generate writes a new table on a covered source from the source’s own SQL', async () => {
   const resolved = resolveDb({ sqliteDb: '.pikku-runtime/dev.db' }, root, root)!
-  const generate = () =>
-    generateMigrations(
-      resolved,
-      root,
-      ['src'],
-      { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-      [{ package: 'addon-auth' }]
-    )
+  const generate = (shape: SourceShape) =>
+    writeSourceMigrations(resolved, [sourceOf('addon-auth', { sqlite: shape })])
 
-  publishAddonSchema('addon-auth', { sqlite: beforePlugin }, root)
-  const first = await generate()
+  const first = await generate(beforePlugin)
   const initial = first.written.find((w) => w.source === 'addon-auth')
   assert.ok(initial, 'the source got its first migration')
   assert.equal(
-    readFileSync(initial.file, 'utf8').includes(beforePlugin!.sql),
+    readFileSync(initial.file, 'utf8').includes(beforePlugin.sql),
     true,
     'the first-time path still writes the source SQL verbatim'
   )
 
   // The plugin is enabled. `person` is already covered, so this goes through the
   // diff path — the one that used to render a new table from its column list.
-  publishAddonSchema('addon-auth', { sqlite: afterPlugin }, root)
-  const second = await generate()
+  const second = await generate(afterPlugin)
   const migration = second.written.find((w) => w.source === 'addon-auth')
   assert.ok(migration, 'the new table and column were written')
   const body = readFileSync(migration.file, 'utf8')
@@ -1680,32 +1287,13 @@ test('db generate writes a new table on a covered source from the source’s own
 test('the same holds on postgres', async () => {
   usePostgresProject()
   const resolved = resolveDb({}, root, root)!
-  const generate = () =>
-    generateMigrations(
-      resolved,
-      root,
-      ['src'],
-      { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-      [{ package: 'addon-auth' }]
-    )
+  const generate = (shape: SourceShape) =>
+    writeSourceMigrations(resolved, [
+      sourceOf('addon-auth', { postgres: shape }),
+    ])
 
-  const before: SchemaArtifact = {
-    postgres: {
-      sql: 'CREATE TABLE person (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL);',
-      tables: beforePlugin!.tables,
-    },
-  }
-  const after: SchemaArtifact = {
-    postgres: {
-      sql: afterPlugin!.sql,
-      tables: afterPlugin!.tables,
-    },
-  }
-
-  publishAddonSchema('addon-auth', before, root)
-  await generate()
-  publishAddonSchema('addon-auth', after, root)
-  const migration = (await generate()).written.find(
+  await generate(beforePlugin)
+  const migration = (await generate(afterPlugin)).written.find(
     (w) => w.source === 'addon-auth'
   )
   assert.ok(migration, 'the new table and column were written')
@@ -1972,46 +1560,31 @@ test('db generate quotes the table and column of a postgres ALTER, so a reserved
   })
   const resolved = resolveDb({}, root, root)!
 
-  const dir = join(root, 'node_modules', 'addon-virtual-user')
-  mkdirSync(join(dir, '.pikku', 'db'), { recursive: true })
-  writeFileSync(
-    join(dir, 'package.json'),
-    JSON.stringify({ name: 'addon-virtual-user', version: '1.0.0' })
-  )
-  writeFileSync(
-    join(dir, '.pikku', 'db', 'pikku-db-meta.gen.json'),
-    JSON.stringify({
-      postgres: {
-        sql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY, virtual user BOOLEAN DEFAULT FALSE);',
-        tables: {
-          user: [
-            {
-              name: 'id',
-              type: 'text',
-              notNull: true,
-              pk: true,
-              defaultValue: null,
-            },
-            {
-              name: 'virtualUser',
-              type: 'boolean',
-              notNull: false,
-              pk: false,
-              defaultValue: 'false',
-            },
-          ],
-        },
+  const source = sourceOf('addon-virtual-user', {
+    postgres: {
+      sql: 'CREATE TABLE "user" (id TEXT PRIMARY KEY, virtual user BOOLEAN DEFAULT FALSE);',
+      tables: {
+        user: [
+          {
+            name: 'id',
+            type: 'text',
+            notNull: true,
+            pk: true,
+            defaultValue: null,
+          },
+          {
+            name: 'virtualUser',
+            type: 'boolean',
+            notNull: false,
+            pk: false,
+            defaultValue: 'false',
+          },
+        ],
       },
-    } satisfies SchemaArtifact)
-  )
+    },
+  })
 
-  const { written } = await generateMigrations(
-    resolved,
-    root,
-    ['src'],
-    { error: (msg: string) => assert.fail(`unexpected error log: ${msg}`) },
-    [{ package: 'addon-virtual-user' }]
-  )
+  const { written } = await writeSourceMigrations(resolved, [source])
 
   const migration = written.find((w) => w.source === 'addon-virtual-user')
   assert.ok(migration, 'the missing column was written')

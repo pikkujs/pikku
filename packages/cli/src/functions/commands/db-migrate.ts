@@ -7,6 +7,7 @@ import {
   computeAuthDrift,
   computeDeclaredTablesDrift,
 } from '../db/local-db.js'
+import { wiredAddons } from '../db/addon-declarations.js'
 import { loadUserConfigForDb } from './db-shared.js'
 
 export const dbMigrate = pikkuSessionlessFunc<
@@ -14,7 +15,7 @@ export const dbMigrate = pikkuSessionlessFunc<
   void
 >({
   remote: true,
-  func: async ({ logger, config }, data) => {
+  func: async ({ logger, config, getInspectorState }, data) => {
     const userConfig = await loadUserConfigForDb({ config, logger })
     if (!userConfig) return
 
@@ -34,8 +35,10 @@ export const dbMigrate = pikkuSessionlessFunc<
 
     if (data?.localOnly) assertLocalDatabase(resolved)
 
+    const addons = wiredAddons(await getInspectorState())
     const { migrate, codegen, zod } = await migrateAndCodegen(resolved, {
       allowDestructive: data?.allowDestructive,
+      addons,
     })
 
     for (const warning of codegen.warnings) {
@@ -84,7 +87,7 @@ export const dbMigrate = pikkuSessionlessFunc<
       throw new Error('Better Auth schema drift — run `pikku db generate`')
     }
 
-    const declared = await computeDeclaredTablesDrift(resolved)
+    const declared = await computeDeclaredTablesDrift(resolved, addons)
     if (declared.pending || declared.refusals.length > 0) {
       logger.error('db migrate: the migrations do not cover db/tables.ts:')
       for (const refusal of declared.refusals) logger.error(`  ${refusal}`)
