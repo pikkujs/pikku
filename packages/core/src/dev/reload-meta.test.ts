@@ -50,6 +50,30 @@ describe('reloadGeneratedMeta', { concurrency: false }, () => {
     await rm(tmpDir, { recursive: true, force: true })
   })
 
+  test('re-adds runtime routes in the step that replaces the HTTP meta', async () => {
+    await mkdir(join(tmpDir, 'http'), { recursive: true })
+    await writeFile(
+      join(tmpDir, 'http/pikku-http-wirings-meta.gen.json'),
+      JSON.stringify({ get: {}, post: {} })
+    )
+    pikkuState(null, 'http', 'meta', {
+      get: { '/runtime': { pikkuFuncId: 'runtime' } },
+    } as any)
+    let seenWhenReplaced: unknown = 'unset'
+    await reloadGeneratedMeta({
+      pikkuDir: tmpDir,
+      logger: mockLogger as any,
+      schemaService: mockSchemaService,
+      onHttpMetaReplaced: () => {
+        const meta = pikkuState(null, 'http', 'meta') as any
+        seenWhenReplaced = meta.get['/runtime']
+        meta.get['/runtime'] = { pikkuFuncId: 'runtime' }
+      },
+    })
+    assert.equal(seenWhenReplaced, undefined)
+    assert.ok((pikkuState(null, 'http', 'meta') as any).get['/runtime'])
+  })
+
   test('reads generated meta json into pikku state', async () => {
     await mkdir(join(tmpDir, 'function'), { recursive: true })
     await mkdir(join(tmpDir, 'rpc'), { recursive: true })

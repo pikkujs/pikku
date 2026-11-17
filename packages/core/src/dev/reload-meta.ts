@@ -17,6 +17,11 @@ export interface ReloadGeneratedMetaOptions {
   /** Used to recompile validators for changed schemas; falls back to the
    *  schema service on the registered singleton services. */
   schemaService?: SchemaService
+  /**
+   * Called in the same synchronous step that replaces the HTTP meta, so routes
+   * a host registers at runtime are back before any request can see them gone.
+   */
+  onHttpMetaReplaced?: () => void
 }
 
 const readJson = async (
@@ -49,7 +54,7 @@ const readJson = async (
 export async function reloadGeneratedMeta(
   options: ReloadGeneratedMetaOptions
 ): Promise<void> {
-  const { pikkuDir, logger, schemaService } = options
+  const { pikkuDir, logger, schemaService, onHttpMetaReplaced } = options
   const dir = resolve(pikkuDir)
 
   const functionsMeta = await readJson(
@@ -66,7 +71,10 @@ export async function reloadGeneratedMeta(
     logger,
     join(dir, 'http/pikku-http-wirings-meta.gen.json')
   )
-  if (httpMeta) pikkuState(null, 'http', 'meta', httpMeta)
+  if (httpMeta) {
+    pikkuState(null, 'http', 'meta', httpMeta)
+    onHttpMetaReplaced?.()
+  }
 
   const rpcMeta = await readJson(
     logger,

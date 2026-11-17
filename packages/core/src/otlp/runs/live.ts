@@ -1,3 +1,4 @@
+import type { Logger } from '../../services/logger.js'
 import type { ScopeDefinitionMeta } from '../../wirings/scope/scope.types.js'
 import type { OtlpSinkBase, OtlpSinkRegistry } from '../otlp-sink.js'
 import { createRunStitcher } from './run-stitcher.js'
@@ -10,17 +11,23 @@ import type {
 } from './types.js'
 
 /** What a caller must hold to read the live runs: the snapshot and the stream. */
-export const OTLP_RUNS_SCOPE = 'otlp:runs'
+export const OTLP_RUNS_SCOPE = 'pikku:otlp:runs'
 
 /** The scope tree core declares for {@link OTLP_RUNS_SCOPE}. */
 export const otlpRunsScopeDefinition = (): ScopeDefinitionMeta => ({
-  name: 'otlp',
-  displayName: 'Telemetry',
-  description: 'Watching what this backend is doing, live',
+  name: 'pikku',
+  displayName: 'Pikku',
+  description: 'What the Pikku runtime itself offers',
   scopes: {
-    runs: {
-      description:
-        'Read the live runs of this backend: the snapshot and the stream',
+    otlp: {
+      displayName: 'Telemetry',
+      description: 'Watching what this backend is doing, live',
+      scopes: {
+        runs: {
+          description:
+            'Read the live runs of this backend: the snapshot and the stream',
+        },
+      },
     },
   },
   origin: { kind: 'generated' },
@@ -78,7 +85,11 @@ export interface RegisterOtlpLiveOptions {
   /** Events per publish. A drain with more is published in several batches, in order. Default 500. */
   maxBatch?: number
   clock?: OtlpLiveClock
+  /** Where the first publish failure, stitcher exception and queue drop are reported, then once a minute with counts. */
+  logger?: Pick<Logger, 'warn'>
 }
+
+const REPORT_EVERY_MS = 60_000
 
 type Frame =
   | { kind: 'start'; frame: SpanFrameStart; receivedMs: number }
@@ -145,6 +156,7 @@ export const registerOtlpLive = (
     sweepMs = 1000,
     maxBatch = 500,
     clock = realClock,
+    logger,
   } = options
 
   const stitcher: RunStitcher = createRunStitcher({ resource: { serviceName } })
@@ -155,6 +167,37 @@ export const registerOtlpLive = (
 
   stitcher.subscribe((event) => pending.push(event))
 
+  const reports = new Map<
+    string,
+    { count: number; lastAt?: number; detail?: string }
+  >()
+  const report = (what: string, count = 1, detail?: unknown): void => {
+    const entry = reports.get(what) ?? { count: 0 }
+    entry.count += count
+    if (detail !== undefined) {
+      entry.detail = detail instanceof Error ? detail.message : String(detail)
+    }
+    reports.set(what, entry)
+    emit(what)
+  }
+  const emit = (what: string): void => {
+    const entry = reports.get(what)
+    if (!entry || entry.count === 0) return
+    const at = clock.now()
+    if (entry.lastAt !== undefined && at - entry.lastAt < REPORT_EVERY_MS)
+      return
+    try {
+      logger?.warn(
+        `Live runs: ${what}${entry.detail ? ` (${entry.detail})` : ''}, ${entry.count} since the last report`
+      )
+    } catch {
+      // Reporting never takes the process down.
+    }
+    entry.count = 0
+    entry.lastAt = at
+  }
+  let reportedDrops = 0
+
   const publishPending = (): void => {
     while (pending.length > 0) {
       const events = pending.slice(0, maxBatch)
@@ -162,10 +205,14 @@ export const registerOtlpLive = (
       try {
         const result = publish(OTLP_RUNS_TOPIC, { v: 1, events })
         if (result && typeof (result as Promise<void>).catch === 'function') {
-          ;(result as Promise<void>).catch(() => void publishFailures++)
+          ;(result as Promise<void>).catch((error) => {
+            publishFailures++
+            report('publish failed', 1, error)
+          })
         }
-      } catch {
+      } catch (error) {
         publishFailures++
+        report('publish failed', 1, error)
       }
     }
   }
@@ -176,9 +223,14 @@ export const registerOtlpLive = (
         // The time the frame was received, not drained, so a late drain does not skew the health window.
         if (item.kind === 'start') stitcher.start(item.frame, item.receivedMs)
         else stitcher.end(item.frame, item.receivedMs)
-      } catch {
+      } catch (error) {
         // One bad frame must not cost the others theirs.
+        report('stitcher failed on a frame', 1, error)
       }
+    }
+    if (queue.dropped > reportedDrops) {
+      report('queue full, oldest frames dropped', queue.dropped - reportedDrops)
+      reportedDrops = queue.dropped
     }
     publishPending()
   }
@@ -187,9 +239,11 @@ export const registerOtlpLive = (
     drain()
     try {
       stitcher.sweep(clock.now())
-    } catch {
+    } catch (error) {
       // Telemetry never takes the process down.
+      report('stitcher failed to sweep', 1, error)
     }
+    for (const what of reports.keys()) emit(what)
     publishPending()
   }
 

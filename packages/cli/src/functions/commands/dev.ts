@@ -66,10 +66,7 @@ import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
-import {
-  registerOtlpRuns,
-  withOtlpRunsScope,
-} from '../wirings/otlp/register-otlp-runs.js'
+import { registerOtlpRuns } from '../wirings/otlp/register-otlp-runs.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import {
   clearDevAddress,
@@ -497,6 +494,7 @@ export const dev = pikkuSessionlessFunc<
         otlpSinks: telemetry.otlpSinks,
         eventHub: eventHubServices.eventHub,
         serviceName: basename(config.rootDir),
+        logger,
       })
     }
     wireLiveRuns()
@@ -620,7 +618,7 @@ export const dev = pikkuSessionlessFunc<
         logger,
         requiredServices,
         scopes: flattenScopeDefinitions(
-          withOtlpRunsScope(projectScopeDefinitions(inspectorState, config))
+          projectScopeDefinitions(inspectorState, config)
         ),
         systemRoles: flattenSystemRoleDefinitions(
           inspectorState.systemRoles.definitions
@@ -806,8 +804,8 @@ export const dev = pikkuSessionlessFunc<
         pikkuDir,
         logger,
         schemaService: resolvedServices.schema,
+        onHttpMetaReplaced: wireLiveRuns,
       })
-      wireLiveRuns()
       // Re-import recently changed files now that the fresh meta is
       // in state: wire* calls skip routes whose meta doesn't exist,
       // so a NEW route in a changed wiring file only registers on

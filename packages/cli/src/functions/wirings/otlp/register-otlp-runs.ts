@@ -1,6 +1,7 @@
 import { wireHTTP } from '@pikku/core/http'
 import { pikkuState } from '@pikku/core/state'
 import type { FunctionsMeta } from '@pikku/core/services'
+import type { Logger } from '@pikku/core/services'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { OtlpSinkRegistry } from '@pikku/core/otlp'
 import {
@@ -18,13 +19,14 @@ const SNAPSHOT_FUNC = 'pikkuOtlpRunsSnapshot'
 const STREAM_FUNC = 'pikkuOtlpRunsSubscribe'
 
 /**
- * The scope tree `registerOtlpRuns` gates on, added to the scopes a dev or
- * served process syncs. A project that declares an `otlp` root itself keeps its own.
+ * The scope tree `registerOtlpRuns` gates on, added to every scope list the
+ * project's generated types, meta and syncs are built from. Core owns the
+ * `pikku` root, so a project that declares its own keeps it and gets no second.
  */
 export const withOtlpRunsScope = (
   scopes: ScopeDefinitions
 ): ScopeDefinitions =>
-  scopes.some((scope) => scope.name === 'otlp')
+  scopes.some((scope) => scope.name === otlpRunsScopeDefinition().name)
     ? scopes
     : [...scopes, otlpRunsScopeDefinition()]
 
@@ -42,10 +44,12 @@ export const registerOtlpRuns = (options: {
   otlpSinks: OtlpSinkRegistry
   eventHub: { publish(topic: string, data: unknown): Promise<void> }
   serviceName: string
+  logger?: Pick<Logger, 'warn'>
 }): OtlpLive => {
   const live = registerOtlpLive({
     otlpSinks: options.otlpSinks,
     serviceName: options.serviceName,
+    logger: options.logger,
     publish: (topic, batch) => options.eventHub.publish(topic, batch),
   })
 

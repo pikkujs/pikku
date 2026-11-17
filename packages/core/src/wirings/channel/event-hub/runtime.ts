@@ -2,6 +2,7 @@ import { getAllPackageStates, pikkuState } from '../../../pikku-state.js'
 import type { EventHubDistributor } from './event-hub-distributor.js'
 import type { PikkuChannelHandler } from '../channel.types.js'
 import type { StoredSubscription } from './event-hub.types.js'
+import { matchesTopicPattern } from './topic-pattern.js'
 
 /**
  * The distributor this process delivers through, or undefined when the host
@@ -30,7 +31,9 @@ export const getSubscribeMeta = (
 /**
  * Subscribes a channel to the topic a subscribe function returned. Nothing a
  * client sent decides the topic: the function did, after the session, scopes
- * and permissions it declares had all passed.
+ * and permissions it declares had all passed. The topic must also match the
+ * pattern that function declared, so a function cannot reach a topic another
+ * function's scopes guard.
  */
 export const subscribeChannelToTopic = (
   distributor: EventHubDistributor,
@@ -41,6 +44,15 @@ export const subscribeChannelToTopic = (
   if (typeof topic !== 'string' || topic === '') {
     throw new Error(
       `Subscribe function '${subscription.pikkuFuncId}' must return a topic string, got ${typeof topic}`
+    )
+  }
+  const declared = getSubscribeMeta(
+    subscription.pikkuFuncId,
+    subscription.packageName
+  )?.topicPattern
+  if (declared === undefined || !matchesTopicPattern(declared, topic)) {
+    throw new Error(
+      `Subscribe function '${subscription.pikkuFuncId}' returned a topic outside the pattern it declared`
     )
   }
   distributor.addSubscription(
