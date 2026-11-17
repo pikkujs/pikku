@@ -17,20 +17,26 @@ export async function connectOrLaunch(
     const ws = await resolveCdpWsUrl(config.cdpUrl)
     return { browser: await chromium.connectOverCDP(ws) }
   }
-  const browser = await chromium.launch({
-    headless: !config.headed,
-    executablePath: config.chromiumPath,
-    slowMo: config.slowMo,
-    args: [
-      '--no-sandbox',
-      '--disable-dev-shm-usage',
-      // The frontend may be host-matched at the edge (Caddy), so the browser
-      // must resolve the sandbox hostname to the loopback edge, not real DNS.
-      ...(config.hostnameOnly
-        ? [`--host-resolver-rules=MAP ${config.hostnameOnly} 127.0.0.1`]
-        : []),
-    ],
-  })
+  const browser = await chromium
+    .launch({
+      headless: !config.headed,
+      executablePath: config.chromiumPath,
+      slowMo: config.slowMo,
+      args: [
+        '--no-sandbox',
+        '--disable-dev-shm-usage',
+        // The frontend may be host-matched at the edge (Caddy), so the browser
+        // must resolve the sandbox hostname to the loopback edge, not real DNS.
+        ...(config.hostnameOnly
+          ? [`--host-resolver-rules=MAP ${config.hostnameOnly} 127.0.0.1`]
+          : []),
+      ],
+    })
+    .catch((error: Error) => {
+      throw new Error(
+        `No browser started${config.chromiumPath ? ` from ${config.chromiumPath}` : ''}: set PLAYWRIGHT_CHROMIUM_PATH or PIKKU_CHROMIUM to a chrome binary, or run 'npx playwright install chromium'. ${String(error?.message ?? error).split('\n')[0]}`
+      )
+    })
   return { browser, release: () => browser.close() }
 }
 

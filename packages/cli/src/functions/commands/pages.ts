@@ -354,7 +354,7 @@ export const pagesCapture = pikkuSessionlessFunc({
         if (!/Executable doesn't exist|launch/i.test(String(error?.message)))
           throw error
         throw new Error(
-          `No browser started for the capture. Set PLAYWRIGHT_CHROMIUM_PATH to a chrome binary, or run 'npx playwright install chromium'. ${String(error.message).split('\n')[0]}`
+          `No browser started for the capture: set PLAYWRIGHT_CHROMIUM_PATH or PIKKU_CHROMIUM to a chrome binary, or run 'npx playwright install chromium'. ${String(error.message).split('\n')[0]}`
         )
       })
     const rel = (file: string) => {
