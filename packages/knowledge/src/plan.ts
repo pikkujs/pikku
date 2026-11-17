@@ -220,9 +220,16 @@ const ScenarioItem = z.object({
    * a completion gate can check. `feature` and `scenario` are prose written for a reader,
    * and prose cannot be matched against codegen without guessing; a plan whose scenarios are
    * only prose is an intention, not an obligation. Optional so plans written before this
-   * existed still parse, but `checkFirstPass` requires it of new ones.
+   * existed still parse, but `checkFirstPass` requires it of new ones. It has to be a valid
+   * export name: a kebab-case id (`public-pages-and-forms`) can never match anything codegen lists.
    */
-  name: z.string().min(1).optional(),
+  name: z
+    .string()
+    .regex(
+      /^[A-Za-z_$][A-Za-z0-9_$]*$/,
+      'a scenario name is the `pikkuScenario` export it becomes, such as `saveEntryScenario`: letters and digits, no hyphens or spaces'
+    )
+    .optional(),
   /**
    * Which pass writes it, defaulting by level — see `scenarioPass`. Permission scenarios
    * default to pass 2 because they harden a journey that has to exist before they can
@@ -747,7 +754,7 @@ export function checkFirstPass(plan: Plan): string[] {
   const fns = itemsOf(plan.functions).filter((f) => f.pass === 1)
   if (surface === 'app' && ui.length === 0) {
     problems.push(
-      'Pass 1 has no `ui` item. The first pass has to reach a screen — move one route into pass 1. If this changeset reaches its person some other way, set the plan\'s `surface`.'
+      "Pass 1 has no `ui` item. The first pass has to reach a screen — move one route into pass 1. If this changeset reaches its person some other way, set the plan's `surface`."
     )
   }
   if (fns.length === 0) {

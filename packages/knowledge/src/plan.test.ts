@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
+  PlanSchema,
   MAX_DEFERRALS,
   PLAN_VERSION,
   deferPlanItem,
@@ -243,10 +244,7 @@ test('a schema failure names the field path so the reader can fix it in one edit
     mkdirSync(join(cwd, 'knowledge/plans'), { recursive: true })
     const plan = basePlan() as unknown as Record<string, unknown>
     delete (plan.functions as Record<string, unknown>).description
-    writeFileSync(
-      join(cwd, planPathFor('cs-1')),
-      JSON.stringify(plan)
-    )
+    writeFileSync(join(cwd, planPathFor('cs-1')), JSON.stringify(plan))
     const read = readPlan(cwd, 'cs-1')
     assert.equal(read.ok, false)
     if (!read.ok) assert.match(read.reason, /functions/)
@@ -263,10 +261,7 @@ test('a plan from a version this reader does not know is refused as a version', 
   try {
     mkdirSync(join(cwd, 'knowledge/plans'), { recursive: true })
     const plan = { ...basePlan(), version: PLAN_VERSION + 1 }
-    writeFileSync(
-      join(cwd, planPathFor('cs-1')),
-      JSON.stringify(plan)
-    )
+    writeFileSync(join(cwd, planPathFor('cs-1')), JSON.stringify(plan))
     const read = readPlan(cwd, 'cs-1')
     assert.equal(read.ok, false)
     if (!read.ok) assert.match(read.reason, /only understands 1/)
@@ -552,4 +547,18 @@ test('the closing instruction is the caller’s, and absent by default', () => {
     'When pass 1 is done, run `acme finish`.'
   )
   assert.match(driven, /When pass 1 is done, run `acme finish`\./)
+})
+
+test('a scenario name that cannot be an export is refused when the plan is written', () => {
+  const plan = basePlan()
+  const kebab = JSON.parse(JSON.stringify(plan))
+  kebab.scenarios.backend = {
+    kind: 'built',
+    description: 'x',
+    items: [{ feature: 'f', scenario: 's', name: 'public-pages-and-forms' }],
+  }
+  const parsed = PlanSchema.safeParse(kebab)
+  assert.equal(parsed.success, false)
+  if (!parsed.success)
+    assert.match(JSON.stringify(parsed.error.issues), /no hyphens/)
 })
