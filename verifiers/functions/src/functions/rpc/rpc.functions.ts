@@ -14,7 +14,8 @@ export const rpcTest = pikkuSessionlessFunc<{ in: number }>({
 
 export const listItems = pikkuListFunc<
   { category?: string },
-  { id: string; label: string }
+  { id: string; label: string },
+  'label' | 'createdAt'
 >({
   func: async (_services, data) => {
     return {

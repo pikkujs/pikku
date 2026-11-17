@@ -147,6 +147,7 @@ export enum ErrorCode {
 
   // Schema authoring errors
   SCHEMA_TRANSFORM_NOT_SUPPORTED = 'PKU491',
+  GENERATED_SCHEMA_HAS_UNKNOWN = 'PKU492',
 
   // Optimization diagnostics
   SERVICES_NOT_DESTRUCTURED = 'PKU410',

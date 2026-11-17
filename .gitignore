@@ -208,3 +208,5 @@ verifiers/ci/.fixture-*
 # head of a PR and comments the diff (.github/workflows/api-report.yml).
 packages/core/api-report.md
 benchmarks/frameworks/pikku/src/routes.gen.ts
+
+.tmp/
