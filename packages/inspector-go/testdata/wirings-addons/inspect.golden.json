@@ -2342,6 +2342,11 @@
       "message": "definePlugin uses the message key 'admin_agent__description', which is missing from the addon's messages/de.json"
     },
     {
+      "level": "error",
+      "code": "PKU492",
+      "message": "'receive' output schema 'ReceiveOutput' admits nothing (never) at '.events[]', which its source does not declare as unknown. The generator could not follow a type there, so the schema is looser than the TypeScript type. Declare the type fully, or write `unknown` explicitly if that is the intent."
+    },
+    {
       "level": "warn",
       "code": "PKU575",
       "message": "wireAddon('shop') declares tag 'addon', but no addTagMiddleware('addon', …) registers anything for it. The tag resolves to an empty middleware list, so it applies no gate to the addon at all. Register middleware for it, or drop the tag if it is only meant to group and document."
@@ -2418,7 +2423,7 @@
     }
   ],
   "validationPass": {
-    "start": 87,
-    "end": 102
+    "start": 88,
+    "end": 103
   }
 }

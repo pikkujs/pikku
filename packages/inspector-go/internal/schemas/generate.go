@@ -36,6 +36,9 @@ type Config struct {
 	// Vendor converts schemaLookup. When the lookup is non-empty and Vendor
 	// is nil, GenerateAll fails rather than return a state missing them.
 	Vendor VendorSchemaConverter
+	// DeclaredUnknowns maps a schema name to the paths its source wrote as
+	// unknown/any. GenerateAll adds the Zod schemas' paths to it.
+	DeclaredUnknowns map[string]map[string]bool
 }
 
 // GenerateAll is generateAllSchemas. Like the TS it adds each converted Zod
@@ -45,6 +48,15 @@ func GenerateAll(log *diag.Logger, cfg Config, st *state.State, cache *program.C
 	vendorSchemas, err := generateVendorSchemas(log, cfg.Vendor, st)
 	if err != nil {
 		return state.Record[state.Raw]{}, err
+	}
+	if cfg.DeclaredUnknowns != nil {
+		for _, s := range vendorSchemas {
+			paths := map[string]bool{}
+			for _, p := range s.DeclaredUnknowns {
+				paths[p] = true
+			}
+			cfg.DeclaredUnknowns[s.Name] = paths
+		}
 	}
 	covered := map[string]bool{}
 	for _, s := range vendorSchemas {

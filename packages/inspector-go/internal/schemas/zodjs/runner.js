@@ -93,7 +93,7 @@ const SCHEMA_TRANSFORM_NOT_SUPPORTED = 'PKU491'
 
 const message = (e) => (e instanceof Error ? e.message : String(e))
 
-export const run = ({ z, zodToTypeText, findZodTransform, files, lookup }) => {
+export const run = ({ z, zodToTypeText, findZodTransform, declaredUnknownPathsOfZod, files, lookup }) => {
   // processZodSchema from vendor-schemas.mjs, unchanged.
   function processZodSchema(schemaName, zodSchema, schemas) {
     const transformPath = findZodTransform(zodSchema)
@@ -124,7 +124,14 @@ export const run = ({ z, zodToTypeText, findZodTransform, files, lookup }) => {
       })
       if (schema.required.length === 0) delete schema.required
     }
-    schemas.push([schemaName, { schema, typeText: zodToTypeText(zodSchema) }])
+    schemas.push([
+      schemaName,
+      {
+        schema,
+        typeText: zodToTypeText(zodSchema),
+        declaredUnknowns: [...declaredUnknownPathsOfZod(zodSchema)],
+      },
+    ])
   }
 
   const schemas = []
