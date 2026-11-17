@@ -10,6 +10,7 @@ import {
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { planRefusal } from '../lib/plan-gate.js'
 import { refuseUntilPagesCompared } from '../lib/page-gate.js'
+import { refuseUntilChecked } from '../lib/check-gate.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import { dim, safe } from '@pikku/cli/addon-support'
 import type { CompleteChangeOutput } from '../lib/types.js'
@@ -64,6 +65,10 @@ export const ChangesDone = pikkuSessionlessFunc({
     let note = input.note
     if (await isGitRepo()) {
       const ref = input.changeId.trim()
+      await refuseUntilChecked({
+        git: (args) => git(args),
+        label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
+      })
       const gate = await refuseUntilPagesCompared({
         git: (args) => git(args),
         waive: input.waive,
