@@ -510,6 +510,11 @@ export type PikkuCLIInput = {
    * they generated. Leave it out and the project inspects its own directory.
    */
   pikkuDirectories?: string[]
+  /**
+   * In a package a root project lists in `pikkuDirectories`: the namespace the
+   * root wires it under. Required there, and unique among the listed packages.
+   */
+  namespace?: string
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
   addon?:
@@ -1298,7 +1303,12 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
      * The packages `pikkuDirectories` lists, ordered so each comes after the
      * listed packages it depends on. Empty when the project lists none.
      */
-    pikkuPackages: Array<{ entry: string; dir: string; name: string }>
+    pikkuPackages: Array<{
+      entry: string
+      dir: string
+      name: string
+      namespace: string
+    }>
     addonName?: string
     stateOutput?: string
     stateInput?: string

@@ -4,6 +4,9 @@
   "addon": {
     "displayName": "Directories Verifier Addon",
     "description": "An addon listed in pikkuDirectories",
-    "categories": ["Utility"]
-  }
+    "categories": [
+      "Utility"
+    ]
+  },
+  "namespace": "tools"
 }

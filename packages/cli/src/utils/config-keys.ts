@@ -62,6 +62,7 @@ const SHAPE: Shape = obj({
   runtimeDir: 'any',
   content: obj({ contentPath: 'any', sizeLimit: 'any', buckets: 'any' }),
   pikkuDirectories: 'any',
+  namespace: 'any',
   ignoreFiles: 'any',
   packageMappings: 'any',
   addon: obj({

@@ -156,10 +156,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         await writeFileInDir(
           logger,
           pikkuPackagesFile,
-          serializePikkuPackages(
-            config.pikkuPackages,
-            join(config.configDir, 'pikku.config.json')
-          )
+          serializePikkuPackages(config.pikkuPackages)
         )
       })
     }

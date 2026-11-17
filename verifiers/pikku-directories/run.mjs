@@ -4,7 +4,7 @@
  *   1. pikku all at the root runs pikku all in each listed package
  *   2. the plain package declares no backends and no frontends, and needs none
  *   3. the root's exposed SDK carries the root's function and the exposed
- *      functions of both packages, namespaced by directory
+ *      functions of both packages, namespaced by the namespace each package's config declares
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
@@ -39,7 +39,7 @@ console.log('✓ each listed package was generated')
 const manifest = JSON.parse(
   readFileSync(join(here, '.pikku/sdk/api/manifest.json'), 'utf8')
 )
-const want = ['addon:greet', 'ping', 'plain:shout']
+const want = ['ping', 'shared:shout', 'tools:greet']
 if (JSON.stringify(manifest.exposed) !== JSON.stringify(want)) {
   fail(`exposed was ${JSON.stringify(manifest.exposed)}, wanted ${JSON.stringify(want)}`)
 }
