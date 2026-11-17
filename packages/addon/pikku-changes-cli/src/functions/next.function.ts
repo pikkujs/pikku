@@ -85,12 +85,22 @@ export const next = pikkuSessionlessFunc({
   },
 })
 
-async function route(
+/** Merges are held: `--no-merge`, or PIKKU_CHANGES_NO_MERGE=1 (a loop whose main branch is red). */
+export const mergesHeld = (
+  merge: boolean | undefined,
+  env: NodeJS.ProcessEnv = process.env
+): boolean => merge === false || env.PIKKU_CHANGES_NO_MERGE === '1'
+
+export async function route(
   root: string,
-  { parallel = false, push = false }: z.infer<typeof NextInput>
+  { parallel = false, push = false, merge }: z.infer<typeof NextInput>
 ): Promise<Route> {
   const { rpc, projectId, storePath } = await changesContext(undefined)
   const merged: string[] = []
+  // finished changesets stay unmerged; dependents of their changes wait
+  // (with --parallel, until each change's commit is in HEAD)
+  if (mergesHeld(merge))
+    return { ...(await pick(root, rpc, projectId!, parallel)), merged }
   const now = Date.now()
   // With --parallel a builder may mark its changes done before it has ended;
   // its lease is live until it ends (the loop driving it releases it), and
