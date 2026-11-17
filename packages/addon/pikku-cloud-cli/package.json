@@ -45,10 +45,10 @@
     "test": "bun test --parallel src"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.158",
-    "@pikku/jose": "^0.12.10",
+    "@pikku/core": "^0.12.159",
+    "@pikku/jose": "^0.12.11",
     "zod": "^4",
-    "@pikku/cli": "^0.12.212",
+    "@pikku/cli": "^0.12.213",
     "@pikku/addon-changes-cli": "^0.12.2"
   },
   "dependencies": {

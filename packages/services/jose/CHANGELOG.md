@@ -1,3 +1,28 @@
+## 0.12.11
+
+### Patch Changes
+
+- f3afcf0: New `@pikku/core/keys` subpath: the reference key service for `defineKeyPair` declarations, with no dependencies and no cryptography of its own. `createLocalKeyService({ crypto, ... })` takes a required `KeyCrypto` provider and signs, verifies, opens sealed values, rotates, promotes, retires and revokes keys over a `KeyStore` ledger, with the private half in custody `secret`, `file`, `wrapped` or `external`. `@pikku/jose/keys` exports `createJoseKeyCrypto()`, the jose-backed provider: Ed25519 and RS256 as compact JWS, X25519 sealing as compact JWE (ECDH-ES with A256GCM, `apv` bound to the recipient SPKI and `kid` in the protected header, both checked on open), RFC 7638 thumbprints. `signer()` returns a handle that fixes kid, alg and version and re-checks the version status on every sign. Names are `signedFormat: "domain"` by default (signed bytes are `domain || 0x00 || data`, exported as `prefixWithDomain`; the stored signature is the signature segment of a compact JWS whose payload is those bytes) or `"jws"` (`signJws` writes `alg` and `kid` from the handle, and a jws handle signs only a `header.payload` input); the wrong form throws `DomainPolicyError`. `sealedKid` reads the key version a sealed value names. Custody `secret` is refused on `LocalSecretService` and on any service that does not declare `durable`. `@pikku/core/keys/file` adds `FileKeyStore` and `FileCustody` (mode 0600; Node only, a server-tier subpath). Nothing in core's other entry points imports it, so an app that does not use it bundles none of it. `@pikku/core/keypair` gains the `KeyService`, `KeyStore` and related interfaces and the `KeyUnavailableError`, `KeyRetiredError`, `KeyCustodyLostError`, `KeyRotatedError` and `DomainPolicyError` errors; `@pikku/core/hmac` gains `importSpkiVerifyKey` and `verifySpkiSignature`; `okpThumbprint` also accepts X25519 keys.
+
+  Core API notes: `KeySigner` has a required `signedFormat` (`signJws` refuses a handle from a domain name). `@pikku/core/services` also exports `spkiToDer`, `base64ToBytes` and `bytesToBase64` (the strict, canonical helpers; now in `utils/base64`). `importSpkiVerifyKey` takes an optional hash and returns extractable public keys, and `verifyPublicKeySignature` now reads SPKI through `spkiToDer`: base64url keys and PEM armour other than `PUBLIC KEY` no longer verify. `verify` with `historical: true` accepts retired keys but never revoked ones (`revoke` records `metadata.revokedAt`).
+
+- 83e1d1f: `VIRTUAL_USER_VERIFY_KEY` accepts a single key (unchanged) or a JSON list of `{ kid, publicKey }`, so a stage can hold more than one virtual user statement key. `pikkuVirtualUser({ verifyKey })` and `JoseVirtualUserStatementVerifier` take the same union; a statement naming a `kid` is checked against that key only (unknown `kid` rejected), one without a `kid` is tried against each key. New statements carry a `kid` (the RFC 7638 thumbprint, `okpThumbprint` in `@pikku/core/services`). A malformed verify key now stops the app at start-up rather than failing each sign-in. `signVirtualUserStatement` takes an optional precomputed `kid`; `resolveStatementMint` computes it. `rsaThumbprint` is exported too.
+- Updated dependencies [7d93a3d]
+- Updated dependencies [ab60937]
+- Updated dependencies [04a22b1]
+- Updated dependencies [353bc05]
+- Updated dependencies [17d754e]
+- Updated dependencies [1a14a30]
+- Updated dependencies [058b973]
+- Updated dependencies [9a54796]
+- Updated dependencies [d8d339a]
+- Updated dependencies [f3afcf0]
+- Updated dependencies [1ff018a]
+- Updated dependencies [f6a9add]
+- Updated dependencies [9796787]
+- Updated dependencies [83e1d1f]
+  - @pikku/core@0.12.159
+
 ## 0.12.10
 
 ### Patch Changes
