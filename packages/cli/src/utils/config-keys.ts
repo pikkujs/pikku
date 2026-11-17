@@ -83,6 +83,7 @@ const SHAPE: Shape = obj({
     }),
   }),
   allowShadowedServices: 'any',
+  liveRuns: 'any',
   metaLocale: 'any',
   tsconfig: 'any',
   clientFiles: obj({

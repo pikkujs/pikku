@@ -1,0 +1,141 @@
+import { describe, test } from 'node:test'
+import assert from 'node:assert/strict'
+import { createOtlpSinks } from '../otlp-sink.js'
+import {
+  OTLP_RUNS_SCOPE,
+  OTLP_RUNS_TOPIC,
+  otlpRunsScopeDefinition,
+  registerOtlpLive,
+  type OtlpLiveClock,
+  type OtlpRunsBatch,
+} from './live.js'
+import { syn, toOpen, T0 } from './stitcher-test-helpers.js'
+import type { RunEvent } from './types.js'
+
+const manualClock = (): OtlpLiveClock & {
+  tick(): void
+  at: number
+} => {
+  const timers: Array<() => void> = []
+  return {
+    at: T0,
+    now() {
+      return this.at
+    },
+    every(fn) {
+      timers.push(fn)
+      return () => {}
+    },
+    tick() {
+      for (const fn of timers) fn()
+    },
+  }
+}
+
+const setup = (options: { maxQueue?: number; maxBatch?: number } = {}) => {
+  const otlpSinks = createOtlpSinks()
+  const clock = manualClock()
+  const batches: OtlpRunsBatch[] = []
+  const live = registerOtlpLive({
+    otlpSinks,
+    serviceName: 'test',
+    publish: (topic, batch) => {
+      assert.equal(topic, OTLP_RUNS_TOPIC)
+      batches.push(batch)
+    },
+    clock,
+    ...options,
+  })
+  const sink = otlpSinks.list()[0]
+  const published = (): RunEvent[] => batches.flatMap((b) => b.events)
+  return { otlpSinks, clock, live, sink, batches, published }
+}
+
+const finish = (sink: ReturnType<typeof setup>['sink'], id: string) => {
+  const span = syn({ id, trace: id, startMs: T0, endMs: T0 + 5 })
+  sink.onSpanStart?.(toOpen(span))
+  sink.exportSpans([span])
+}
+
+describe('registerOtlpLive', () => {
+  test('a full queue drops its oldest frame and counts it', () => {
+    const { live, sink } = setup({ maxQueue: 2 })
+    for (const id of ['a', 'b', 'c']) {
+      sink.onSpanStart?.(toOpen(syn({ id, trace: id, startMs: T0 })))
+    }
+    assert.deepEqual(live.stats(), {
+      queued: 2,
+      dropped: 1,
+      publishFailures: 0,
+    })
+    const open = live.snapshot().open.map((r) => r.rootSpanId)
+    assert.deepEqual(open.sort(), ['b', 'c'])
+  })
+
+  test('the snapshot seq is the last seq the stream published', () => {
+    const { live, sink, clock, published } = setup()
+    finish(sink, 'a')
+    clock.tick()
+    const seqs = published().map((e) => e.seq)
+    assert.ok(seqs.length > 0)
+    assert.deepEqual(
+      seqs,
+      seqs.map((_, i) => seqs[0] + i)
+    )
+    const snapshot = live.snapshot()
+    assert.equal(snapshot.seq, seqs[seqs.length - 1])
+
+    finish(sink, 'b')
+    const next = live.snapshot()
+    clock.tick()
+    const after = published().filter((e) => e.seq > snapshot.seq)
+    assert.ok(after.length > 0)
+    assert.equal(next.seq, after[after.length - 1].seq)
+  })
+
+  test('registering twice on one registry returns the first handle and adds one sink', () => {
+    const { otlpSinks, live } = setup()
+    const again = registerOtlpLive({
+      otlpSinks,
+      serviceName: 'test',
+      publish: () => {},
+    })
+    assert.equal(again, live)
+    assert.equal(otlpSinks.list().length, 1)
+  })
+
+  test('a closed handle is replaced by a fresh registration', () => {
+    const { otlpSinks, live } = setup()
+    live.close()
+    const fresh = registerOtlpLive({
+      otlpSinks,
+      serviceName: 'test',
+      publish: () => {},
+    })
+    assert.notEqual(fresh, live)
+  })
+
+  test('a failing publish is counted and never thrown', () => {
+    const otlpSinks = createOtlpSinks()
+    const clock = manualClock()
+    const live = registerOtlpLive({
+      otlpSinks,
+      serviceName: 'test',
+      publish: () => {
+        throw new Error('hub down')
+      },
+      clock,
+    })
+    finish(otlpSinks.list()[0], 'a')
+    clock.tick()
+    assert.ok(live.stats().publishFailures > 0)
+  })
+})
+
+describe('otlpRunsScopeDefinition', () => {
+  test('declares otlp:runs', () => {
+    const def = otlpRunsScopeDefinition()
+    assert.equal(`${def.name}:runs`, OTLP_RUNS_SCOPE)
+    assert.ok(def.scopes?.runs)
+  })
+})

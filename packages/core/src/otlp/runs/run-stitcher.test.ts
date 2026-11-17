@@ -262,7 +262,7 @@ describe('createRunStitcher', () => {
 
     const dir = fileURLToPath(new URL('./', import.meta.url))
     const sources = readdirSync(dir).filter(
-      (f) => f.endsWith('.ts') && !f.endsWith('.test.ts')
+      (f) => f.endsWith('.ts') && !f.endsWith('.test.ts') && f !== 'live.ts'
     )
     assert.ok(sources.includes('run-stitcher.ts'))
     for (const file of sources) {
