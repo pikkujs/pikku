@@ -149,22 +149,25 @@ export async function pick(
       `A changeset is running: ${running.map((g) => g.title).join(', ')}`
     )
   const open = claimable(list, now)
-  const blockers = open.some(
+  const everything = open.some(
     (c) => (c as { dependsOn?: string[] }).dependsOn?.length
   )
-    ? (
-        await rpc.invoke('listChanges', {
-          projectId,
-          includeDone: true,
-          pickupOnly: false,
-          limit: LIST_CHANGES_MAX,
-        })
-      ).changes
-    : []
+    ? await rpc.invoke('listChanges', {
+        projectId,
+        includeDone: true,
+        pickupOnly: false,
+        limit: LIST_CHANGES_MAX,
+      })
+    : { changes: [], groups: [] }
+  const blockers = everything.changes
+  const blockerGroups = everything.groups as Array<{
+    groupId: string
+    branch?: string
+  }>
   const unblocked = runnable(
     open as Array<(typeof open)[number] & { dependsOn?: string[] }>,
     blockers,
-    parallel ? await doneNotMerged(root, blockers) : undefined
+    parallel ? await doneNotMerged(root, blockers, blockerGroups) : undefined
   )
   const specialist = nextSpecialist(unblocked)
   const ready = unblocked.filter((c) => specialistOf(c) === specialist)
@@ -220,16 +223,28 @@ const parallelLoop = (
   env: NodeJS.ProcessEnv = process.env
 ): boolean => parallel || env.PIKKU_CHANGES_PARALLEL === '1'
 
-async function doneNotMerged(
+export async function doneNotMerged(
   root: string,
-  changes: Array<{ changeId: string; status: string; headCommit?: unknown }>
+  changes: Array<{
+    changeId: string
+    status: string
+    headCommit?: unknown
+    groupId?: string | null
+  }>,
+  groups: Array<{ groupId: string; branch?: string }> = []
 ): Promise<Set<string>> {
   const unmerged = new Set<string>()
   for (const change of changes) {
     const sha = typeof change.headCommit === 'string' ? change.headCommit : ''
     if (change.status !== 'done' || !sha) continue
     const merged = await isAncestor(sha, 'HEAD', root).catch(() => true)
-    if (!merged) unmerged.add(change.changeId)
+    // done from the wrong checkout records a sha already in HEAD; the work is
+    // there only once the changeset's own branch is (a merged branch is deleted)
+    const branch = groups.find((g) => g.groupId === change.groupId)?.branch
+    const branchIn = branch
+      ? await isAncestor(branch, 'HEAD', root).catch(() => true)
+      : true
+    if (!merged || !branchIn) unmerged.add(change.changeId)
   }
   return unmerged
 }

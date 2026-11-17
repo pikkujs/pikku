@@ -56,7 +56,12 @@ export async function finishedChangesets(
   for (const group of list.groups) {
     const changes = list.changes.filter((c) => c.groupId === group.groupId)
     if (!changes.length || changes.some((c) => c.status !== 'done')) continue
-    const branches = [...new Set(changes.map((c) => c.branch))]
+    // the branch recorded on the group at `claim --worktree` wins over what
+    // each done recorded (a done run from the wrong checkout records that one)
+    const recorded = (group as { branch?: string }).branch
+    const branches = recorded
+      ? [recorded]
+      : [...new Set(changes.map((c) => c.branch))]
     const branch = branches[0]
     if (branches.length !== 1 || !branch) continue
     if (!(await branchExists(branch)) || (await isAncestor(branch, 'HEAD')))

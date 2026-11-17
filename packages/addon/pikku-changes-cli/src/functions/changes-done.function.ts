@@ -12,7 +12,10 @@ import { planRefusal } from '../lib/plan-gate.js'
 import { refuseUntilPagesCompared } from '../lib/page-gate.js'
 import { buildsPages, declaredPages } from '../lib/change-plan.js'
 import { refuseUntilChecked } from '../lib/check-gate.js'
-import { changesetSlug, changesetWorktrees } from '../lib/changeset-worktree.js'
+import {
+  changesetBranch,
+  changesetWorktrees,
+} from '../lib/changeset-worktree.js'
 import type { ChangesRPC, Declaration } from '../lib/changes-local.js'
 import { dim, safe } from '@pikku/cli/addon-support'
 import type { CompleteChangeOutput } from '../lib/types.js'
@@ -145,18 +148,26 @@ export async function refuseOutsideChangeset(
     groupId: change.groupId,
     includeDone: true,
   })
-  const group = groups.find((g) => g.groupId === change.groupId)
+  const group = groups.find((g) => g.groupId === change.groupId) as
+    ((typeof groups)[number] & { branch?: string }) | undefined
   if (!group) return
-  const branch = `changeset/${changesetSlug(group.title)}`
-  const exists = await git(
-    ['rev-parse', '--verify', '--quiet', `refs/heads/${branch}`],
-    cwd
-  ).then(
-    () => true,
-    () => false
-  )
-  if (!exists) return
+  const exists = (name: string) =>
+    git(['rev-parse', '--verify', '--quiet', `refs/heads/${name}`], cwd).then(
+      () => true,
+      () => false
+    )
   const here = (await git(['rev-parse', '--abbrev-ref', 'HEAD'], cwd)).trim()
+  // the branch recorded on the group at `claim --worktree`; else (a group
+  // claimed before branches were recorded, or one renamed by a later --title)
+  // a slug of its title, else a changeset branch holding this change's commit
+  let branch: string | undefined = group.branch
+  if (!branch) {
+    const slugged = changesetBranch(group.title)
+    branch = (await exists(slugged))
+      ? slugged
+      : await branchWithCommitFor(change, here, cwd)
+  }
+  if (!branch || !(await exists(branch))) return
   if (here === branch) return
   const worktree = (await changesetWorktrees(cwd)).find(
     (w) => w.branch === branch
@@ -164,6 +175,42 @@ export async function refuseOutsideChangeset(
   throw new CloudPreconditionError(
     `${label} belongs to the changeset on ${branch}, and this checkout is on ${here}. Run done there${worktree ? `: cd ${worktree.path}` : ''}, where the change was built and committed.`
   )
+}
+
+/** A changeset branch (not this one) holding a commit with the change's trailer. */
+async function branchWithCommitFor(
+  change: { changeId: string; shortId: string },
+  here: string,
+  cwd?: string
+): Promise<string | undefined> {
+  const branches = (
+    await git(
+      ['for-each-ref', '--format=%(refname:short)', 'refs/heads/changeset/'],
+      cwd
+    ).catch(() => '')
+  )
+    .split('\n')
+    .map((b) => b.trim())
+    .filter((b) => b && b !== here)
+  for (const branch of branches) {
+    const sha = (
+      await git(
+        [
+          'log',
+          '-1',
+          '--format=%H',
+          '-E',
+          `--grep=^Change(-Id)?: (${change.changeId}|#?${change.shortId})$`,
+          branch,
+          '--not',
+          'HEAD',
+        ],
+        cwd
+      ).catch(() => '')
+    ).trim()
+    if (sha) return branch
+  }
+  return undefined
 }
 
 /**
