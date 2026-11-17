@@ -583,6 +583,10 @@ jobs:
           download-inspector-go: 'true'
           download-inspector-rs: 'true'
       - uses: ./.github/actions/e2e-codegen
+      # The capture tests drive this app, which the server mounts on /app.
+      - name: Build the e2e web app
+        working-directory: e2e/packages/web
+        run: bun run build
       - name: Run CLI e2e tests
         run: bun run test:e2e:cli
 

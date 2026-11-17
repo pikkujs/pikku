@@ -122,28 +122,28 @@ describe('pikku scenario run', () => {
   })
 
   test('declared steps render a readable ladder', async () => {
-    const run = await runScenario('codeEditorScenario')
+    const run = await runScenario('scopesDirectGrantOpensTheGateScenario')
     assertAllPassed(run)
     assert.match(
       run.output,
-      /^\s*When\s+admin \(the Console administrator\) reads a function definition in the console\s+✓/m,
+      /^\s*Given\s+admin \(the Console administrator\) reads its own user id\s+✓/m,
       `expected the first mention to name the virtual user and their role:\n${run.output}`
     )
     assert.match(
       run.output,
-      /^\s*Then\s+admin sees how editableFunc is declared\s+✓/m,
+      /^\s*When\s+admin invokes getReport\s+✓/m,
       `expected a phase change to name the virtual user again, without the role:\n${run.output}`
     )
     assert.match(
       run.output,
-      /^\s*And\s+sees the original greeting\s+✓/m,
-      `expected a repeated phase and virtual user to drop both:\n${run.output}`
+      /^ {8}grants the scope directly\s+✓/m,
+      `expected a step with no phase of its own and the same virtual user to drop both:\n${run.output}`
     )
   })
 
   /** A run that skips everything it was asked for must not report success. */
   test('a scenario that cannot run on the surface fails the run', async () => {
-    const { code, output } = await runScenario('codeEditorConsoleScenario')
+    const { code, output } = await runScenario('captureScenario')
     assert.notEqual(
       code,
       0,
@@ -151,7 +151,7 @@ describe('pikku scenario run', () => {
     )
     assert.match(
       output,
-      /^SKIP codeEditorConsoleScenario \(no default or default binding: /m,
+      /^SKIP captureScenario \(no default or default binding: /m,
       `expected the scenario to name the missing surface:\n${output}`
     )
     assert.match(
@@ -201,8 +201,8 @@ describe('pikku scenario run', () => {
       `expected captures under ${scenarioDir}:\n${run.output}`
     )
     assert.deepEqual(readdirSync(scenarioDir).sort(), [
-      '01-addons-gallery-admin.png',
-      '02-functions-list-admin.png',
+      '01-app-home-guest.png',
+      '02-pricing-page-guest.png',
     ])
   })
 
@@ -285,9 +285,9 @@ describe('pikku scenario run', () => {
   test('--tags selects scenarios without narrowing the project', async () => {
     const { output } = await run([
       '--tags',
-      'console',
+      'captures',
       '--features',
-      'addonsFeature',
+      'capturesFeature',
       '--run',
       'browser',
     ])
