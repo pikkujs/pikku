@@ -40,6 +40,7 @@ pub mod group_approval_description;
 pub mod group_analytics;
 pub mod group_define_contributors;
 pub mod group_wire_contributors;
+pub mod check_wiring_top_level;
 pub mod group_feature;
 pub mod group_feature_flag;
 pub mod group_channel;
@@ -265,6 +266,7 @@ pub fn register_groups(r: &mut Registry) {
     group_analytics::register(r);
     group_define_contributors::register(r);
     group_wire_contributors::register(r);
+    check_wiring_top_level::register(r);
     group_pikku_studio::register(r);
     group_middleware::register(r);
     group_permission::register(r);

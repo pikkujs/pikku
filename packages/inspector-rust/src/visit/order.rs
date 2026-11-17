@@ -5,6 +5,7 @@
 
 // visitSetup
 pub const CORE_SINGLETON_SERVICES: i32 = 0; // addFileExtendsCoreType CoreSingletonServices
+pub const CHECK_WIRINGS_TOP_LEVEL: i32 = 5;
 pub const CORE_SERVICES: i32 = 10; // addFileExtendsCoreType CoreServices
 pub const CORE_USER_SESSION: i32 = 20; // addFileExtendsCoreType CoreUserSession
 pub const CORE_CONFIG: i32 = 30; // addFileExtendsCoreType CoreConfig

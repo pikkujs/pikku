@@ -6,7 +6,8 @@ package visit
 
 // visitSetup
 const (
-	OrderCoreSingletonServices      = 0  // addFileExtendsCoreType CoreSingletonServices
+	OrderCoreSingletonServices      = 0 // addFileExtendsCoreType CoreSingletonServices
+	OrderCheckWiringsTopLevel       = 5
 	OrderCoreServices               = 10 // addFileExtendsCoreType CoreServices
 	OrderCoreUserSession            = 20 // addFileExtendsCoreType CoreUserSession
 	OrderCoreConfig                 = 30 // addFileExtendsCoreType CoreConfig
