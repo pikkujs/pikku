@@ -2553,6 +2553,25 @@
         "tsx": "^4.23.15",
       },
     },
+    "verifiers/rate-limits": {
+      "name": "@pikku/verifiers-rate-limits",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/kysely": "workspace:*",
+        "@pikku/redis": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+        "better-sqlite3": "^13.0.3",
+        "ioredis": "^6.0.0",
+        "kysely": "^0.29.6",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/better-sqlite3": "^9.6.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/release": {
       "name": "@pikku/verifiers-release",
       "devDependencies": {
@@ -3864,6 +3883,8 @@
     "@pikku/verifiers-product-hooks": ["@pikku/verifiers-product-hooks@workspace:verifiers/product-hooks"],
 
     "@pikku/verifiers-product-hooks-none": ["@pikku/verifiers-product-hooks-none@workspace:verifiers/product-hooks-none"],
+
+    "@pikku/verifiers-rate-limits": ["@pikku/verifiers-rate-limits@workspace:verifiers/rate-limits"],
 
     "@pikku/verifiers-release": ["@pikku/verifiers-release@workspace:verifiers/release"],
 

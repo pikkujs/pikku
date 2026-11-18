@@ -498,6 +498,28 @@ jobs:
       - name: Run deploy-standalone-nats verifier
         run: cd verifiers/deploy-standalone-nats && bun run test
 
+  # Runs every scenario against each store a project can pick, so it needs a
+  # real Redis. A row in the matrix above would have no server and the Redis
+  # scenarios would not run, which RATE_LIMITS_REQUIRE_REDIS turns into a failure.
+  verifiers-rate-limits:
+    name: Verifiers (rate-limits)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: build
+    services:
+      redis:
+        image: mirror.gcr.io/library/redis:7
+        ports:
+          - 6379:6379
+    env:
+      REDIS_URL: redis://localhost:6379
+      RATE_LIMITS_REQUIRE_REDIS: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Run rate-limits verifier
+        run: cd verifiers/rate-limits && bun run test
+
   verifiers-binary:
     name: Binary (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

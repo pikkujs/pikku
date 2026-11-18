@@ -20,6 +20,7 @@ const DEDICATED = new Set([
   'db-vectors',
   'deploy-standalone-nats',
   'fullstack',
+  'rate-limits',
 ])
 
 const WORKFLOWS = ['.github/workflows/full.yml']
