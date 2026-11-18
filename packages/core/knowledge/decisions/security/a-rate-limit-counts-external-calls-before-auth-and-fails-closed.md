@@ -14,23 +14,30 @@ called by the HTTP runner and the MCP runner just before the function runs.
 
 **Why in the wire runners.** Only an external call should be counted. A
 middleware attached by tag can reach a function through an internal `rpc`, queue
-or workflow call, and on Cloudflare a request crosses several Workers through
-service bindings, so a check in `runPikkuFunc` would count one request once per
-hop. The runners are the one place a call is known to come from outside.
+or workflow call, and a check in `runPikkuFunc` would count all of them. The
+runners are the one place a call is known to come from outside.
+
+One thing the placement does not cover: the routes Pikku generates for
+unit-to-unit calls (`/mesh/rpc/:rpcName`, `/__pikku/queue-job`,
+`/__pikku/scheduler-job`) are HTTP routes, so on Cloudflare a request that
+crosses Workers through service bindings reaches an HTTP runner again at each
+hop. Those routes set `rateLimit: false`, and a new generated internal route has
+to do the same.
 
 **Why before auth and validation.** A refusal is the same 429 whether or not the
-call would have succeeded, so the limit gives an attacker no oracle. This is the
-same reasoning that made the removed passphrase lock refuse a correct passphrase
-during its lockout window: a guess that behaves differently from the others is a
-confirmed guess.
+call would have succeeded, so the limit gives an attacker no oracle: a guess
+that behaves differently from the others is a confirmed guess, which is also why
+a lockout window refuses a correct secret along with the wrong ones.
 
 **Why there is no default client address.** `PikkuHTTPRequest` has no address
 accessor, so the address can only come from a header, and a header the client can
 set is not something to trust by default. `ipHeader` names the header a proxy
-sets (`cf-connecting-ip`, or `x-forwarded-for`, whose first entry is used).
-Without it every caller shares one bucket per route or tool and a warning says
-so. That is safe, and a denial of service on a busy route, which is why the
-warning exists.
+sets (`cf-connecting-ip`, or `x-forwarded-for`). A comma-separated list is read
+from the right, `trustedProxies` entries in, because a proxy appends the address
+it saw and everything left of that is the client's claim; reading from the left
+would let a caller choose a new bucket on every request. Without `ipHeader`
+every caller shares one bucket per route or tool and a warning says so. That is
+safe, and a denial of service on a busy route, which is why the warning exists.
 
 **Why it fails closed.** A limit with no `rateLimitService` answers 500 rather
 than skipping the check, and a store that throws answers 503. `onStoreError:

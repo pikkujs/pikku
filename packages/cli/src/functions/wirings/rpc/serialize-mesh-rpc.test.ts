@@ -13,6 +13,16 @@ describe('serializeMeshRPC', () => {
     assert.ok(functions.includes('remote: true'))
   })
 
+  test('exempts the mesh route from the global rate limit', () => {
+    const { functions } = serializeMeshRPC(
+      (name: string) => `./${name}/index.js`
+    )
+    assert.ok(
+      /route: '\/mesh\/rpc\/:rpcName'[\s\S]*?rateLimit: false/.test(functions),
+      'units call each other on this route, so counting it would refuse internal calls'
+    )
+  })
+
   test('wires the pikku-mesh-rpc queue worker consumed by scheduleRPC', () => {
     const { functions } = serializeMeshRPC(
       (name: string) => `./${name}/index.js`

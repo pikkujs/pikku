@@ -639,4 +639,35 @@ describe('runMCPTool rate limits', () => {
     registerEcho({ rateLimit: false })
     for (let i = 0; i < 4; i++) await callEcho()
   })
+
+  test('every URI a resource template matches shares one bucket', async () => {
+    addGlobalRateLimiter({ limit: 1, windowMs: 60_000 })
+    pikkuState(null, 'mcp', 'resourcesMeta')['resource://users/{id}'] = {
+      title: 'User',
+      description: 'User',
+      pikkuFuncId: 'userFunc',
+      inputSchema: null,
+      outputSchema: null,
+    } as never
+    registerFunction('userFunc', async () => ({ ok: true }))
+    wireMCPResource({
+      uri: 'resource://users/{id}',
+      title: 'User',
+      description: 'User',
+      func: { func: async () => ({ ok: true }) } as never,
+    })
+    const read = (id: number) =>
+      runMCPResource(
+        { jsonrpc: '2.0', id: 'req', params: {} },
+        { mcp: mcpWire as never },
+        `resource://users/${id}`
+      )
+
+    await read(1)
+    await assert.rejects(read(2), (e: any) => {
+      assert.ok(e instanceof MCPError)
+      assert.equal(e.error.code, -32000)
+      return true
+    })
+  })
 })

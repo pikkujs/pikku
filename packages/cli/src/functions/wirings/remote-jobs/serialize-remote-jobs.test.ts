@@ -13,6 +13,20 @@ describe('serializeRemoteJobs', () => {
     assert.ok(functions.includes("tags: ['pikku']"))
   })
 
+  test('exempts both inbox routes from the global rate limit', () => {
+    const { functions } = serializeRemoteJobs(leaf)
+    for (const route of ['/__pikku/queue-job', '/__pikku/scheduler-job']) {
+      const wiring = functions.slice(
+        functions.indexOf(`route: '${route}'`),
+        functions.indexOf('})', functions.indexOf(`route: '${route}'`))
+      )
+      assert.ok(
+        wiring.includes('rateLimit: false'),
+        `${route} receives deliveries from the platform, so counting them would refuse jobs`
+      )
+    }
+  })
+
   test('the schemas keep what core reads, which zod would otherwise strip', () => {
     const { schemas } = serializeRemoteJobs(leaf)
     const [queue, scheduled] = schemas.split('RemoteScheduledJob')

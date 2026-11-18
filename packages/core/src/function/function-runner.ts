@@ -148,6 +148,24 @@ export const addFunction = (
   pikkuState(packageName, 'function', 'functions').set(funcName, funcConfig)
 }
 
+/**
+ * A registered function's config, found the way `runPikkuFunc` finds it: under
+ * its own id, or through the addon namespace a `ref('ns:fn')` names.
+ */
+export const findFunctionConfig = (
+  funcId: string,
+  packageName: string | null
+): CorePikkuFunctionConfig<any, any, any, any, any> | undefined => {
+  const own = pikkuState(packageName, 'function', 'functions').get(funcId)
+  if (own) return own
+  const target = resolveAddonFunctionTarget(funcId, packageName)
+  return target
+    ? pikkuState(target.packageName, 'function', 'functions').get(
+        target.localName
+      )
+    : undefined
+}
+
 export const getFunctionNames = (
   packageName: string | null = null
 ): string[] => {

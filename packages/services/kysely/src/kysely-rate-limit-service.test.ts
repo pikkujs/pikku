@@ -109,4 +109,34 @@ for (const [name, database] of Object.entries(databases)) {
     ).map((r) => r.key)
     assert.deepEqual(keys, ['long'])
   })
+
+  test(`a row a hit has just inserted survives a prune [${name}]`, async () => {
+    const db = database()
+    await applyPikkuSchemas(db, [rateLimitSchema])
+    const limiter = new KyselyRateLimitService(db)
+    await limiter.init()
+    await db
+      .insertInto('pikkuRateLimit')
+      .values({ key: 'fresh', count: 0, resetAt: 0 })
+      .execute()
+    await limiter.prune()
+    const rows = await db.selectFrom('pikkuRateLimit').select('key').execute()
+    assert.deepEqual(
+      rows.map((r) => r.key),
+      ['fresh']
+    )
+  })
+
+  test(`hits that race prunes are all answered [${name}]`, async () => {
+    const db = database()
+    await applyPikkuSchemas(db, [rateLimitSchema])
+    const limiter = new KyselyRateLimitService(db)
+    await limiter.init()
+    const work: Promise<unknown>[] = []
+    for (let i = 0; i < 60; i++) {
+      work.push(limiter.hit(`k${i % 5}`, 3, 1))
+      work.push(limiter.prune())
+    }
+    await Promise.all(work)
+  })
 }

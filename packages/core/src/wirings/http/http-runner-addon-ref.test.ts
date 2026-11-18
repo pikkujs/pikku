@@ -7,6 +7,9 @@ import {
 } from '../../middleware-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { addSchema } from '../../schema.js'
+import { addFunction } from '../../function/function-runner.js'
+import { addGlobalRateLimiter } from '../../rate-limit/rate-limit-runner.js'
+import { InMemoryRateLimitService } from '../../services/in-memory-rate-limit-service.js'
 import { PikkuMockRequest } from '../channel/local/local-channel-runner.test.js'
 import { httpRouter } from './routers/http-router.js'
 import type { CoreHTTPFunctionWiring, HTTPMethod } from './http.types.js'
@@ -344,5 +347,52 @@ describe('http routes wired with ref() to an addon function', () => {
 
     assert.strictEqual(response.status, 200)
     assert.deepStrictEqual(ran, ['audited'])
+  })
+
+  describe('rate limits', () => {
+    const wireRef = () => {
+      pikkuState(null, 'package', 'singletonServices', {
+        logger: { info: () => {}, warn: () => {}, error: () => {} },
+        rateLimitService: new InMemoryRateLimitService(),
+      } as never)
+      setRouteMeta('/addon/greet', 'get', { auth: false })
+      // A `ref('ns:fn')` wiring carries no function of its own.
+      wireHTTP({
+        route: '/addon/greet',
+        method: 'get',
+        auth: false,
+      } as unknown as CoreHTTPFunctionWiring<unknown, unknown, string>)
+      httpRouter.initialize()
+    }
+    const greet = async () =>
+      (await fetch(new ParamsRequest('/addon/greet', 'get'))).status
+
+    test("an addon function's own `rateLimit: false` exempts the route", async () => {
+      addGlobalRateLimiter({ limit: 1, windowMs: 60_000 })
+      registerAddon()
+      addFunction(
+        'greet',
+        { func: async () => ({ message: 'hello' }), rateLimit: false } as never,
+        ADDON_PACKAGE
+      )
+      wireRef()
+      for (let i = 0; i < 3; i++) assert.strictEqual(await greet(), 200)
+    })
+
+    test("an addon function's own limit replaces the global one", async () => {
+      addGlobalRateLimiter({ limit: 5, windowMs: 60_000 })
+      registerAddon()
+      addFunction(
+        'greet',
+        {
+          func: async () => ({ message: 'hello' }),
+          rateLimit: { limit: 1, windowMs: 60_000 },
+        } as never,
+        ADDON_PACKAGE
+      )
+      wireRef()
+      assert.strictEqual(await greet(), 200)
+      assert.strictEqual(await greet(), 429)
+    })
   })
 })

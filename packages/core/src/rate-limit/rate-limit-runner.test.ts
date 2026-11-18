@@ -98,7 +98,23 @@ describe('enforceRateLimit', () => {
     }
   })
 
-  test('callers are counted apart by the configured header, first hop only', async () => {
+  test('callers are counted apart by the configured header', async () => {
+    addGlobalRateLimiter({
+      ...LIMIT_TWO,
+      limit: 1,
+      ipHeader: 'cf-connecting-ip',
+    })
+    const limiter = new InMemoryRateLimitService()
+    const from = (value: string) => check(limiter, { header: () => value })
+    await enforceRateLimit(from('1.1.1.1'))
+    await enforceRateLimit(from('2.2.2.2'))
+    await assert.rejects(
+      enforceRateLimit(from('1.1.1.1')),
+      TooManyRequestsError
+    )
+  })
+
+  test('a forwarded list is read from the right, so a client cannot choose its own bucket', async () => {
     addGlobalRateLimiter({
       ...LIMIT_TWO,
       limit: 1,
@@ -106,12 +122,49 @@ describe('enforceRateLimit', () => {
     })
     const limiter = new InMemoryRateLimitService()
     const from = (value: string) => check(limiter, { header: () => value })
-    await enforceRateLimit(from('1.1.1.1, 10.0.0.1'))
-    await enforceRateLimit(from('2.2.2.2, 10.0.0.1'))
+    // The proxy appended the address it saw, so whatever the client put to the
+    // left of it is a claim, and changing it must not open a new bucket.
+    await enforceRateLimit(from('spoof-1, 1.1.1.1'))
     await assert.rejects(
-      enforceRateLimit(from('1.1.1.1, 10.9.9.9')),
+      enforceRateLimit(from('spoof-2, 1.1.1.1')),
       TooManyRequestsError
     )
+    await enforceRateLimit(from('spoof-1, 2.2.2.2'))
+  })
+
+  test('`trustedProxies` skips the entries your own proxies appended', async () => {
+    addGlobalRateLimiter({
+      ...LIMIT_TWO,
+      limit: 1,
+      ipHeader: 'x-forwarded-for',
+      trustedProxies: 2,
+    })
+    const limiter = new InMemoryRateLimitService()
+    const from = (value: string) => check(limiter, { header: () => value })
+    await enforceRateLimit(from('spoof, 1.1.1.1, 10.0.0.1'))
+    await assert.rejects(
+      enforceRateLimit(from('other, 1.1.1.1, 10.0.0.2')),
+      TooManyRequestsError
+    )
+  })
+
+  test('a key always fits a 255-character column', async () => {
+    addGlobalRateLimiter({ ...LIMIT_TWO, ipHeader: 'x-forwarded-for' })
+    const keys: string[] = []
+    const inner = new InMemoryRateLimitService()
+    const recording: RateLimitService = {
+      hit: async (key, limit, windowMs) => {
+        keys.push(key)
+        return inner.hit(key, limit, windowMs)
+      },
+    }
+    await enforceRateLimit(
+      check(recording, {
+        scope: `post:/${'a'.repeat(400)}`,
+        header: () => 'b'.repeat(400),
+      })
+    )
+    assert.ok(keys[0]!.length <= 255, `key is ${keys[0]!.length} long`)
   })
 
   test('without an ipHeader everyone shares one bucket, and it says so once', async () => {
@@ -197,7 +250,10 @@ class TestRequest extends PikkuMockRequest {
   }
 }
 
-const wireRoute = (funcConfig: Record<string, unknown> = {}) => {
+const wireRoute = (
+  funcConfig: Record<string, unknown> = {},
+  routeConfig: Record<string, unknown> = {}
+) => {
   pikkuState(null, 'function', 'meta', {
     pikku_func_name: {
       pikkuFuncId: 'pikku_func_name',
@@ -222,7 +278,13 @@ const wireRoute = (funcConfig: Record<string, unknown> = {}) => {
   const func = async () => ({ ok: ++calls })
   const config = { func, ...funcConfig } as any
   addFunction('pikku_func_name', config)
-  wireHTTP({ route: 'test', method: 'get', func: config, auth: false })
+  wireHTTP({
+    route: 'test',
+    method: 'get',
+    func: config,
+    auth: false,
+    ...routeConfig,
+  } as any)
 }
 
 describe('rate limits on external calls', () => {
@@ -274,16 +336,124 @@ describe('rate limits on external calls', () => {
     await assert.rejects(call(), TooManyRequestsError)
   })
 
-  test('internal calls to the same function are never counted', async () => {
+  test('a refused call is refused before auth, so it learns nothing about the call', async () => {
     addGlobalRateLimiter({ limit: 1, windowMs: 60_000 })
-    wireRoute()
-    const singletonServices = pikkuState(null, 'package', 'singletonServices')!
-    for (let i = 0; i < 5; i++) {
-      await runPikkuFunc('rpc', 'pikku_func_name', 'pikku_func_name', {
-        singletonServices,
-        data: () => ({}),
-        wire: {},
+    wireRoute({}, { auth: true })
+    // Without a session the route would answer 401 to every call. The limit
+    // runs first, so once the window is full the answer is 429 instead.
+    const first = await call().then(
+      () => 'ok',
+      (e) => e.constructor.name
+    )
+    assert.notEqual(first, 'TooManyRequestsError')
+    await assert.rejects(call(), TooManyRequestsError)
+  })
+
+  test("a route's own `rateLimit` replaces the function's and the global one", async () => {
+    addGlobalRateLimiter({ limit: 1, windowMs: 60_000 })
+    wireRoute(
+      { rateLimit: false },
+      { rateLimit: { limit: 2, windowMs: 60_000 } }
+    )
+    await call()
+    await call()
+    await assert.rejects(call(), TooManyRequestsError)
+  })
+
+  test('a route that sets `rateLimit: false` is exempt whatever its function says', async () => {
+    addGlobalRateLimiter({ limit: 1, windowMs: 60_000 })
+    wireRoute(
+      { rateLimit: { limit: 1, windowMs: 60_000 } },
+      { rateLimit: false }
+    )
+    for (let i = 0; i < 4; i++) await call()
+  })
+
+  describe('the public RPC route', () => {
+    const wirePublicRpc = () => {
+      const meta = (id: string) => ({
+        pikkuFuncId: id,
+        inputSchemaName: null,
+        outputSchemaName: null,
+        sessionless: true,
+        services: ['userSession'],
+      })
+      pikkuState(null, 'function', 'meta', {
+        rpcCaller: meta('rpcCaller'),
+        login: meta('login'),
+        other: meta('other'),
+      } as any)
+      pikkuState(null, 'http', 'meta', {
+        get: {},
+        post: {
+          '/rpc/:rpcName': {
+            pikkuFuncId: 'rpcCaller',
+            route: '/rpc/:rpcName',
+            method: 'post',
+          },
+        },
+        delete: {},
+        patch: {},
+        head: {},
+        put: {},
+        options: {},
+      } as any)
+      const func = async () => ({ ok: true })
+      addFunction('login', {
+        func,
+        rateLimit: { limit: 1, windowMs: 60_000 },
+      } as any)
+      addFunction('other', { func } as any)
+      const caller = { func } as any
+      addFunction('rpcCaller', caller)
+      wireHTTP({
+        route: '/rpc/:rpcName',
+        method: 'post',
+        func: caller,
+        auth: false,
       } as any)
     }
+    const rpc = (name: string) =>
+      fetchData(
+        new TestRequest(`/rpc/${name}`, 'post') as any,
+        new TestResponse() as any,
+        { bubbleErrors: true }
+      )
+
+    test("applies the target function's own limit, not the caller's", async () => {
+      addGlobalRateLimiter({ limit: 3, windowMs: 60_000 })
+      wirePublicRpc()
+      await rpc('login')
+      await assert.rejects(rpc('login'), TooManyRequestsError)
+    })
+
+    test('counts each exposed function apart', async () => {
+      addGlobalRateLimiter({ limit: 2, windowMs: 60_000 })
+      wirePublicRpc()
+      await rpc('other')
+      await rpc('other')
+      await assert.rejects(rpc('other'), TooManyRequestsError)
+      await rpc('login')
+    })
+
+    test('a name that is no function does not open a bucket of its own', async () => {
+      addGlobalRateLimiter({ limit: 2, windowMs: 60_000 })
+      wirePublicRpc()
+      const keys: string[] = []
+      const inner = new InMemoryRateLimitService()
+      pikkuState(null, 'package', 'singletonServices', {
+        logger,
+        rateLimitService: {
+          hit: async (key: string, limit: number, windowMs: number) => {
+            keys.push(key)
+            return inner.hit(key, limit, windowMs)
+          },
+        },
+      } as any)
+      for (const name of ['nope-1', 'nope-2', 'nope-3']) {
+        await rpc(name).catch(() => {})
+      }
+      assert.equal(new Set(keys).size, 1)
+    })
   })
 })
