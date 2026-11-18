@@ -39,6 +39,17 @@ Give the widget the challenge object through `configure`, not a URL: the RPC is 
 
 A challenge expires after five minutes. When the widget fires `expired`, fetch and configure a new one.
 
+## React and Tailwind
+
+Copy two files from this skill's `references/` into the app, both tested in a real browser:
+
+- `captcha-field.tsx`: `<CaptchaField getChallenge onChange resetKey />`. It keeps the ALTCHA widget hidden and shows its own Tailwind button with idle, checking, verified, expired and error states. It reports the payload through `onChange` (`null` whenever the payload is not usable) and fetches a fresh challenge when one expires.
+- `contact-form.tsx`: a form that holds the payload in state, disables Send until it is set, sends it as `altcha`, maps the three refusal codes to messages, and bumps `resetKey` after every submit, because a payload is spent whether or not the submit worked.
+
+Adapt two things: the `rpc` import in `contact-form.tsx` (any client that calls `captcha:getChallenge` and your form function works), and how the refusal code is read from your client's error (the example reads the start of `error.message`).
+
+Install the widget with `npm install altcha`. Tailwind v4 needs the two files in its `@source` paths.
+
 ## Server
 
 Call verify first in every public form function, before anything is written:
