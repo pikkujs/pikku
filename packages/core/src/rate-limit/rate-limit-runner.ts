@@ -31,6 +31,8 @@ export type RateLimitCheck = {
  * Sets the limit every HTTP route and MCP tool falls under unless its function
  * declares its own `rateLimit`. Internal calls (rpc, queue, workflow steps) are
  * never counted.
+ *
+ * @example snippet: addGlobalRateLimiter
  */
 export const addGlobalRateLimiter = (
   config: RateLimitConfig,
