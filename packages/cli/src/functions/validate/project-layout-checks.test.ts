@@ -90,6 +90,56 @@ describe('project layout', () => {
     )
   })
 
+  test('a base with its own config resolves #pikku to its own .pikku', async () => {
+    await withProject(
+      async (root) => {
+        await write(root, 'packages/server/pikku.config.json', {})
+        await write(root, 'packages/server/package.json', {
+          name: '@my-app/server',
+          imports: {
+            '#pikku/*.js': './.pikku/*.ts',
+            '#pikku/*': './.pikku/*/index.ts',
+          },
+        })
+        await write(root, 'pikku.config.json', {
+          base: 'packages/server',
+          emailTemplatesDir: 'emails',
+        })
+        await rm(join(root, 'tsconfig.json'))
+      },
+      async (configDir) => {
+        assert.deepEqual(
+          await runProjectLayoutChecks(configDir, { strict: true }),
+          []
+        )
+      }
+    )
+  })
+
+  test('a base with its own config that points #pikku at the root output is flagged', async () => {
+    await withProject(
+      async (root) => {
+        await write(root, 'packages/server/pikku.config.json', {})
+        await write(root, 'packages/server/package.json', {
+          name: '@my-app/server',
+          imports: { '#pikku/*': '../../.pikku/*/index.ts' },
+        })
+        await write(root, 'pikku.config.json', {
+          base: 'packages/server',
+          emailTemplatesDir: 'emails',
+        })
+        await rm(join(root, 'tsconfig.json'))
+      },
+      async (configDir) => {
+        const finding = await assertFlagged(
+          configDir,
+          LAYOUT_PIKKU_IMPORT_NOT_ROOT
+        )
+        assert.match(finding.fixHint ?? '', /its own pikku.config.json/)
+      }
+    )
+  })
+
   test('a single-package project keeps everything in one directory', async () => {
     const root = await mkdtemp(join(tmpdir(), 'pikku-layout-single-'))
     try {
