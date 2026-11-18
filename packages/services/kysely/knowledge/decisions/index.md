@@ -8,6 +8,7 @@ description: How encrypted columns are wrapped, and which key wraps them
 
 <!-- pikku:knowledge-index -->
 
+- [A default or onUpdate is data, spelled per engine when it is bound](a-default-or-onupdate-is-data-spelled-per-engine.md) — default and onUpdate take now, uuid (default only), a literal or sql written once per engine; the engine is read from the database the statement is bound to, a missing key is an error naming the column and engine, and onUpdate is a Postgres function plus trigger, a SQLite trigger or a MySQL column attribute
 - [A console role cannot take a system role's name](a-console-role-cannot-take-a-system-roles-name.md) — createRole refuses any name the store holds as a system role, and asks the pikkuRoles table rather than the declared list, so one name never answers to two roles
 - [A credential with no user is one row per name](a-credential-with-no-user-is-one-row-per-name.md) — The database enforces one app-wide credential per name by indexing COALESCE(user_id, ''), and the service maps a missing user to IS NULL
 - [A lease is taken by one guarded UPDATE](a-lease-is-taken-by-one-guarded-update.md) — Acquire inserts the key's row already lapsed, takes it with a guarded UPDATE, and reads the row back, because that is the one shape that behaves the same on SQLite, Postgres and MySQL

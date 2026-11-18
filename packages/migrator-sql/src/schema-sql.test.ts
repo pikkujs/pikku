@@ -148,3 +148,41 @@ create table "other" ("id" text);`
     assert.equal(tableDefinitions(sql, 'absent').columns.size, 0)
   })
 })
+
+describe('triggers and the function behind onUpdate', () => {
+  const sqliteTrigger = `create trigger "note_updated_at_on_update" after update on "note" for each row when new."updated_at" is old."updated_at" begin update "note" set "updated_at" = (CURRENT_TIMESTAMP) where rowid = new.rowid; end;`
+  const postgresTrigger = `create trigger "note_updated_at_on_update" before update on "app"."note" for each row execute function "app"."pikku_on_update"('updated_at', 'now()');`
+  const fn = `create or replace function "pikku_on_update"() returns trigger language plpgsql as $pikku$ begin return new; end $pikku$;`
+
+  test('a SQLite trigger body is one statement, not three', () => {
+    const sql = `create table "note" ("id" text);\n\n${sqliteTrigger}\n\ncreate table "other" ("id" text);`
+    assert.deepEqual(splitStatements(sql), [
+      'create table "note" ("id" text);',
+      sqliteTrigger,
+      'create table "other" ("id" text);',
+    ])
+  })
+
+  test('statementShape tells a trigger and the function from anything else', () => {
+    assert.deepEqual(statementShape(sqliteTrigger), {
+      kind: 'trigger',
+      table: 'note',
+      name: 'note_updated_at_on_update',
+    })
+    assert.deepEqual(statementShape(postgresTrigger), {
+      kind: 'trigger',
+      table: 'note',
+      name: 'note_updated_at_on_update',
+    })
+    assert.deepEqual(statementShape(fn), { kind: 'function' })
+    assert.deepEqual(statementShape('drop table "note";'), { kind: 'other' })
+  })
+
+  test('a table is created together with its trigger', () => {
+    const sql = `create table "note" ("id" text);\n\n${sqliteTrigger}`
+    assert.deepEqual(tableCreationSql(sql, 'note'), [
+      'create table "note" ("id" text);',
+      sqliteTrigger,
+    ])
+  })
+})

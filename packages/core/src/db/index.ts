@@ -9,8 +9,8 @@
  *
  * Tables and columns are named the way queries name them (camelCase); the
  * compiler turns them into physical snake_case names. Raw SQL fragments — a
- * `default: { sql }` or an index `where` — are passed through verbatim, so they
- * are written in physical names.
+ * `default: { sql }`, an `onUpdate: { sql }` or an index `where` — are written
+ * once per engine and passed through verbatim, so they are in physical names.
  */
 
 /**
@@ -106,21 +106,49 @@ export type ColumnType =
  */
 export type OnDelete = 'cascade' | 'setNull' | 'restrict' | 'noAction'
 
+/** The engines a declaration compiles for. `sqlite` covers libSQL and Turso. */
+export type DbEngine = 'postgres' | 'mysql' | 'sqlite'
+
+/**
+ * SQL written once per engine. Only the key for the project's configured
+ * engine (`db.engine`) is required; a missing one is an error naming the column
+ * and the engine, and an unknown key is an error too. Written in physical names.
+ */
+export type EngineSql = { [engine in DbEngine]?: string }
+
 /**
  * A column default.
  *
  * A string, number or boolean is a literal. `{ now: true }` is the current
- * timestamp. `{ sql }` is a raw SQL expression passed through verbatim, the
- * escape hatch for anything else (`gen_random_uuid()`, say).
+ * timestamp and `{ uuid: true }` a random version 4 UUID, each spelled the way
+ * the engine spells it. `{ sql }` is a raw SQL expression per engine, the escape
+ * hatch for anything else.
  */
 export type ColumnDefault =
-  string | number | boolean | { now: true } | { sql: string }
+  | string
+  | number
+  | boolean
+  | { now: true }
+  | { uuid: true }
+  | { sql: EngineSql }
+
+/**
+ * What a column is set to when an `UPDATE` does not set it itself.
+ *
+ * The same forms as a default, minus `uuid`. Postgres and SQLite get a trigger;
+ * MySQL gets `ON UPDATE CURRENT_TIMESTAMP`, which only `{ now: true }` can use.
+ * A value the statement sets explicitly always wins.
+ */
+export type ColumnOnUpdate =
+  string | number | boolean | { now: true } | { sql: EngineSql }
 
 /** The parts of a column declaration that do not depend on its type. */
 export interface ColumnFields extends ColumnAnnotation, ColumnConstraints {
   /** `not null`. Primary key columns are required whether or not this says so. */
   required?: boolean
   default?: ColumnDefault
+  /** Set when an `UPDATE` leaves the column alone. */
+  onUpdate?: ColumnOnUpdate
   /** A single-column primary key. A composite key goes on the table. */
   primaryKey?: boolean
   /** A single-column unique constraint. A composite one goes on the table. */
@@ -167,10 +195,11 @@ export interface IndexDeclaration {
   columns: readonly string[]
   unique?: boolean
   /**
-   * A raw SQL predicate making this a partial index, in physical names.
-   * Supported on postgres and sqlite; MySQL has no partial indexes and refuses.
+   * A raw SQL predicate per engine making this a partial index, in physical
+   * names. Supported on postgres and sqlite; MySQL has no partial indexes and
+   * refuses.
    */
-  where?: string
+  where?: EngineSql
   /** Defaults to `<table>_<columns>_idx`. */
   name?: string
 }

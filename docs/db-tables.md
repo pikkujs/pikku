@@ -37,7 +37,8 @@ Postgres and MySQL all work from the same declaration.
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json`. Optional on a `declareOnly` table |
 | `required`                                                | `NOT NULL`                                                                                                                                              |
-| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                                                                 |
+| `default`                                                 | A literal, `{ now: true }`, `{ uuid: true }`, or `{ sql: { postgres?, mysql?, sqlite? } }`. See [Defaults and onUpdate](#defaults-and-onupdate)         |
+| `onUpdate`                                                | What the column is set to when an `UPDATE` leaves it alone: a literal, `{ now: true }` or `{ sql: { ... } }`                                            |
 | `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                                                                  |
 | `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                                                    |
 | `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                                                            |
@@ -64,8 +65,54 @@ tables something else creates (see `declareOnly` below).
 | `interval`, `point`                          | `string`                                           |
 
 A table takes `columns`, and optionally `primaryKey` (composite), `unique`
-(composite constraints), `indexes` (with `unique`, a partial `where`, and a `name`),
+(composite constraints), `indexes` (with `unique`, a partial `where` written per engine, and a `name`),
 and `declareOnly`.
+
+### Defaults and onUpdate
+
+A default or `onUpdate` is data, never a function, and the generator spells it
+for the project's engine (`db.engine`):
+
+| Declared            | Postgres            | MySQL               | SQLite                                   |
+| ------------------- | ------------------- | ------------------- | ---------------------------------------- |
+| `default: { now }`  | `now()`             | `CURRENT_TIMESTAMP` | `CURRENT_TIMESTAMP`                      |
+| `default: { uuid }` | `gen_random_uuid()` | `(UUID())`          | a version 4 UUID built from `randomblob` |
+| `default: 'draft'`  | `'draft'`           | `('draft')` on text | `'draft'`                                |
+| `{ sql: { ... } }`  | the `postgres` key  | the `mysql` key     | the `sqlite` key (libSQL and Turso too)  |
+
+```ts
+createdAt: { type: 'timestamptz', required: true, default: { now: true } },
+updatedAt: {
+  type: 'timestamptz',
+  required: true,
+  default: { now: true },
+  onUpdate: { now: true },
+},
+token: { type: 'uuid', default: { sql: { postgres: 'gen_random_uuid()' } } },
+```
+
+`{ sql }` (and an index `where`) hold the SQL for each engine, in physical names.
+Only the key for the configured engine is required; a missing one is an error
+naming the column and the engine, and an unknown key is an error. `{ uuid: true }`
+is for `uuid`, `id`, `key`, `text` and `string(36)` or longer columns.
+
+`onUpdate` takes the same forms except `uuid`, and a value the statement sets
+explicitly always wins:
+
+- **Postgres**: one shared function, `pikku_on_update`, and a `BEFORE UPDATE`
+  trigger per column that calls it only when the statement left the column
+  unchanged.
+- **SQLite**: an `AFTER UPDATE` trigger per column, guarded so its own write does
+  not fire it again.
+- **MySQL**: the `ON UPDATE CURRENT_TIMESTAMP` column attribute, which only
+  `{ now: true }` can use. Any other `onUpdate` needs a trigger written by hand.
+
+Triggers are generated only for the configured engine. They are written with a new
+table, or when a column with an `onUpdate` is added to a table that exists; adding
+`onUpdate` to an existing column, or changing it, is a migration a person writes.
+On a `declareOnly` table nothing is generated, so `pikku db generate` checks that
+the migrations create the trigger (or the MySQL attribute) and refuses the
+declaration if they do not.
 
 ### Constraints
 

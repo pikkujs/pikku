@@ -20,6 +20,10 @@ import { endOfComment, endOfQuoted } from './sql-scan.js'
  * boundary, and cutting there yields two fragments that are each valid-looking
  * and neither of which does what the original did.
  */
+const SQLITE_TRIGGER =
+  /^CREATE\s+(?:TEMP(?:ORARY)?\s+)?TRIGGER\b[\s\S]*?\bBEGIN\b/i
+const TRIGGER_END = /\bEND\s*;$/i
+
 export function splitStatements(sql: string): string[] {
   const statements: string[] = []
   let start = 0
@@ -52,6 +56,12 @@ export function splitStatements(sql: string): string[] {
 
     if (ch === ';') {
       const statement = sql.slice(start, i + 1).trim()
+      // A SQLite trigger body is statements of its own: the semicolons inside
+      // `begin ... end` are not boundaries, the one after `end` is.
+      if (SQLITE_TRIGGER.test(statement) && !TRIGGER_END.test(statement)) {
+        i++
+        continue
+      }
       if (statement.length > 1) statements.push(statement)
       start = i + 1
     }
@@ -84,6 +94,11 @@ const CREATE_TABLE =
 const CREATE_INDEX =
   /^CREATE\s+(?:UNIQUE\s+)?INDEX\s+(?:CONCURRENTLY\s+)?(?:IF\s+NOT\s+EXISTS\s+)?\S+\s+ON\s+(?:ONLY\s+)?([^\s(]+)/i
 
+const CREATE_TRIGGER =
+  /^CREATE\s+(?:TEMP(?:ORARY)?\s+)?TRIGGER\s+(?:IF\s+NOT\s+EXISTS\s+)?(\S+)\s[\s\S]*?\sON\s+(?:ONLY\s+)?([^\s(]+)/i
+
+const CREATE_FUNCTION = /^CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\b/i
+
 const ALTER_TABLE = /^ALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?([^\s(]+)/i
 
 /**
@@ -115,6 +130,12 @@ export function tableCreationSql(sql: string, table: string): string[] {
 
     const index = CREATE_INDEX.exec(statement)
     if (index && bareTableName(index[1]!) === wanted) {
+      statements.push(statement)
+      continue
+    }
+
+    const trigger = CREATE_TRIGGER.exec(statement)
+    if (trigger && bareTableName(trigger[2]!) === wanted) {
       statements.push(statement)
       continue
     }
@@ -159,6 +180,8 @@ export function tablesInSourceOrder(sql: string, tables: string[]): string[] {
 export type StatementShape =
   | { kind: 'table'; table: string }
   | { kind: 'index'; table: string; name: string }
+  | { kind: 'trigger'; table: string; name: string }
+  | { kind: 'function' }
   | { kind: 'other' }
 
 const INDEX_NAME =
@@ -167,10 +190,11 @@ const INDEX_NAME =
 /**
  * What a single statement creates.
  *
- * A declared schema is limited to tables and their indexes, because those are
- * the two things a later delta can tell apart from what the migrations already
- * hold. Anything else cannot be diffed, so the caller refuses it rather than
- * re-running it or quietly leaving it out.
+ * A declared schema is limited to tables, their indexes and the triggers and
+ * function behind `onUpdate`, because those are the things a later delta can
+ * tell apart from what the migrations already hold. Anything else cannot be
+ * diffed, so the caller refuses it rather than re-running it or quietly leaving
+ * it out.
  */
 export function statementShape(statement: string): StatementShape {
   const create = CREATE_TABLE.exec(statement)
@@ -183,6 +207,15 @@ export function statementShape(statement: string): StatementShape {
       name: bareTableName(INDEX_NAME.exec(statement)![1]!),
     }
   }
+  const trigger = CREATE_TRIGGER.exec(statement)
+  if (trigger) {
+    return {
+      kind: 'trigger',
+      table: bareTableName(trigger[2]!),
+      name: bareTableName(trigger[1]!),
+    }
+  }
+  if (CREATE_FUNCTION.test(statement)) return { kind: 'function' }
   return { kind: 'other' }
 }
 

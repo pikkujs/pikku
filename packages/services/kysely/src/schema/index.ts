@@ -319,10 +319,10 @@ export const applyPikkuSchemas = async (
     const bound = bind(trx)
     const ctx = contextFor(bound)
     const queries = schemas.flatMap((schema) =>
-      statementsOf(schema).map((statement) => ({
-        schema,
-        query: statement(bound, types, ctx),
-      }))
+      statementsOf(schema).flatMap((statement) => {
+        const query = statement(bound, types, ctx)
+        return query ? [{ schema, query }] : []
+      })
     )
     for (const { schema, query } of queries) {
       try {
@@ -422,7 +422,9 @@ export const declaredTables = (
   const ctx = contextFor(bound)
   const tables: DeclaredTable[] = []
   for (const statement of statementsOf(schema)) {
-    const match = CREATE_TABLE.exec(statement(bound, {}, ctx).compile().sql)
+    const match = CREATE_TABLE.exec(
+      statement(bound, {}, ctx)?.compile().sql ?? ''
+    )
     if (match) tables.push({ schema: match[1], name: match[2]! })
   }
   return tables
@@ -537,9 +539,10 @@ export const compilePikkuSchemas = (
   const ctx = contextFor(bound)
   return schemas
     .flatMap((schema) =>
-      statementsOf(schema).map(
-        (statement) => `${statement(bound, types, ctx).compile().sql};`
-      )
+      statementsOf(schema).flatMap((statement) => {
+        const query = statement(bound, types, ctx)
+        return query ? [`${query.compile().sql};`] : []
+      })
     )
     .join('\n\n')
 }

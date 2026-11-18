@@ -59,12 +59,15 @@ import {
   emptyDeclaration,
   declaredTablesMarker,
   declareOnlyProblems,
+  declaresOnUpdate,
+  declareOnlyOnUpdateProblems,
   recordedDeclaredTables,
   refuseTableChanges,
   type DestructiveChange,
   TABLES_FILE,
   type LoadedDeclaration,
   type ColumnRename,
+  type UpdateRules,
 } from './table-declaration.js'
 import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
 import { SqliteIntrospector } from './sqlite/sqlite-introspector.js'
@@ -1996,6 +1999,80 @@ async function coveredIndexes(resolved: ResolvedDb): Promise<Set<string>> {
   }
 }
 
+async function coveredUpdateRules(resolved: ResolvedDb): Promise<UpdateRules> {
+  const lower = (value: unknown) => String(value).toLowerCase()
+  switch (resolved.dialect) {
+    case 'sqlite': {
+      const db = await openSqlite(resolved, ':memory:')
+      try {
+        await migrate(
+          new SqliteMigrationExecutor(db),
+          resolved.migrationsDir,
+          REPLAY
+        )
+        const rows = db
+          .prepare(
+            `select name, tbl_name as tbl, sql from sqlite_master where type = 'trigger'`
+          )
+          .all() as { name: string; tbl: string; sql: string }[]
+        return {
+          triggers: rows.map((row) => ({
+            name: lower(row.name),
+            table: lower(row.tbl),
+            definition: row.sql,
+          })),
+          attributes: new Set(),
+        }
+      } finally {
+        db.close()
+      }
+    }
+    case 'mysql':
+      return withScratchMysqlDatabase(resolved, async (client) => {
+        await migrate(
+          new MysqlMigrationExecutor(client),
+          resolved.migrationsDir,
+          REPLAY
+        )
+        const { rows } = await client.query(
+          `select table_name as t, column_name as c from information_schema.columns
+           where table_schema = database() and lower(extra) like '%on update%'`
+        )
+        return {
+          triggers: [],
+          attributes: new Set(
+            (rows as { t: string; c: string }[]).map(
+              (row) => `${lower(row.t)}.${lower(row.c)}`
+            )
+          ),
+        }
+      })
+    case 'postgres':
+      return withScratchPostgresDatabase(resolved, async (client) => {
+        await migrate(
+          new PostgresMigrationExecutor(client),
+          resolved.migrationsDir,
+          REPLAY
+        )
+        const { rows } = await client.query(
+          `select t.tgname as name, c.relname as tbl, pg_get_triggerdef(t.oid) as def
+           from pg_trigger t join pg_class c on c.oid = t.tgrelid
+           where not t.tgisinternal`
+        )
+        return {
+          triggers: (rows as { name: string; tbl: string; def: string }[]).map(
+            (row) => ({
+              name: lower(row.name),
+              table: lower(row.tbl),
+              definition: row.def,
+            })
+          ),
+          attributes: new Set(),
+        }
+      })
+  }
+}
+
 /** The columns of `table` in `schema`, matched the way `diffSchemas` matches. */
 const coveredTable = (
   covered: SchemaMap,
@@ -2239,6 +2316,15 @@ export async function planDeclaredTables(
       resolved.dialect
     )
   )
+  if (declaresOnUpdate(declaration.declareOnly)) {
+    refusals.push(
+      ...declareOnlyOnUpdateProblems(
+        declaration.declareOnly,
+        await coveredUpdateRules(resolved),
+        resolved.dialect
+      )
+    )
+  }
 
   const ownerOf = (table: string) => declaration.owners?.[table] ?? TABLES_FILE
   for (const source of otherSources) {
@@ -2443,6 +2529,28 @@ export async function planDeclaredTables(
         statements.push(statement)
       }
     }
+  }
+  // The same for a trigger, which a table created above already carries.
+  const newTriggers = shapes.filter(
+    ({ shape }) =>
+      shape.kind === 'trigger' && !missingTables.includes(shape.table)
+  )
+  if (newTriggers.length > 0) {
+    const { triggers } = await coveredUpdateRules(resolved)
+    const existing = new Set(triggers.map((trigger) => trigger.name))
+    for (const { statement, shape } of newTriggers) {
+      if (shape.kind === 'trigger' && !existing.has(shape.name)) {
+        statements.push(statement)
+      }
+    }
+  }
+  // Every trigger calls the one shared function, so it goes in first.
+  const sharedFunction = shapes.find(({ shape }) => shape.kind === 'function')
+  if (
+    sharedFunction &&
+    statements.some((statement) => /^create\s+trigger\b/im.test(statement))
+  ) {
+    statements.unshift(sharedFunction.statement)
   }
   if (refusals.length > 0) return { tables, bodies: [], refusals, destructive }
 

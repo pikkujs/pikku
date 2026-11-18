@@ -7,19 +7,28 @@ import {
   type SqlBool,
 } from 'kysely'
 import type {
-  ColumnDeclaration,
-  ColumnDefault,
+  ColumnOnUpdate,
   ColumnType,
+  DbEngine,
   DeclareOnlyColumnDeclaration,
+  EngineSql,
   NamedConstraint,
   TableDeclaration,
   TablesDeclaration,
 } from '@pikku/core/db'
+import {
+  engineSqlProblems,
+  logicalExpression,
+  logicalProblems,
+  logicalText,
+  sqlFor,
+} from './logical-sql.js'
 import type {
   ForeignKeyTarget,
   RequiredTypes,
   SchemaContext,
   SchemaRequirement,
+  SchemaStatement,
   SchemaStatementFactory,
 } from './pikku-schema.types.js'
 
@@ -175,12 +184,19 @@ const dataType = (
   }
 }
 
-const defaultValue = (value: ColumnDefault, ctx: SchemaContext) => {
-  if (typeof value === 'object') {
-    return 'now' in value ? sql`CURRENT_TIMESTAMP` : sql.raw(value.sql)
-  }
+const defaultValue = (
+  column: DeclareOnlyColumnDeclaration,
+  engine: DbEngine,
+  ctx: SchemaContext,
+  where: string
+) => {
+  const value = logicalExpression(column.default!, engine, `${where} default`)
   return typeof value === 'string' ? ctx.defaultText(value) : value
 }
+
+/** Which engine a bound database is, which is what `default` and `onUpdate` are written for. */
+const engineOf = (db: Kysely<any>, ctx: SchemaContext): DbEngine =>
+  isPostgres(db) ? 'postgres' : ctx.mysql ? 'mysql' : 'sqlite'
 
 /** The kind of a `CHECK` a column constraint compiles to, which names it. */
 export type CheckKind = 'enum' | 'min' | 'max' | 'minlength' | 'maxlength'
@@ -390,6 +406,51 @@ const constraintProblems = (
   return problems
 }
 
+const TIMESTAMP_TYPES = new Set<string>(['timestamp', 'timestamptz'])
+
+/** What is wrong with a column's `default` and `onUpdate`, whatever engine they compile for. */
+const logicalColumnProblems = (
+  tables: TablesDeclaration,
+  table: string,
+  name: string,
+  column: DeclareOnlyColumnDeclaration
+): string[] => {
+  const here = `${table}.${name}`
+  const resolved = resolveType(tables, table, name)
+  const type = resolved.kind === 'declared' ? resolved.type : undefined
+  const problems: string[] = []
+  if (column.default !== undefined) {
+    problems.push(...logicalProblems(here, 'default', column.default))
+    if (
+      typeof column.default === 'object' &&
+      'uuid' in column.default &&
+      type &&
+      !['uuid', 'id', 'key', 'text'].includes(type) &&
+      !(
+        BOUNDED_STRING.exec(type) && Number(BOUNDED_STRING.exec(type)![1]) >= 36
+      )
+    ) {
+      problems.push(
+        `'${here}' is ${type}, so it cannot default to { uuid: true }. It needs a uuid, id, key, text or string(36) or longer column.`
+      )
+    }
+  }
+  if (column.onUpdate !== undefined) {
+    problems.push(...logicalProblems(here, 'onUpdate', column.onUpdate))
+    if (
+      typeof column.onUpdate === 'object' &&
+      'now' in column.onUpdate &&
+      type &&
+      !TIMESTAMP_TYPES.has(type)
+    ) {
+      problems.push(
+        `'${here}' is ${type}, so it cannot take onUpdate { now: true }. It needs a timestamp or timestamptz column.`
+      )
+    }
+  }
+  return problems
+}
+
 const validate = (tables: TablesDeclaration): void => {
   for (const [table, declaration] of Object.entries(tables)) {
     const columns = declaration.columns
@@ -408,8 +469,16 @@ const validate = (tables: TablesDeclaration): void => {
     known(primaryKey, 'primary key')
     for (const group of declaration.unique ?? [])
       known(constraint(group).columns, 'unique constraints')
-    for (const index of declaration.indexes ?? [])
+    for (const index of declaration.indexes ?? []) {
       known(index.columns, 'indexes')
+      if (index.where !== undefined) {
+        const problems = engineSqlProblems(
+          `Index on '${table}' (${index.columns.join(', ')}) where`,
+          index.where
+        )
+        if (problems.length > 0) throw new Error(problems.join(' '))
+      }
+    }
 
     const columnKeys = Object.entries(columns).filter(([, c]) => c.primaryKey)
     if (declaration.primaryKey && columnKeys.length > 0) {
@@ -466,7 +535,10 @@ const validate = (tables: TablesDeclaration): void => {
         }
         resolveType(tables, table, name)
       }
-      const problems = constraintProblems(tables, table, name, column)
+      const problems = [
+        ...constraintProblems(tables, table, name, column),
+        ...logicalColumnProblems(tables, table, name, column),
+      ]
       if (problems.length > 0) throw new Error(problems.join(' '))
     }
   }
@@ -509,11 +581,12 @@ const createTable = (
   const keyed = keyedColumns(tables, table)
   return (db, types: RequiredTypes, ctx) => {
     const postgres = isPostgres(db)
+    const engine = engineOf(db, ctx)
     let builder = db.schema.createTable(table)
     const foreignKeys: Record<string, ForeignKeyTarget> = {}
     for (const [name, column] of Object.entries(declaration.columns) as [
       string,
-      ColumnDeclaration,
+      DeclareOnlyColumnDeclaration,
     ][]) {
       const resolved = resolveType(tables, table, name)
       const type =
@@ -529,7 +602,19 @@ const createTable = (
         if (column.required) col = col.notNull()
         if (column.unique) col = col.unique()
         if (column.default !== undefined) {
-          col = col.defaultTo(defaultValue(column.default, ctx))
+          col = col.defaultTo(
+            defaultValue(column, engine, ctx, `${table}.${name}`)
+          )
+        }
+        if (column.onUpdate !== undefined && engine === 'mysql') {
+          if (!(
+            typeof column.onUpdate === 'object' && 'now' in column.onUpdate
+          )) {
+            throw new Error(
+              `${table}.${name} has an onUpdate other than { now: true }, which MySQL cannot express as a column attribute. Write the trigger in a migration.`
+            )
+          }
+          col = col.modifyEnd(sql`on update CURRENT_TIMESTAMP`)
         }
         if (column.references) {
           col = ctx.references(col, column.references, column.onDelete)
@@ -572,14 +657,14 @@ const createTable = (
 const createIndex = (
   table: string,
   columns: readonly string[],
-  options: { unique?: boolean; where?: string; name?: string }
+  options: { unique?: boolean; where?: EngineSql; name?: string }
 ): SchemaStatementFactory => {
   const name =
     options.name ?? `${snake(table)}_${columns.map(snake).join('_')}_idx`
   return (db, _types, ctx) => {
     if (options.where && ctx.mysql) {
       throw new Error(
-        `Index '${name}' on '${table}' is partial (where ${options.where}), and MySQL has no partial indexes. ` +
+        `Index '${name}' on '${table}' is partial, and MySQL has no partial indexes. ` +
           'Drop the where, or write this index by hand in a migration.'
       )
     }
@@ -588,10 +673,95 @@ const createIndex = (
       .on(table)
       .columns([...columns])
     if (options.unique) builder = builder.unique()
-    if (options.where) builder = builder.where(sql.raw<SqlBool>(options.where))
+    if (options.where) {
+      builder = builder.where(
+        sql.raw<SqlBool>(
+          sqlFor(
+            options.where,
+            engineOf(db, ctx),
+            `Index '${name}' on '${table}' where`
+          )
+        )
+      )
+    }
     return builder
   }
 }
+
+/** The one Postgres function every `onUpdate` trigger calls. */
+export const ON_UPDATE_FUNCTION = 'pikku_on_update'
+
+/** The trigger that keeps one column's `onUpdate`, named so a later diff finds it again. */
+export const onUpdateTriggerName = (table: string, column: string): string => {
+  const plain = `${snake(table)}_${snake(column)}_on_update`
+  if (Buffer.byteLength(plain) <= MAX_NAME_BYTES) return plain
+  const hash = createHash('sha1')
+    .update(`${snake(table)}\0${snake(column)}`)
+    .digest('hex')
+    .slice(0, 8)
+  return `${plain.slice(0, MAX_NAME_BYTES - 'on_update'.length - hash.length - 2)}_${hash}_on_update`
+}
+
+const bound = (
+  db: Kysely<any>,
+  fragment: ReturnType<typeof sql>
+): SchemaStatement => ({
+  execute: () => fragment.execute(db),
+  compile: () => fragment.compile(db),
+})
+
+/**
+ * The function every Postgres `onUpdate` trigger shares. It evaluates the
+ * expression the trigger hands it and writes the result into the named column;
+ * the trigger's own `when` decides whether the statement left the column alone.
+ */
+const onUpdateFunction = (): SchemaStatementFactory => (db, _types, ctx) =>
+  isPostgres(db)
+    ? bound(
+        db,
+        sql`create or replace function ${ctx.table(ON_UPDATE_FUNCTION)}() returns trigger language plpgsql as $pikku$
+declare
+  computed jsonb;
+begin
+  execute format('select to_jsonb(%s)', tg_argv[1]) into computed;
+  new := jsonb_populate_record(new, jsonb_build_object(tg_argv[0], computed));
+  return new;
+end
+$pikku$`
+      )
+    : undefined
+
+/**
+ * The trigger that sets one column when an `UPDATE` did not. Postgres runs the
+ * shared function before the row is written; SQLite sets it after, guarded so
+ * the trigger's own write does not fire it again. MySQL has the column attribute
+ * instead and needs none.
+ */
+const onUpdateTrigger =
+  (
+    table: string,
+    column: string,
+    value: ColumnOnUpdate
+  ): SchemaStatementFactory =>
+  (db, _types, ctx) => {
+    const engine = engineOf(db, ctx)
+    if (engine === 'mysql') return undefined
+    const what = `${table}.${column} onUpdate`
+    const expression = logicalText(value, engine, what)
+    const [t, c] = [sql.id(snake(table)), sql.id(snake(column))]
+    const name = sql.id(onUpdateTriggerName(table, column))
+    if (engine === 'postgres') {
+      return bound(
+        db,
+        sql`create trigger ${name} before update on ${ctx.table(snake(table))} for each row when (new.${c} is not distinct from old.${c}) execute function ${ctx.table(ON_UPDATE_FUNCTION)}(${sql.lit(snake(column))}, ${sql.lit(expression)})`
+      )
+    }
+    const target = sql.raw(`(${expression})`)
+    return bound(
+      db,
+      sql`create trigger ${name} after update on ${t} for each row when new.${c} is old.${c} and new.${c} is not ${target} begin update ${t} set ${c} = ${target} where rowid = new.rowid; end`
+    )
+  }
 
 /**
  * Compile a plain table declaration into the statements a `PikkuSchema`
@@ -619,6 +789,13 @@ export const compileTables = (
   const creates = managed.map(([table, declaration]) =>
     createTable(tables, table, declaration)
   )
+  const onUpdates = managed.flatMap(([table, declaration]) =>
+    Object.entries(declaration.columns).flatMap(([name, column]) =>
+      column.onUpdate === undefined
+        ? []
+        : [onUpdateTrigger(table, name, column.onUpdate)]
+    )
+  )
   const indexes = managed.flatMap(([table, declaration]) => [
     ...Object.entries(declaration.columns)
       .filter(([, column]) => column.index)
@@ -627,5 +804,10 @@ export const compileTables = (
       createIndex(table, index.columns, index)
     ),
   ])
-  return [...creates, ...indexes]
+  return [
+    ...creates,
+    ...indexes,
+    ...(onUpdates.length > 0 ? [onUpdateFunction()] : []),
+    ...onUpdates,
+  ]
 }
