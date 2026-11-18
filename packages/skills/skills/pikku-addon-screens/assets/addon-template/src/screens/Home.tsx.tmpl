@@ -1,0 +1,18 @@
+// The screen imports `m` from the host's message module. "@/i18n/messages" is Pikku Studio's alias; another host names its own.
+import { m } from '@/i18n/messages'
+import { useEffect, useState } from 'react'
+import { asI18n, usePikkuRPC } from '@pikku/react'
+
+export default function Home() {
+  const rpc = usePikkuRPC() as { invoke: (name: string, data?: unknown) => Promise<{ message: string }> }
+  const [message, setMessage] = useState<string | null>(null)
+  useEffect(() => {
+    void rpc.invoke('hello:helloHello').then((r) => setMessage(r.message))
+  }, [rpc])
+  return (
+    <div className="flex h-full flex-col gap-4 p-6">
+      <h1 className="text-xl font-semibold">{m.hello_home__title()}</h1>
+      <p>{message === null ? m.hello_home__loading() : asI18n(message)}</p>
+    </div>
+  )
+}

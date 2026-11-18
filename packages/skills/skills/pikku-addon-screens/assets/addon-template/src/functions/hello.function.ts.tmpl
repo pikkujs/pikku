@@ -1,0 +1,7 @@
+import { pikkuFunc } from '#pikku/addon/function'
+
+export const helloHello = pikkuFunc<void, { message: string }>({
+  expose: true,
+  scopes: ['hello:read'],
+  func: async () => ({ message: 'Hello from Hello' }),
+})

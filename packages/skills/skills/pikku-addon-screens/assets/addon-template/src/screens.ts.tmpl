@@ -1,0 +1,15 @@
+import { definePlugin } from '@pikku/core/addon'
+
+export default definePlugin({
+  title: 'hello__title',
+  screens: [
+    {
+      path: '/hello',
+      title: 'hello_home__title',
+      scope: 'project',
+      nav: { area: 'project', icon: 'puzzle', order: 100 },
+      scopes: ['hello:read'],
+      component: () => import('./screens/Home.js'),
+    },
+  ],
+})
