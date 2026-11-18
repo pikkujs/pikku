@@ -128,7 +128,10 @@ export interface EntryGenerationContext {
    * functions package. It is the same map `pikku dev` attaches, so a deployed
    * query returns the Date, boolean and parsed JSON values it does locally.
    */
-  coercionMap?: Record<string, Record<string, 'date' | 'bool' | 'json'>>
+  coercionMap?: Record<
+    string,
+    Record<string, 'date' | 'bool' | 'json' | 'bigint'>
+  >
 
   /**
    * The app's `pikkuServerLifecycle` export, when it declares one.

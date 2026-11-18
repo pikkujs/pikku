@@ -25,7 +25,7 @@ export const COLUMN_FORMS = [
 ] as const satisfies readonly ColumnForm[]
 
 export interface ColAnnotation extends ColumnConstraints {
-  /** Column kind override: `date`, `bool`, `json`, or `uuid`. */
+  /** Column kind override: `date`, `bool`, `json`, `uuid`, or `bigint`. */
   kind?: AnnotationKind
   /** TypeScript type string that overrides the inferred column type, e.g. `string[]`. */
   tsType?: string
@@ -106,7 +106,8 @@ export function toColAnnotation(ann: RawEntry): ColAnnotation {
     ann.kind === 'bool' ||
     ann.kind === 'date' ||
     ann.kind === 'json' ||
-    ann.kind === 'uuid'
+    ann.kind === 'uuid' ||
+    ann.kind === 'bigint'
   )
     entry.kind = ann.kind
   if (ann.tsType) entry.tsType = ann.tsType

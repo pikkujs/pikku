@@ -10,6 +10,8 @@ A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
 
+- [A bigint column reads as a number and throws above the safe range, and a declareOnly column's type comes from the database](a-bigint-reads-as-a-number-and-throws-above-the-safe-range.md) — integer is the default number type, type bigint (or kind bigint) is the opt-in 64-bit variant read as a JS number with a runtime range check, an undeclared int8 or numeric reads as a string on postgres, and a declareOnly column may omit its type
+
 - [A functions package below the config maps #pikku/* with tsconfig paths](a-functions-package-below-the-config-maps-pikku-with-tsconfig-paths.md) — When pikku.config.json sits at the workspace root and the code in packages/functions, #pikku/* is mapped by tsconfig paths in the tsconfig that governs the package, never by package.json imports or a .pikku symlink
 - [The CLI's native binaries are compiled only when asked for](native-binaries-are-compiled-only-when-asked-for.md) — a normal build compiles none; PIKKU_CLI_BINARIES=host or all opts in, and release sets all on both builds it runs
 - [pikku ci -p builds the commit in a throwaway worktree, and --deploy never picks a target](pikku-ci-builds-the-commit-and-never-picks-a-target.md) — With -p, pikku ci refuses a dirty tree, runs in a detached git worktree it always removes, copies only .deploy back, and --deploy without -p is an error; db migrate under ci refuses any non-loopback database

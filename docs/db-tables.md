@@ -33,16 +33,35 @@ Postgres and MySQL all work from the same declaration.
 
 ## Columns
 
-| Field                                                     | Meaning                                                                                                                |
-| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json`   |
-| `required`                                                | `NOT NULL`                                                                                                             |
-| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                                |
-| `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                                 |
-| `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                   |
-| `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                           |
-| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints: `CHECK`s in the SQL on Postgres and MySQL (never `pattern`), and bounds in the generated zod schema |
-| Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                               |
+| Field                                                     | Meaning                                                                                                                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                                    | `id`, `key`, `text`, `string(n)`, `integer`, `bigint`, `real`, `boolean`, `timestamp`, `timestamptz`, `uuid`, `json`. Optional on a `declareOnly` table |
+| `required`                                                | `NOT NULL`                                                                                                                                              |
+| `default`                                                 | A literal, `{ now: true }`, or `{ sql: '...' }` passed through verbatim                                                                                 |
+| `primaryKey`, `unique`, `index`                           | Single-column key, constraint or index. Composite ones go on the table                                                                                  |
+| `references`                                              | `table.column`. Without a `type`, the column takes its target's type                                                                                    |
+| `onDelete`                                                | `cascade`, `setNull`, `restrict` (the default) or `noAction`                                                                                            |
+| `enum`, `min`, `max`, `minLength`, `maxLength`, `pattern` | Value constraints: `CHECK`s in the SQL on Postgres and MySQL (never `pattern`), and bounds in the generated zod schema                                  |
+| Annotation fields                                         | `security`, `form`, `keyId`, `classification`, `kind`, `tsType`, `format`, `description`                                                                |
+
+### Column types
+
+`integer` is the default number type: 32-bit storage, read as a `number`.
+`bigint` is the 64-bit variant and is still read as a `number`: the generated
+coercion map gives the column the `bigint` kind, and a value above
+`Number.MAX_SAFE_INTEGER` throws when the row is read instead of rounding. A
+decimal reads as a `string` and binary data as a `Uint8Array`; neither can be
+declared on a table `pikku db generate` writes, because they only occur in
+tables something else creates (see `declareOnly` below).
+
+| The database column                          | Reads as                                           |
+| -------------------------------------------- | -------------------------------------------------- |
+| `integer`, `smallint`, `serial`, `real`      | `number`                                           |
+| `bigint` declared `type: 'bigint'` (or kind) | `number`, throwing above `Number.MAX_SAFE_INTEGER` |
+| `bigint`, undeclared                         | `string` on Postgres, `number` on SQLite and MySQL |
+| `numeric`, `decimal`                         | `string` on Postgres and MySQL, `number` on SQLite |
+| `bytea`, `blob`                              | `Uint8Array`                                       |
+| `interval`, `point`                          | `string`                                           |
 
 A table takes `columns`, and optionally `primaryKey` (composite), `unique`
 (composite constraints), `indexes` (with `unique`, a partial `where`, and a `name`),
@@ -378,8 +397,14 @@ export const tables = defineTables({
 
 No SQL is generated for it and generate never changes it. Its columns are checked
 against the table the migrations create instead: a declared column the table does
-not have, or a `type` or `kind` the real column cannot hold, is refused. Columns
-the declaration leaves out are not checked. `pikku meta db` lists these tables
+not have, or a `type`, `tsType` or `kind` the real column cannot hold, is
+refused. Columns the declaration leaves out are not checked.
+
+A column's `type` is optional here: it is read from the column the migrations
+create. A `bigint` column left undeclared reads as a `string` on Postgres; declare
+`type: 'bigint'` (or `kind: 'bigint'`) to read it as a number with the range
+check. A `tsType` of `number` over a column that reads as a string is an error
+that names the fix. `pikku meta db` lists these tables
 apart from the generated ones.
 
 ## Annotations

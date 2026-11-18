@@ -17,6 +17,7 @@ import type { CodedDiagnostic } from '@pikku/inspector'
 import { ErrorCode } from '@pikku/inspector'
 import { suggestSecurityForColumn } from './sensitive-names.js'
 import { withBuiltinAnnotations } from './builtin-annotations.js'
+import { typeFamilyOf } from './column-family.js'
 import type { ColumnKind, CoercionMap } from '@pikku/kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
@@ -91,39 +92,45 @@ function escapeTsString(value: string): string {
 
 // ─── Type mapping ─────────────────────────────────────────────────────────────
 
-function mapType(sqlType: string): string {
+/**
+ * What a column of this database type reads as in TypeScript.
+ *
+ * A 64-bit integer and a decimal are strings on postgres (its driver cannot
+ * hold them in a number without losing precision) and a decimal is a string on
+ * MySQL too; sqlite stores both as plain numbers. A column declared `bigint`
+ * reads as a number whatever the dialect, through the coercion kind.
+ */
+function mapType(sqlType: string, dialect: Dialect): string {
   const upper = sqlType.toUpperCase()
   // Preserve array-ness — map the element type and re-apply the `[]` suffix
   // rather than letting the element's substring match flatten it to a scalar.
-  if (upper.endsWith('[]')) return `${mapType(sqlType.slice(0, -2))}[]`
-  if (upper.includes('INT')) return 'number'
-  if (
-    upper.includes('CHAR') ||
-    upper.includes('CLOB') ||
-    upper.includes('TEXT') ||
-    upper === 'UUID'
-  )
-    return 'string'
-  if (upper.includes('BLOB') || upper === 'BYTEA') return 'Buffer'
-  if (
-    upper.includes('REAL') ||
-    upper.includes('FLOA') ||
-    upper.includes('DOUB')
-  )
-    return 'number'
-  if (upper.includes('NUMERIC') || upper.includes('DECIMAL')) return 'number'
+  if (upper.endsWith('[]')) return `${mapType(sqlType.slice(0, -2), dialect)}[]`
   // Postgres BOOLEAN type → boolean; SQLite BOOL (stores as int) → number
   if (upper === 'BOOLEAN') return 'boolean'
-  if (upper.includes('BOOL')) return 'number'
-  if (upper.includes('JSON')) return 'unknown'
-  return 'string'
+  switch (typeFamilyOf(sqlType)) {
+    case 'boolean':
+    case 'integer':
+    case 'real':
+      return 'number'
+    case 'bigint':
+      return dialect === 'postgres' ? 'string' : 'number'
+    case 'decimal':
+      return dialect === 'sqlite' ? 'number' : 'string'
+    case 'bytea':
+      return 'Uint8Array'
+    case 'json':
+      return 'unknown'
+    default:
+      return 'string'
+  }
 }
 
 // ─── Type expression ─────────────────────────────────────────────────────────
 
 function selectBase(
   annotation: { kind?: AnnotationKind; tsType?: string } | null,
-  col: ColumnInfo
+  col: ColumnInfo,
+  dialect: Dialect
 ): string {
   // An explicit `tsType` is a general type override and wins over everything.
   if (annotation?.tsType) return annotation.tsType
@@ -131,19 +138,22 @@ function selectBase(
   if (annotation?.kind === 'date') return 'Date'
   if (annotation?.kind === 'uuid') return 'Uuid'
   if (annotation?.kind === 'json') return 'unknown'
-  return mapType(col.type)
+  if (annotation?.kind === 'bigint') return 'number'
+  return mapType(col.type, dialect)
 }
 
 function insertBase(
   annotation: { kind?: AnnotationKind; tsType?: string } | null,
-  col: ColumnInfo
+  col: ColumnInfo,
+  dialect: Dialect
 ): string {
   if (annotation?.tsType) return annotation.tsType
   if (annotation?.kind === 'bool') return 'boolean | number'
   if (annotation?.kind === 'date') return 'Date | string'
   if (annotation?.kind === 'uuid') return 'Uuid'
   if (annotation?.kind === 'json') return 'unknown'
-  return mapType(col.type)
+  if (annotation?.kind === 'bigint') return 'number'
+  return mapType(col.type, dialect)
 }
 
 /**
@@ -181,10 +191,14 @@ function columnTypeExpression(
   col: ColumnInfo,
   annotation: { kind?: AnnotationKind; tsType?: string } | null,
   classification: Classification,
+  dialect: Dialect,
   form?: ColumnForm
 ): string {
   const nullable = !col.notNull && !col.pk
-  const isAutoInt = col.pk && mapType(col.type) === 'number'
+  const isAutoInt =
+    col.pk &&
+    (typeFamilyOf(col.type) === 'integer' ||
+      typeFamilyOf(col.type) === 'bigint')
   const isOptionalInsert =
     col.defaultValue !== null || isAutoInt || Boolean(col.generated)
 
@@ -232,7 +246,7 @@ function columnTypeExpression(
       const base = nullable ? 'unknown | null' : 'unknown'
       return wrap(base)
     }
-    const base = mapType(col.type)
+    const base = selectBase(annotation, col, dialect)
     if (isAutoInt) return `Generated<${base}>`
     if (col.defaultValue !== null || col.generated)
       return `Generated<${base}${nullable ? ' | null' : ''}>`
@@ -240,8 +254,8 @@ function columnTypeExpression(
   }
 
   const B = classificationBrand(classification)
-  const sBase = selectBase(annotation, col)
-  const iBase = insertBase(annotation, col)
+  const sBase = selectBase(annotation, col, dialect)
+  const iBase = insertBase(annotation, col, dialect)
 
   const selectT = nullable ? `${B}<${sBase}> | null` : `${B}<${sBase}>`
   const insertT = nullable
@@ -401,7 +415,7 @@ function emitInterface(
       const isJsonColumn =
         col.type.toUpperCase().includes('JSON') || ann?.kind === 'json'
       if (isJsonColumn) {
-        const resolved = selectBase(typeAnn, col)
+        const resolved = selectBase(typeAnn, col, dialect)
         if (resolved === 'unknown' || resolved === 'any') {
           warnings.push({
             severity: 'warn',
@@ -419,7 +433,7 @@ function emitInterface(
       // plain `string`; on anything else (Date/Uuid/boolean/enum/unknown via
       // kind/tsType) it would contradict the type, so warn and skip.
       if (ann?.format) {
-        const base = selectBase(typeAnn, col)
+        const base = selectBase(typeAnn, col, dialect)
         if (base === 'string') {
           ;(formatHints[ifaceName] ??= {})[fieldName] = ann.format
         } else {
@@ -440,8 +454,9 @@ function emitInterface(
       // `.int()`, but only while its type is still the number the DB gave it.
       const bounds = zodConstraintsFor(
         ann,
-        selectBase(typeAnn, col),
-        !typeAnn?.tsType && /INT|SERIAL/i.test(col.type)
+        selectBase(typeAnn, col, dialect),
+        !typeAnn?.tsType &&
+          ['integer', 'bigint'].includes(typeFamilyOf(col.type) ?? '')
       )
       if (bounds) (constraintHints[ifaceName] ??= {})[fieldName] = bounds
 
@@ -492,7 +507,7 @@ function emitInterface(
       // migrated to text first, which is a schema decision, not a codegen one.
       let form = ann?.form
       if (form && form !== 'plain') {
-        const base = selectBase(typeAnn, col)
+        const base = selectBase(typeAnn, col, dialect)
         if (base !== 'string') {
           warnings.push({
             severity: 'warn',
@@ -526,7 +541,13 @@ function emitInterface(
         })
       }
 
-      const type = columnTypeExpression(col, typeAnn, classification, form)
+      const type = columnTypeExpression(
+        col,
+        typeAnn,
+        classification,
+        dialect,
+        form
+      )
       const safeName = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(fieldName)
         ? fieldName
         : JSON.stringify(fieldName)

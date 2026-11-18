@@ -787,11 +787,13 @@ describe('declared constraints', () => {
         col({ name: 'e', type: 'numeric' }),
         col({ name: 'f', type: 'text' }),
         col({ name: 'g', type: 'integer' }),
+        col({ name: 'h', type: 'bigint' }),
       ],
-      { widget: { g: { tsType: 'number' } } }
+      { widget: { g: { tsType: 'number' }, h: { kind: 'bigint' } } }
     )
+    // An undeclared bigint reads as a string on postgres, so there is no number to hint.
     assert.deepEqual(result.zodConstraints, {
-      AppWidget: { a: { int: true }, b: { int: true }, c: { int: true } },
+      AppWidget: { a: { int: true }, c: { int: true }, h: { int: true } },
     })
   })
 })
