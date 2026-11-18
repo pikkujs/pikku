@@ -15,41 +15,41 @@
 import { pikkuFeature, pikkuScenario } from '#pikku/scenario'
 
 export const captureScenario = pikkuScenario<void, { captures: number }>({
-  title: 'A run captures screenshots of the console',
+  title: 'A run captures screenshots of the app',
   description:
-    'An admin opens two console pages and photographs each one, so the run leaves something to look at',
-  tags: ['scenario', 'console'],
+    'A visitor opens the app and its pricing page and photographs each one, so the run leaves something to look at',
+  tags: ['scenario', 'captures', 'browser'],
   func: async (_services, _data, { scenario, virtualUsers }) => {
-    if (!virtualUsers?.admin) {
+    if (!virtualUsers?.guest) {
       throw new Error(
-        'captureScenario needs the admin virtual user — run via `pikku scenario run <environment>`'
+        'captureScenario needs the guest virtual user — run via `pikku scenario run <environment>`'
       )
     }
 
     await scenario.given(
-      'opens the addons page',
-      'opensConsolePage',
-      { path: '/console/addons' },
-      { virtualUser: virtualUsers.admin }
+      'opens the app',
+      'opensPage',
+      { path: '/app', waitFor: { testId: 'app' } },
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
-      'photographs the addons gallery',
+      'photographs the home page',
       'capturesTheScreen',
-      { description: 'Addons gallery' },
-      { virtualUser: virtualUsers.admin }
+      { description: 'App home' },
+      { virtualUser: virtualUsers.guest }
     )
 
     await scenario.when(
-      'opens the functions page',
-      'opensConsolePage',
-      { path: '/console/functions' },
-      { virtualUser: virtualUsers.admin }
+      'opens the pricing page',
+      'clicksTestId',
+      { testId: 'nav-pricing' },
+      { virtualUser: virtualUsers.guest }
     )
     await scenario.then(
-      'photographs the functions list',
+      'photographs the pricing page',
       'capturesTheScreen',
-      { description: 'Functions list' },
-      { virtualUser: virtualUsers.admin }
+      { description: 'Pricing page' },
+      { virtualUser: virtualUsers.guest }
     )
 
     return { captures: 2 }
@@ -60,6 +60,6 @@ export const capturesFeature = pikkuFeature({
   name: 'Run Captures',
   description:
     'A scenario run can photograph the pages it visits, and does not depend on being asked to',
-  tags: ['captures', 'console'],
+  tags: ['captures', 'browser'],
   scenarios: [captureScenario],
 })
