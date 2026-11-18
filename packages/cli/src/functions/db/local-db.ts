@@ -14,6 +14,7 @@ import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { CamelCasePlugin, Kysely, PostgresDialect, sql } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
+import { hasDeclaredSql, runDeclaredSql } from './declaration-probe.js'
 import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import {
   migrate,
@@ -2152,8 +2153,9 @@ async function materializeDeclaration(
   { schema, owners }: LoadedDeclaration,
   covered: SchemaMap,
   schemaName: string | undefined
-): Promise<{ desired?: DesiredSchema; refusals: string[] }> {
+): Promise<{ desired?: DesiredSchema; refusals: string[]; notes: string[] }> {
   const refusals: string[] = []
+  const notes: string[] = []
   const standIns = new Map<string, ColumnInfo[]>()
 
   for (const { table, column } of tableRequirements(schema.tables)) {
@@ -2166,7 +2168,7 @@ async function materializeDeclaration(
     }
     standIns.set(table, [...(standIns.get(table) ?? []), info])
   }
-  if (refusals.length > 0) return { refusals }
+  if (refusals.length > 0) return { refusals, notes }
 
   return withThrowawayKysely(resolved, async (db, introspect) => {
     const physical = db.withoutPlugins()
@@ -2192,17 +2194,31 @@ async function materializeDeclaration(
         refusals: [
           `${TABLES_FILE} does not apply on ${resolved.dialect}: ${error.message}.`,
         ],
+        notes,
       }
     }
 
     const tables = await introspect()
     for (const table of before.keys()) tables.delete(table)
+    const desiredSql = compilePikkuSchemas(db, [schema], types, schemaName)
+    // Last, because the probes add tables to the throwaway database.
+    if (resolved.dialect === 'mysql') {
+      if (hasDeclaredSql(schema.tables)) {
+        notes.push(
+          'The declared default and onUpdate SQL was not executed: MySQL has no embedded engine to run it on. Only the engine keys and the generated statements were checked.'
+        )
+      }
+    } else {
+      refusals.push(
+        ...(await runDeclaredSql(db, schema.tables)).map(
+          (problem) => `${TABLES_FILE}: ${problem}`
+        )
+      )
+    }
     return {
-      desired: {
-        tables,
-        sql: compilePikkuSchemas(db, [schema], types, schemaName),
-      },
+      desired: { tables, sql: desiredSql },
       refusals,
+      notes,
     }
   })
 }
@@ -2288,12 +2304,14 @@ export async function planDeclaredTables(
     schemaName
   )
   const notes: string[] = renamed.notes
-  const { desired, refusals } = await materializeDeclaration(
+  const materialized = await materializeDeclaration(
     resolved,
     declaration,
     covered,
     schemaName
   )
+  const { desired, refusals } = materialized
+  notes.push(...materialized.notes)
   refusals.push(...renamed.refusals)
   if (!desired) return { tables: [], bodies: [], refusals, destructive: [] }
 

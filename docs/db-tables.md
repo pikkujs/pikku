@@ -91,7 +91,7 @@ updatedAt: {
 token: { type: 'uuid', default: { sql: { postgres: 'gen_random_uuid()' } } },
 ```
 
-`{ sql }` (and an index `where`) hold the SQL for each engine, in physical names.
+`{ sql }` (and an index `where`) hold the SQL for each engine, in physical names. A SQLite or MySQL default is wrapped in parentheses for you, as those engines require for an expression.
 Only the key for the configured engine is required; a missing one is an error
 naming the column and the engine, and an unknown key is an error. `{ uuid: true }`
 is for `uuid`, `id`, `key`, `text` and `string(36)` or longer columns.
@@ -113,6 +113,18 @@ table, or when a column with an `onUpdate` is added to a table that exists; addi
 On a `declareOnly` table nothing is generated, so `pikku db generate` checks that
 the migrations create the trigger (or the MySQL attribute) and refuses the
 declaration if they do not.
+
+### The declared SQL is run
+
+`pikku db generate` and `pikku db migrate` do not trust a `default: { sql }` or an
+`onUpdate` by reading it. Each one is run on the shadow database, which is PGlite
+for Postgres and a scratch SQLite database for SQLite, on a probe table with the
+column in its declared type: the statement has to parse, the default has to fit the
+type when a row is inserted, and the `onUpdate` has to survive an `UPDATE` that does
+not name its column. A failure refuses the declaration with the column and the
+database's own message, and nothing is written. MySQL has no embedded engine, so only
+the engine keys and the generated statements are checked, and the output says the
+SQL was not executed.
 
 ### Server-set columns
 

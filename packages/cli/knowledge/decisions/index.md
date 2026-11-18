@@ -10,6 +10,7 @@ A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
 
+- [Declared default and onUpdate SQL is run on the shadow database, and MySQL says it was not](declared-sql-is-run-on-the-shadow-database.md) — materializeDeclaration runs each default sql and onUpdate on a probe table on the PGlite or scratch SQLite shadow database; a failure refuses the declaration, and on MySQL, which has no embedded engine, only the keys are checked and a note says the SQL was not executed
 - [input false marks a server-set column and removes it from every typed input](input-false-marks-a-server-set-column.md) — A column declared input false stays in the row type and the row zod schema, is left out of the generated insert and patch zod schemas, and is typed ColumnType<Row, never, never> in the Kysely types
 - [A bigint column reads as a number and throws above the safe range, and a declareOnly column's type comes from the database](a-bigint-reads-as-a-number-and-throws-above-the-safe-range.md) — integer is the default number type, type bigint (or kind bigint) is the opt-in 64-bit variant read as a JS number with a runtime range check, an undeclared int8 or numeric reads as a string on postgres, and a declareOnly column may omit its type
 
