@@ -1,0 +1,9 @@
+// Goes in the HOST app's wirings, not in the addon package. (Pikku Studio's own repo copies it from the addon's wire/ folder; see references/studio-host.md.)
+import { wireAddon } from '#pikku/addon'
+
+wireAddon({
+  name: 'hello',
+  package: '@acme/addon-hello',
+  expose: true,
+  ui: true,
+})

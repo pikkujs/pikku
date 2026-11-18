@@ -1,0 +1,11 @@
+import { defineScope } from '@pikku/core/scope'
+
+defineScope({
+  'hello': {
+    displayName: 'Hello',
+    description: 'Hello for Pikku Studio',
+    scopes: {
+      read: { description: 'See Hello' },
+    },
+  },
+})
