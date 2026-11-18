@@ -4,7 +4,10 @@ import { readFile, realpath } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import type { ValidateFinding } from './virtual-user-checks.js'
 import { applyRuleSeverity } from './rule-severity.js'
-import { projectSourceDirs } from '../../utils/project-packages.js'
+import {
+  defaultScaffoldDir,
+  projectSourceDirs,
+} from '../../utils/project-packages.js'
 
 /**
  * Rules `pikku validate` insists are on, at `error`, with type information.
@@ -573,7 +576,7 @@ export const loadProject = async (root: string): Promise<Project | null> => {
   )
   const scaffold = (config.scaffold ?? {}) as Record<string, unknown>
   const scaffoldDir = abs(
-    stringOrUndefined(scaffold.pikkuDir) ?? 'src/scaffold'
+    stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir(config)
   )
 
   // Every package.json that could carry the dependency or the lint script: the

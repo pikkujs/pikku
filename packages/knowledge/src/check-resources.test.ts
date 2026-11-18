@@ -305,6 +305,27 @@ describe('orphans', () => {
     )
   })
 
+  test('with a base, the platform code is src/scaffold of the base package', async () => {
+    const root = await project({
+      '.pikku/function/pikku-functions-meta.gen.json': { agentCaller: {}, checkout: {} },
+      'pikku.config.json': { base: 'packages/app' },
+      '.pikku/function/pikku-functions-meta-verbose.gen.json': {
+        agentCaller: { sourceFile: `${'ROOT'}/packages/app/src/scaffold/agent/agent.gen.ts` },
+        checkout: { sourceFile: `${'ROOT'}/packages/app/src/functions/checkout.function.ts` },
+      },
+    })
+    const verbose = join(root, '.pikku/function/pikku-functions-meta-verbose.gen.json')
+    await writeFile(
+      verbose,
+      (await readFile(verbose, 'utf8')).replaceAll('ROOT', root),
+      'utf8'
+    )
+    assert.deepEqual(
+      (await check(root)).orphans.map((orphan) => orphan.uri),
+      ['func:checkout']
+    )
+  })
+
   test('an empty orphanPrefixes turns the report off', async () => {
     const root = await project(FUNC_META)
     const result = await checkKnowledgeResources(root, join(root, '.pikku'), {

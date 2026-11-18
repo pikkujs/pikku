@@ -12,6 +12,7 @@ import {
   normalizeMetaLocale,
   tryGetPikkuCLIConfig,
 } from './pikku-cli-config.js'
+import { scaffoldFilePath } from './file-writer.js'
 import { isExpectedError } from '@pikku/core/errors'
 
 describe('getPikkuCLIConfig', () => {
@@ -107,6 +108,29 @@ describe('getPikkuCLIConfig', () => {
     await assert.rejects(
       getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
       /base in .* is "\.\.\/.*", which is outside the config directory/
+    )
+  })
+
+  test('the scaffold lands in the base package, where its dependencies resolve', async () => {
+    const root = await writeConfig({ base: 'packages/main' })
+    await mkdir(join(root, 'packages/main'), { recursive: true })
+    await writeFile(join(root, 'packages/main/pikku.config.json'), '{}')
+    await writeFile(
+      join(root, 'packages/main/package.json'),
+      JSON.stringify({ name: 'main' })
+    )
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
+    assert.equal(
+      config.resolvedScaffoldDir,
+      join(root, 'packages/main/src/scaffold')
+    )
+    assert.equal(
+      scaffoldFilePath(config, 'functions', 'doIt', '.function.ts'),
+      join(root, 'packages/main/src/functions/do-it.function.ts')
     )
   })
 
