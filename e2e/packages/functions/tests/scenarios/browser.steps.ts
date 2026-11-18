@@ -33,6 +33,37 @@ import { expect } from '@pikku/playwright'
  */
 export type { TestIdSelector }
 
+/**
+ * How long a page is given to put up its landing element, not an assertion
+ * about how fast it should be: a cold bundle on a loaded CI runner is slow.
+ */
+const PAGE_READY_TIMEOUT = 60_000
+
+/**
+ * Opens a page and waits for it to have rendered something.
+ *
+ * `waitFor` names the element by test id, the way every other browser step
+ * names what it acts on, never as a raw CSS selector.
+ */
+export const opensPage = pikkuScenarioStep<
+  { path: string; waitFor?: TestIdSelector },
+  { url: string }
+>({
+  name: 'opensPage',
+  description: 'opens a page',
+  template: 'opens {path}',
+  browser: async (_services, { path, waitFor }, { browser }) => {
+    await browser.goto(path)
+    if (waitFor) {
+      await browser
+        .locate(waitFor)
+        .first()
+        .waitFor({ state: 'visible', timeout: PAGE_READY_TIMEOUT })
+    }
+    return { url: browser.page.url() }
+  },
+})
+
 export const seesText = pikkuScenarioStep<{ text: string }, { visible: true }>({
   name: 'seesText',
   description: 'sees a piece of text on the page',

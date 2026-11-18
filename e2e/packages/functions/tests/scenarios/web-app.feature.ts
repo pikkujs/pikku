@@ -46,7 +46,7 @@ export const webFlagHidesAndRevealsAPanelScenario = pikkuScenario<
 
     await scenario.given(
       'the visitor opens the app',
-      'opensConsolePage',
+      'opensPage',
       { path: APP, waitFor: { testId: 'app' } },
       { virtualUser: virtualUsers.guest }
     )
@@ -65,7 +65,7 @@ export const webFlagHidesAndRevealsAPanelScenario = pikkuScenario<
     )
     await scenario.when(
       'the visitor reloads',
-      'opensConsolePage',
+      'opensPage',
       { path: APP, waitFor: { testId: 'app' } },
       { virtualUser: virtualUsers.guest }
     )
@@ -100,7 +100,7 @@ export const webPageViewsReachTheDestinationScenario = pikkuScenario<
   func: async (_services, _data, { scenario, virtualUsers }) => {
     await scenario.given(
       'the visitor opens the app',
-      'opensConsolePage',
+      'opensPage',
       { path: APP, waitFor: { testId: 'app' } },
       { virtualUser: virtualUsers.guest }
     )
@@ -116,7 +116,7 @@ export const webPageViewsReachTheDestinationScenario = pikkuScenario<
     // timer, and it is not what this scenario is about.
     await scenario.given(
       'and comes back with the banner answered',
-      'opensConsolePage',
+      'opensPage',
       { path: APP, waitFor: { testId: 'app' } },
       { virtualUser: virtualUsers.guest }
     )
@@ -195,7 +195,7 @@ export const webRefusingConsentSendsNothingScenario = pikkuScenario<
 
     await scenario.given(
       'the visitor opens the app',
-      'opensConsolePage',
+      'opensPage',
       { path: APP, waitFor: { testId: 'app' } },
       { virtualUser: virtualUsers.guest }
     )
