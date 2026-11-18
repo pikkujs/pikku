@@ -23,6 +23,7 @@ wireAddon({
 - Name it `captcha`. Its table is `captcha_used_challenge`, and every addon table must start with the wired name.
 - Only `getChallenge` is exposed. `verifyChallenge` stays server-side so a browser cannot spend challenges.
 - Set the secrets `ALTCHA_HMAC_SECRET` and `ALTCHA_HMAC_KEY_SECRET`, each 32 characters or more and different from each other. Rotating them invalidates challenges in flight, which is harmless.
+- Optionally set `ALTCHA_COST` (default 5000, the PBKDF2 iterations per attempt). Raise it to slow bots further, lower it for slow devices.
 - Run `pikku all`, then `pikku db generate` and `pikku db migrate`. The addon ships its table as a declaration and never creates it itself.
 
 ## Browser
@@ -34,7 +35,7 @@ const widget = document.querySelector('altcha-widget')
 widget.configure({ challenge: await rpc.invoke('captcha:getChallenge') })
 ```
 
-Give the widget the challenge object through `configure`, not a URL: the RPC is a POST and the widget's URL form issues a GET. The widget then writes the base64 payload into a hidden field named `altcha`; include that string in the form's input. It solves in about half a second on a desktop browser and needs HTTPS (`localhost` counts). The bundle is about 120 KB minified.
+Give the widget the challenge object through `configure`, not a URL: the RPC is a POST and the widget's URL form issues a GET. The widget then writes the base64 payload into a hidden field named `altcha`; include that string in the form's input. At the default cost it solves in two to four seconds on a desktop browser, which is fine because the visitor started it, and it needs HTTPS (`localhost` counts). The bundle is about 120 KB minified.
 
 A challenge expires after five minutes. When the widget fires `expired`, fetch and configure a new one.
 

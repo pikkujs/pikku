@@ -13,9 +13,9 @@ import {
 
 /** PBKDF2 keeps the widget's solve to about a second on a phone. `deriveKey` is the only part that needs `node:crypto`. */
 const ALGORITHM = 'PBKDF2/SHA-256'
-/** With the counter range below, about 3M hashes per solve: roughly half a second on a desktop browser. */
-const DEFAULT_COST = 2_000
-const COUNTER_RANGE = [1_000, 2_000] as const
+/** With the counter range below, about 15M hashes per solve: two to three seconds on a desktop browser. A solve the visitor started may take that long. */
+export const DEFAULT_COST = 5_000
+const COUNTER_RANGE = [2_000, 4_000] as const
 
 /** A challenge stays solvable for five minutes, long enough to fill a form. */
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
