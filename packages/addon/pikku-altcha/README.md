@@ -19,4 +19,4 @@ wireAddon({
 })
 ```
 
-Set the secrets `ALTCHA_HMAC_SECRET` and `ALTCHA_HMAC_KEY_SECRET`. The package's `skills/using-altcha` explains the browser and server sides.
+Set the secrets `ALTCHA_HMAC_SECRET` and `ALTCHA_HMAC_KEY_SECRET`, and optionally the variable `ALTCHA_COST` (default 5000) to tune how long the widget works. The package's `skills/using-altcha` explains the browser and server sides.
