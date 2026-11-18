@@ -176,13 +176,16 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
-  test('srcDirectories is refused and points at base and addons', async () => {
+  test('srcDirectories is accepted and reads nothing', async () => {
     const root = await writeConfig({ srcDirectories: ['src'] })
 
-    await assert.rejects(
-      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /srcDirectories in .* is gone.*`base`.*`addons`/
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
     )
+
+    assert.deepEqual(config.sourceDirs, ['.'])
   })
 
   test('derives the analytics scaffold outputs and leaves the union in src', async () => {
