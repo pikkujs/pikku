@@ -7,6 +7,7 @@ import { sql, type Kysely } from 'kysely'
 import { AltchaService } from './services/altcha.service.js'
 import { verifyChallenge } from './functions/verify-challenge.function.js'
 import { getChallenge } from './functions/get-challenge.function.js'
+import { VerifyChallengeInput } from './lib/altcha.schemas.js'
 
 const SECRET = 'a'.repeat(40)
 const KEY_SECRET = 'b'.repeat(40)
@@ -107,6 +108,11 @@ describe('verifyChallenge', () => {
 
   test('accepts a valid solution', async () => {
     assert.deepEqual(await run(await solved(altcha)), { verified: true })
+  })
+
+  test('an empty payload is a captcha refusal, not a schema error', async () => {
+    assert.ok(VerifyChallengeInput.safeParse({ payload: '' }).success)
+    assert.equal(await refusal(run('')), 'CAPTCHA_INVALID')
   })
 
   test('refuses a missing or invalid payload and records nothing', async () => {
