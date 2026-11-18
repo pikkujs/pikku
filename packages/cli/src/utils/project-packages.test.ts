@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { basename, join, relative } from 'node:path'
+import { basename, join, relative, resolve } from 'node:path'
 import { afterEach, describe, test } from 'node:test'
 import {
   isNestedProject,
@@ -278,13 +278,13 @@ describe('resolveBasePackage', () => {
   const file = 'pikku.config.json'
 
   test('is undefined when the project is its own base', async () => {
-    assert.equal(await resolveBasePackage(file, '/p', undefined, []), undefined)
+    assert.equal(await resolveBasePackage(file, '/p', undefined), undefined)
   })
 
   test('reads a package with its own config and name', async () => {
     const root = await project({ 'packages/app': { name: 'app' } })
     await writeFile(join(root, 'packages/app/pikku.config.json'), '{}')
-    const base = await resolveBasePackage(file, root, 'packages/app', [])
+    const base = await resolveBasePackage(file, root, 'packages/app')
     assert.equal(base?.name, 'app')
     assert.equal(base?.dir, join(root, 'packages/app'))
   })
@@ -292,11 +292,11 @@ describe('resolveBasePackage', () => {
   test('refuses a list, an addon, a config that sets addons, and the project itself', async () => {
     const root = await project({ 'packages/app': { name: 'app' } })
     await assert.rejects(
-      resolveBasePackage(file, root, ['packages/app'], []),
+      resolveBasePackage(file, root, ['packages/app']),
       /must be one directory/
     )
     await assert.rejects(
-      resolveBasePackage(file, root, 'packages/app', []),
+      resolveBasePackage(file, root, 'packages/app'),
       /which is an addon/
     )
     await writeFile(
@@ -304,16 +304,13 @@ describe('resolveBasePackage', () => {
       '{"addons":[]}'
     )
     await assert.rejects(
-      resolveBasePackage(file, root, 'packages/app', []),
+      resolveBasePackage(file, root, 'packages/app'),
       /sets addons or base itself/
     )
-    await assert.rejects(
-      resolveBasePackage(file, root, '.', []),
-      /own directory/
-    )
+    await assert.rejects(resolveBasePackage(file, root, '.'), /own directory/)
   })
 
-  test('refuses a base outside the config directory: `..`, absolute, or a symlink out', async () => {
+  test('refuses a base outside the project root: `..`, absolute, or a symlink out', async () => {
     const root = await project({ 'inner/placeholder': { name: 'x' } })
     const outside = await project({ app: { name: 'app' } })
     await writeFile(join(outside, 'app/pikku.config.json'), '{}')
@@ -325,28 +322,40 @@ describe('resolveBasePackage', () => {
       'linked',
     ]) {
       await assert.rejects(
-        resolveBasePackage(file, inner, entry, []),
-        /outside the config directory.*must live inside the config directory/,
+        resolveBasePackage(file, inner, entry),
+        /outside the project root \(rootDir, .*must live inside rootDir/,
         entry
       )
     }
   })
+})
 
-  test('refuses a directory that is also an addon', async () => {
-    const root = await project({ 'packages/app': { name: 'app' } })
-    await writeFile(join(root, 'packages/app/pikku.config.json'), '{}')
-    const addons = [
-      {
-        entry: 'packages/app',
-        dir: join(root, 'packages/app'),
-        name: 'app',
-        namespace: 'app',
-        dependsOn: [],
-      },
-    ]
+describe('resolveBasePackage root of trust', () => {
+  const file = 'pikku.config.json'
+
+  test('a rootDir that is the filesystem root is refused', async () => {
     await assert.rejects(
-      resolveBasePackage(file, root, 'packages/app', addons),
-      /also listed in addons/
+      resolveBasePackage(file, '/', 'tmp'),
+      /rootDir in pikku.config.json is the filesystem root/
+    )
+  })
+
+  test('a rootDir of `..` holds a base below it and refuses one beside it', async () => {
+    const root = await project({
+      'proj/placeholder': { name: 'x' },
+      'sibling/app': { name: 'app' },
+    })
+    await writeFile(join(root, 'sibling/app/pikku.config.json'), '{}')
+    await writeFile(join(root, 'sibling/app/package.json'), '{"name":"app"}')
+    const config = join(root, 'proj')
+    const up = resolve(config, '..')
+    assert.equal(
+      (await resolveBasePackage(file, up, 'sibling/app'))?.name,
+      'app'
+    )
+    await assert.rejects(
+      resolveBasePackage(file, up, '../elsewhere'),
+      /outside the project root/
     )
   })
 })
@@ -383,6 +392,56 @@ describe('checkAddonsWired', () => {
           '/p/packages/app'
         ),
       /"@x\/tools" "tols".*"tools" \(addons in \/p\/pikku.config.json\)/
+    )
+  })
+
+  test('a second call for the same package is an error naming both calls', () => {
+    const twice = new Map([
+      ['tools', { package: '@x/tools', file: '/p/packages/app/src/a.ts' }],
+      ['tools_test', { package: '@x/tools', file: '/p/packages/app/src/b.ts' }],
+    ])
+    assert.throws(
+      () => checkAddonsWired(file, [tools], twice, '/p/packages/app'),
+      /"@x\/tools" is wired twice: wireAddon "tools" in \/p\/packages\/app\/src\/a.ts and "tools_test" in \/p\/packages\/app\/src\/b.ts/
+    )
+  })
+
+  test('a call whose package is an alias counts as the package it installs', () => {
+    const alias = new Map([
+      ['tools', { package: 'tools', file: '/p/packages/app/src/a.ts' }],
+    ])
+    const resolveName = (d: { package: string }) =>
+      d.package === 'tools' ? '@x/tools' : d.package
+    assert.deepEqual(
+      checkAddonsWired(file, [tools], alias, '/p/packages/app', resolveName),
+      []
+    )
+  })
+
+  test('a call that takes the namespace for another package is an error', () => {
+    assert.throws(
+      () =>
+        checkAddonsWired(
+          file,
+          [tools],
+          call('tools', '@x/other'),
+          '/p/packages/app'
+        ),
+      /wireAddon "tools" in .* points at "@x\/other", but "tools" is the namespace packages\/tools\/pikku.config.json declares for "@x\/tools"/
+    )
+  })
+
+  test('a declaration with no file counts, and an entry with a trailing slash names a clean config path', () => {
+    const noFile = new Map([['tols', { package: '@x/tools' }]])
+    assert.throws(
+      () =>
+        checkAddonsWired(
+          file,
+          [{ ...tools, entry: './packages/tools/' }],
+          noFile,
+          '/p/packages/app'
+        ),
+      /names the package "@x\/tools" "tols", but packages\/tools\/pikku.config.json declares/
     )
   })
 

@@ -211,8 +211,6 @@ const MOVED_TOP_LEVEL: Record<
 > = {
   srcDirectories:
     'is gone: a project inspects its own directory. Name the package that owns the wirings and services with `base`, and list addon directories in `addons`. Delete it',
-  pikkuDirectories:
-    'is gone. Name the package that owns the wirings and services with `base`, and list addon directories (each with its own pikku.config.json and a namespace) in `addons`. Delete it',
   outDir:
     'is no longer a config key: generated files always go to `.pikku/` beside pikku.config.json. Delete it (`--outDir` stays as an internal flag for per-unit codegen)',
   dev: (value) => {

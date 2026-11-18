@@ -1,6 +1,6 @@
 import { existsSync, realpathSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { parseAddonDependencies } from '@pikku/inspector'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 
@@ -294,13 +294,14 @@ export type BasePackage = { entry: string; dir: string; name: string }
  * Reads the directory a project names as its `base` and refuses what cannot
  * be one: not a single string, missing, the project's own directory, without
  * its own pikku.config.json or package.json name, an addon, or one that sets
- * `addons` or `base` itself. `base` is one package, so a list is refused.
+ * `addons` or `base` itself. `base` is one package, so a list is refused. It
+ * resolves against the project root (`rootDir`), which is where the project's
+ * code is read from, and must stay inside it.
  */
 export const resolveBasePackage = async (
   configFile: string,
   rootDir: string,
-  entry: unknown,
-  addons: AddonPackage[]
+  entry: unknown
 ): Promise<BasePackage | undefined> => {
   if (entry === undefined) return undefined
   const where = `base in ${configFile}`
@@ -310,6 +311,11 @@ export const resolveBasePackage = async (
     )
   }
   const own = resolve(rootDir)
+  if (dirname(own) === own) {
+    throw new PikkuCLIConfigError(
+      `rootDir in ${configFile} is the filesystem root, so every directory is inside it and base cannot be checked. Point rootDir at the project.`
+    )
+  }
   const dir = resolve(rootDir, entry)
   const label = relative(own, dir) || entry
   if (dir === own) {
@@ -319,7 +325,7 @@ export const resolveBasePackage = async (
   }
   const outside = () =>
     new PikkuCLIConfigError(
-      `${where} is "${entry}", which is outside the config directory (${own}). The base must live inside the config directory: move the package there, or put the config in a directory above it.`
+      `${where} is "${entry}", which is outside the project root (rootDir, ${own}). The base must live inside rootDir: move the package there, or point rootDir at a directory above it.`
     )
   if (escapes(own, dir)) throw outside()
   if (!existsSync(dir)) {
@@ -351,11 +357,6 @@ export const resolveBasePackage = async (
       `${where} is "${entry}", whose package.json has no name. Add a "name" to ${label}/package.json.`
     )
   }
-  if (addons.some((a) => a.dir === dir)) {
-    throw new PikkuCLIConfigError(
-      `${where} is "${entry}", which is also listed in addons. A directory is the base or an addon, not both.`
-    )
-  }
   return { entry, dir, name: pkg.name }
 }
 
@@ -372,34 +373,61 @@ export type WireAddonDeclaration = {
  * addon's package, under the addon's `namespace`. Only the base's source is
  * read: a `wireAddon` anywhere else in the root does not count.
  *
- * The match is by package. A call that names a listed addon's package under any
- * other name is a typo that would leave the addon's functions callable under a
- * name nothing expects, and is an error. A listed addon no call points at is
- * dead weight, and is returned as a warning.
+ * `resolvePackage` names the package a call points at, the way the addon
+ * loader resolves it (the package.json name of the resolved directory), so an
+ * npm alias counts as the package it installs.
+ *
+ * Exactly one call may point at each listed addon, under its `namespace`. A
+ * second call, or a call that names it otherwise, is an error, and so is a call
+ * that takes the addon's namespace for another package. A listed addon no call
+ * points at is dead weight, and is returned as a warning.
  */
 export const checkAddonsWired = (
   configFile: string,
   addons: readonly { entry: string; name: string; namespace: string }[],
   declarations: ReadonlyMap<string, WireAddonDeclaration>,
-  baseDir: string
+  baseDir: string,
+  resolvePackage: (declaration: WireAddonDeclaration) => string = (d) =>
+    d.package
 ): string[] => {
   const own = resolve(baseDir)
-  const fromBase = [...declarations].filter(
-    ([, declaration]) =>
-      declaration.file === undefined || !escapes(own, resolve(declaration.file))
-  )
+  const fromBase = [...declarations]
+    .filter(
+      ([, declaration]) =>
+        declaration.file === undefined ||
+        !escapes(own, resolve(declaration.file))
+    )
+    .map(([name, declaration]) => ({
+      name,
+      file: declaration.file,
+      package: resolvePackage(declaration),
+    }))
+  const at = (call: { name: string; file?: string }) =>
+    `"${call.name}"${call.file ? ` in ${call.file}` : ''}`
   const warnings: string[] = []
   for (const addon of addons) {
-    const calls = fromBase.filter(
-      ([, declaration]) => declaration.package === addon.name
+    const addonConfig = join(addon.entry, CONFIG_FILE)
+    const stolen = fromBase.find(
+      (call) => call.name === addon.namespace && call.package !== addon.name
     )
-    const misnamed = calls.find(([name]) => name !== addon.namespace)
-    if (misnamed) {
+    if (stolen) {
       throw new PikkuCLIConfigError(
-        `wireAddon names the package "${addon.name}" "${misnamed[0]}", but ${addon.entry}/${CONFIG_FILE} declares its namespace as "${addon.namespace}" (addons in ${configFile}). Use one name in both places.`
+        `wireAddon ${at(stolen)} points at "${stolen.package}", but "${addon.namespace}" is the namespace ${addonConfig} declares for "${addon.name}" (addons in ${configFile}). Wire "${addon.name}" under that name, or change the namespace in both places.`
       )
     }
-    if (calls.length === 0) {
+    const calls = fromBase.filter((call) => call.package === addon.name)
+    if (calls.length > 1) {
+      throw new PikkuCLIConfigError(
+        `"${addon.name}" is wired twice: wireAddon ${at(calls[0]!)} and ${at(calls[1]!)}. An addon listed in addons (${configFile}) is wired once, under its namespace "${addon.namespace}". Remove the extra call.`
+      )
+    }
+    const [call] = calls
+    if (call && call.name !== addon.namespace) {
+      throw new PikkuCLIConfigError(
+        `wireAddon names the package "${addon.name}" ${at(call)}, but ${addonConfig} declares its namespace as "${addon.namespace}" (addons in ${configFile}). Use one name in both places.`
+      )
+    }
+    if (!call) {
       warnings.push(
         `addons in ${configFile} lists "${addon.entry}", but no wireAddon in the base package's source points at ${addon.name}. Expected wireAddon({ name: '${addon.namespace}', package: '${addon.name}' }); until it is wired, the addon's functions are not callable from the app. Add it, or remove the entry from addons.`
       )

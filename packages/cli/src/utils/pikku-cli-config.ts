@@ -542,8 +542,7 @@ const _getPikkuCLIConfig = async (
     const basePackage = await resolveBasePackage(
       configFile,
       rootDir,
-      config.base,
-      addonPackages
+      config.base
     )
     const result: PikkuCLIConfig = {
       ...(config as unknown as PikkuCLIConfig),
@@ -555,6 +554,7 @@ const _getPikkuCLIConfig = async (
       ),
       outDir: join(configDir, '.pikku'),
       configDir,
+      configPath: configFile,
       packageMappings: config.packageMappings || {},
       rootDir,
       sourceDirs: projectSourceDirs(config),

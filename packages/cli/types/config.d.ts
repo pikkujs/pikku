@@ -1295,6 +1295,8 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
     clientFiles?: PikkuClientSdkFiles
     filters: InspectorFilters
     configDir: string
+    /** The pikku.config.json this config was read from, as it was found or passed with `--config`. */
+    configPath: string
     /**
      * The directories whose source is inspected, relative to `rootDir`: the
      * project's own directory and its base, minus dependencies, build output, its generated

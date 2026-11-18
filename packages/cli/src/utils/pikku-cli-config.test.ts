@@ -90,7 +90,7 @@ describe('getPikkuCLIConfig', () => {
     assert.deepEqual(config.sourceDirs, ['.', 'packages/main'])
   })
 
-  test('a base outside the config directory is refused', async () => {
+  test('a base outside the project root is refused', async () => {
     const outside = await mkdtemp(join(tmpdir(), 'pikku-config-outside-'))
     tempDirs.push(outside)
     await writeFile(join(outside, 'pikku.config.json'), '{}')
@@ -107,7 +107,7 @@ describe('getPikkuCLIConfig', () => {
 
     await assert.rejects(
       getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /base in .* is "\.\.\/.*", which is outside the config directory/
+      /base in .* is "\.\.\/.*", which is outside the project root/
     )
   })
 
@@ -176,16 +176,14 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
-  for (const key of ['srcDirectories', 'pikkuDirectories']) {
-    test(`${key} is refused and points at base and addons`, async () => {
-      const root = await writeConfig({ [key]: ['src'] })
+  test('srcDirectories is refused and points at base and addons', async () => {
+    const root = await writeConfig({ srcDirectories: ['src'] })
 
-      await assert.rejects(
-        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-        new RegExp(`${key} in .* is gone.*\`base\`.*\`addons\``)
-      )
-    })
-  }
+    await assert.rejects(
+      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /srcDirectories in .* is gone.*`base`.*`addons`/
+    )
+  })
 
   test('derives the analytics scaffold outputs and leaves the union in src', async () => {
     const root = await writeConfig({ scaffold: { analytics: true } })

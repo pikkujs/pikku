@@ -134,14 +134,14 @@ What an app sees:
 
 ### `srcDirectories` is now `base` and `addons`
 
-**What:** a project inspects its own directory, so `srcDirectories` is gone and a config that still sets it (or `pikkuDirectories`) is rejected. Two keys replace it:
+**What:** a project inspects its own directory, so `srcDirectories` is gone and a config that still sets it is rejected. Two keys replace it:
 
-- `base`: one directory that owns all wirings and services, with its own `pikku.config.json` and a `package.json` name, inside the directory that holds the root config (`..`, an absolute path or a symlink out is an error). The root inspects the base's source in place, takes `createConfig` and `createSingletonServices` from it, and wires nothing of its own. Without `base`, a config is its own base.
+- `base`: one directory that owns all wirings and services, with its own `pikku.config.json` and a `package.json` name, inside the project root, which is `rootDir` (default: the directory that holds the root config; `..` past it, an absolute path or a symlink out is an error, and so is a `rootDir` that is the filesystem root). The root inspects the base's source in place, takes `createConfig` and `createSingletonServices` from it, and wires nothing of its own. Without `base`, a config is its own base.
 - `addons`: directories of addons, each with its own `pikku.config.json` (an `addon` section) and a required `namespace`.
 
 - The project skips `node_modules`, `dist`, `build`, `.pikku`, dot-directories and any directory with its own `pikku.config.json`, except its `base`. Source that sat outside the project directory, or that the old list excluded by omission, is now inspected unless `ignoreFiles` names it.
 - `pikku all` at the root runs `pikku all` in each addon, dependencies first (the four dependency fields and `pikku.uses` order them; a cycle is an error), then in the base, then builds the backends from the root. The SDKs land in the root `.pikku/sdk/<backend>/exposed`: the base's exposed functions un-namespaced, an addon's as `<namespace>:<function>`.
-- The base keeps its own `wireAddon` calls in its source: that is where an `expose` allowlist is declared, and the SDK carries a function only when the addon marks it `expose` and the `wireAddon` exposes it. A `wireAddon` is matched to an addon by its `package`, and only a call in the base's source counts. A call whose `name` differs from the addon's `namespace` is an error naming both; an addon in `addons` that no call points at is a warning naming the addon and the `wireAddon` it expects.
+- The base keeps its own `wireAddon` calls in its source: that is where an `expose` allowlist is declared, and the SDK carries a function only when the addon marks it `expose` and the `wireAddon` exposes it. A `wireAddon` is matched to an addon by its `package`, and only a call in the base's source counts. `package` is resolved the way the addon loader resolves it, so an npm alias counts as the package it installs. Exactly one call may point at each addon in `addons`: a call whose `name` differs from the addon's `namespace` is an error naming both, a second call for the same package is an error naming both calls, and a call that takes an addon's `namespace` for another package is an error; an addon in `addons` that no call points at is a warning naming the addon and the `wireAddon` it expects.
 - An addon needs `exports` for `./.pikku/*`, as any addon does, and a required `namespace` in its `pikku.config.json` (lowercase letter first, then lowercase alphanumerics, hyphens or underscores; unique among `addons`). A missing or duplicate namespace, or an entry that is not an addon, is an error. The base needs no `backends` or `frontends`.
 - Each service an addon's functions need from its project (`requiredParentServices`) must be one the base's `SingletonServices` provides (PKU368). A service declared only as a wire service does not satisfy it.
 - Generated scaffold files (`scaffold.pikkuDir`, default `src/scaffold`) are written in the base package, and `pikku new function`, `pikku addons add` and the other generators write under the base's `src`, so the generated files sit where the base's dependencies resolve.
@@ -167,7 +167,7 @@ What an app sees:
 wireAddon({ name: 'billing', package: '@acme/billing', expose: true })
 ```
 
-**Find:** `rg -n '"(srcDirectories|pikkuDirectories)"' --glob pikku.config.json`
+**Find:** `rg -n '"srcDirectories"' --glob pikku.config.json`
 
 ### `pikku.config.json` declares `backends` and/or `frontends`; `extends`, `namedFilters` and the filter flags are gone
 
