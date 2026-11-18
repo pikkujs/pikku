@@ -81,6 +81,7 @@ const COLUMN_FIELDS = new Set([
   'type',
   'required',
   'default',
+  'onUpdate',
   'primaryKey',
   'unique',
   'index',
@@ -416,9 +417,14 @@ export function recordedDeclaredTables(migrationsDir: string): Set<string> {
 
 // ─── Comparing a declared table with what the migrations hold ────────────────
 
+/** The current timestamp as each engine reports it: `now()` on postgres, `CURRENT_TIMESTAMP` elsewhere. */
+const isNow = (value: string): boolean =>
+  /^(now\(\)|current_timestamp(\(\))?)$/i.test(value.trim())
+
 /** Case folds only outside a string literal: `'A'` and `'a'` are different defaults. */
 const sameDefault = (a: string | null, b: string | null): boolean => {
   if (a === null || b === null) return a === b
+  if (isNow(a) && isNow(b)) return true
   return /['"]/.test(a) || /['"]/.test(b)
     ? a.trim() === b.trim()
     : a.trim().toLowerCase() === b.trim().toLowerCase()
@@ -670,6 +676,64 @@ export function declareOnlyProblems(
             : ` Drop the tsType to read it as ${readsAs(family, dialect)}.`
         problems.push(
           `${at} is ${info.type} in the migrations, which reads as ${readsAs(family, dialect)}, not the '${column.tsType}' ${TABLES_FILE} gives it as tsType.${advice}`
+        )
+      }
+    }
+  }
+  return problems
+}
+
+// ─── onUpdate on a table something else creates ──────────────────────────────
+
+/** What keeps an `onUpdate` in the schema the migrations alone define. */
+export interface UpdateRules {
+  /** Triggers, with the table each is on and its definition as the database reports it. */
+  triggers: { name: string; table: string; definition: string }[]
+  /** MySQL columns carrying `ON UPDATE`, as `table.column`. */
+  attributes: Set<string>
+}
+
+/** Whether any column of a `declareOnly` table declares an `onUpdate`. */
+export const declaresOnUpdate = (declareOnly: TablesDeclaration): boolean =>
+  Object.values(declareOnly).some((table) =>
+    Object.values(table.columns).some((column) => column.onUpdate !== undefined)
+  )
+
+/**
+ * Where a `declareOnly` column declares an `onUpdate` that nothing the
+ * migrations create provides.
+ *
+ * Nothing is generated for these tables, so a declaration that promised the
+ * column would be kept current would otherwise be believed and never true. The
+ * author writes the migration: a trigger on Postgres and SQLite, the `ON UPDATE`
+ * attribute on MySQL.
+ */
+export function declareOnlyOnUpdateProblems(
+  declareOnly: TablesDeclaration,
+  rules: UpdateRules,
+  dialect: string
+): string[] {
+  const problems: string[] = []
+  for (const [logical, declaration] of Object.entries(declareOnly)) {
+    const table = snakeCase(logical)
+    for (const [name, column] of Object.entries(declaration.columns)) {
+      if (column.onUpdate === undefined) continue
+      const physical = snakeCase(name)
+      const at = `${table}.${physical}`
+      const provided =
+        dialect === 'mysql'
+          ? rules.attributes.has(at)
+          : rules.triggers.some(
+              (trigger) =>
+                trigger.table === table &&
+                new RegExp(`\\b${physical}\\b`, 'i').test(trigger.definition) &&
+                /\bupdate\b/i.test(trigger.definition)
+            )
+      if (!provided) {
+        problems.push(
+          `${TABLES_FILE} declares onUpdate on ${at}, but the migrations create no ` +
+            `${dialect === 'mysql' ? 'ON UPDATE attribute' : 'UPDATE trigger'} for it. ` +
+            `Nothing is generated for a declareOnly table, so write that migration, or drop the onUpdate.`
         )
       }
     }

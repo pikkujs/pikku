@@ -885,6 +885,34 @@ A run suspended for an approval or a credential now records `expiresAt` on each 
 
 To find affected code, search for `implements AgentRunStateService|PendingApproval`.
 
+### `default: { sql }` and an index `where` are written once per engine
+
+**What:** in `db/tables.ts`, a raw `default: { sql: '...' }` and an index `where: '...'` took one verbatim string for every engine. They now take an object with the SQL for each engine, and only the key for the project's configured engine (`db.engine`) is required. A missing key is an error naming the column and the engine; an unknown key is an error too.
+
+**Why:** one string could not be right for SQLite, Postgres and MySQL at once, so a declaration written for one engine failed on another with a raw database error.
+
+**Before and after:**
+
+```ts
+// before
+token: { type: 'uuid', default: { sql: 'gen_random_uuid()' } },
+indexes: [{ columns: ['id'], where: 'finished_at IS NULL' }],
+
+// after
+token: { type: 'uuid', default: { uuid: true } },
+indexes: [{ columns: ['id'], where: { postgres: 'finished_at IS NULL', sqlite: 'finished_at IS NULL' } }],
+```
+
+`{ uuid: true }` is new and stands for `gen_random_uuid()` on Postgres, `(UUID())` on MySQL and a version 4 UUID built from `randomblob` on SQLite. `{ now: true }` now compiles to `now()` on Postgres (it stays `CURRENT_TIMESTAMP` elsewhere); generate treats `now()` and `CURRENT_TIMESTAMP` as the same default, so an existing table does not read as changed.
+
+**Find:** `rg -n "default: \{ sql|where: ['\"\`]" db/tables.ts`
+
+### `bigint` reads as a number and a `declareOnly` column's type is derived
+
+**What:** the generated type of an undeclared 64-bit integer (`int8`) or decimal column on Postgres is `string`, not `number`, and a `bytea`/`blob` column is `Uint8Array`, not `Buffer`. A column declared `type: 'bigint'` (or `kind: 'bigint'`) reads as a `number`, and a value above `Number.MAX_SAFE_INTEGER` throws when the row is read. On a `declareOnly` table, `type` is optional, and a declared `type` that disagrees with the real column is an error (`integer` over an `int8` on Postgres, `real` over a `numeric`).
+
+**Find:** columns your generated `schema.gen.ts` types `number` that are `bigint`, `numeric` or `decimal` in the database, and `declareOnly` columns whose `type` is `integer` over a `bigint`.
+
 ## How to upgrade
 
 There are no codemods. The old names are removed with no aliases, and in most cases there is no deprecation shim either. Work through the steps below in order.

@@ -29,11 +29,15 @@ export interface SchemaStatement {
   compile(): CompiledQuery
 }
 
+/**
+ * Binds a statement to a database. Returns `undefined` when the statement has
+ * nothing to do on that engine, such as a Postgres trigger function on SQLite.
+ */
 export type SchemaStatementFactory = (
   db: Kysely<any>,
   types: RequiredTypes,
   ctx: SchemaContext
-) => SchemaStatement
+) => SchemaStatement | undefined
 
 /**
  * What a statement needs to know about the schema its DDL lands in.

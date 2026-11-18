@@ -22,6 +22,7 @@ import {
 import Database from 'better-sqlite3'
 import { PGlite } from '@electric-sql/pglite'
 import { defineTables, type TablesDeclaration } from '@pikku/core/db'
+import { SQLITE_UUID_SQL } from './logical-sql.js'
 import {
   applyPikkuSchemas,
   checkName,
@@ -139,20 +140,20 @@ describe('compileTables: defaults', () => {
           required: true,
           default: { now: true },
         },
-        token: { type: 'uuid', default: { sql: 'gen_random_uuid()' } },
+        token: { type: 'uuid', default: { uuid: true } },
       },
     },
   })
 
   test('sqlite', () => {
     assert.deepEqual(compile('sqlite', tables), [
-      `create table "note" ("status" text default 'draft' not null, "count" integer default 0, "pinned" boolean default false, "created_at" timestamp default CURRENT_TIMESTAMP not null, "token" text default gen_random_uuid());`,
+      `create table "note" ("status" text default 'draft' not null, "count" integer default 0, "pinned" boolean default false, "created_at" timestamp default CURRENT_TIMESTAMP not null, "token" text default ${SQLITE_UUID_SQL});`,
     ])
   })
 
   test('postgres', () => {
     assert.deepEqual(compile('postgres', tables), [
-      `create table "note" ("status" text default 'draft' not null, "count" integer default 0, "pinned" boolean default false, "created_at" timestamp default CURRENT_TIMESTAMP not null, "token" uuid default gen_random_uuid());`,
+      `create table "note" ("status" text default 'draft' not null, "count" integer default 0, "pinned" boolean default false, "created_at" timestamp default now() not null, "token" uuid default gen_random_uuid());`,
     ])
   })
 
@@ -169,7 +170,7 @@ describe('compileTables: defaults', () => {
 
   test('mysql takes a text literal default as an expression', () => {
     assert.deepEqual(compile('mysql', tables), [
-      "create table `note` (`status` longtext default ('draft') not null, `count` integer default 0, `pinned` boolean default false, `created_at` timestamp default CURRENT_TIMESTAMP not null, `token` char(36) default gen_random_uuid());",
+      "create table `note` (`status` longtext default ('draft') not null, `count` integer default 0, `pinned` boolean default false, `created_at` timestamp default CURRENT_TIMESTAMP not null, `token` char(36) default (UUID()));",
     ])
   })
 })
@@ -418,7 +419,15 @@ describe('compileTables: indexes', () => {
           id: { type: 'id', primaryKey: true },
           finishedAt: { type: 'timestamp' },
         },
-        indexes: [{ columns: ['id'], where: 'finished_at IS NULL' }],
+        indexes: [
+          {
+            columns: ['id'],
+            where: {
+              postgres: 'finished_at IS NULL',
+              sqlite: 'finished_at IS NULL',
+            },
+          },
+        ],
       },
     })
 
@@ -465,7 +474,7 @@ describe('compileTables: indexes', () => {
     test('mysql refuses, naming the index', () => {
       assert.throws(
         () => compile('mysql', partial),
-        /Index 'job_id_idx' on 'job' is partial \(where finished_at IS NULL\), and MySQL has no partial indexes/
+        /Index 'job_id_idx' on 'job' is partial, and MySQL has no partial indexes/
       )
     })
   })
@@ -623,7 +632,13 @@ const live = defineTables({
       id: { type: 'id', primaryKey: true },
       doneAt: { type: 'timestamp' },
     },
-    indexes: [{ columns: ['id'], where: 'done_at IS NULL', unique: true }],
+    indexes: [
+      {
+        columns: ['id'],
+        where: { postgres: 'done_at IS NULL', sqlite: 'done_at IS NULL' },
+        unique: true,
+      },
+    ],
   },
 })
 
@@ -851,7 +866,11 @@ describe('compileTables: constraints', () => {
     accepted({ a: { type: 'integer', min: 1, max: 5 } })
     accepted({ a: { type: 'text', enum: ['a', 'b'], minLength: undefined } })
     accepted({
-      a: { type: 'integer', min: 1, default: { sql: 'floor(random() * 5)' } },
+      a: {
+        type: 'integer',
+        min: 1,
+        default: { sql: { postgres: 'floor(random() * 5)' } },
+      },
     })
   })
 
