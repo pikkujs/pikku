@@ -143,8 +143,8 @@ describe('logical defaults and onUpdate, as SQL per engine', () => {
       },
     }
     assert.match(compile('postgres', tables)[0]!, /default 1\)/)
-    assert.match(compile('mysql', tables)[0]!, /default 2\)/)
-    assert.match(compile('sqlite', tables)[0]!, /default 3\)/)
+    assert.match(compile('mysql', tables)[0]!, /default \(2\)\)/)
+    assert.match(compile('sqlite', tables)[0]!, /default \(3\)\)/)
   })
 
   test('a partial index where takes the key of the engine being compiled', () => {

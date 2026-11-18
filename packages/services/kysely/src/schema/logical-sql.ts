@@ -117,7 +117,8 @@ export const logicalExpression = (
   if (typeof value !== 'object') return value
   if ('now' in value) return sql.raw(NOW_SQL[engine])
   if ('uuid' in value) return sql.raw(UUID_SQL[engine])
-  return sql.raw(sqlFor(value.sql, engine, what))
+  const written = sqlFor(value.sql, engine, what)
+  return sql.raw(engine === 'postgres' ? written : `(${written})`)
 }
 
 /** The same expression as text, for a trigger that has to carry it. */

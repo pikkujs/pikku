@@ -216,3 +216,36 @@ describe('declareOnlyOnUpdateProblems', () => {
     )
   })
 })
+
+describe('declared SQL is run on the shadow database', () => {
+  const withDefault = (sqlText: Record<string, string>) =>
+    `note: { columns: {
+      id: { type: 'key', primaryKey: true },
+      n: { type: 'integer', default: { sql: ${JSON.stringify(sqlText)} } },
+    } }`
+
+  test('sqlite refuses a default that fails when a row is inserted', async () => {
+    declare(withDefault({ sqlite: 'nosuchfunction()' }))
+    const { refusals } = await generate(sqliteProject())
+    assert.equal(refusals.length, 1)
+    assert.match(refusals[0]!, /note\.n default did not run/)
+  })
+
+  test('postgres refuses a default that does not fit its column type', async () => {
+    declare(withDefault({ postgres: "'abc'" }))
+    const { refusals } = await generate(postgresProject())
+    assert.equal(refusals.length, 1)
+    assert.match(refusals[0]!, /note\.n default|does not apply on postgres/)
+  })
+
+  test('a default that runs is accepted on both', async () => {
+    declare(withDefault({ postgres: '1 + 1', sqlite: '1 + 1' }))
+    assert.deepEqual((await generate(sqliteProject())).refusals, [])
+  })
+
+  test('a missing engine key is refused naming the column and the engine', async () => {
+    declare(withDefault({ postgres: '1' }))
+    const { refusals } = await generate(sqliteProject())
+    assert.match(refusals[0]!, /note\.n default has no SQL for sqlite/)
+  })
+})

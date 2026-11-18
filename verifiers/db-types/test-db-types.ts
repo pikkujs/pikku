@@ -261,6 +261,28 @@ export const tables = defineTables({
   }
 )
 
+await check(
+  'a declared default that fails when a row is inserted is refused before anything is written',
+  () => {
+    const dir = project('sqlite')
+    writeFileSync(
+      join(dir, 'db', 'tables.ts'),
+      `import { defineTables } from '@pikku/core/db'
+export const tables = defineTables({
+  note: { columns: { n: { type: 'integer', default: { sql: { sqlite: 'nosuchfunction()' } } } } },
+})
+`
+    )
+    run(dir, [])
+    const output = run(dir, ['db', 'generate'], true)
+    assert(/note\.n default did not run/.test(output), output)
+    assert(
+      !existsSync(join(dir, 'db', 'sqlite', '0002-app-tables.sql')),
+      'a migration was written'
+    )
+  }
+)
+
 rmSync(WORK, { recursive: true, force: true })
 if (failures > 0) {
   console.log(`\n${failures} check(s) failed`)
