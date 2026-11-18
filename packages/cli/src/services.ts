@@ -38,7 +38,7 @@ import {
 import { inspect as inspectWithGo } from '@pikku/inspector-go'
 import { selectInspectorEngine } from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
-import { CONFIG_FILE, checkAddonsWired } from './utils/project-packages.js'
+import { checkAddonsWired } from './utils/project-packages.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
@@ -312,12 +312,12 @@ export const createConfig: CreateConfig<
   } else if (hasGlue && !cliConfig.addon) {
     if (declared.length === 0) {
       throw new Error(
-        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports a backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares no backends. Remove clientFiles, or declare the backend whose SDK it imports.`
+        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports a backend's SDK, and ${cliConfig.configPath} declares no backends. Remove clientFiles, or declare the backend whose SDK it imports.`
       )
     }
     if (declared.length !== 1) {
       throw new Error(
-        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports one backend's SDK, and ${cliConfig.configDir}/pikku.config.json declares ${declared.length}. Declare exactly one backend until frontends choose theirs.`
+        `clientFiles frontend glue (rpcFile, nextBackendFile, tanstackStartFile, ...) imports one backend's SDK, and ${cliConfig.configPath} declares ${declared.length}. Declare exactly one backend until frontends choose theirs.`
       )
     }
     clientFiles = {
@@ -367,6 +367,7 @@ export const createSingletonServices: CreateSingletonServices<
   let inspectorInvalidated = false
 
   let inspectPass = 0
+  const warnedAddons = new Set<string>()
 
   /**
    * `unfiltered` is for commands that RUN the project rather than generate from
@@ -550,13 +551,29 @@ export const createSingletonServices: CreateSingletonServices<
       }
 
       try {
+        const { addonResolutionDirs, createAddonResolver } =
+          await import('@pikku/inspector')
         for (const warning of checkAddonsWired(
-          join(config.configDir, CONFIG_FILE),
+          config.configPath,
           config.addonPackages,
           unfilteredState.rpc.wireAddonDeclarations,
-          config.basePackage?.dir ?? rootDir
+          config.basePackage?.dir ?? rootDir,
+          (declaration) => {
+            try {
+              const manifest = createAddonResolver(
+                addonResolutionDirs(rootDir, declaration.file)
+              ).resolve(`${declaration.package}/package.json`)
+              const name = JSON.parse(readFileSync(manifest, 'utf-8')).name
+              return typeof name === 'string' ? name : declaration.package
+            } catch {
+              return declaration.package
+            }
+          }
         )) {
-          logger.warn(warning)
+          if (!warnedAddons.has(warning)) {
+            warnedAddons.add(warning)
+            logger.warn(warning)
+          }
         }
       } catch (error) {
         // A step that failed here runs again; the cached state would let the
