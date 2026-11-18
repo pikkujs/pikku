@@ -14,6 +14,7 @@ import type {
   KeyStoreHarness,
   KeyStoreTestOptions,
 } from './service-tests/key-store-tests.js'
+import type { RateLimitService } from '../services/rate-limit-service.js'
 import type { WorkflowFencingHarness } from './service-tests/workflow-fencing-tests.js'
 
 /**
@@ -49,6 +50,7 @@ export interface ServiceTestConfig {
     /** A key ledger: each call returns one empty, isolated ledger (see {@link KeyStoreHarness}). */
     keyStore?: () => Promise<KeyStoreHarness>
     keyStoreOptions?: KeyStoreTestOptions
+    rateLimitService?: () => Promise<RateLimitService>
     /** A workflow service that fences each step write to the claim that made it. */
     workflowFencing?: () => Promise<WorkflowFencingHarness>
     /** A workflow service to run saga compensation and graph `recover` against, driven through a queue. */
@@ -69,6 +71,7 @@ import { defineAgentRunServiceTests } from './service-tests/agent-run-service-te
 import { defineSessionStoreTests } from './service-tests/session-store-tests.js'
 import { defineLeaseServiceTests } from './service-tests/lease-service-tests.js'
 import { defineKeyStoreTests } from './service-tests/key-store-tests.js'
+import { defineRateLimitServiceTests } from './service-tests/rate-limit-service-tests.js'
 import { defineWorkflowFencingTests } from './service-tests/workflow-fencing-tests.js'
 import {
   defineWorkflowCompensationQueuedTests,
@@ -130,6 +133,9 @@ export function defineServiceTests(config: ServiceTestConfig): void {
   }
   if (services.keyStore) {
     defineKeyStoreTests(name, services.keyStore, services.keyStoreOptions)
+  }
+  if (services.rateLimitService) {
+    defineRateLimitServiceTests(name, services.rateLimitService)
   }
   if (services.workflowFencing) {
     defineWorkflowFencingTests(name, services.workflowFencing)

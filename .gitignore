@@ -20,6 +20,7 @@ my-app
 # The SDK tarball `pikku all` packs beside an addon's package.json.
 *.sdk.tgz
 .deploy
+.tmp/
 .tmp-pii-gate-*
 console-app
 cli.schema.json
