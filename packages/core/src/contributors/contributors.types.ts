@@ -10,7 +10,10 @@ export type ContributorDb = {
   /** The SQL engine the app's database runs on. MySQL is not represented. */
   engine: 'sqlite' | 'postgres'
   /** Column coercion map from `pikku db generate`, keyed by table then column. */
-  coercionMap?: Record<string, Record<string, 'date' | 'bool' | 'json'>>
+  coercionMap?: Record<
+    string,
+    Record<string, 'date' | 'bool' | 'json' | 'bigint'>
+  >
 }
 
 /**

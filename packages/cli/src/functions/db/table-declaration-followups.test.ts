@@ -52,20 +52,20 @@ describe('declareOnly type families', () => {
   })
 
   test('the real integer spellings still pass', () => {
-    for (const type of [
-      'integer',
-      'int',
-      'bigint',
-      'smallint',
-      'int4',
-      'INT8',
-    ]) {
+    for (const type of ['integer', 'int', 'smallint', 'int4', 'serial']) {
       assert.deepEqual(problemsFor('integer', info(type)), [], type)
     }
     assert.deepEqual(
       problemsFor('timestamp', info('timestamp without time zone')),
       []
     )
+  })
+})
+
+describe('declareOnly integer widths', () => {
+  test('a bigint column is not an integer on postgres, and is on sqlite', () => {
+    assert.equal(problemsFor('integer', info('bigint', 'int8')).length, 1)
+    assert.deepEqual(problemsFor('integer', info('BIGINT'), 'sqlite'), [])
   })
 })
 

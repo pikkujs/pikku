@@ -13,6 +13,7 @@ import type { ColumnInfo } from './db-introspector.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import { ZOD_FORMATS } from './zod-codegen.js'
 import { snakeCase } from './snake-case.js'
+import { typeFamilyOf, type TypeFamily } from './column-family.js'
 
 /** Where a project declares its own tables, relative to its root. */
 export const TABLES_FILE = 'db/tables.ts'
@@ -57,7 +58,7 @@ const ALLOWED_VALUES: Record<
   security: ['public', 'private', 'pii', 'secret'],
   form: ['plain', 'hashed', 'wrapped', 'sealed'],
   classification: ['fake:email', 'fake:name', 'hash', 'keep'],
-  kind: ['date', 'bool', 'json', 'uuid'],
+  kind: ['date', 'bool', 'json', 'uuid', 'bigint'],
   format: Object.keys(ZOD_FORMATS),
   keyId: 'string',
   tsType: 'string',
@@ -203,14 +204,18 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
  */
 export const annotationOf = (
   column: Record<string, unknown>
-): ColumnAnnotation & ColumnConstraints =>
-  Object.fromEntries(
+): ColumnAnnotation & ColumnConstraints => {
+  const annotation = Object.fromEntries(
     Object.entries(column).filter(
       ([field, value]) =>
         (field in ALLOWED_VALUES || CONSTRAINT_FIELDS.has(field)) &&
         value !== undefined
     )
   ) as ColumnAnnotation & ColumnConstraints
+  return column.type === 'bigint' && annotation.kind === undefined
+    ? { ...annotation, kind: 'bigint' }
+    : annotation
+}
 
 /**
  * Read `db/tables.ts`, or `null` when the project declares nothing. A
@@ -531,37 +536,6 @@ export function refuseTableChanges(
 }
 
 /**
- * `array` and `interval` are families no declared type accepts: they are
- * recognised so they are not mistaken for the element or the lookalike type.
- */
-type TypeFamily =
-  | 'text'
-  | 'integer'
-  | 'real'
-  | 'boolean'
-  | 'timestamp'
-  | 'uuid'
-  | 'json'
-  | 'array'
-  | 'interval'
-
-/** What an introspected type holds, or `undefined` when it is not one this can judge. */
-const familyOf = (type: string): TypeFamily | undefined => {
-  const t = type.toLowerCase()
-  // Postgres reports an array as `ARRAY` with a `_`-prefixed udt name.
-  if (/\barray\b|\[\]|(^|\s)_/.test(t)) return 'array'
-  if (/interval/.test(t)) return 'interval'
-  if (/bool/.test(t)) return 'boolean'
-  if (/uuid/.test(t)) return 'uuid'
-  if (/json/.test(t)) return 'json'
-  if (/\b(tiny|small|medium|big)?int(eger)?[248]?\b/.test(t)) return 'integer'
-  if (/real|double|float|numeric|decimal/.test(t)) return 'real'
-  if (/timestamp|datetime|date|time/.test(t)) return 'timestamp'
-  if (/char|text|clob|user-defined/.test(t)) return 'text'
-  return undefined
-}
-
-/**
  * The families a declared type may be found as. Loose where an engine has no
  * such type and stores it as another: sqlite keeps dates as text or numbers,
  * MySQL a uuid as `char(36)`, and both a boolean as an integer.
@@ -571,12 +545,13 @@ const acceptedFamilies = (type: ColumnType, dialect: string): TypeFamily[] => {
     dialect === 'sqlite' ? ['timestamp', 'text', 'integer'] : ['timestamp']
   switch (type) {
     case 'id':
-      return ['text', 'uuid', 'integer']
+      return ['text', 'uuid', 'integer', 'bigint']
     case 'key':
       return ['text', 'uuid']
     case 'integer':
+      return dialect === 'sqlite' ? ['integer', 'bigint'] : ['integer']
     case 'bigint':
-      return ['integer']
+      return dialect === 'sqlite' ? ['bigint', 'integer'] : ['bigint']
     case 'real':
       return ['real']
     case 'boolean':
@@ -602,7 +577,37 @@ const KIND_FAMILIES: Record<
   bool: () => ['boolean', 'integer'],
   json: () => ['json', 'text'],
   uuid: () => ['uuid', 'text'],
+  bigint: () => ['bigint', 'integer'],
 }
+
+/**
+ * What a primitive `tsType` claims the column reads as, against what a column
+ * of that family really reads as on this dialect. Only the primitives are
+ * judged: any other `tsType` is a refinement (a union, a JSON shape) that the
+ * family cannot contradict.
+ */
+const PRIMITIVE_READS: Record<
+  string,
+  (family: TypeFamily, dialect: string) => boolean
+> = {
+  number: (family, dialect) =>
+    family === 'integer' ||
+    family === 'real' ||
+    (dialect !== 'postgres' && (family === 'bigint' || family === 'decimal')),
+  string: (family, dialect) =>
+    family === 'text' ||
+    family === 'uuid' ||
+    family === 'timestamp' ||
+    (dialect !== 'sqlite' && family === 'decimal') ||
+    (dialect === 'postgres' && family === 'bigint'),
+  boolean: (family) => family === 'boolean',
+  Uint8Array: (family) => family === 'bytea',
+}
+
+const readsAs = (family: TypeFamily, dialect: string): string =>
+  (['number', 'string', 'boolean', 'Uint8Array'] as const).find((read) =>
+    PRIMITIVE_READS[read]!(family, dialect)
+  ) ?? family
 
 /**
  * Where a `declareOnly` table disagrees with the table the migrations made.
@@ -636,7 +641,7 @@ export function declareOnlyProblems(
         )
         continue
       }
-      const family = familyOf(typeOf(info))
+      const family = typeFamilyOf(typeOf(info))
       if (!family) continue
       if (
         column.type &&
@@ -651,6 +656,20 @@ export function declareOnlyProblems(
       ) {
         problems.push(
           `${at} is ${info.type} in the migrations, which does not hold the kind '${column.kind}' ${TABLES_FILE} gives it.`
+        )
+      } else if (
+        column.tsType &&
+        column.tsType in PRIMITIVE_READS &&
+        !column.kind &&
+        column.type !== 'bigint' &&
+        !PRIMITIVE_READS[column.tsType]!(family, dialect)
+      ) {
+        const advice =
+          column.tsType === 'number' && family === 'bigint'
+            ? " Declare type: 'bigint' (or kind: 'bigint') to read it as a number, checked against the safe range."
+            : ` Drop the tsType to read it as ${readsAs(family, dialect)}.`
+        problems.push(
+          `${at} is ${info.type} in the migrations, which reads as ${readsAs(family, dialect)}, not the '${column.tsType}' ${TABLES_FILE} gives it as tsType.${advice}`
         )
       }
     }

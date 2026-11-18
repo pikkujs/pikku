@@ -10,6 +10,7 @@ import type {
   ColumnDeclaration,
   ColumnDefault,
   ColumnType,
+  DeclareOnlyColumnDeclaration,
   NamedConstraint,
   TableDeclaration,
   TablesDeclaration,
@@ -101,12 +102,15 @@ const resolveType = (
     )
   }
   if (declaration.type) return { kind: 'declared', type: declaration.type }
+  if (!declaration.references) {
+    return { kind: 'foreign', table, column }
+  }
   if (seen.includes(here)) {
     throw new Error(
       `'${here}' takes its type from a reference that leads back to itself: ${[...seen, here].join(' -> ')}. Give one of them a type.`
     )
   }
-  const [targetTable, targetColumn] = splitTarget(declaration.references!, here)
+  const [targetTable, targetColumn] = splitTarget(declaration.references, here)
   if (!tables[targetTable]) {
     return { kind: 'foreign', table: targetTable, column: targetColumn }
   }
@@ -229,7 +233,7 @@ export const checkName = (
 const columnChecks = (
   table: string,
   name: string,
-  column: ColumnDeclaration
+  column: DeclareOnlyColumnDeclaration
 ): { name: string; test: ReturnType<typeof sql> }[] => {
   const col = sql.id(name)
   const length = sql`char_length(${col})`
@@ -263,7 +267,7 @@ const constraintProblems = (
   tables: TablesDeclaration,
   table: string,
   name: string,
-  column: ColumnDeclaration
+  column: DeclareOnlyColumnDeclaration
 ): string[] => {
   const here = `${table}.${name}`
   const problems: string[] = []
@@ -432,7 +436,7 @@ const validate = (tables: TablesDeclaration): void => {
           `'${here}' has type '${column.type}'. A bounded string needs a length of at least 1.`
         )
       }
-      if (!column.type && !column.references) {
+      if (!column.type && !column.references && !declaration.declareOnly) {
         throw new Error(
           `'${here}' has no type. Give it one, or a 'references' to take its target's.`
         )
@@ -485,7 +489,8 @@ export const tableRequirements = (
     for (const column of Object.values(declaration.columns)) {
       if (!column.references) continue
       const [table, target] = column.references.split('.') as [string, string]
-      if (tables[table]) continue
+      const declared = tables[table]?.columns[target]
+      if (declared && (declared.type || declared.references)) continue
       const requirement = { table: snake(table), column: snake(target), owner }
       const key = `${requirement.table}.${requirement.column}`
       if (seen.has(key)) continue

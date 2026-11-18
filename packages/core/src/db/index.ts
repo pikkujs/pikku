@@ -27,8 +27,12 @@ export interface ColumnAnnotation {
   keyId?: string
   /** Anonymize strategy. */
   classification?: 'fake:email' | 'fake:name' | 'hash' | 'keep'
-  /** Column kind, for coercion and typing. */
-  kind?: 'date' | 'bool' | 'json' | 'uuid'
+  /**
+   * Column kind, for coercion and typing. `bigint` reads a 64-bit integer as a
+   * JS `number` and throws above `Number.MAX_SAFE_INTEGER`; a column typed
+   * `bigint` has it already.
+   */
+  kind?: 'date' | 'bool' | 'json' | 'uuid' | 'bigint'
   /** TypeScript type override, e.g. `string[]`. Wins over `kind`. */
   tsType?: string
   /** Zod string format, e.g. `email`. Keeps the TypeScript type as `string`. */
@@ -77,6 +81,9 @@ export type TableAnnotations = Record<
  * - `timestamp`: a timestamp without a time zone.
  * - `timestamptz`: a timestamp with a time zone on postgres; a plain
  *   timestamp elsewhere, where there is no such type.
+ * - `integer`: a 32-bit integer, read as a `number`.
+ * - `bigint`: a 64-bit integer, still read as a `number`. A value above
+ *   `Number.MAX_SAFE_INTEGER` throws on read instead of rounding.
  */
 export type ColumnType =
   | 'id'
@@ -143,6 +150,18 @@ export interface ColumnFields extends ColumnAnnotation, ColumnConstraints {
 export type ColumnDeclaration = ColumnFields &
   ({ type: ColumnType } | { type?: ColumnType; references: string })
 
+/**
+ * One column of a `declareOnly` table. The type is read from the column the
+ * migrations create, so declaring one is optional; a declared `type`, `tsType`
+ * or `kind` that disagrees with that column is an error.
+ *
+ * Left undeclared, a 64-bit integer or a decimal reads as a `string` on
+ * postgres, and binary data as a `Uint8Array`.
+ */
+export type DeclareOnlyColumnDeclaration = ColumnFields & {
+  type?: ColumnType
+}
+
 /** An index over one or more columns. */
 export interface IndexDeclaration {
   columns: readonly string[]
@@ -165,9 +184,8 @@ export interface NamedConstraint {
   name: string
 }
 
-/** One table. */
-export interface TableDeclaration {
-  columns: Record<string, ColumnDeclaration>
+/** The parts of a table declaration that do not depend on who creates it. */
+interface TableFields {
   /**
    * A composite primary key, instead of `primaryKey` on a column. Named
    * `<table>_pk` unless given a name.
@@ -179,14 +197,28 @@ export interface TableDeclaration {
    */
   unique?: readonly (readonly string[] | NamedConstraint)[]
   indexes?: readonly IndexDeclaration[]
-  /**
-   * The table is created by something else — a hand-written migration, or
-   * another package such as Better Auth — and declared here only for its types
-   * and annotations. No SQL is generated for it; its columns are checked
-   * against the table the migrations create.
-   */
-  declareOnly?: boolean
 }
+
+/** A table `pikku db generate` writes SQL for. */
+export interface ManagedTableDeclaration extends TableFields {
+  columns: Record<string, ColumnDeclaration>
+  declareOnly?: false
+}
+
+/**
+ * The table is created by something else — a hand-written migration, or
+ * another package such as Better Auth — and declared here only for its types
+ * and annotations. No SQL is generated for it; its columns are checked
+ * against the table the migrations create.
+ */
+export interface DeclareOnlyTableDeclaration extends TableFields {
+  columns: Record<string, DeclareOnlyColumnDeclaration>
+  declareOnly: true
+}
+
+/** One table. */
+export type TableDeclaration =
+  ManagedTableDeclaration | DeclareOnlyTableDeclaration
 
 /** An app's tables, keyed by table name. */
 export type TablesDeclaration = Record<string, TableDeclaration>
