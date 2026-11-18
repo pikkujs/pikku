@@ -440,6 +440,7 @@ jobs:
             mcp-auth,
             virtual-users,
             pikku-studio,
+            base-addons,
           ]
     steps:
       - uses: actions/checkout@v7
