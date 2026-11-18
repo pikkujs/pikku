@@ -10,6 +10,15 @@ export const tick = pikkuSessionlessFunc<void, void>({
   func: async () => {},
 })
 
+export const stampVia = pikkuSessionlessFunc<
+  { text: string },
+  { text: string }
+>({
+  auth: false,
+  func: async (_services, { text }, { rpc }) =>
+    rpc.invoke('tools:stamped', { text }),
+})
+
 export const greetVia = pikkuSessionlessFunc<
   { name: string },
   { message: string }

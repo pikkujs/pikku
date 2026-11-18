@@ -29,3 +29,9 @@ if (greeting.message !== 'Hello, Ada!') {
   throw new Error(`/greet returned ${JSON.stringify(greeting)}`)
 }
 console.log('✓ the base reaches the addon through tools:greet')
+
+const stamped = await get('/stamp?text=hi')
+if (stamped.text !== '[stamped] hi') {
+  throw new Error(`/stamp returned ${JSON.stringify(stamped)}`)
+}
+console.log('✓ the addon reads a service the base provides')

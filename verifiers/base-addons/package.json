@@ -16,6 +16,6 @@
     "@pikku/cli": "workspace:*"
   },
   "scripts": {
-    "test": "node run.mjs"
+    "test": "node run.mjs && node pku368.mjs"
   }
 }

@@ -134,6 +134,27 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
+  test('a package pass needs no backends or frontends, and a project does', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-config-pass-'))
+    tempDirs.push(root)
+    await writeFile(
+      join(root, 'pikku.config.json'),
+      JSON.stringify({ tsconfig: 'tsconfig.json' })
+    )
+    const load = () =>
+      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), [])
+    await assert.rejects(load(), /declares no backends and no frontends/)
+
+    const before = process.env.PIKKU_PACKAGE_PASS
+    process.env.PIKKU_PACKAGE_PASS = '1'
+    try {
+      assert.equal((await load()).rootDir, root)
+    } finally {
+      if (before === undefined) delete process.env.PIKKU_PACKAGE_PASS
+      else process.env.PIKKU_PACKAGE_PASS = before
+    }
+  })
+
   test('a config without base is its own base', async () => {
     const root = await writeConfig()
     const config = await getPikkuCLIConfig(
