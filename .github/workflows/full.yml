@@ -436,6 +436,7 @@ jobs:
             bun-server,
             webhooks,
             db-schema,
+            db-types,
             validate,
             mcp-auth,
             virtual-users,
