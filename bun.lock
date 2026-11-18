@@ -2079,7 +2079,7 @@
       },
     },
     "verifiers/base-addons": {
-      "name": "@pikku/verifier-base-addons",
+      "name": "@pikku/verifiers-base-addons",
       "dependencies": {
         "@pikku/core": "workspace:*",
         "@pikku/verifier-ba-app": "workspace:*",
@@ -3855,8 +3855,6 @@
 
     "@pikku/verifier-ba-tools": ["@pikku/verifier-ba-tools@workspace:verifiers/base-addons/packages/tools"],
 
-    "@pikku/verifier-base-addons": ["@pikku/verifier-base-addons@workspace:verifiers/base-addons"],
-
     "@pikku/verifier-db-addon": ["@pikku/verifier-db-addon@workspace:verifiers/db-schema/addon"],
 
     "@pikku/verifier-db-remote-addon": ["@pikku/verifier-db-remote-addon@workspace:verifiers/db-schema/remote-addon"],
@@ -3886,6 +3884,8 @@
     "@pikku/verifiers-analytics": ["@pikku/verifiers-analytics@workspace:verifiers/analytics"],
 
     "@pikku/verifiers-app-native": ["@pikku/verifiers-app-native@workspace:verifiers/app-native"],
+
+    "@pikku/verifiers-base-addons": ["@pikku/verifiers-base-addons@workspace:verifiers/base-addons"],
 
     "@pikku/verifiers-better-auth": ["@pikku/verifiers-better-auth@workspace:verifiers/better-auth"],
 

@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/verifier-base-addons",
+  "name": "@pikku/verifiers-base-addons",
   "type": "module",
   "private": true,
   "description": "A root project with one addon and a base package that owns the wirings and services",
