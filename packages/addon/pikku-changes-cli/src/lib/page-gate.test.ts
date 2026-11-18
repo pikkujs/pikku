@@ -748,3 +748,60 @@ describe('touchedFiles', () => {
     })
   })
 })
+
+describe("a page that is the original's screenshot", () => {
+  test('a copy of a reference screenshot in the app, under any name, is refused', async () => {
+    const dir = project()
+    write(join(dir, 'apps', 'app', 'public', 'pages', 'team-photo.jpg'), 'x')
+    report(dir, { rows: [...allAbout, row('index', 1440, 90)] })
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: { PIKKU_CHANGES_BUILDER: '1' },
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match(
+      (outcome as { message: string }).message,
+      /apps\/app\/public\/pages\/team-photo\.jpg is a copy of the original's screenshot/
+    )
+    assert.match((outcome as { message: string }).message, /answer key/)
+  })
+
+  test('source that names a reference screenshot is refused, even with a clean compare report', async () => {
+    const dir = project()
+    write(
+      join(dir, 'apps', 'app', 'src', 'pages', 'About.tsx'),
+      "export const About = () => <img src='/references/example.com/about-1440.jpg' />"
+    )
+    report(dir, { rows: [...allAbout, row('index', 1440, 90)] })
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
+    assert.match(
+      (outcome as { message: string }).message,
+      /About\.tsx uses the original's screenshot about-1440\.jpg/
+    )
+  })
+
+  test("the original's own pictures, and the builder switching the gate off, do not hide it", async () => {
+    const dir = project()
+    write(join(dir, 'apps', 'app', 'public', 'hero.jpg'), 'a different picture')
+    report(dir, { rows: [...allAbout, row('index', 1440, 90)] })
+    const fine = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: {},
+    })
+    assert.strictEqual(fine.kind, 'pass')
+    write(join(dir, 'apps', 'app', 'public', 'x.png'), 'x')
+    const off = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      env: { PIKKU_CHANGES_BUILDER: '1', PIKKU_COMPARE_GATE: 'off' },
+    })
+    assert.strictEqual(off.kind, 'refuse')
+  })
+})

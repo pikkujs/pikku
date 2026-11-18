@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import {
   existsSync,
   readdirSync,
+  type Dirent,
   readFileSync,
   rmSync,
   statSync,
@@ -406,6 +408,90 @@ export function touchedPages(
   return pages.filter((p) => hit.has(p))
 }
 
+const IMAGE_FILE = /\.(jpe?g|png|webp)$/i
+const SOURCE_FILE = /\.(tsx?|jsx?|css|scss|html|json|md|mdx|svg)$/i
+const SKIP_DIRS = new Set([
+  'node_modules',
+  '.git',
+  '.pikku',
+  'dist',
+  'build',
+  '.output',
+  '.tanstack',
+  'artifacts',
+  'tmp',
+])
+
+/**
+ * The original's screenshots are the answer key, not material: a page that shows its own screenshot scores 0% and is
+ * a picture of a page. A change is refused when the app holds a file byte-identical to a reference screenshot (copied
+ * and perhaps renamed), or source that names one of the screenshot files.
+ */
+export function embeddedScreenshots(top: string, sites: Site[]): string[] {
+  const shots = sites.flatMap((site) => site.shots.map((shot) => shot.file))
+  if (!shots.length) return []
+  const sizes = new Map<number, string>()
+  const names = new Set<string>()
+  const hashes = new Set<string>()
+  for (const file of shots) {
+    try {
+      const bytes = readFileSync(file)
+      sizes.set(bytes.length, file)
+      hashes.add(createHash('sha256').update(bytes).digest('hex'))
+      names.add(basename(file))
+    } catch {}
+  }
+  const found: string[] = []
+  const walk = (dir: string, depth: number) => {
+    if (depth > 8) return
+    let entries: Dirent[]
+    try {
+      entries = readdirSync(dir, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      const path = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (!SKIP_DIRS.has(entry.name)) walk(path, depth + 1)
+      } else if (entry.isFile()) {
+        const rel = relative(top, path).split(sep).join('/')
+        if (IMAGE_FILE.test(entry.name)) {
+          let size = -1
+          try {
+            size = statSync(path).size
+          } catch {}
+          if (size >= 0 && sizes.has(size)) {
+            try {
+              if (
+                hashes.has(
+                  createHash('sha256').update(readFileSync(path)).digest('hex')
+                )
+              )
+                found.push(
+                  `${rel} is a copy of the original's screenshot ${basename(sizes.get(size)!)}`
+                )
+            } catch {}
+          }
+        } else if (SOURCE_FILE.test(entry.name)) {
+          let text = ''
+          try {
+            if (statSync(path).size < 400_000) text = readFileSync(path, 'utf8')
+          } catch {}
+          for (const name of names) {
+            if (text.includes(name)) {
+              found.push(`${rel} uses the original's screenshot ${name}`)
+              break
+            }
+          }
+        }
+      }
+    }
+  }
+  for (const dir of ['apps', 'packages']) walk(join(top, dir), 0)
+  return found
+}
+
 const shortSha = (sha?: string | null) => (sha ? sha.slice(0, 7) : 'unknown')
 
 export async function checkPageGate({
@@ -433,6 +519,20 @@ export async function checkPageGate({
   const clone = isCloneProject(top)
   if (!sites.length && !clone)
     return { kind: 'skip', why: `no reference under ${REFERENCES_DIR}` }
+  // Whatever the compare says, a page that is the original's screenshot is not a page.
+  const cheats = embeddedScreenshots(top, sites)
+  if (cheats.length)
+    return {
+      kind: 'refuse',
+      message: [
+        `${label} is refused: the app shows the original's screenshots as its pages.`,
+        ...cheats.slice(0, 10).map((line) => `  ${line}`),
+        cheats.length > 10 ? `  … and ${cheats.length - 10} more` : '',
+        "The screenshots are the answer key, not material. Build each page from the original's text (as i18n messages), its pictures (artifacts/references/<site>/pictures/), its colours, fonts and layout (the .style.json and .layout.json files). Delete these files and build the page.",
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    }
 
   const found = findConfig(top, cwd)
   const configDir = found?.dir ?? top
