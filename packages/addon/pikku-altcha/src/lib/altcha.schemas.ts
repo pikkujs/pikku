@@ -25,7 +25,7 @@ export const GetChallengeOutput = z.object({
 
 /** The base64 payload the widget writes into the form field named `altcha`. */
 export const VerifyChallengeInput = z.object({
-  payload: z.string().min(1).max(16_384),
+  payload: z.string().max(16_384),
 })
 
 export const VerifyChallengeOutput = z.object({ verified: z.boolean() })

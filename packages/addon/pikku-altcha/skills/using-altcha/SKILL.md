@@ -29,12 +29,14 @@ wireAddon({
 
 ```ts
 import 'altcha'
-const challenge = await rpc.invoke('captcha:getChallenge')
+
+const widget = document.querySelector('altcha-widget')
+widget.configure({ challenge: await rpc.invoke('captcha:getChallenge') })
 ```
 
-Give the widget the object, not a URL: `<altcha-widget challenge={challenge} name="altcha" />`. It writes the base64 payload into the form field `altcha`. Include that string in the form's input. The widget needs HTTPS.
+Give the widget the challenge object through `configure`, not a URL: the RPC is a POST and the widget's URL form issues a GET. The widget then writes the base64 payload into a hidden field named `altcha`; include that string in the form's input. It solves in about half a second on a desktop browser and needs HTTPS (`localhost` counts). The bundle is about 120 KB minified.
 
-A challenge expires after five minutes. When the widget fires `expired`, fetch a new one.
+A challenge expires after five minutes. When the widget fires `expired`, fetch and configure a new one.
 
 ## Server
 
