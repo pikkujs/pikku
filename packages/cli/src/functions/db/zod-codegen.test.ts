@@ -217,3 +217,35 @@ export interface Item {
   assert.match(out, /qty: z\.number\(\)\.int\(\)\.min\(0\)\.nullable\(\),/)
   assert.match(out, /rate: z\.number\(\)\.min\(0\.5\),/)
 })
+
+test('a server-set column is in the row schema but not in the insert or patch schemas', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'zod-codegen-'))
+  const schemaFile = join(dir, 'schema.gen.ts')
+  const outFile = join(dir, 'zod.gen.ts')
+  writeFileSync(
+    schemaFile,
+    `
+export interface Note {
+  title: ColumnType<Private<string>, string, string>
+  updatedAt: ColumnType<Private<string>, never, never>
+}
+`,
+    'utf8'
+  )
+  generateZodTypes({ schemaFile, outFile, serverSet: { Note: ['updatedAt'] } })
+  const out = readFileSync(outFile, 'utf8')
+
+  assert.match(
+    out,
+    /export const NoteZ = z\.object\(\{[^}]*updatedAt: z\.string\(\)/
+  )
+  const insert = /export const NoteInsertZ = z\.object\(\{([^}]*)\}\)/.exec(
+    out
+  )![1]!
+  assert.doesNotMatch(insert, /updatedAt/)
+  assert.match(insert, /title: z\.string\(\)/)
+  assert.match(
+    out,
+    /NotePatchZ = NoteZ\.omit\(\{ updatedAt: true \}\)\.partial\(\)/
+  )
+})

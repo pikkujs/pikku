@@ -187,13 +187,37 @@ function formBrand(form: ColumnForm | undefined): string | null {
   }
 }
 
-function columnTypeExpression(
+/**
+ * A column the server sets: it reads like any other, but Kysely accepts no
+ * insert or update of it (`never`), so the typed helpers leave it out.
+ */
+function serverSetType(
   col: ColumnInfo,
   annotation: { kind?: AnnotationKind; tsType?: string } | null,
   classification: Classification,
   dialect: Dialect,
   form?: ColumnForm
 ): string {
+  const brand = formBrand(form)
+  const base = brand ?? selectBase(annotation, col, dialect)
+  const read =
+    classification === 'public'
+      ? base
+      : `${classificationBrand(classification)}<${base}>`
+  return `ColumnType<${!col.notNull && !col.pk ? `${read} | null` : read}, never, never>`
+}
+
+function columnTypeExpression(
+  col: ColumnInfo,
+  annotation: { kind?: AnnotationKind; tsType?: string } | null,
+  classification: Classification,
+  dialect: Dialect,
+  form?: ColumnForm,
+  serverSet = false
+): string {
+  if (serverSet) {
+    return serverSetType(col, annotation, classification, dialect, form)
+  }
   const nullable = !col.notNull && !col.pk
   const isAutoInt =
     col.pk &&
@@ -320,6 +344,7 @@ function emitInterface(
   enumByName: Map<string, string[]>,
   formatHints: Record<string, Record<string, ZodFormat>>,
   constraintHints: Record<string, Record<string, ZodConstraints>>,
+  serverSetHints: Record<string, string[]>,
   warnings: CodedDiagnostic[],
   frameworkTables: ReadonlySet<string> = new Set()
 ): string {
@@ -546,8 +571,11 @@ function emitInterface(
         typeAnn,
         classification,
         dialect,
-        form
+        form,
+        ann?.input === false
       )
+      if (ann?.input === false)
+        (serverSetHints[ifaceName] ??= []).push(fieldName)
       const safeName = /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(fieldName)
         ? fieldName
         : JSON.stringify(fieldName)
@@ -702,6 +730,8 @@ export interface CodegenResult {
   zodFormats: Record<string, Record<string, ZodFormat>>
   /** Per-interface, per-field bounds for the zod codegen, keyed like `zodFormats`. */
   zodConstraints: Record<string, Record<string, ZodConstraints>>
+  /** Per-interface fields the server sets (`input: false`), which no input schema carries. */
+  zodServerSet: Record<string, string[]>
 }
 
 /**
@@ -818,6 +848,7 @@ export async function generateSchemaTypes(
   )
   const zodFormats: Record<string, Record<string, ZodFormat>> = {}
   const zodConstraints: Record<string, Record<string, ZodConstraints>> = {}
+  const zodServerSet: Record<string, string[]> = {}
   const interfaces = tables
     .map((t) =>
       emitInterface(
@@ -828,6 +859,7 @@ export async function generateSchemaTypes(
         enumByName,
         zodFormats,
         zodConstraints,
+        zodServerSet,
         warnings,
         frameworkTables
       )
@@ -1086,5 +1118,6 @@ export async function generateSchemaTypes(
     warnings,
     zodFormats,
     zodConstraints,
+    zodServerSet,
   }
 }

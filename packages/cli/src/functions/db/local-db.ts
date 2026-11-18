@@ -856,6 +856,7 @@ export async function migrateAndCodegen(
     outFile: resolved.zodFile,
     formats: codegenResult.zodFormats,
     constraints: codegenResult.zodConstraints,
+    serverSet: codegenResult.zodServerSet,
   })
 
   return {

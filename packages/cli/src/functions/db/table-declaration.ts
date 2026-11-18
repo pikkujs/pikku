@@ -53,7 +53,7 @@ export interface ColumnRename {
 
 const ALLOWED_VALUES: Record<
   keyof ColumnAnnotation,
-  readonly string[] | 'string'
+  readonly string[] | 'string' | 'false'
 > = {
   security: ['public', 'private', 'pii', 'secret'],
   form: ['plain', 'hashed', 'wrapped', 'sealed'],
@@ -63,6 +63,7 @@ const ALLOWED_VALUES: Record<
   keyId: 'string',
   tsType: 'string',
   description: 'string',
+  input: 'false',
 }
 
 /** The constraint fields of a column, which the sidecar carries beside its annotations. */
@@ -113,6 +114,8 @@ function columnProblems(at: string, column: Record<string, unknown>): string[] {
     const allowed = ALLOWED_VALUES[field as keyof ColumnAnnotation]
     if (!allowed) {
       problems.push(`${at} has an unknown field '${field}'`)
+    } else if (allowed === 'false') {
+      if (value !== false) problems.push(`${at}.input must be false`)
     } else if (allowed === 'string') {
       if (typeof value !== 'string') {
         problems.push(`${at}.${field} must be a string`)

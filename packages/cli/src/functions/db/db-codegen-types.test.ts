@@ -113,3 +113,23 @@ describe('typeFamilyOf', () => {
     assert.equal(typeFamilyOf('int unsigned'), 'integer')
   })
 })
+
+describe('a column declared input: false', () => {
+  const create =
+    'create table ledger (id serial primary key, name text not null, stamped timestamp);'
+
+  test('reads as usual and accepts no insert or update, in the Kysely types', async () => {
+    const { schema } = await generated(create, {
+      ledger: { name: { input: false }, stamped: { input: false } },
+    })
+    assert.match(schema, /name: ColumnType<Private<string>, never, never>/)
+    assert.match(
+      schema,
+      /stamped: ColumnType<Private<Date> \| null, never, never>/
+    )
+    assert.match(
+      schema,
+      /id: ColumnType<Private<number>, number \| undefined, number>/
+    )
+  })
+})

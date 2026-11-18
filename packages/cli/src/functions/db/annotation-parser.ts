@@ -50,6 +50,8 @@ export interface ColAnnotation extends ColumnConstraints {
    * stays the single place the default is applied.
    */
   keyId?: string
+  /** `false`: the server sets this column, so it is not part of any input. */
+  input?: false
 }
 
 /** Per-table, per-column annotation map sourced from the columns in `db/tables.ts`. */
@@ -85,6 +87,7 @@ export interface RawEntry {
   tsType?: string
   format?: string
   description?: string
+  input?: unknown
   enum?: unknown
   min?: unknown
   max?: unknown
@@ -126,6 +129,7 @@ export function toColAnnotation(ann: RawEntry): ColAnnotation {
     entry.form = ann.form as ColumnForm
   }
   if (ann.keyId) entry.keyId = ann.keyId
+  if (ann.input === false) entry.input = false
   if (
     Array.isArray(ann.enum) &&
     ann.enum.length > 0 &&
