@@ -124,22 +124,24 @@ pub fn validate_secret_overrides(log: &mut Logger, st: &State) {
 
 /// Port of Go `validateAddonParentServices`: what a used addon function needs
 /// from the project that wires it must be declared in the project's own
-/// SingletonServices (or Services).
+/// SingletonServices. A service declared only as a wire service does not count.
+/// A function whose services are unknown (nil) is checked for every service the
+/// addon takes from its project, which is how finalize requires them.
 pub fn validate_addon_parent_services(log: &mut Logger, st: &State) {
     let Some(types) = &st.service_types else { return };
     if types.singleton_services.is_none() || st.addon_services_factory_seen {
         return;
     }
     let agg = &st.service_aggregation;
-    let provided: std::collections::HashSet<&String> =
-        agg.all_singleton_services.iter().chain(agg.all_wire_services.iter()).collect();
+    let provided: std::collections::HashSet<&String> = agg.all_singleton_services.iter().collect();
     let parent: std::collections::HashSet<&String> = st.addon_required_parent_services.iter().collect();
     let mut reported: std::collections::HashSet<String> = std::collections::HashSet::new();
     for id in agg.used_functions.values() {
         let Some((ns, func)) = id.split_once(':') else { continue };
         let Some(fns) = st.addon_functions.get(ns) else { continue };
         let Some(meta) = fns.get(func) else { continue };
-        for service in &meta.services.services {
+        let needs = if meta.services_unknown() { &st.addon_required_parent_services } else { &meta.services.services };
+        for service in needs {
             if !parent.contains(service) || !agg.required_services.has(service) || provided.contains(service) {
                 continue;
             }

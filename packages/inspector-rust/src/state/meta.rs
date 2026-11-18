@@ -269,6 +269,12 @@ impl FunctionMeta {
         FunctionMeta { fields, inline: false, verbatim: Raw::default(), nil_slices: NilSlices::default() }
     }
 
+    /// Go's nil `Services.Services`: the services were absent or `null` where the
+    /// entry was decoded, so what the function takes from its project is unknown.
+    pub fn services_unknown(&self) -> bool {
+        self.nil_slices.services && self.fields.services.services.is_empty()
+    }
+
     /// `fields` as JSON with the nil slices written `null`.
     fn fields_json(&self) -> Result<Value, serde_json::Error> {
         let mut v = serde_json::to_value(&self.fields)?;

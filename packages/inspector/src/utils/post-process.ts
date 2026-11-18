@@ -585,51 +585,6 @@ export function validateAddonUses(
   }
 }
 
-/**
- * What a used addon function needs from the project that wires it must be
- * declared in the project's own SingletonServices (or Services). The project
- * is the base package: its factory builds the services, and an addon cannot
- * build them itself.
- */
-export function validateAddonParentServices(
-  logger: InspectorLogger,
-  state: InspectorState
-): void {
-  if (
-    !state.serviceTypes?.singletonServices ||
-    state.addonServicesFactorySeen
-  ) {
-    return
-  }
-  const { allSingletonServices, allWireServices, requiredServices } =
-    state.serviceAggregation
-  const provided = new Set([...allSingletonServices, ...allWireServices])
-  const parent = new Set(state.addonRequiredParentServices ?? [])
-  const reported = new Set<string>()
-  for (const id of state.serviceAggregation.usedFunctions) {
-    const separator = id.indexOf(':')
-    if (separator < 0) continue
-    const namespace = id.slice(0, separator)
-    const meta = state.addonFunctions?.[namespace]?.[id.slice(separator + 1)]
-    for (const service of (meta as { services?: FunctionServicesMeta })
-      ?.services?.services ?? []) {
-      if (
-        !parent.has(service) ||
-        !requiredServices.has(service) ||
-        provided.has(service) ||
-        reported.has(`${id} ${service}`)
-      ) {
-        continue
-      }
-      reported.add(`${id} ${service}`)
-      logger.critical(
-        ErrorCode.ADDON_SERVICE_NOT_PROVIDED,
-        `Addon function '${id}' needs the service '${service}' from its project, but SingletonServices does not declare it. Add '${service}' to SingletonServices and build it in createSingletonServices of the package that wires '${namespace}'.`
-      )
-    }
-  }
-}
-
 export function validateAddonContentGrants(
   logger: InspectorLogger,
   state: InspectorState

@@ -303,6 +303,48 @@ fn addon_function_services_must_be_declared_by_the_project() {
     assert!(found[0].message.contains("'admin:listScopes'") && found[0].message.contains("'scopeService'"));
 }
 
+fn parent_services_state_with_wire(declared: &[&str], wire: &[&str]) -> State {
+    let mut st = admin_addon_state(false);
+    st.service_types = Some(crate::state::ServiceTypes {
+        singleton_services: Some(Strings::from(declared.iter().map(|s| s.to_string()).collect::<Vec<_>>())),
+        services: Some(Strings::from(wire.iter().map(|s| s.to_string()).collect::<Vec<_>>())),
+        ..Default::default()
+    });
+    services::aggregate_required_services(&mut st);
+    st
+}
+
+fn parent_service_reports(st: &State) -> Vec<String> {
+    let mut log = crate::diag::Logger::new();
+    addons::validate_addon_parent_services(&mut log, st);
+    log.entries().into_iter().filter(|d| d.code.as_deref() == Some("PKU368")).map(|d| d.message).collect()
+}
+
+#[test]
+fn a_wire_service_does_not_provide_what_an_addon_takes_from_its_project() {
+    let found = parent_service_reports(&parent_services_state_with_wire(&[], &["scopeService"]));
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("'scopeService'"));
+}
+
+#[test]
+fn an_addon_function_with_unknown_services_is_checked_for_every_parent_service() {
+    let build = |declared: &[&str]| {
+        let mut st = parent_services_state(declared);
+        let mut legacy = FunctionMeta::default();
+        legacy.nil_slices.services = true;
+        st.addon_functions.get_mut("admin").unwrap().set("legacy", legacy);
+        st.service_aggregation.used_functions = Default::default();
+        st.service_aggregation.used_functions.add("admin:legacy");
+        services::aggregate_required_services(&mut st);
+        st
+    };
+    let found = parent_service_reports(&build(&[]));
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("'admin:legacy'") && found[0].contains("'scopeService'"));
+    assert!(parent_service_reports(&build(&["scopeService"])).is_empty());
+}
+
 #[test]
 fn addon_parent_services_are_skipped_when_the_types_are_unresolved() {
     let mut st = admin_addon_state(false);
