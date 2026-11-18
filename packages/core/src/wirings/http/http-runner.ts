@@ -53,6 +53,7 @@ import type {
 // function, and the barrel drags in 4,932 lines of channel RPC runtime.
 import { unsupportedChannelRemote } from '../channel/channel-rpc.types.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { enforceRateLimit } from '../../rate-limit/rate-limit-runner.js'
 import { applyWebResponse } from './web-request.js'
 import { httpRouter } from './routers/http-router.js'
 import {
@@ -241,6 +242,19 @@ const executeRoute = async (
   )
 
   http?.request?.setParams(params)
+
+  await enforceRateLimit({
+    wire: 'http',
+    scope: `${meta.method}:${meta.route}`,
+    override: pikkuState(meta.packageName ?? null, 'function', 'functions').get(
+      meta.pikkuFuncId
+    )?.rateLimit,
+    header: (name) => http?.request?.header(name),
+    singletonServices,
+    packageName: meta.packageName ?? null,
+    setRetryAfter: (seconds) =>
+      http?.response?.header('Retry-After', String(seconds)),
+  })
 
   if (meta.headersSchemaName && http.request && singletonServices.schema) {
     const headerKeys = singletonServices.schema.getSchemaKeys(

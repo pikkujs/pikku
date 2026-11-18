@@ -20,6 +20,7 @@ import {
   getCreateWireServices,
 } from '../../pikku-state.js'
 import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import { enforceRateLimit } from '../../rate-limit/rate-limit-runner.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
 import {
@@ -325,6 +326,21 @@ async function runMCPPikkuFunc(
         resolvedPackageName = resolved.package
       }
     }
+
+    await enforceRateLimit({
+      wire: 'mcp',
+      scope: `${type}:${name}`,
+      override: pikkuState(resolvedPackageName, 'function', 'functions').get(
+        resolvedFuncName
+      )?.rateLimit,
+      header: (header) => http?.request?.header(header),
+      sessionId: (mcpSessionService.get() as { userId?: string } | undefined)
+        ?.userId,
+      singletonServices,
+      packageName: resolvedPackageName,
+      setRetryAfter: (seconds) =>
+        http?.response?.header('Retry-After', String(seconds)),
+    })
 
     let result = await runPikkuFunc(
       'mcp',

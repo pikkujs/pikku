@@ -18,6 +18,8 @@ export {
   runMiddleware,
 } from '../middleware-runner.js'
 export { addGlobalPermission } from '../permissions.js'
+export { addGlobalRateLimiter } from '../rate-limit/rate-limit-runner.js'
+export type { RateLimitConfig } from '../rate-limit/rate-limit.types.js'
 export type {
   CorePikkuMiddleware,
   CorePikkuMiddlewareConfig,

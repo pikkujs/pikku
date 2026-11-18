@@ -27,7 +27,7 @@ For the full option tables (every `wireHTTP` field, the `defineHTTPRoutes`/`wire
 
 ```typescript
 addHTTPMiddleware('*', [authBearer()]) // All routes
-addHTTPMiddleware('/api/*', [rateLimit()]) // Pattern match
+addHTTPMiddleware('/api/*', [authBearer()]) // Pattern match
 ```
 
 > HTTP-route-level permissions (`addHTTPPermission`, a `permissions` field on the wiring) were removed in #972. Declare authorization on the function definition (`pikkuFunc({ permissions })`, see `pikku-permissions`), or app-wide via `addGlobalPermission`. Tags/patterns are for _middleware_ only now.
@@ -107,7 +107,7 @@ addHTTPMiddleware('*', [
 ])
 
 // Scoped middleware
-addHTTPMiddleware('/api/*', [rateLimit({ maxRequests: 100, windowMs: 60_000 })])
+addHTTPMiddleware('/api/*', [authBearer()])
 
 // Per-route middleware
 wireHTTP({
@@ -117,6 +117,36 @@ wireHTTP({
   middleware: [auditLog],
 })
 ```
+
+### Rate limits
+
+A rate limit is not middleware: it counts external calls only (HTTP and MCP), so an internal `rpc`, queue or workflow call to the same function is never counted. Set one for every route and tool, and override or exempt per function:
+
+```typescript
+import { addGlobalRateLimiter } from '@pikku/core/middleware'
+
+// Every HTTP route and MCP tool, per caller and route
+addGlobalRateLimiter({
+  limit: 100,
+  windowMs: 60_000,
+  ipHeader: 'cf-connecting-ip', // the header your proxy sets with the client address
+})
+
+// A function's own limit replaces the global one; `false` exempts it
+export const submitContact = pikkuSessionlessFunc({
+  rateLimit: { limit: 3, windowMs: 60 * 60_000 },
+  func: async (services, data) => {
+    /* ... */
+  },
+})
+export const health = pikkuSessionlessFunc({ rateLimit: false, func: async () => ({ ok: true }) })
+```
+
+- A `rateLimitService` must be in the singleton services (`InMemoryRateLimitService` counts per process; the Kysely and Redis services share counts across instances and restarts). A limit with no service refuses every call with a 500 rather than silently not limiting.
+- There is no default `ipHeader`, because a header a client can set is not an address to trust. Without one, every caller shares a bucket per route or tool, and a warning says so.
+- A refused call answers 429 with `Retry-After` (whole seconds) and `retryAfterMs` in the body, before auth and validation, so a correct call and an incorrect one are refused identically.
+- If the store fails the call is refused with 503. Set `onStoreError: 'allow'` to let calls through instead, which turns the limit off while the store is down.
+
 
 ### SSE (Server-Sent Events)
 

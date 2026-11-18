@@ -14,6 +14,8 @@ import { addFunction } from '../../function/function-runner.js'
 import { pikkuState, resetPikkuState } from '../../pikku-state.js'
 import { pikkuMiddleware } from '../../middleware/middleware-factories.js'
 import { addTagMiddleware } from '../../middleware-runner.js'
+import { addGlobalRateLimiter } from '../../rate-limit/rate-limit-runner.js'
+import { InMemoryRateLimitService } from '../../services/in-memory-rate-limit-service.js'
 
 const logger = {
   debug: () => {},
@@ -586,3 +588,55 @@ describe('runMCPPrompt', () => {
 const getResourceMap = () => {
   return pikkuState(null, 'mcp', 'resources')
 }
+
+describe('runMCPTool rate limits', () => {
+  const registerEcho = (config: Record<string, unknown> = {}) => {
+    pikkuState(null, 'mcp', 'toolsMeta').echo = {
+      name: 'echo',
+      title: 'Echo',
+      description: 'Echo',
+      pikkuFuncId: 'toolFunc',
+      inputSchema: null,
+      outputSchema: null,
+    } as never
+    addFunction('toolFunc', {
+      func: async (_s: any, data: any) => data,
+      ...config,
+    } as never)
+    pikkuState(null, 'function', 'meta').toolFunc = {
+      name: 'toolFunc',
+      sessionless: true,
+      permissions: [],
+    } as never
+  }
+  const callEcho = () =>
+    runMCPTool(
+      { jsonrpc: '2.0', id: 'req', params: { hello: 'world' } },
+      { mcp: mcpWire as never },
+      'echo'
+    )
+
+  beforeEach(() => {
+    pikkuState(null, 'package', 'singletonServices', {
+      logger,
+      rateLimitService: new InMemoryRateLimitService(),
+    } as never)
+  })
+
+  test('a tool is refused after the global limit, as a rate-limit error', async () => {
+    addGlobalRateLimiter({ limit: 1, windowMs: 60_000 })
+    registerEcho()
+    await callEcho()
+    await assert.rejects(callEcho(), (e: any) => {
+      assert.ok(e instanceof MCPError)
+      assert.equal(e.error.code, -32000)
+      return true
+    })
+  })
+
+  test("a tool's `rateLimit: false` is never limited", async () => {
+    addGlobalRateLimiter({ limit: 1, windowMs: 60_000 })
+    registerEcho({ rateLimit: false })
+    for (let i = 0; i < 4; i++) await callEcho()
+  })
+})
