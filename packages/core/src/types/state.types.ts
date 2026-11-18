@@ -75,6 +75,7 @@ import type {
   CorePikkuMiddlewareGroup,
 } from '../middleware/middleware.types.js'
 import type { CorePikkuChannelMiddleware } from '../wirings/channel/channel.types.js'
+import type { RateLimitConfig } from '../rate-limit/rate-limit.types.js'
 
 /**
  * The shape of one package's registry, as read and written by `pikkuState`.
@@ -227,6 +228,10 @@ export interface PikkuPackageState {
   }
   permissions: {
     global: (CorePermissionGroup | CorePikkuPermission)[]
+  }
+  rateLimit: {
+    /** At most one entry: the limit every HTTP route and MCP tool falls under. */
+    global: RateLimitConfig[]
   }
   misc: {
     errors: Map<PikkuErrorConstructor, ErrorDetails>

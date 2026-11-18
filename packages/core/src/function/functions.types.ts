@@ -14,6 +14,7 @@ import type { PikkuError } from '../errors/error-handler.js'
 import type { CoreNodeConfig } from '../wirings/node/node.types.js'
 import type { ScenarioSurface } from '../wirings/workflow/scenario-step.types.js'
 import type { Safe } from '../classification/secret-value.js'
+import type { RateLimitConfig } from '../rate-limit/rate-limit.types.js'
 
 /**
  * The body of a function that requires a session: `(services, data, wire)`,
@@ -343,6 +344,12 @@ export type CorePikkuFunctionConfig<
   readonly?: boolean
   /** Where this function is deployed when the build can go either way. `auto` lets the analyser decide from what the function touches. */
   deploy?: 'serverless' | 'server' | 'auto'
+  /**
+   * This function's own limit on external calls (HTTP and MCP), replacing the
+   * global one. `false` exempts it, as a health check or webhook should be.
+   * Internal calls are never counted.
+   */
+  rateLimit?: RateLimitConfig | false
   /** Under an agent's `explicit` approval policy, calling this pauses for a human to approve it. */
   approvalRequired?: boolean
   /** When true, workflow steps calling this function are dispatched via the queue. No queue service configured is a hard error. Defaults to false (inline). */

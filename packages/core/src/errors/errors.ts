@@ -442,6 +442,7 @@ addError(LockedError, {
 export class TooManyRequestsError extends PikkuError {}
 addError(TooManyRequestsError, {
   status: 429,
+  mcpCode: -32000,
   message:
     'The user has sent too many requests in a given amount of time ("rate limiting").',
 })

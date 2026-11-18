@@ -16,7 +16,7 @@ Broadest to narrowest. Pick the narrowest that covers the job.
 - **`addGlobalMiddleware`**: every wire type (HTTP, Queue, Channel, Trigger, Scheduler, Workflow, Agent, CLI, MCP). For concerns that must wrap every invocation whatever the transport, such as telemetry.
 - **`addHTTPMiddleware('*', …)`**: every HTTP route, including `/rpc`. Anything that sets a session for an HTTP caller goes here. It does not run for a queue job, scheduled task or webhook trigger: those set identity in their own middleware (see the cron section).
 - **`addHTTPMiddleware('/admin/*', …)`**: one URL prefix.
-- **`addTagMiddleware`**: any wiring carrying that tag, on the function or the wire object; the two tag sets merge and middleware from both runs. For a group of routes, rate limiting a group, or a yes/no gate.
+- **`addTagMiddleware`**: any wiring carrying that tag, on the function or the wire object; the two tag sets merge and middleware from both runs. For a group of routes or a yes/no gate. Rate limits are not middleware: see `addGlobalRateLimiter` in `pikku-wiring/references/http.md`.
 - **`middleware` on a wiring or function**: one route or task.
 
 ## Rules
