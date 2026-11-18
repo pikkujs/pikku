@@ -108,8 +108,13 @@ func validateAddonUses(log *diag.Logger, st *state.State) {
 
 // validateAddonParentServices checks that what a used addon function needs
 // from the project that wires it is declared in the project's own
-// SingletonServices (or Services). The project is the base package: its
-// factory builds the services, and an addon cannot build them itself.
+// SingletonServices. The project is the base package: its factory builds the
+// services, and an addon cannot build them itself. A service declared only as a
+// wire service does not count: it exists per wire, not for the addon.
+//
+// A function whose services were not optimized (nil) may use any service the
+// addon takes from its project, which is how finalize requires them, so each
+// of those is checked for it.
 func validateAddonParentServices(log *diag.Logger, st *state.State) {
 	if st.ServiceTypes == nil || st.ServiceTypes.SingletonServices == nil || st.AddonServicesFactorySeen {
 		return
@@ -117,9 +122,6 @@ func validateAddonParentServices(log *diag.Logger, st *state.State) {
 	agg := &st.ServiceAggregation
 	provided := map[string]bool{}
 	for _, s := range agg.AllSingletonServices {
-		provided[s] = true
-	}
-	for _, s := range agg.AllWireServices {
 		provided[s] = true
 	}
 	parent := map[string]bool{}
@@ -140,7 +142,11 @@ func validateAddonParentServices(log *diag.Logger, st *state.State) {
 		if !ok || meta == nil {
 			continue
 		}
-		for _, service := range meta.Services.Services {
+		needs := meta.Services.Services
+		if needs == nil {
+			needs = st.AddonRequiredParentServices
+		}
+		for _, service := range needs {
 			if !parent[service] || !agg.RequiredServices.Has(service) || provided[service] || reported[id+" "+service] {
 				continue
 			}

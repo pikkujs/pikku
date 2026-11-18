@@ -307,7 +307,10 @@ pub fn aggregate_required_services(st: &mut State) {
     let mut addon_fn: HashMap<String, Option<Vec<String>>> = HashMap::new();
     for (ns, fns) in st.addon_functions.iter() {
         for (id, meta) in fns.iter() {
-            addon_fn.insert(format!("{ns}:{id}"), Some(meta.services.services.clone()));
+            addon_fn.insert(
+                format!("{ns}:{id}"),
+                (!meta.services_unknown()).then(|| meta.services.services.clone()),
+            );
         }
     }
     // An addon forwarding incomingWebhookService reads it when the app has one;
