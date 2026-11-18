@@ -114,6 +114,14 @@ On a `declareOnly` table nothing is generated, so `pikku db generate` checks tha
 the migrations create the trigger (or the MySQL attribute) and refuses the
 declaration if they do not.
 
+### Server-set columns
+
+`input: false` marks a column the server sets, such as an `onUpdate` timestamp.
+The generated zod schemas leave it out of `<Table>InsertZ` and `<Table>PatchZ`
+(it stays in `<Table>Z`, the row), and the generated Kysely type is
+`ColumnType<Row, never, never>`, so an insert or update that names it does not
+compile. Only `false` is accepted.
+
 ### Constraints
 
 `enum`, `min`, `max`, `minLength` and `maxLength` always drive the generated zod

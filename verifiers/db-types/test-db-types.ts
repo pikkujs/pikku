@@ -144,6 +144,30 @@ await check('the generated type for views is number', () => {
 })
 
 await check(
+  'input: false leaves updated_at out of the insert types and the zod input',
+  () => {
+    const schema = readFileSync(
+      join(sqlite, '.pikku', 'db', 'schema.gen.ts'),
+      'utf8'
+    )
+    assert(
+      /updatedAt: ColumnType<Private<string>, never, never>/.test(schema),
+      'updatedAt accepts input'
+    )
+    const zod = readFileSync(join(sqlite, '.pikku', 'db', 'zod.gen.ts'), 'utf8')
+    const insert =
+      /export const NoteInsertZ = z\.object\(\{([^}]*)\}\)/.exec(zod)?.[1] ?? ''
+    assert(insert.includes('views') && !insert.includes('updatedAt'), insert)
+    assert(
+      /NotePatchZ = NoteZ\.omit\(\{ updatedAt: true \}\)\.partial\(\)/.test(
+        zod
+      ),
+      'patch keeps updatedAt'
+    )
+  }
+)
+
+await check(
   'the migrated database fills the uuid, the time, and fires the trigger',
   () => {
     const db = new DatabaseSync(join(sqlite, '.pikku-runtime', 'dev.db'))

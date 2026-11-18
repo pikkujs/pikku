@@ -10,6 +10,7 @@ A rule that was chosen, and what it rules out.
 
 <!-- pikku:knowledge-index -->
 
+- [input false marks a server-set column and removes it from every typed input](input-false-marks-a-server-set-column.md) — A column declared input false stays in the row type and the row zod schema, is left out of the generated insert and patch zod schemas, and is typed ColumnType<Row, never, never> in the Kysely types
 - [A bigint column reads as a number and throws above the safe range, and a declareOnly column's type comes from the database](a-bigint-reads-as-a-number-and-throws-above-the-safe-range.md) — integer is the default number type, type bigint (or kind bigint) is the opt-in 64-bit variant read as a JS number with a runtime range check, an undeclared int8 or numeric reads as a string on postgres, and a declareOnly column may omit its type
 
 - [A functions package below the config maps #pikku/* with tsconfig paths](a-functions-package-below-the-config-maps-pikku-with-tsconfig-paths.md) — When pikku.config.json sits at the workspace root and the code in packages/functions, #pikku/* is mapped by tsconfig paths in the tsconfig that governs the package, never by package.json imports or a .pikku symlink

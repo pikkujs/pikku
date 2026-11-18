@@ -39,6 +39,12 @@ export interface ColumnAnnotation {
   format?: string
   /** What the column holds, for people and agents reading the schema. */
   description?: string
+  /**
+   * `false` marks a column the server sets, through its default, `onUpdate` or
+   * its own code: the generated zod input schemas leave it out, and the Kysely
+   * types accept no insert or update of it.
+   */
+  input?: false
 }
 
 /**

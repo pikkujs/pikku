@@ -143,3 +143,19 @@ describe('a bigint column carries its range check', () => {
     )
   })
 })
+
+describe('input: false in a declaration', () => {
+  test('is kept in the annotations and must be false', () => {
+    assert.deepEqual(annotationOf({ type: 'text', input: false }), {
+      input: false,
+    })
+    assert.throws(
+      () =>
+        parseDeclaration(
+          { t: { columns: { c: { type: 'text', input: true } } } },
+          'tables.ts'
+        ),
+      /t\.c\.input must be false/
+    )
+  })
+})

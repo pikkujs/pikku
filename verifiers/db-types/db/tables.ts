@@ -11,6 +11,7 @@ export const tables = defineTables({
         required: true,
         default: { now: true },
         onUpdate: { now: true },
+        input: false,
       },
     },
   },
