@@ -1,5 +1,4 @@
-import { readFileSync } from 'node:fs'
-import { relative, resolve as resolvePath } from 'node:path'
+import { relative } from 'node:path'
 import { spawn } from 'node:child_process'
 import { PikkuError } from '@pikku/core/errors'
 import {
