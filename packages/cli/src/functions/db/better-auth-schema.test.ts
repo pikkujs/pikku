@@ -8,6 +8,7 @@ import { betterAuth } from 'better-auth'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { createSqliteKysely } from './sqlite/sqlite-kysely.js'
 import {
+  findAuthSourceFile,
   loadAuthOptions,
   withoutAuthSchemaCheck,
 } from './better-auth-schema.js'
@@ -215,5 +216,30 @@ export const auth = Object.assign(
     } finally {
       rmSync(root, { recursive: true, force: true })
     }
+  }
+})
+
+test("the auth source is the base's, not one in an addon, a test file or a dot-directory", async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pikku-auth-find-'))
+  const call = 'export const auth = pikkuBetterAuth({})\n'
+  const put = (file: string, text: string) => {
+    mkdirSync(join(root, file, '..'), { recursive: true })
+    writeFileSync(join(root, file), text)
+  }
+  try {
+    put('packages/app/pikku.config.json', '{}')
+    put('packages/app/src/auth.ts', call)
+    put('packages/billing/pikku.config.json', '{}')
+    put('packages/billing/src/auth.ts', call)
+    put('.worktrees/x/auth.ts', call)
+    put('src/auth.test.ts', call)
+    assert.equal(
+      await findAuthSourceFile(root, ['.', 'packages/app']),
+      join(root, 'packages/app/src/auth.ts')
+    )
+    rmSync(join(root, 'packages/app/src/auth.ts'))
+    assert.equal(await findAuthSourceFile(root, ['.', 'packages/app']), null)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
   }
 })

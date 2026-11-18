@@ -238,18 +238,25 @@ const walk = async (dir: string, base = ''): Promise<string[]> => {
 /**
  * The directory the project's scaffold is generated into: `scaffold.pikkuDir`
  * from pikku.config.json, or `src/scaffold` when it is not set (the CLI's own
- * default), under the `base` package when the config names one. Read from the
- * config rather than assumed, because a project can move it.
+ * default), under the `base` package when the config names one. Paths are
+ * relative to the config's `rootDir` (the directory holding the config when it
+ * sets none), as the CLI reads them. Read from the config rather than assumed,
+ * because a project can move it.
  */
 const scaffoldDirOf = async (root: string): Promise<string> => {
   const config = (await readJson(join(root, 'pikku.config.json'))) as {
+    rootDir?: unknown
     base?: unknown
     scaffold?: { pikkuDir?: unknown }
   } | null
+  const rootDir =
+    typeof config?.rootDir === 'string' && config.rootDir !== ''
+      ? resolve(root, config.rootDir)
+      : root
   const configured = config?.scaffold?.pikkuDir
-  if (typeof configured === 'string') return resolve(root, configured)
+  if (typeof configured === 'string') return resolve(rootDir, configured)
   const base = typeof config?.base === 'string' ? config.base : '.'
-  return resolve(root, base, 'src', 'scaffold')
+  return resolve(rootDir, base, 'src', 'scaffold')
 }
 
 const isInside = (dir: string, file: string): boolean => {
