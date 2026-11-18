@@ -1,0 +1,16 @@
+import { defineTables } from '@pikku/core/db'
+
+/**
+ * The one table this addon ships. A solved challenge is single-use, so its
+ * signature is recorded here and a second submission of the same payload hits
+ * the primary key. `expiry` is epoch milliseconds; rows past it are pruned.
+ * Every name carries the prefix the consumer wires the addon under (`captcha_`).
+ */
+export const tables = defineTables({
+  captchaUsedChallenge: {
+    columns: {
+      id: { type: 'key', primaryKey: true },
+      expiry: { type: 'integer', required: true },
+    },
+  },
+})
