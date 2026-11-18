@@ -17,17 +17,15 @@ export function ContactForm() {
     null
   )
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+  async function send(formElement: HTMLFormElement) {
     if (!payload) return
-    // `currentTarget` is null once the handler has awaited, so keep the element.
-    const formElement = event.currentTarget
     const form = new FormData(formElement)
     setSending(true)
+    setMessage(null)
     try {
       await rpc.invoke('submitContact', {
-        name: String(form.get('name')),
-        message: String(form.get('message')),
+        name: form.get('name') as string,
+        message: form.get('message') as string,
         altcha: payload,
       })
       setMessage({ ok: true, text: 'Thanks, we got your message.' })
@@ -40,6 +38,12 @@ export function ContactForm() {
       setResetKey((key) => key + 1)
       setSending(false)
     }
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    // Keep the element: `currentTarget` is null once the handler has awaited.
+    void send(event.currentTarget)
   }
 
   return (
