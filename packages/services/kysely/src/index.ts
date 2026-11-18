@@ -16,6 +16,7 @@ export type { KyselyFeatureFlagStoreOptions } from './kysely-feature-flag-store.
 export { KyselyWebhookService } from './kysely-webhook-service.js'
 export { KyselyTriggerSourceStore } from './kysely-trigger-source-store.js'
 export { KyselyLeaseService } from './kysely-lease-service.js'
+export { KyselyRateLimitService } from './kysely-rate-limit-service.js'
 export { KyselyKeyStore } from './kysely-key-store.js'
 export { KyselyIncomingWebhookService } from './kysely-incoming-webhook-service.js'
 export {
@@ -82,6 +83,7 @@ export {
   incomingWebhookSchema,
   keySchema,
   leaseSchema,
+  rateLimitSchema,
   scopeSchema,
   secretSchema,
   sessionSchema,

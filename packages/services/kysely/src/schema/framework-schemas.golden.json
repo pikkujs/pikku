@@ -80,6 +80,9 @@
       "lease": [
         "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
       ],
+      "rate-limit": [
+        "create table \"pikku_rate_limit\" (\"key\" text primary key, \"count\" integer not null, \"reset_at\" bigint not null)"
+      ],
       "audit": [
         "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
         "create index \"idx_audit_occurred_at\" on \"audit\" (\"occurred_at\")",
@@ -185,6 +188,9 @@
       "lease": [
         "create table \"app\".\"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
       ],
+      "rate-limit": [
+        "create table \"app\".\"pikku_rate_limit\" (\"key\" text primary key, \"count\" integer not null, \"reset_at\" bigint not null)"
+      ],
       "audit": [
         "create table \"app\".\"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
         "create index \"idx_audit_occurred_at\" on \"app\".\"audit\" (\"occurred_at\")",
@@ -289,6 +295,9 @@
       ],
       "lease": [
         "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "rate-limit": [
+        "create table \"pikku_rate_limit\" (\"key\" text primary key, \"count\" integer not null, \"reset_at\" bigint not null)"
       ],
       "audit": [
         "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
@@ -397,6 +406,9 @@
       "lease": [
         "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
       ],
+      "rate-limit": [
+        "create table \"pikku_rate_limit\" (\"key\" text primary key, \"count\" integer not null, \"reset_at\" bigint not null)"
+      ],
       "audit": [
         "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
         "create index \"idx_audit_occurred_at\" on \"audit\" (\"occurred_at\")",
@@ -502,6 +514,9 @@
       "lease": [
         "create table \"app\".\"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
       ],
+      "rate-limit": [
+        "create table \"app\".\"pikku_rate_limit\" (\"key\" text primary key, \"count\" integer not null, \"reset_at\" bigint not null)"
+      ],
       "audit": [
         "create table \"app\".\"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
         "create index \"idx_audit_occurred_at\" on \"app\".\"audit\" (\"occurred_at\")",
@@ -606,6 +621,9 @@
       ],
       "lease": [
         "create table \"pikku_lease\" (\"key\" text primary key, \"holder\" text not null, \"token\" integer not null, \"expires_at\" bigint not null)"
+      ],
+      "rate-limit": [
+        "create table \"pikku_rate_limit\" (\"key\" text primary key, \"count\" integer not null, \"reset_at\" bigint not null)"
       ],
       "audit": [
         "create table \"audit\" (\"audit_id\" text primary key, \"occurred_at\" text not null, \"type\" text not null, \"source\" text default 'auto' not null, \"outcome\" text, \"function_id\" text, \"wire_type\" text, \"trace_id\" text, \"transaction_id\" text, \"query_id\" text, \"user_id\" text, \"org_id\" text, \"pikku_user_id\" text, \"tables\" text, \"changed_cols\" text, \"event\" text, \"old\" text, \"data\" text)",
@@ -714,6 +732,9 @@
       "lease": [
         "create table `pikku_lease` (`key` varchar(255) primary key, `holder` longtext not null, `token` integer not null, `expires_at` bigint not null)"
       ],
+      "rate-limit": [
+        "create table `pikku_rate_limit` (`key` varchar(255) primary key, `count` integer not null, `reset_at` bigint not null)"
+      ],
       "audit": [
         "create table `audit` (`audit_id` varchar(255) primary key, `occurred_at` varchar(255) not null, `type` varchar(255) not null, `source` longtext default ('auto') not null, `outcome` longtext, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `transaction_id` longtext, `query_id` longtext, `user_id` varchar(255), `org_id` longtext, `pikku_user_id` longtext, `tables` longtext, `changed_cols` longtext, `event` longtext, `old` longtext, `data` longtext)",
         "create index `idx_audit_occurred_at` on `audit` (`occurred_at`)",
@@ -819,6 +840,9 @@
       "lease": [
         "create table `app`.`pikku_lease` (`key` varchar(255) primary key, `holder` longtext not null, `token` integer not null, `expires_at` bigint not null)"
       ],
+      "rate-limit": [
+        "create table `app`.`pikku_rate_limit` (`key` varchar(255) primary key, `count` integer not null, `reset_at` bigint not null)"
+      ],
       "audit": [
         "create table `app`.`audit` (`audit_id` varchar(255) primary key, `occurred_at` varchar(255) not null, `type` varchar(255) not null, `source` longtext default ('auto') not null, `outcome` longtext, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `transaction_id` longtext, `query_id` longtext, `user_id` varchar(255), `org_id` longtext, `pikku_user_id` longtext, `tables` longtext, `changed_cols` longtext, `event` longtext, `old` longtext, `data` longtext)",
         "create index `idx_audit_occurred_at` on `app`.`audit` (`occurred_at`)",
@@ -923,6 +947,9 @@
       ],
       "lease": [
         "create table `pikku_lease` (`key` varchar(255) primary key, `holder` longtext not null, `token` integer not null, `expires_at` bigint not null)"
+      ],
+      "rate-limit": [
+        "create table `pikku_rate_limit` (`key` varchar(255) primary key, `count` integer not null, `reset_at` bigint not null)"
       ],
       "audit": [
         "create table `audit` (`audit_id` varchar(255) primary key, `occurred_at` varchar(255) not null, `type` varchar(255) not null, `source` longtext default ('auto') not null, `outcome` longtext, `function_id` longtext, `wire_type` longtext, `trace_id` longtext, `transaction_id` longtext, `query_id` longtext, `user_id` varchar(255), `org_id` longtext, `pikku_user_id` longtext, `tables` longtext, `changed_cols` longtext, `event` longtext, `old` longtext, `data` longtext)",

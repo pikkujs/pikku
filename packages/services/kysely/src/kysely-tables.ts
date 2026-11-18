@@ -301,6 +301,14 @@ export interface PikkuLeaseTable {
   expiresAt: number
 }
 
+/** A fixed window of hits on one key, current or last. */
+export interface PikkuRateLimitTable {
+  key: string
+  count: number
+  /** Epoch milliseconds on the clock windows are judged by; see `appNowMs`. */
+  resetAt: number
+}
+
 /** One key version in the ledger `KyselyKeyStore` keeps. Timestamps are ISO 8601 text. */
 export interface PikkuKeyTable {
   kid: string
@@ -528,6 +536,7 @@ export interface KyselyPikkuDB {
   pikkuFeatureFlagOverrides: PikkuFeatureFlagOverridesTable
   pikkuTriggerSource: PikkuTriggerSourceTable
   pikkuLease: PikkuLeaseTable
+  pikkuRateLimit: PikkuRateLimitTable
   pikkuKey: PikkuKeyTable
   channels: ChannelsTable
   channelSubscriptions: ChannelSubscriptionsTable

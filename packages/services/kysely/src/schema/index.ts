@@ -21,6 +21,7 @@ import { triggerSourceSchema } from './trigger-source.schema.js'
 import { incomingWebhookSchema } from './incoming-webhook.schema.js'
 import { keySchema } from './key.schema.js'
 import { leaseSchema } from './lease.schema.js'
+import { rateLimitSchema } from './rate-limit.schema.js'
 import { secretSchema } from './secret.schema.js'
 import { sessionSchema } from './session.schema.js'
 import { webhookSchema } from './webhook.schema.js'
@@ -119,6 +120,7 @@ export const pikkuSchemas: PikkuSchema[] = [
   flagSchema,
   triggerSourceSchema,
   leaseSchema,
+  rateLimitSchema,
   auditSchema,
   analyticsSchema,
   virtualUserSchema,
@@ -135,6 +137,7 @@ export { deploymentSchema } from './deployment.schema.js'
 export { flagSchema } from './flag.schema.js'
 export { keySchema } from './key.schema.js'
 export { leaseSchema } from './lease.schema.js'
+export { rateLimitSchema } from './rate-limit.schema.js'
 export { triggerSourceSchema } from './trigger-source.schema.js'
 export { incomingWebhookSchema } from './incoming-webhook.schema.js'
 export { scopeSchema } from './scope.schema.js'

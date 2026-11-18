@@ -583,6 +583,14 @@ describe('requiredPikkuSchemas', () => {
     )
   })
 
+  test('a rate limit service brings in its own table', () => {
+    assert.ok(
+      requiredPikkuSchemas(new Set(['rateLimitService'])).some(
+        (s) => s.name === 'rate-limit'
+      )
+    )
+  })
+
   test('any one of a schema s owners is enough to ask for it', () => {
     // A schema several services share is needed as soon as one of them is.
     assert.ok(
