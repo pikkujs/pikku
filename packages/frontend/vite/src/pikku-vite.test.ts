@@ -62,6 +62,18 @@ describe('pikkuVite', () => {
     assert.equal(readPikkuViteProject(dir)?.betterAuth, true)
   })
 
+  test('finds the Better Auth wiring in the scaffold of the base package', async () => {
+    const dir = project(
+      {
+        rootDir: '.',
+        base: 'packages/functions',
+        clientFiles: config.clientFiles,
+      },
+      { betterAuth: true }
+    )
+    assert.equal(readPikkuViteProject(dir)?.betterAuth, true)
+  })
+
   test('a directory with no pikku.config.json still gets the test ids', async () => {
     const root = mkdtempSync(join(tmpdir(), 'pikku-vite-none-'))
     roots.push(root)

@@ -16,6 +16,7 @@ import {
   projectSourceDirs,
   resolveAddonPackages,
   resolveBasePackage,
+  defaultScaffoldDir,
 } from './project-packages.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 import { assertKnownConfigKeys } from './config-keys.js'
@@ -811,9 +812,9 @@ const _getPikkuCLIConfig = async (
     }
 
     // Scaffold directory for auto-generated wiring files. A project inspects
-    // its own directory, so the scaffold lands in it, under `src/scaffold`.
-    const defaultScaffoldDir = 'src/scaffold'
-    const scaffoldDir = result.scaffold?.pikkuDir ?? defaultScaffoldDir
+    // its own directory, so the scaffold lands in it, under `src/scaffold`; with
+    // a base it lands in the base package, where the base's dependencies resolve.
+    const scaffoldDir = result.scaffold?.pikkuDir ?? defaultScaffoldDir(config)
     const resolvedScaffoldDir = isAbsolute(scaffoldDir)
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)

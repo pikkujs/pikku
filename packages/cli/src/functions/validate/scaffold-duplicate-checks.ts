@@ -11,7 +11,10 @@ import {
 import { blankComments } from '../../utils/blank-comments.js'
 import type { ValidateFinding } from './virtual-user-checks.js'
 import { applyRuleSeverity } from './rule-severity.js'
-import { projectSourceDirs } from '../../utils/project-packages.js'
+import {
+  defaultScaffoldDir,
+  projectSourceDirs,
+} from '../../utils/project-packages.js'
 
 /**
  * Everything `pikku all` writes into the scaffold directory, keyed the way
@@ -209,9 +212,8 @@ export const runScaffoldDuplicateChecks = async (
   const rel = (p: string) => relative(root, p) || '.'
 
   const scaffold = (config.scaffold ?? {}) as Record<string, unknown>
-  const defaultScaffoldDir = 'src/scaffold'
   const scaffoldDir = abs(
-    stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir
+    stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir(config)
   )
 
   // Where `pikku all` writes one output: an explicit path wins, else the
@@ -332,7 +334,7 @@ export const runScaffoldDuplicateChecks = async (
   }
 
   // The scaffold dir is not where tooling looks
-  const canonical = resolve(abs(defaultScaffoldDir))
+  const canonical = resolve(abs(defaultScaffoldDir(config)))
   if (resolve(scaffoldDir) !== canonical) {
     findings.push({
       id: 'scaffold-dir-noncanonical',

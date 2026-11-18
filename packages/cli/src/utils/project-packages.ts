@@ -50,6 +50,19 @@ export const projectSourceDirs = (config: { base?: unknown }): string[] => [
 ]
 
 /**
+ * Where `pikku all` writes the scaffold (the generated wirings) when
+ * `scaffold.pikkuDir` is not set, relative to the config's `rootDir`: under
+ * `src/scaffold` of the package that owns the wirings, which is the `base` when
+ * the project names one, so the files sit where the base's dependencies resolve.
+ */
+export const defaultScaffoldDir = (config: { base?: unknown }): string =>
+  join(
+    typeof config.base === 'string' && config.base !== '' ? config.base : '.',
+    'src',
+    'scaffold'
+  )
+
+/**
  * The file that exports a project's `createConfig`: `src/config.ts` (or `.js`)
  * of the first directory in `dirs` that has one, then `config.ts` at its top.
  * The base is searched before the project's own directory, because the base is
@@ -373,8 +386,7 @@ export const checkAddonsWired = (
   const own = resolve(baseDir)
   const fromBase = [...declarations].filter(
     ([, declaration]) =>
-      declaration.file === undefined ||
-      !escapes(own, resolve(declaration.file))
+      declaration.file === undefined || !escapes(own, resolve(declaration.file))
   )
   const warnings: string[] = []
   for (const addon of addons) {
