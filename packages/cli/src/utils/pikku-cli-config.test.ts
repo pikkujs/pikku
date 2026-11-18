@@ -1,7 +1,7 @@
 import { strict as assert } from 'node:assert'
 import { mkdtemp, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { rmSync } from 'node:fs'
 import {
@@ -87,6 +87,27 @@ describe('getPikkuCLIConfig', () => {
     )
     assert.equal(config.basePackage?.entry, 'packages/main')
     assert.deepEqual(config.sourceDirs, ['.', 'packages/main'])
+  })
+
+  test('a base outside the config directory is refused', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'pikku-config-outside-'))
+    tempDirs.push(outside)
+    await writeFile(join(outside, 'pikku.config.json'), '{}')
+    await writeFile(join(outside, 'package.json'), '{"name":"app"}')
+    const root = await writeConfig()
+    await writeFile(
+      join(root, 'pikku.config.json'),
+      JSON.stringify({
+        tsconfig: 'tsconfig.json',
+        backends: { api: { filter: {} } },
+        base: relative(root, outside),
+      })
+    )
+
+    await assert.rejects(
+      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /base in .* is "\.\.\/.*", which is outside the config directory/
+    )
   })
 
   test('a config without base is its own base', async () => {

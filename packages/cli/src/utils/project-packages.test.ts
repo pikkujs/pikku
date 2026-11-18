@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, join, relative } from 'node:path'
 import { afterEach, describe, test } from 'node:test'
 import {
   isNestedProject,
@@ -11,7 +11,7 @@ import {
   projectSourceDirs,
   resolveAddonPackages,
   resolveBasePackage,
-  assertAddonsWired,
+  checkAddonsWired,
   type AddonPackage,
 } from './project-packages.js'
 
@@ -313,6 +313,25 @@ describe('resolveBasePackage', () => {
     )
   })
 
+  test('refuses a base outside the config directory: `..`, absolute, or a symlink out', async () => {
+    const root = await project({ 'inner/placeholder': { name: 'x' } })
+    const outside = await project({ app: { name: 'app' } })
+    await writeFile(join(outside, 'app/pikku.config.json'), '{}')
+    await symlink(join(outside, 'app'), join(root, 'inner/linked'))
+    const inner = join(root, 'inner')
+    for (const entry of [
+      relative(inner, join(outside, 'app')),
+      join(outside, 'app'),
+      'linked',
+    ]) {
+      await assert.rejects(
+        resolveBasePackage(file, inner, entry, []),
+        /outside the config directory.*must live inside the config directory/,
+        entry
+      )
+    }
+  })
+
   test('refuses a directory that is also an addon', async () => {
     const root = await project({ 'packages/app': { name: 'app' } })
     await writeFile(join(root, 'packages/app/pikku.config.json'), '{}')
@@ -332,19 +351,69 @@ describe('resolveBasePackage', () => {
   })
 })
 
-describe('assertAddonsWired', () => {
-  const tools = { entry: 'packages/tools', namespace: 'tools' }
+describe('checkAddonsWired', () => {
+  const tools = {
+    entry: 'packages/tools',
+    name: '@x/tools',
+    namespace: 'tools',
+  }
+  const file = '/p/pikku.config.json'
+  const call = (name: string, pkg: string, path = '/p/packages/app/src/a.ts') =>
+    new Map([[name, { package: pkg, file: path }]])
 
   test('accepts an addon the base wires under its namespace', () => {
-    assert.doesNotThrow(() =>
-      assertAddonsWired('pikku.config.json', [tools], ['tools'])
+    assert.deepEqual(
+      checkAddonsWired(
+        file,
+        [tools],
+        call('tools', '@x/tools'),
+        '/p/packages/app'
+      ),
+      []
     )
   })
 
-  test('names an addon the base never wires', () => {
+  test('a call naming the addon package under another name is an error showing both names', () => {
     assert.throws(
-      () => assertAddonsWired('pikku.config.json', [tools], ['other']),
-      /lists "packages\/tools", but no wireAddon names its namespace "tools"/
+      () =>
+        checkAddonsWired(
+          file,
+          [tools],
+          call('tols', '@x/tools'),
+          '/p/packages/app'
+        ),
+      /"@x\/tools" "tols".*"tools" \(addons in \/p\/pikku.config.json\)/
+    )
+  })
+
+  test('an addon no call points at is a warning naming it and the expected namespace', () => {
+    const warnings = checkAddonsWired(
+      file,
+      [tools],
+      call('other', '@x/other'),
+      '/p/packages/app'
+    )
+    assert.equal(warnings.length, 1)
+    assert.match(warnings[0]!, /\/p\/pikku.config.json lists "packages\/tools"/)
+    assert.match(warnings[0]!, /name: 'tools', package: '@x\/tools'/)
+  })
+
+  test('only a call in the base source counts', () => {
+    const elsewhere = call('tools', '@x/tools', '/p/src/other.ts')
+    assert.equal(
+      checkAddonsWired(file, [tools], elsewhere, '/p/packages/app').length,
+      1
+    )
+    assert.deepEqual(checkAddonsWired(file, [tools], elsewhere, '/p'), [])
+    // A misnamed call outside the base is not read either.
+    assert.equal(
+      checkAddonsWired(
+        file,
+        [tools],
+        call('tols', '@x/tools', '/p/src/other.ts'),
+        '/p/packages/app'
+      ).length,
+      1
     )
   })
 })

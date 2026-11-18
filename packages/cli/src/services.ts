@@ -38,7 +38,7 @@ import {
 import { inspect as inspectWithGo } from '@pikku/inspector-go'
 import { selectInspectorEngine } from './inspector-engine.js'
 import { findSourceFiles } from './utils/find-source-files.js'
-import { assertAddonsWired } from './utils/project-packages.js'
+import { CONFIG_FILE, checkAddonsWired } from './utils/project-packages.js'
 import path from 'path'
 import type { PikkuCLIConfig } from '../types/config.js'
 import type { ForwardedLogMessage } from './services/cli-logger-forwarder.service.js'
@@ -550,11 +550,14 @@ export const createSingletonServices: CreateSingletonServices<
       }
 
       try {
-        assertAddonsWired(
-          'pikku.config.json',
+        for (const warning of checkAddonsWired(
+          join(config.configDir, CONFIG_FILE),
           config.addonPackages,
-          unfilteredState.rpc.wireAddonDeclarations.keys()
-        )
+          unfilteredState.rpc.wireAddonDeclarations,
+          config.basePackage?.dir ?? rootDir
+        )) {
+          logger.warn(warning)
+        }
       } catch (error) {
         // A step that failed here runs again; the cached state would let the
         // second attempt skip this check and carry on.
