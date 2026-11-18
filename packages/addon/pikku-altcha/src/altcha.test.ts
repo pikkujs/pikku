@@ -96,7 +96,7 @@ describe('verifyChallenge', () => {
 
   beforeEach(async () => {
     kysely = createBunSqliteKysely({ filename: ':memory:' }) as Kysely<any>
-    await sql`create table captcha_used_challenge (id text primary key, expiry integer not null)`.execute(
+    await sql`create table captcha_used_challenge (id text primary key, expiry timestamp not null)`.execute(
       kysely
     )
     altcha = new AltchaService(SECRET, KEY_SECRET, COST)
@@ -154,7 +154,7 @@ describe('verifyChallenge', () => {
   test('prunes spent rows past their expiry', async () => {
     await kysely
       .insertInto('captcha_used_challenge')
-      .values({ id: 'old', expiry: Date.now() - 1000 })
+      .values({ id: 'old', expiry: new Date(Date.now() - 1000) })
       .execute()
     await run(await solved(altcha))
     const ids = (

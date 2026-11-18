@@ -21,13 +21,13 @@ export const verifyChallenge = pikkuSessionlessFunc({
     const { id, expiry } = await altcha.check(payload)
     await kysely
       .deleteFrom('captcha_used_challenge')
-      .where('expiry', '<', Date.now())
+      .where('expiry', '<', new Date())
       .execute()
     // The primary key makes the claim atomic: of two concurrent submissions of
     // one solution, exactly one inserts a row.
     const claimed = await kysely
       .insertInto('captcha_used_challenge')
-      .values({ id, expiry })
+      .values({ id, expiry: new Date(expiry) })
       .onConflict((oc) => oc.column('id').doNothing())
       .executeTakeFirst()
     if (!claimed.numInsertedOrUpdatedRows) throw new CaptchaReusedError()
