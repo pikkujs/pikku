@@ -23,7 +23,11 @@ export interface RateLimitService {
   hit(key: string, limit: number, windowMs: number): Promise<RateLimitResult>
 }
 
-/** Rejects a limit or window no store can count against. */
+/**
+ * Rejects a limit or window no store can count against.
+ *
+ * @example snippet: assertRateLimitArgs
+ */
 export const assertRateLimitArgs = (limit: number, windowMs: number): void => {
   if (!Number.isInteger(limit) || limit < 1) {
     throw new RangeError(`Rate limit must be a positive integer, got ${limit}`)
