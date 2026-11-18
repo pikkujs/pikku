@@ -47,6 +47,12 @@ export {
   type LeaseService,
 } from './lease-service.js'
 export { InMemoryLeaseService } from './in-memory-lease-service.js'
+export {
+  assertRateLimitArgs,
+  type RateLimitResult,
+  type RateLimitService,
+} from './rate-limit-service.js'
+export { InMemoryRateLimitService } from './in-memory-rate-limit-service.js'
 export { InMemoryAgentRunStateService } from './in-memory-agent-run-state-service.js'
 export type {
   ContentService,

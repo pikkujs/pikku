@@ -6,6 +6,7 @@ export type { TraceContext }
 import type { IncomingWebhookService } from '../services/incoming-webhook-service.js'
 import type { TriggerSourceStore } from '../services/trigger-source-store.js'
 import type { LeaseService } from '../services/lease-service.js'
+import type { RateLimitService } from '../services/rate-limit-service.js'
 import type { Logger, LogLevel } from '../services/logger.js'
 import type { VariablesService } from '../services/variables-service.js'
 import type { SecretService } from '../services/secret-service.js'
@@ -231,6 +232,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** Which trigger sources an operator enabled, and what enabling registered. */
   triggerSourceStore?: TriggerSourceStore
   leaseService?: LeaseService
+  /** Counts hits against a limit. Required once a rate limiter is set. */
+  rateLimitService?: RateLimitService
   metaService?: MetaService
   /**
    * Where virtual-user runs are recorded. A run is dispatched and answered for
