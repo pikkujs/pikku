@@ -39,9 +39,12 @@ for (const pkg of ['tools', 'app']) {
 console.log('✓ the addon and the base were generated')
 
 const http = JSON.parse(
-  readFileSync(join(here, '.pikku/http/pikku-http-wirings-meta.gen.json'), 'utf8')
+  readFileSync(
+    join(here, '.pikku/http/pikku-http-wirings-meta.gen.json'),
+    'utf8'
+  )
 )
-for (const route of ['/ping', '/greet']) {
+for (const route of ['/ping', '/greet', '/stamp']) {
   if (!http.get?.[route]) fail(`the root http meta has no ${route}`)
 }
 console.log('✓ the root http meta carries the base routes')
@@ -51,29 +54,54 @@ const manifest = JSON.parse(
 )
 const want = ['ping', 'tools:greet']
 if (JSON.stringify(manifest.exposed) !== JSON.stringify(want)) {
-  fail(`exposed was ${JSON.stringify(manifest.exposed)}, wanted ${JSON.stringify(want)}`)
+  fail(
+    `exposed was ${JSON.stringify(manifest.exposed)}, wanted ${JSON.stringify(want)}`
+  )
 }
 console.log('✓ the SDK carries the base function and the addon function')
 
 const map = readFileSync(
-  join(here, '.pikku/sdk/api/exposed/contract/rpc/pikku-rpc-wirings-map.gen.d.ts'),
+  join(
+    here,
+    '.pikku/sdk/api/exposed/contract/rpc/pikku-rpc-wirings-map.gen.d.ts'
+  ),
   'utf8'
 )
 if (/'hidden'/.test(map)) fail('a function that is not exposed reached the SDK')
 console.log('✓ a function that is not exposed stays out')
 
-const bootstrap = readFileSync(join(here, '.pikku/pikku-bootstrap.gen.ts'), 'utf8')
+// The addon declares `farewell` exposed too, but the base's wireAddon lists only
+// `greet`: the allowlist is the base's, so the map is narrowed to it.
+if (/'(tools:)?farewell'/.test(map)) {
+  fail("an addon function outside the base's expose list reached the SDK")
+}
+if (!/Pick<ToolsRPCMap, Extract<keyof ToolsRPCMap, 'greet'>>/.test(map)) {
+  fail("the SDK map does not narrow the addon to the base's expose list")
+}
+console.log("✓ the base's expose list narrows the addon's functions in the SDK")
+
+const bootstrap = readFileSync(
+  join(here, '.pikku/pikku-bootstrap.gen.ts'),
+  'utf8'
+)
 if (/packages\/app\/\.pikku/.test(bootstrap)) {
   fail("the root bootstrap imports the base's own bootstrap")
 }
 if (!bootstrap.includes('packages/app/src/app.wiring')) {
   fail("the root bootstrap does not import the base's wirings")
 }
-console.log("✓ the root bootstrap imports the base's wirings, not its bootstrap")
+console.log(
+  "✓ the root bootstrap imports the base's wirings, not its bootstrap"
+)
 
 const smoke = spawnSync(TSX, ['smoke.ts'], { cwd: here, encoding: 'utf8' })
 if (smoke.status !== 0) {
   console.error(smoke.stdout + smoke.stderr)
   fail('the runtime smoke test failed')
 }
-console.log(smoke.stdout.split('\n').filter((l) => l.startsWith('✓')).join('\n'))
+console.log(
+  smoke.stdout
+    .split('\n')
+    .filter((l) => l.startsWith('✓'))
+    .join('\n')
+)

@@ -45,6 +45,59 @@ describe('serializeTypedRPCMap', () => {
     )
   })
 
+  describe('the exposed map narrows each addon to the functions the host exposes', () => {
+    const declarations = new Map([
+      ['tools', { package: '@x/tools' }],
+      ['hidden', { package: '@x/hidden' }],
+      ['all', { package: '@x/all' }],
+    ]) as any
+    const serialize = (addonExposed?: Record<string, string[]>) =>
+      serializeTypedRPCMap(
+        logger,
+        '/tmp/pikku-rpc-map.gen.d.ts',
+        {},
+        emptyTypesMap,
+        {},
+        {},
+        '/tmp/pikku-custom-types.gen.d.ts',
+        declarations,
+        undefined,
+        undefined,
+        undefined,
+        addonExposed
+      )
+
+    test('a namespace with exposed functions is a Pick of exactly those', () => {
+      const result = serialize({
+        tools: ['greet', 'wave'],
+        hidden: [],
+        all: [],
+      })
+      assert.match(
+        result,
+        /PrefixKeys<Pick<ToolsRPCMap, Extract<keyof ToolsRPCMap, 'greet' \| 'wave'>>, 'tools'>/
+      )
+    })
+
+    test('a namespace with none exposed brings no keys', () => {
+      const result = serialize({ tools: ['greet'], hidden: [], all: [] })
+      assert.match(result, /PrefixKeys<\{\}, 'hidden'>/)
+    })
+
+    test('without a narrowing a namespace brings its whole map', () => {
+      const result = serialize()
+      assert.match(result, /PrefixKeys<ToolsRPCMap, 'tools'>/)
+      assert.match(result, /PrefixKeys<HiddenRPCMap, 'hidden'>/)
+    })
+
+    test('a namespace the narrowing does not name brings its whole map', () => {
+      assert.match(
+        serialize({ tools: ['greet'] }),
+        /PrefixKeys<AllRPCMap, 'all'>/
+      )
+    })
+  })
+
   test('agent run and approve resolve to a result carrying status and pendingApprovals', () => {
     const result = serializeTypedRPCMap(
       logger,

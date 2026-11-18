@@ -6,6 +6,7 @@ export const createConfig = pikkuConfig(async () => ({}))
 export const createSingletonServices = pikkuServices(async (config) => ({
   config,
   logger: new ConsoleLogger(),
+  stamper: { stamp: (text: string) => `[stamped] ${text}` },
 }))
 
 export const createWireServices = pikkuWireServices(async () => ({}))
