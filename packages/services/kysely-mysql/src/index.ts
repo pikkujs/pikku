@@ -1,5 +1,6 @@
 export { MySQLKyselyWorkflowService } from './mysql-kysely-workflow-service.js'
 export { MySQLKyselyLeaseService } from './mysql-kysely-lease-service.js'
+export { MySQLKyselyRateLimitService } from './mysql-kysely-rate-limit-service.js'
 export { MySQLKyselyDeploymentService } from './mysql-kysely-deployment-service.js'
 export { MySQLKyselyAgentStorageService } from './mysql-kysely-agent-storage-service.js'
 export { MySQLKyselyAgentRunService } from './mysql-kysely-agent-run-service.js'

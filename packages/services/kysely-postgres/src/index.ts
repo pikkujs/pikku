@@ -1,5 +1,6 @@
 export { PgKyselyWorkflowService } from './pg-kysely-workflow-service.js'
 export { PgKyselyLeaseService } from './pg-kysely-lease-service.js'
+export { PgKyselyRateLimitService } from './pg-kysely-rate-limit-service.js'
 export { PgKyselyDeploymentService } from './pg-kysely-deployment-service.js'
 export { PgKyselyAgentStorageService } from './pg-kysely-agent-storage-service.js'
 export { PgKyselyAgentRunService } from './pg-kysely-agent-run-service.js'
