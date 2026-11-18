@@ -242,6 +242,7 @@ fn admin_addon_state(blanket: bool) -> State {
     }
     st.addon_functions.set("admin", fns);
     st.addon_required_parent_services = Strings::from(["scopeService".to_string(), "incomingWebhookService".to_string()]);
+    st.addon_required_parent_services_by_namespace.insert("admin".into(), vec!["scopeService".into(), "incomingWebhookService".into()]);
     st.service_aggregation.used_functions.add("admin:listIncomingWebhookReceipts");
     st.service_aggregation.used_functions.add("admin:listScopes");
     st
@@ -343,6 +344,56 @@ fn an_addon_function_with_unknown_services_is_checked_for_every_parent_service()
     assert_eq!(found.len(), 1, "{found:?}");
     assert!(found[0].contains("'admin:legacy'") && found[0].contains("'scopeService'"));
     assert!(parent_service_reports(&build(&["scopeService"])).is_empty());
+}
+
+// Two addons in one project: `mail` takes `mailer`, `tools` takes `scopeService`.
+fn two_addon_state(tools_services: Option<&[&str]>, declared: &[&str]) -> State {
+    let mut st = parent_services_state(declared);
+    let mut mail = crate::state::Record::new();
+    mail.set("send", fn_meta(|m| {
+        m.services.optimized = true;
+        m.services.services = vec!["mailer".to_string()];
+    }));
+    st.addon_functions.set("mail", mail);
+    let mut tools = crate::state::Record::new();
+    tools.set("greet", match tools_services {
+        Some(list) => fn_meta(|m| {
+            m.services.optimized = true;
+            m.services.services = list.iter().map(|s| s.to_string()).collect();
+        }),
+        None => {
+            let mut m = FunctionMeta::default();
+            m.nil_slices.services = true;
+            m
+        }
+    });
+    st.addon_functions.set("tools", tools);
+    st.addon_required_parent_services = Strings::from(["mailer".to_string(), "scopeService".to_string()]);
+    st.addon_required_parent_services_by_namespace.insert("mail".into(), vec!["mailer".into()]);
+    st.addon_required_parent_services_by_namespace.insert("tools".into(), vec!["scopeService".into()]);
+    st.service_aggregation.used_functions = Default::default();
+    st.service_aggregation.used_functions.add("mail:send");
+    st.service_aggregation.used_functions.add("tools:greet");
+    services::aggregate_required_services(&mut st);
+    st
+}
+
+#[test]
+fn an_unknown_services_function_is_blamed_only_for_its_own_addons_parent_services() {
+    let found = parent_service_reports(&two_addon_state(None, &["scopeService"]));
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("'mail:send'") && found[0].contains("'mailer'"), "{found:?}");
+    let found = parent_service_reports(&two_addon_state(None, &["mailer"]));
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("'tools:greet'") && found[0].contains("'scopeService'"), "{found:?}");
+}
+
+#[test]
+fn a_function_using_a_service_outside_the_project_checks_its_addons_whole_parent_list() {
+    let found = parent_service_reports(&two_addon_state(Some(&["toolsOwnStore"]), &["mailer"]));
+    assert_eq!(found.len(), 1, "{found:?}");
+    assert!(found[0].contains("'tools:greet'") && found[0].contains("'scopeService'"), "{found:?}");
+    assert!(parent_service_reports(&two_addon_state(Some(&["toolsOwnStore"]), &["mailer", "scopeService"])).is_empty());
 }
 
 #[test]

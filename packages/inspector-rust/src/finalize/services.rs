@@ -50,11 +50,11 @@ fn mark_singleton_services_only(st: &mut State, wire_services: &HashSet<String>)
     }
 }
 
-fn is_internal(s: &str) -> bool {
+pub(crate) fn is_internal(s: &str) -> bool {
     matches!(s, "rpc" | "mcp" | "channel" | "userSession")
 }
 
-fn is_default(s: &str) -> bool {
+pub(crate) fn is_default(s: &str) -> bool {
     matches!(s, "config" | "logger" | "variables" | "schema" | "secrets")
 }
 

@@ -96,3 +96,54 @@ func TestAnAddonFunctionWithUnoptimizedServicesIsCheckedForEveryParentService(t 
 		t.Fatalf("scopeService is declared but was reported: %v", found)
 	}
 }
+
+// Two addons wired into one project: `mail` takes `mailer` and `tools` takes
+// `scopeService`. The project provides neither.
+func twoAddonState(toolServices []string, singleton ...string) *state.State {
+	st := parentServicesState(singleton...)
+	mail := state.NewRecord[*state.FunctionMeta]()
+	mail.Set("send", &state.FunctionMeta{Services: state.ServicesMeta{Optimized: true, Services: []string{"mailer"}}})
+	st.AddonFunctions.Set("mail", mail)
+	tools := state.NewRecord[*state.FunctionMeta]()
+	meta := &state.FunctionMeta{}
+	if toolServices != nil {
+		meta.Services = state.ServicesMeta{Optimized: true, Services: toolServices}
+	}
+	tools.Set("greet", meta)
+	st.AddonFunctions.Set("tools", tools)
+	st.AddonRequiredParentServices = state.Strings{"mailer", "scopeService"}
+	st.AddonRequiredParentServicesByNamespace = map[string][]string{"mail": {"mailer"}, "tools": {"scopeService"}}
+	st.ServiceAggregation.UsedFunctions = *state.NewSet()
+	st.ServiceAggregation.UsedFunctions.Add("mail:send")
+	st.ServiceAggregation.UsedFunctions.Add("tools:greet")
+	aggregateRequiredServices(st)
+	return st
+}
+
+func TestAnUnoptimizedFunctionIsBlamedOnlyForItsOwnAddonsParentServices(t *testing.T) {
+	found := parentServiceReports(t, twoAddonState(nil, "scopeService"))
+	for _, msg := range found {
+		if strings.Contains(msg, "'tools:greet'") {
+			t.Fatalf("tools:greet blamed for a service only mail needs: %v", found)
+		}
+	}
+	if len(found) != 1 || !strings.Contains(found[0], "'mail:send'") || !strings.Contains(found[0], "'mailer'") {
+		t.Fatalf("want one report for mail:send, got %v", found)
+	}
+	found = parentServiceReports(t, twoAddonState(nil, "mailer"))
+	if len(found) != 1 || !strings.Contains(found[0], "'tools:greet'") || !strings.Contains(found[0], "'scopeService'") {
+		t.Fatalf("want one report for tools:greet naming scopeService, got %v", found)
+	}
+}
+
+func TestAFunctionUsingAServiceOutsideTheProjectChecksItsAddonsWholeParentList(t *testing.T) {
+	// greet lists only its own service, but the addon's factory is built from
+	// everything the addon takes from the project, so scopeService must exist.
+	found := parentServiceReports(t, twoAddonState([]string{"toolsOwnStore"}, "mailer"))
+	if len(found) != 1 || !strings.Contains(found[0], "'tools:greet'") || !strings.Contains(found[0], "'scopeService'") {
+		t.Fatalf("want one report for tools:greet naming scopeService, got %v", found)
+	}
+	if found := parentServiceReports(t, twoAddonState([]string{"toolsOwnStore"}, "mailer", "scopeService")); len(found) != 0 {
+		t.Fatalf("everything is declared but %v was reported", found)
+	}
+}

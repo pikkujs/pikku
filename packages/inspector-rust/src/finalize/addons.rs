@@ -125,8 +125,11 @@ pub fn validate_secret_overrides(log: &mut Logger, st: &State) {
 /// Port of Go `validateAddonParentServices`: what a used addon function needs
 /// from the project that wires it must be declared in the project's own
 /// SingletonServices. A service declared only as a wire service does not count.
-/// A function whose services are unknown (nil) is checked for every service the
-/// addon takes from its project, which is how finalize requires them.
+/// What counts is what the addon that owns the function takes from its project,
+/// not what every wired addon does. A function whose services are unknown (nil),
+/// or that uses a service which is neither the project's nor internal nor a
+/// default, makes finalize require every service its addon takes from the
+/// project, so each of those is checked for it.
 pub fn validate_addon_parent_services(log: &mut Logger, st: &State) {
     let Some(types) = &st.service_types else { return };
     if types.singleton_services.is_none() || st.addon_services_factory_seen {
@@ -134,13 +137,17 @@ pub fn validate_addon_parent_services(log: &mut Logger, st: &State) {
     }
     let agg = &st.service_aggregation;
     let provided: std::collections::HashSet<&String> = agg.all_singleton_services.iter().collect();
-    let parent: std::collections::HashSet<&String> = st.addon_required_parent_services.iter().collect();
     let mut reported: std::collections::HashSet<String> = std::collections::HashSet::new();
     for id in agg.used_functions.values() {
         let Some((ns, func)) = id.split_once(':') else { continue };
         let Some(fns) = st.addon_functions.get(ns) else { continue };
         let Some(meta) = fns.get(func) else { continue };
-        let needs = if meta.services_unknown() { &st.addon_required_parent_services } else { &meta.services.services };
+        let from_project: &[String] = st.addon_required_parent_services_by_namespace.get(ns).map(Vec::as_slice).unwrap_or(&[]);
+        let parent: std::collections::HashSet<&String> = from_project.iter().collect();
+        let own: &[String] = if meta.services_unknown() { &[] } else { &meta.services.services };
+        let factory_needed = meta.services_unknown()
+            || own.iter().any(|s| !parent.contains(s) && !super::services::is_internal(s) && !super::services::is_default(s));
+        let needs: Vec<&String> = if factory_needed { own.iter().chain(from_project.iter()).collect() } else { own.iter().collect() };
         for service in needs {
             if !parent.contains(service) || !agg.required_services.has(service) || provided.contains(service) {
                 continue;
