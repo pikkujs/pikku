@@ -174,3 +174,46 @@ test('an empty scratch database makes Better Auth log a schema mismatch', async 
 test('the schema-only kysely keeps that check from firing', async () => {
   assert.deepEqual(await errorsLoggedBuildingAuthOn(true), [])
 })
+
+/**
+ * The auth factory reads the project's `createConfig` through `services.config`.
+ * A project is its own directory (`.`) or a base package, so the file is
+ * `src/config.ts` under one of those, not under a `src` entry of the config.
+ */
+test('the auth factory gets the createConfig of an ordinary project and of a base', async () => {
+  const cases: [string, string[]][] = [
+    ['', ['.']],
+    ['packages/app/', ['.', 'packages/app']],
+  ]
+  for (const [prefix, sourceDirs] of cases) {
+    const root = mkdtempSync(join(tmpdir(), 'pikku-auth-config-'))
+    try {
+      mkdirSync(join(root, prefix, 'src'), { recursive: true })
+      writeFileSync(
+        join(root, prefix, 'src', 'config.ts'),
+        `export const createConfig = async () => ({ appName: 'found' })\n`
+      )
+      writeFileSync(
+        join(root, prefix, 'src', 'auth.ts'),
+        `const PIKKU_BETTER_AUTH = Symbol.for('pikku.betterAuth')
+// Marker for the source scan, which looks for pikkuBetterAuth( in the file.
+export const auth = Object.assign(
+  (services: { config?: { appName?: string } }) => ({
+    options: { database: { type: 'sqlite' }, appName: services.config?.appName },
+  }),
+  { [PIKKU_BETTER_AUTH]: true }
+)
+`
+      )
+      const options = await loadAuthOptions({
+        rootDir: root,
+        sourceDirs,
+        kysely: {} as never,
+        logger: { error() {} },
+      })
+      assert.equal(options?.appName, 'found', sourceDirs.join(','))
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  }
+})
