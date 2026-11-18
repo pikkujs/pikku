@@ -15,7 +15,7 @@ import type { AltchaService } from '../src/services/altcha.service.js'
 export interface CaptchaDB {
   captcha_used_challenge: {
     id: string
-    expiry: number
+    expiry: Date
   }
 }
 
