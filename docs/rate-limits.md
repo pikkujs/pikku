@@ -1,6 +1,6 @@
 # Rate limits
 
-A rate limit caps how many **external** calls a caller can make in a window. It applies to HTTP routes and MCP tools. An internal call (`rpc`, a queue job, a workflow step) is never counted, so a function that fans out to others costs its caller one hit.
+A rate limit caps how many **external** calls a caller can make in a window. It applies to HTTP routes and to MCP tools, resources and prompts. An internal call (`rpc`, a queue job, a workflow step) is never counted, so a function that fans out to others costs its caller one hit. The routes Pikku generates for unit-to-unit calls (`/mesh/rpc/:rpcName`, `/__pikku/queue-job`, `/__pikku/scheduler-job`) are exempt.
 
 ## Setting a limit
 
@@ -14,7 +14,7 @@ addGlobalRateLimiter({
 })
 ```
 
-Every HTTP route and MCP tool is counted per caller and per route (or tool). A function can replace the limit, or opt out:
+Every HTTP route and MCP tool, resource and prompt is counted per caller and per route (or tool). A function can replace the limit, or opt out:
 
 ```typescript
 export const submitContact = pikkuSessionlessFunc({
@@ -30,13 +30,17 @@ export const health = pikkuSessionlessFunc({
 })
 ```
 
-A function's own `rateLimit` **replaces** the global limit; it does not add to it.
+A function's own `rateLimit` **replaces** the global limit; it does not add to it. A route can carry its own too, `wireHTTP({ route, func, rateLimit: false })`, which wins over the function's.
+
+`POST /rpc/:rpcName` dispatches to the function `rpcName` names, so that function's own `rateLimit` is the one that applies, counted per function. This holds for a function an addon provides, too.
 
 ## Who the caller is
 
-`ipHeader` names the request header your proxy sets with the client address, such as `cf-connecting-ip` or `x-forwarded-for` (the first entry is used).
+`ipHeader` names the request header your proxy sets with the client address, such as `cf-connecting-ip` or `x-forwarded-for`.
 
-There is no default, because a header the client can set is not an address to trust. Without `ipHeader` every caller shares one bucket per route or tool, and a warning says so. For an MCP call with no HTTP request behind it, the caller is the session's user when there is one, and one shared bucket otherwise.
+There is no default, because a header the client can set is not an address to trust. Without `ipHeader` every caller shares one bucket per route or tool, and a warning says so. An MCP call with no HTTP request behind it has no address, so its callers share one bucket per tool.
+
+A comma-separated list such as `x-forwarded-for` is read **from the right**. A proxy appends the address it saw to the end of the list, so everything to its left is whatever the client claimed, and reading from the left would let a caller pick a new bucket on every request. `trustedProxies` (default 1) is how many entries your own proxies appended: with a CDN in front of a load balancer, set it to 2.
 
 ## Where the counts live
 

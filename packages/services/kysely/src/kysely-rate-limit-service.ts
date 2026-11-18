@@ -48,6 +48,23 @@ export class KyselyRateLimitService implements RateLimitService {
     windowMs: number
   ): Promise<RateLimitResult> {
     assertRateLimitArgs(limit, windowMs)
+    // A prune can delete the row between the insert and the update, so a hit
+    // that finds no row once it has updated starts over.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await this.tryHit(key, limit, windowMs)
+      if (result) {
+        await this.pruneIfDue()
+        return result
+      }
+    }
+    throw new Error(`Rate limit row for '${key}' keeps disappearing`)
+  }
+
+  private async tryHit(
+    key: string,
+    limit: number,
+    windowMs: number
+  ): Promise<RateLimitResult | null> {
     await insertOrIgnore(
       this.db,
       this.db
@@ -82,25 +99,31 @@ export class KyselyRateLimitService implements RateLimitService {
 
     const row = await this.db
       .selectFrom('pikkuRateLimit')
-      .select(['count', 'resetAt'])
+      .select(['count', 'resetAt', sql<number>`${now}`.as('now')])
       .where('key', '=', key)
-      .executeTakeFirstOrThrow()
-    const resetAt = Number(row.resetAt)
-    await this.pruneIfDue()
+      .executeTakeFirst()
+    if (!row) return null
 
+    const resetAt = Number(row.resetAt)
     return {
       allowed,
       count: Number(row.count),
       limit,
       resetAt: new Date(resetAt),
-      retryAfterMs: Math.min(windowMs, Math.max(0, resetAt - Date.now())),
+      // Both ends on the database's clock, so a worker's own skew cannot shorten it.
+      retryAfterMs: Math.min(windowMs, Math.max(0, resetAt - Number(row.now))),
     }
   }
 
-  /** Deletes windows that have ended. A hit calls it at most once a minute. */
+  /**
+   * Deletes windows that have ended. A hit calls it at most once a minute. A row
+   * whose `resetAt` is 0 is one a hit has just inserted and not yet counted, so
+   * it is left alone.
+   */
   async prune(): Promise<void> {
     await this.db
       .deleteFrom('pikkuRateLimit')
+      .where('resetAt', '>', 0)
       .where('resetAt', '<=', this.nowMs())
       .execute()
   }

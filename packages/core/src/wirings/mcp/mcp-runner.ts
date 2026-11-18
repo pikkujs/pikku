@@ -19,7 +19,11 @@ import {
   getSingletonServices,
   getCreateWireServices,
 } from '../../pikku-state.js'
-import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import {
+  addFunction,
+  findFunctionConfig,
+  runPikkuFunc,
+} from '../../function/function-runner.js'
 import { enforceRateLimit } from '../../rate-limit/rate-limit-runner.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { BadRequestError, NotFoundError } from '../../errors/errors.js'
@@ -329,13 +333,12 @@ async function runMCPPikkuFunc(
 
     await enforceRateLimit({
       wire: 'mcp',
-      scope: `${type}:${name}`,
-      override: pikkuState(resolvedPackageName, 'function', 'functions').get(
-        resolvedFuncName
-      )?.rateLimit,
+      // The template for a resource, not the concrete URI, so every URI one
+      // template matches shares a bucket.
+      scope: `${type}:${metaKey}`,
+      override: findFunctionConfig(pikkuFuncId, meta?.packageName ?? null)
+        ?.rateLimit,
       header: (header) => http?.request?.header(header),
-      sessionId: (mcpSessionService.get() as { userId?: string } | undefined)
-        ?.userId,
       singletonServices,
       packageName: resolvedPackageName,
       setRetryAfter: (seconds) =>

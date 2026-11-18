@@ -1,6 +1,7 @@
 import type { SerializeOptions } from 'cookie'
 import type { StandardSchemaV1 } from '@standard-schema/spec'
 import type { CommonWireMeta } from '../../types/core.types.js'
+import type { RateLimitConfig } from '../../rate-limit/rate-limit.types.js'
 import type { CorePikkuMiddleware } from '../../middleware/middleware.types.js'
 import type {
   CorePikkuFunction,
@@ -130,8 +131,10 @@ type HTTPWiringShared<
    * a mismatch is a compile error rather than a 404 at runtime.
    */
   route: R
-  /** Wraps every request to this route: auth, tracing, rate limiting. Runs before the permissions on `func`. */
+  /** Wraps every request to this route: auth, tracing. Runs before the permissions on `func`. */
   middleware?: PikkuMiddleware[]
+  /** This route's own limit on external calls, replacing the function's and the global one. `false` exempts it. */
+  rateLimit?: RateLimitConfig | false
 }
 
 /**

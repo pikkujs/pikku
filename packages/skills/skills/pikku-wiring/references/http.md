@@ -143,7 +143,8 @@ export const health = pikkuSessionlessFunc({ rateLimit: false, func: async () =>
 ```
 
 - A `rateLimitService` must be in the singleton services (`InMemoryRateLimitService` counts per process; the Kysely and Redis services share counts across instances and restarts). A limit with no service refuses every call with a 500 rather than silently not limiting.
-- There is no default `ipHeader`, because a header a client can set is not an address to trust. Without one, every caller shares a bucket per route or tool, and a warning says so.
+- There is no default `ipHeader`, because a header a client can set is not an address to trust. Without one, every caller shares a bucket per route or tool, and a warning says so. A comma-separated list such as `x-forwarded-for` is read from the right, `trustedProxies` (default 1) entries in, because everything left of your proxy's entry is the client's claim.
+- A route can set its own: `wireHTTP({ route, func, rateLimit: false })` wins over the function's. `POST /rpc/:rpcName` applies the called function's own `rateLimit`. The generated `/mesh/rpc/:rpcName` and `/__pikku/*-job` routes are exempt, and any route another unit calls has to be too.
 - A refused call answers 429 with `Retry-After` (whole seconds) and `retryAfterMs` in the body, before auth and validation, so a correct call and an incorrect one are refused identically.
 - If the store fails the call is refused with 503. Set `onStoreError: 'allow'` to let calls through instead, which turns the limit off while the store is down.
 

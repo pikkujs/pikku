@@ -50,6 +50,7 @@ wireHTTP({
   route: '/mesh/rpc/:rpcName',
   method: 'post',
   auth: false,
+  rateLimit: false,
   tags: ['pikku'],
   middleware: [pikkuMeshAuthMiddleware],
   func: meshRPCHandler,

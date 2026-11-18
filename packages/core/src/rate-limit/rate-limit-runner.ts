@@ -19,8 +19,6 @@ export type RateLimitCheck = {
   override?: RateLimitConfig | false
   /** The request header holding the client address. Without one every caller shares a bucket. */
   header?: (name: string) => string | null | undefined
-  /** A caller identity the wire has once a session exists. */
-  sessionId?: string
   singletonServices: CoreSingletonServices
   packageName?: string | null
   /** Sets `Retry-After` on the response before the refusal is thrown. */
@@ -42,23 +40,30 @@ export const addGlobalRateLimiter = (
   return config
 }
 
+/** A caller and a scope are cut to these, so a key fits the narrowest store (a MySQL `varchar(255)`). */
+const MAX_CALLER_LENGTH = 64
+const MAX_SCOPE_LENGTH = 128
+
 const warnedWithoutHeader = new WeakSet<RateLimitConfig>()
 
 const clientAddress = (
   header: RateLimitCheck['header'],
-  name: string | undefined
+  config: RateLimitConfig
 ): string | undefined => {
-  if (!name || !header) return undefined
-  const value = header(name)
+  if (!config.ipHeader || !header) return undefined
+  const value = header(config.ipHeader)
   if (!value) return undefined
-  const first = value.split(',')[0]?.trim()
-  return first || undefined
+  const entries = value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+  const hops = Math.max(1, config.trustedProxies ?? 1)
+  return entries[Math.max(0, entries.length - hops)]
 }
 
 const callerOf = (check: RateLimitCheck, config: RateLimitConfig): string => {
-  const address = clientAddress(check.header, config.ipHeader)
-  if (address) return `ip:${address}`
-  if (check.sessionId) return `session:${check.sessionId}`
+  const address = clientAddress(check.header, config)
+  if (address) return `ip:${address.slice(0, MAX_CALLER_LENGTH)}`
   if (!config.ipHeader && !warnedWithoutHeader.has(config)) {
     warnedWithoutHeader.add(config)
     check.singletonServices.logger.warn(
@@ -94,7 +99,7 @@ export const enforceRateLimit = async (
     )
   }
 
-  const key = `rl:${check.wire}:${check.scope}:${callerOf(check, config)}`
+  const key = `rl:${check.wire}:${check.scope.slice(0, MAX_SCOPE_LENGTH)}:${callerOf(check, config)}`
   let result
   try {
     result = await service.hit(key, config.limit, config.windowMs)

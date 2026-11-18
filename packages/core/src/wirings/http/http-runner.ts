@@ -52,7 +52,11 @@ import type {
 // The leaf module, not the channel-rpc barrel: http needs one refusal
 // function, and the barrel drags in 4,932 lines of channel RPC runtime.
 import { unsupportedChannelRemote } from '../channel/channel-rpc.types.js'
-import { addFunction, runPikkuFunc } from '../../function/function-runner.js'
+import {
+  addFunction,
+  findFunctionConfig,
+  runPikkuFunc,
+} from '../../function/function-runner.js'
 import { enforceRateLimit } from '../../rate-limit/rate-limit-runner.js'
 import { applyWebResponse } from './web-request.js'
 import { httpRouter } from './routers/http-router.js'
@@ -216,6 +220,9 @@ export const createHTTPWire = (
   return http
 }
 
+/** The generated function behind `POST /rpc/:rpcName`. */
+const PUBLIC_RPC_FUNCTION = 'rpcCaller'
+
 const executeRoute = async (
   services: {
     singletonServices: any
@@ -243,12 +250,22 @@ const executeRoute = async (
 
   http?.request?.setParams(params)
 
+  // The public RPC route dispatches to whichever function its `rpcName` names,
+  // so that function's own limit is the one that applies, counted per function.
+  const rpcTarget =
+    meta.pikkuFuncId === PUBLIC_RPC_FUNCTION &&
+    typeof params?.rpcName === 'string'
+      ? findFunctionConfig(params.rpcName, meta.packageName ?? null)
+      : undefined
+  const limited =
+    rpcTarget ?? findFunctionConfig(meta.pikkuFuncId, meta.packageName ?? null)
+
   await enforceRateLimit({
     wire: 'http',
-    scope: `${meta.method}:${meta.route}`,
-    override: pikkuState(meta.packageName ?? null, 'function', 'functions').get(
-      meta.pikkuFuncId
-    )?.rateLimit,
+    scope: rpcTarget
+      ? `${meta.method}:${meta.route}:${params.rpcName}`
+      : `${meta.method}:${meta.route}`,
+    override: route.rateLimit ?? limited?.rateLimit,
     header: (name) => http?.request?.header(name),
     singletonServices,
     packageName: meta.packageName ?? null,
