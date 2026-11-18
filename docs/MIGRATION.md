@@ -134,7 +134,7 @@ What an app sees:
 
 ### `srcDirectories` is now `base` and `addons`
 
-**What:** a project inspects its own directory, so `srcDirectories` is gone and a config that still sets it is rejected. Two keys replace it:
+**What:** a project inspects its own directory, so `srcDirectories` is no longer read: the loader accepts the key and ignores it. Two keys replace it:
 
 - `base`: one directory that owns all wirings and services, with its own `pikku.config.json` and a `package.json` name, inside the project root, which is `rootDir` (default: the directory that holds the root config; `..` past it, an absolute path or a symlink out is an error, and so is a `rootDir` that is the filesystem root). The root inspects the base's source in place, takes `createConfig` and `createSingletonServices` from it, and wires nothing of its own. Without `base`, a config is its own base.
 - `addons`: directories of addons, each with its own `pikku.config.json` (an `addon` section) and a required `namespace`.
@@ -147,7 +147,7 @@ What an app sees:
 - Generated scaffold files (`scaffold.pikkuDir`, default `src/scaffold`) are written in the base package, and `pikku new function`, `pikku addons add` and the other generators write under the base's `src`, so the generated files sit where the base's dependencies resolve.
 - `pikku new addon` writes a `namespace` (the addon's name) into the addon's `pikku.config.json`.
 - The root's tsconfig must include the base's source, and the root has no `types/application-types.d.ts` of its own: the base declares `Config`, `UserSession`, `SingletonServices` and `Services`.
-- Release order: `packages/cli/build.sh` bootstraps with the published `@pikku/cli`, which still requires `srcDirectories` and rejects `base`, `addons` and `namespace`, so it cannot read `packages/cli/pikku.config.json` as migrated here. Publish the new `@pikku/cli` first, built by hand: add `"srcDirectories": ["src", "bin", "types"]` to that config for the two bootstrap invocations in `build.sh` only (the local pass after them reads the config without it). Every later build bootstraps with the published release (`PIKKU_CLI_VERSION` picks one). `packages/services/queue-nats` and `e2e` build with the workspace CLI and are not affected.
+- Release order: `packages/cli/build.sh` bootstraps with the published `@pikku/cli`, which still requires `srcDirectories` and rejects `base`, `addons` and `namespace`. `packages/cli/pikku.config.json` therefore keeps `srcDirectories`, which the new loader ignores, until a published `@pikku/cli` reads `base` and `addons`; the key is then deleted from it. `packages/services/queue-nats` and `e2e` build with the workspace CLI and are not affected.
 - A backend filter selects an addon's functions with `names: ["<namespace>:*"]`.
 
 ```json

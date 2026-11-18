@@ -2264,6 +2264,21 @@
         "zod": "^4",
       },
     },
+    "verifiers/db-types": {
+      "name": "@pikku/verifiers-db-types",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/kysely": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+        "kysely": "^0.29.6",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/db-vectors": {
       "name": "@pikku/verifiers-db-vectors",
       "dependencies": {
@@ -3900,6 +3915,8 @@
     "@pikku/verifiers-column-security-lint": ["@pikku/verifiers-column-security-lint@workspace:verifiers/column-security-lint"],
 
     "@pikku/verifiers-db-schema": ["@pikku/verifiers-db-schema@workspace:verifiers/db-schema"],
+
+    "@pikku/verifiers-db-types": ["@pikku/verifiers-db-types@workspace:verifiers/db-types"],
 
     "@pikku/verifiers-db-vectors": ["@pikku/verifiers-db-vectors@workspace:verifiers/db-vectors"],
 

@@ -63,6 +63,9 @@ const SHAPE: Shape = obj({
   content: obj({ contentPath: 'any', sizeLimit: 'any', buckets: 'any' }),
   addons: 'any',
   base: 'any',
+  // Read by the published CLI that bootstraps this repo's own build; the
+  // loader accepts the key and reads nothing from it.
+  srcDirectories: 'any',
   namespace: 'any',
   ignoreFiles: 'any',
   packageMappings: 'any',
@@ -209,8 +212,6 @@ const MOVED_TOP_LEVEL: Record<
   string,
   string | ((value: unknown, file: string) => string)
 > = {
-  srcDirectories:
-    'is gone: a project inspects its own directory. Name the package that owns the wirings and services with `base`, and list addon directories in `addons`. Delete it',
   outDir:
     'is no longer a config key: generated files always go to `.pikku/` beside pikku.config.json. Delete it (`--outDir` stays as an internal flag for per-unit codegen)',
   dev: (value) => {
