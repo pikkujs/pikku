@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { addonUiFiles } from './new-addon-ui.js'
+import { getPikkuCLIConfig } from '../../utils/pikku-cli-config.js'
 
 test('the scaffold declares screens, so the host can mount them', () => {
   const files = addonUiFiles('invoice-tracker')
@@ -69,4 +73,25 @@ test('package.json carries the studio block Studio links the addon by', () => {
     ui: './src',
     messages: './messages/{locale}.json',
   })
+})
+
+test('the emitted pikku.config.json loads, under the addon name as its namespace', async () => {
+  const files = addonUiFiles('invoice-tracker')
+  const dir = await mkdtemp(join(tmpdir(), 'pikku-new-addon-ui-'))
+  try {
+    for (const name of ['package.json', 'tsconfig.json', 'pikku.config.json']) {
+      await writeFile(join(dir, name), files[name]!)
+    }
+    const loaded = await getPikkuCLIConfig(
+      { error() {}, warn() {}, info() {}, debug() {} } as never,
+      join(dir, 'pikku.config.json'),
+      []
+    )
+    assert.equal(
+      (loaded as { namespace?: string }).namespace,
+      'invoice-tracker'
+    )
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })

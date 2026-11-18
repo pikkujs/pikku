@@ -6,6 +6,7 @@ import { describe, test, afterEach } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
+import { getPikkuCLIConfig } from '../../utils/pikku-cli-config.js'
 import {
   buildGeneratedAddon,
   workspaceCovers,
@@ -160,6 +161,37 @@ describe('getAddonFiles', () => {
     )
     assert.equal('outDir' in addon, false)
     assert.equal('outDir' in testApp, false)
+  })
+
+  /**
+   * A scaffold that only parses is not one that loads: the config is read by the
+   * strict loader, which refuses unknown keys and needs the namespace a project
+   * wires the addon under.
+   */
+  test('the emitted pikku.config.json files load, the addon under its own name', async () => {
+    const quiet = { error() {}, warn() {}, info() {}, debug() {} } as never
+    const flags = { secret: false, variable: false, oauth: false }
+    for (const [kind, files] of [
+      ['addon', getAddonFiles(vars('Acme CRM', 'desc'), flags)],
+      ['test app', getTestFiles(vars('Acme CRM', 'desc'))],
+    ] as const) {
+      const dir = await makeTmp()
+      await writeFile(join(dir, 'package.json'), files['package.json']!)
+      await writeFile(join(dir, 'tsconfig.json'), files['tsconfig.json']!)
+      await writeFile(
+        join(dir, 'pikku.config.json'),
+        files['pikku.config.json']!
+      )
+      const loaded = await getPikkuCLIConfig(
+        quiet,
+        join(dir, 'pikku.config.json'),
+        []
+      )
+      assert.equal(loaded.rootDir, dir, kind)
+      if (kind === 'addon') {
+        assert.equal((loaded as { namespace?: string }).namespace, 'crm')
+      }
+    }
   })
 
   test('scaffolds parseable sources for ordinary prose', () => {

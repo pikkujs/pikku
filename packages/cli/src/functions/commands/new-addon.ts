@@ -27,6 +27,7 @@ import {
   openAPIRegistryName,
 } from './openapi-registry.js'
 import { registryUrl } from '../../utils/remote-addon-sync.js'
+import { NAMESPACE_PATTERN } from '../../utils/project-packages.js'
 
 /**
  * Pick the protocol the generated test app uses to depend on its parent addon.
@@ -286,7 +287,7 @@ export function getAddonFiles(
       $schema:
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
       tsconfig: './tsconfig.json',
-      sourceDirs: ['src', 'types'],
+      namespace: name,
       addon: {
         displayName,
         description,
@@ -857,8 +858,8 @@ export function getTestFiles(vars: AddonVars): Record<string, string> {
     {
       $schema:
         'https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json',
-      sourceDirs: ['./src', './types'],
       tsconfig: './tsconfig.json',
+      backends: { api: { filter: {} } },
     },
     null,
     2
@@ -1300,6 +1301,13 @@ export async function newAddon(
   }: NewAddonInput
 ): Promise<string> {
   name = sanitizeAddonName(name)
+  if (!NAMESPACE_PATTERN.test(name)) {
+    logger.error(
+      `Invalid addon name "${name}": must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores`
+    )
+    process.exit(1)
+  }
+
   if (ui) {
     const uiRoot = join(
       dir || config.scaffold?.addonDir || 'packages',
@@ -1310,13 +1318,6 @@ export async function newAddon(
       process.exit(1)
     }
     return resolve(uiRoot)
-  }
-
-  if (!/^[a-z][a-z0-9_-]*$/.test(name)) {
-    logger.error(
-      `Invalid addon name "${name}": must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores`
-    )
-    process.exit(1)
   }
 
   const pascalName = toPascalCase(name)
