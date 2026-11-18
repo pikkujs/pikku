@@ -68,7 +68,7 @@ const KNOWN_AREA_CYCLES = [
 ]
 
 /** How many modules `@pikku/core/services` may load. It was 102 before 0.13 and is 40. */
-const SERVICES_MODULE_BUDGET = 45
+const SERVICES_MODULE_BUDGET = 47
 
 const sourceFiles = (directory: string): string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

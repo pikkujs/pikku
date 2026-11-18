@@ -109,6 +109,6 @@ export const enforceRateLimit = async (
   const retryAfterSeconds = Math.max(1, Math.ceil(result.retryAfterMs / 1000))
   check.setRetryAfter?.(retryAfterSeconds)
   const refusal = new TooManyRequestsError()
-  ;(refusal as any).payload = { retryAfterMs: result.retryAfterMs }
+  Object.assign(refusal, { payload: { retryAfterMs: result.retryAfterMs } })
   throw refusal
 }
