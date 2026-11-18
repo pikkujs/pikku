@@ -110,3 +110,76 @@ describe('next with merges held', () => {
     }
   })
 })
+
+describe('next --parallel offering every kind of change at once (PIKKU_CHANGES_MIXED=1)', () => {
+  const setup = async () => {
+    const root = realpathSync(await mkdtemp(join(tmpdir(), 'next-mixed-')))
+    await git(['init', '-q', '-b', 'main'], root)
+    await writeFile(join(root, 'pikku.config.json'), '{}\n')
+    await git(['add', '.'], root)
+    await git([...ID, 'commit', '-q', '-m', 'init'], root)
+    const rpc = localChangesRPC(join(root, '.git', 'q.json'))
+    const make = async (
+      title: string,
+      specialist: string,
+      dependsOn: string[] = []
+    ) =>
+      (
+        await rpc.invoke('createChange', {
+          stageId: 'local',
+          title,
+          specialist,
+          dependsOn,
+        } as any)
+      ).change.changeId as string
+    return { root, rpc, make }
+  }
+  const titles = (context: string | null) =>
+    [...(context ?? '').matchAll(/^## #\d+ (.+)$/gm)].map((m) => m[1])
+
+  test('a capture that gates the screens is offered before backend changes nothing waits on; without the marker only one kind is', async () => {
+    const { root, rpc, make } = await setup()
+    await make('Appointments', 'build')
+    const capture = await make('Capture original', 'artifacts')
+    await make('Frame', 'frontend', [capture])
+    delete process.env.PIKKU_CHANGES_MIXED
+    const single = await pick(root, rpc, 'local', true)
+    assert.deepStrictEqual(titles(single.context), ['Appointments']) // build first, one kind
+    process.env.PIKKU_CHANGES_MIXED = '1'
+    try {
+      const mixed = await pick(root, rpc, 'local', true)
+      assert.deepStrictEqual(titles(mixed.context), [
+        'Capture original',
+        'Appointments',
+      ])
+    } finally {
+      delete process.env.PIKKU_CHANGES_MIXED
+    }
+  })
+
+  test('a frontend change that nothing pending blocks goes first, ahead of the backend', async () => {
+    const { root, rpc, make } = await setup()
+    await make('Settings', 'build')
+    await make('Legal pages', 'frontend')
+    process.env.PIKKU_CHANGES_MIXED = '1'
+    try {
+      const mixed = await pick(root, rpc, 'local', true)
+      assert.deepStrictEqual(titles(mixed.context), ['Legal pages', 'Settings'])
+    } finally {
+      delete process.env.PIKKU_CHANGES_MIXED
+    }
+  })
+
+  test('the serial loop is unchanged by the marker', async () => {
+    const { root, rpc, make } = await setup()
+    await make('Settings', 'build')
+    await make('Legal pages', 'frontend')
+    process.env.PIKKU_CHANGES_MIXED = '1'
+    try {
+      const serial = await pick(root, rpc, 'local', false)
+      assert.deepStrictEqual(titles(serial.context), ['Settings'])
+    } finally {
+      delete process.env.PIKKU_CHANGES_MIXED
+    }
+  })
+})

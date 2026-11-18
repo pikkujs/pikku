@@ -14,11 +14,12 @@ import { planOnBranch } from '../lib/plan-gate.js'
 import { takeBump, type PikkuBump } from '../lib/pikku-bump.js'
 import { localStorePath } from '../lib/changes-local.js'
 import { predictSkills } from '../lib/predict-skills.js'
-import { runnable } from '../lib/change-order.js'
+import { chainLengths, runnable } from '../lib/change-order.js'
 import {
   SPECIALISTS,
   nextSpecialist,
   specialistOf,
+  priorityOrder,
 } from '../lib/specialists.js'
 import { knowledgeLine } from '@pikku/knowledge'
 import {
@@ -179,8 +180,29 @@ export async function pick(
     blockers,
     parallel ? await doneNotMerged(root, blockers, blockerGroups) : undefined
   )
-  const specialist = nextSpecialist(unblocked)
-  const ready = unblocked.filter((c) => specialistOf(c) === specialist)
+  // Serial: one specialist at a time, in a fixed order. A loop that sets PIKKU_CHANGES_MIXED=1 under --parallel is offered every unblocked change, frontend first,
+  // so a screen is never queued behind backend work it does not wait on.
+  const mixed = parallel && process.env.PIKKU_CHANGES_MIXED === '1'
+  const ordered = mixed
+    ? priorityOrder(
+        unblocked as Array<(typeof unblocked)[number] & { changeId: string }>,
+        chainLengths(
+          unblocked,
+          blockers as Array<{
+            changeId: string
+            status: string
+            dependsOn?: string[] | null
+          }>
+        )
+      )
+    : unblocked
+  const specialist =
+    mixed && ordered.length
+      ? specialistOf(ordered[0]!)
+      : nextSpecialist(unblocked)
+  const ready = mixed
+    ? ordered
+    : unblocked.filter((c) => specialistOf(c) === specialist)
   if (open.length && !unblocked.length)
     return idle('Every open change is waiting on another change')
   if (!ready.length) {
