@@ -7,6 +7,7 @@ import { PIKKU_BETTER_AUTH } from '@pikku/better-auth/constants'
 import { createSecretValue } from '@pikku/core/classification'
 import { LocalVariablesService } from '@pikku/core/services'
 import { loadUserModule } from '../commands/load-user-project.js'
+import { findConfigFactoryFile } from '../../utils/project-packages.js'
 
 type AuthFactoryLike = (services: unknown) => unknown
 
@@ -168,33 +169,11 @@ function schemaServicesStub(kysely: Kysely<any>, logger: unknown) {
   })
 }
 
-function findUserConfigFactoryFile(
-  rootDir: string,
-  sourceDirs: string[]
-): string | null {
-  for (const srcDir of sourceDirs) {
-    for (const name of ['config.ts', 'config.js']) {
-      const candidate = join(rootDir, srcDir, name)
-      if (existsSync(candidate)) return candidate
-    }
-  }
-
-  for (const name of ['config.ts', 'config.js']) {
-    const candidate = join(rootDir, name)
-    if (existsSync(candidate)) return candidate
-  }
-
-  return null
-}
-
 async function loadAuthConfig(opts: {
   rootDir: string
   sourceDirs: string[]
 }): Promise<unknown | undefined> {
-  const configFactoryFile = findUserConfigFactoryFile(
-    opts.rootDir,
-    opts.sourceDirs
-  )
+  const configFactoryFile = findConfigFactoryFile(opts.rootDir, opts.sourceDirs)
   if (!configFactoryFile) return undefined
 
   const configModule = await loadUserModule(configFactoryFile)

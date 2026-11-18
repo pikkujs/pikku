@@ -50,6 +50,32 @@ export const projectSourceDirs = (config: { base?: unknown }): string[] => [
 ]
 
 /**
+ * The file that exports a project's `createConfig`: `src/config.ts` (or `.js`)
+ * of the first directory in `dirs` that has one, then `config.ts` at its top.
+ * The base is searched before the project's own directory, because the base is
+ * the package that owns the services. A `config.ts` at `rootDir` is the last
+ * resort.
+ */
+export const findConfigFactoryFile = (
+  rootDir: string,
+  dirs: string[]
+): string | null => {
+  const candidates = [...dirs]
+    .reverse()
+    .flatMap((dir) =>
+      ['src', '.'].flatMap((sub) =>
+        ['config.ts', 'config.js'].map((name) =>
+          resolve(rootDir, dir, sub, name)
+        )
+      )
+    )
+  candidates.push(
+    ...['config.ts', 'config.js'].map((name) => join(rootDir, name))
+  )
+  return candidates.find((candidate) => existsSync(candidate)) ?? null
+}
+
+/**
  * Every file under `dirs` (relative to `root`) whose name ends in one of
  * `extensions`, walking the way the inspector does: build output, dependencies,
  * dot-directories and any nested project are left alone, except where a nested

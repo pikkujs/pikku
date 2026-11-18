@@ -1,8 +1,9 @@
 import { existsSync } from 'fs'
-import { resolve, join } from 'path'
+import { join } from 'path'
 import { LocalVariablesService } from '@pikku/core/services'
 import { callUserCreateConfig } from '../../utils/call-user-create-config.js'
 import { loadUserModule } from './load-user-project.js'
+import { findConfigFactoryFile } from '../../utils/project-packages.js'
 
 export interface UserConfigShape {
   sqliteDb?: string
@@ -16,25 +17,6 @@ interface LoadOptions {
   logger: { error: (msg: string) => void; warn: (msg: string) => void }
   /** Called when the config could not be read and a default stood in for it. */
   onFallback?: () => void
-}
-
-function findUserConfigFactoryFile(
-  rootDir: string,
-  sourceDirs: string[]
-): string | null {
-  for (const srcDir of sourceDirs) {
-    for (const name of ['config.ts', 'config.js']) {
-      const candidate = resolve(rootDir, srcDir, name)
-      if (existsSync(candidate)) return candidate
-    }
-  }
-
-  for (const name of ['config.ts', 'config.js']) {
-    const candidate = join(rootDir, name)
-    if (existsSync(candidate)) return candidate
-  }
-
-  return null
 }
 
 export async function loadUserConfigForDb(
@@ -54,7 +36,7 @@ export async function loadUserConfigForDb(
     return null
   }
 
-  const configFactoryFile = findUserConfigFactoryFile(
+  const configFactoryFile = findConfigFactoryFile(
     config.rootDir,
     config.sourceDirs
   )
