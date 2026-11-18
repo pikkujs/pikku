@@ -58,3 +58,23 @@ export function nextSpecialist(
   const present = new Set(changes.map(specialistOf))
   return SPECIALISTS.find((s) => present.has(s)) ?? null
 }
+
+/**
+ * The order a parallel loop starts changes in when it offers every unblocked change at once (PIKKU_CHANGES_MIXED=1): a frontend
+ * change goes first (screens are the slow, risky part and should always be running when nothing pending blocks them), then the
+ * one that unblocks the longest chain, then the order they were filed in. `lengths` comes from `chainLengths`.
+ */
+export function priorityOrder<
+  T extends { title: string; body?: string | null; changeId: string } & Tagged,
+>(changes: T[], lengths: Map<string, number>): T[] {
+  return changes
+    .map((c, index) => ({ c, index }))
+    .sort(
+      (a, b) =>
+        Number(specialistOf(b.c) === 'frontend') -
+          Number(specialistOf(a.c) === 'frontend') ||
+        (lengths.get(b.c.changeId) ?? 1) - (lengths.get(a.c.changeId) ?? 1) ||
+        a.index - b.index
+    )
+    .map(({ c }) => c)
+}
