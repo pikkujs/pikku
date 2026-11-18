@@ -1,13 +1,16 @@
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { readdirSync, statSync, readFileSync, existsSync } from 'node:fs'
-import { join, extname, dirname } from 'node:path'
+import { readFileSync, existsSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 import type { Kysely } from 'kysely'
 import { PIKKU_BETTER_AUTH } from '@pikku/better-auth/constants'
 import { createSecretValue } from '@pikku/core/classification'
 import { LocalVariablesService } from '@pikku/core/services'
 import { loadUserModule } from '../commands/load-user-project.js'
-import { findConfigFactoryFile } from '../../utils/project-packages.js'
+import {
+  findConfigFactoryFile,
+  listProjectFiles,
+} from '../../utils/project-packages.js'
 
 type AuthFactoryLike = (services: unknown) => unknown
 
@@ -45,56 +48,30 @@ async function loadGetMigrations() {
   return cachedGetMigrations!
 }
 
-const SKIP_DIRS = new Set([
-  'node_modules',
-  '.pikku',
-  '.git',
-  'dist',
-  '.pikku-runtime',
-])
-
-function findAuthSourceFile(
+/**
+ * The source file that calls `pikkuBetterAuth`. The base is searched before the
+ * project's own directory, because the base is the package that owns the
+ * services; the walk skips dependencies, dot-directories, test files and any
+ * nested project (an addon), as the inspector does.
+ */
+export async function findAuthSourceFile(
   rootDir: string,
   sourceDirs: string[]
-): string | null {
-  const walk = (dir: string): string | null => {
-    let entries: string[]
-    try {
-      entries = readdirSync(dir)
-    } catch {
-      return null
-    }
-    for (const entry of entries) {
-      if (SKIP_DIRS.has(entry)) continue
-      const full = join(dir, entry)
-      let st
-      try {
-        st = statSync(full)
-      } catch {
-        continue
-      }
-      if (st.isDirectory()) {
-        const found = walk(full)
-        if (found) return found
-        continue
-      }
-      if (extname(full) !== '.ts') continue
+): Promise<string | null> {
+  for (const srcDir of [...sourceDirs].reverse()) {
+    const files = await listProjectFiles(rootDir, [srcDir], ['.ts'])
+    for (const file of files) {
+      if (/\.(test|spec|d)\.ts$/.test(file)) continue
       let src: string
       try {
-        src = readFileSync(full, 'utf8')
+        src = readFileSync(file, 'utf8')
       } catch {
         continue
       }
-      if (/\bpikkuBetterAuth\s*\(/.test(src)) return full
+      if (/\bpikkuBetterAuth\s*\(/.test(src)) return file
     }
-    return null
   }
-
-  for (const srcDir of sourceDirs) {
-    const found = walk(join(rootDir, srcDir))
-    if (found) return found
-  }
-  return walk(rootDir)
+  return null
 }
 
 async function loadAuthFactory(
@@ -250,7 +227,7 @@ export async function loadAuthOptions(opts: {
   kysely: Kysely<any>
   logger: { error: (msg: string) => void }
 }): Promise<BetterAuthOptionsLike | null> {
-  const sourceFile = findAuthSourceFile(opts.rootDir, opts.sourceDirs)
+  const sourceFile = await findAuthSourceFile(opts.rootDir, opts.sourceDirs)
   if (!sourceFile) return null
 
   const factory = await loadAuthFactory(sourceFile)

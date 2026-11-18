@@ -279,21 +279,32 @@ describe('orphans', () => {
       },
     })
     const result = await check(root)
-    assert.deepEqual(
-      result.orphans.map((orphan) => orphan.uri).sort(),
-      ['func:checkout', 'func:getSession', 'table:orders']
-    )
+    assert.deepEqual(result.orphans.map((orphan) => orphan.uri).sort(), [
+      'func:checkout',
+      'func:getSession',
+      'table:orders',
+    ])
   })
 
   test('without a configured scaffold dir, src/scaffold is the platform code', async () => {
     const root = await project({
-      '.pikku/function/pikku-functions-meta.gen.json': { agentCaller: {}, checkout: {} },
+      '.pikku/function/pikku-functions-meta.gen.json': {
+        agentCaller: {},
+        checkout: {},
+      },
       '.pikku/function/pikku-functions-meta-verbose.gen.json': {
-        agentCaller: { sourceFile: `${'ROOT'}/src/scaffold/agent/agent.gen.ts` },
-        checkout: { sourceFile: `${'ROOT'}/src/functions/checkout.function.ts` },
+        agentCaller: {
+          sourceFile: `${'ROOT'}/src/scaffold/agent/agent.gen.ts`,
+        },
+        checkout: {
+          sourceFile: `${'ROOT'}/src/functions/checkout.function.ts`,
+        },
       },
     })
-    const verbose = join(root, '.pikku/function/pikku-functions-meta-verbose.gen.json')
+    const verbose = join(
+      root,
+      '.pikku/function/pikku-functions-meta-verbose.gen.json'
+    )
     await writeFile(
       verbose,
       (await readFile(verbose, 'utf8')).replaceAll('ROOT', root),
@@ -307,14 +318,55 @@ describe('orphans', () => {
 
   test('with a base, the platform code is src/scaffold of the base package', async () => {
     const root = await project({
-      '.pikku/function/pikku-functions-meta.gen.json': { agentCaller: {}, checkout: {} },
+      '.pikku/function/pikku-functions-meta.gen.json': {
+        agentCaller: {},
+        checkout: {},
+      },
       'pikku.config.json': { base: 'packages/app' },
       '.pikku/function/pikku-functions-meta-verbose.gen.json': {
-        agentCaller: { sourceFile: `${'ROOT'}/packages/app/src/scaffold/agent/agent.gen.ts` },
-        checkout: { sourceFile: `${'ROOT'}/packages/app/src/functions/checkout.function.ts` },
+        agentCaller: {
+          sourceFile: `${'ROOT'}/packages/app/src/scaffold/agent/agent.gen.ts`,
+        },
+        checkout: {
+          sourceFile: `${'ROOT'}/packages/app/src/functions/checkout.function.ts`,
+        },
       },
     })
-    const verbose = join(root, '.pikku/function/pikku-functions-meta-verbose.gen.json')
+    const verbose = join(
+      root,
+      '.pikku/function/pikku-functions-meta-verbose.gen.json'
+    )
+    await writeFile(
+      verbose,
+      (await readFile(verbose, 'utf8')).replaceAll('ROOT', root),
+      'utf8'
+    )
+    assert.deepEqual(
+      (await check(root)).orphans.map((orphan) => orphan.uri),
+      ['func:checkout']
+    )
+  })
+
+  test('with a rootDir, the base and the scaffold dir resolve against it', async () => {
+    const root = await project({
+      '.pikku/function/pikku-functions-meta.gen.json': {
+        agentCaller: {},
+        checkout: {},
+      },
+      'pikku.config.json': { rootDir: 'code', base: 'packages/app' },
+      '.pikku/function/pikku-functions-meta-verbose.gen.json': {
+        agentCaller: {
+          sourceFile: `${'ROOT'}/code/packages/app/src/scaffold/agent/agent.gen.ts`,
+        },
+        checkout: {
+          sourceFile: `${'ROOT'}/code/packages/app/src/functions/checkout.function.ts`,
+        },
+      },
+    })
+    const verbose = join(
+      root,
+      '.pikku/function/pikku-functions-meta-verbose.gen.json'
+    )
     await writeFile(
       verbose,
       (await readFile(verbose, 'utf8')).replaceAll('ROOT', root),
