@@ -6,7 +6,7 @@
     "url": "git+https://github.com/pikkujs/pikku.git",
     "directory": "packages/runtimes/cloudflare"
   },
-  "description": "Cloudflare Workers runtime for Pikku — fetch, scheduled, queues, D1 and hibernating WebSockets",
+  "description": "Cloudflare Workers runtime for Pikku \u2014 fetch, scheduled, queues, D1 and hibernating WebSockets",
   "license": "MIT",
   "author": "yasser.fadl@gmail.com",
   "module": "dist/index.js",
@@ -58,8 +58,10 @@
     "@pikku/core": "^0.12.159",
     "@pikku/kysely": "^0.13.46",
     "@pikku/modelcontextprotocol": "^0.12.19",
+    "@types/better-sqlite3": "^9.6.0",
     "@vitest/runner": "^4.1.12",
     "@vitest/snapshot": "^4.1.12",
+    "better-sqlite3": "^13.0.3",
     "kysely": "^0.29.6",
     "vitest": "^4.1.12"
   },
