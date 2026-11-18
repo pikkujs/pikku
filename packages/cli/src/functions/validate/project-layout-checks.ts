@@ -9,7 +9,8 @@ import type { ValidateFinding } from './virtual-user-checks.js'
  *
  * - `pikku.config.json` at the project top level, and only one of it;
  * - generated output in `<config dir>/.pikku`, which every `#pikku/*` import
- *   resolves to;
+ *   resolves to, except in a base package, which has its own config and its own
+ *   `.pikku`;
  * - `db/` and `emails/` beside the config (db under `rootDir`, emails under
  *   `emailTemplatesDir`), never inside a functions package;
  * - the code in the project's base package.
@@ -371,12 +372,16 @@ export async function runProjectLayoutChecks(
     }
   }
 
-  // 4. #pikku/* resolves to <config dir>/.pikku in every functions package.
-  // A package below the config reaches it through tsconfig `paths` (in its own
-  // tsconfig or the one above it); a package.json `imports` there can only
-  // name a `.pikku` inside the package, which is a copy or a symlink.
-  const outDir = join(configDir, '.pikku')
+  // 4. #pikku/* resolves to the generated output of the package that owns the
+  // code. A package with a pikku.config.json of its own (the base) has its own
+  // pass and its own `.pikku`, which its package.json `imports` name. Any other
+  // package below the config reaches <config dir>/.pikku through tsconfig `paths`
+  // (in its own tsconfig or the one above it); a package.json `imports` there can
+  // only name a `.pikku` inside the package, which is a copy or a symlink.
+  const rootOut = join(configDir, '.pikku')
   for (const pkg of packages) {
+    const ownsPass = pkg !== configDir && existsSync(join(pkg, CONFIG))
+    const outDir = ownsPass ? join(pkg, '.pikku') : rootOut
     const wrong = new Set<string>()
     for (const mapping of await pikkuMappingsOf(pkg, configDir)) {
       const dir = mapping.target && pikkuDirOf(mapping.target)
@@ -392,8 +397,9 @@ export async function runProjectLayoutChecks(
       severity,
       message: `${rel(pkg) === '.' ? 'the project' : `the package ${rel(pkg)}`} resolves #pikku/* to a .pikku that is not the generated output (${[...wrong].join(', ')}); generated files are always written to ${outDir}`,
       path: pkg,
-      fixHint:
-        pkg === configDir
+      fixHint: ownsPass
+        ? `Point every #pikku/* entry in ${rel(pkg)}/package.json "imports" at ./.pikku: this package has its own pikku.config.json, so its generated files are in ${rel(outDir)}.`
+        : pkg === configDir
           ? 'Point every #pikku/* mapping at ./.pikku beside pikku.config.json.'
           : `Map #pikku/* with tsconfig paths in ${rel(tsconfigFile)}: "#pikku/*.js": ["${target}/*.ts"], "#pikku/*": ["${target}/*/index.ts"]. Remove the #pikku entries from ${rel(pkg)}/package.json "imports" and any ${rel(pkg)}/.pikku symlink: Node refuses an imports target outside the package.`,
     })
