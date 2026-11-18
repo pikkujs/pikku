@@ -1,6 +1,6 @@
-import { existsSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
-import { join, relative, resolve } from 'node:path'
+import { isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { parseAddonDependencies } from '@pikku/inspector'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
 
@@ -268,6 +268,12 @@ export const resolveAddonPackages = async (
   return packages
 }
 
+/** Whether `dir` is not `root` or something below it. */
+const escapes = (root: string, dir: string): boolean => {
+  const inside = relative(root, dir)
+  return inside === '..' || inside.startsWith(`..${sep}`) || isAbsolute(inside)
+}
+
 /** The package a project names as its `base`: the one that owns the wirings and services. */
 export type BasePackage = { entry: string; dir: string; name: string }
 
@@ -298,11 +304,17 @@ export const resolveBasePackage = async (
       `${where} is "${entry}", this project's own directory. A config without base is its own base: leave the key out.`
     )
   }
+  const outside = () =>
+    new PikkuCLIConfigError(
+      `${where} is "${entry}", which is outside the config directory (${own}). The base must live inside the config directory: move the package there, or put the config in a directory above it.`
+    )
+  if (escapes(own, dir)) throw outside()
   if (!existsSync(dir)) {
     throw new PikkuCLIConfigError(
       `${where} is "${entry}", which does not exist. Fix the path or remove the key.`
     )
   }
+  if (escapes(realpathSync(own), realpathSync(dir))) throw outside()
   const configPath = join(dir, CONFIG_FILE)
   if (!existsSync(configPath)) {
     throw new PikkuCLIConfigError(
@@ -334,24 +346,54 @@ export const resolveBasePackage = async (
   return { entry, dir, name: pkg.name }
 }
 
+/** What a `wireAddon` call declares, as the inspector reports it. */
+export type WireAddonDeclaration = {
+  package: string
+  /** The source file the call is in, absolute. */
+  file?: string
+}
+
 /**
  * An addon in `addons` runs its own pass and joins the root's SDK, but the
- * base is what wires it: a `wireAddon` in the base's source names it, with the
- * addon's `namespace`. One the base never wires is dead weight, or a typo.
+ * base is what wires it: a `wireAddon` in the base's own source points at the
+ * addon's package, under the addon's `namespace`. Only the base's source is
+ * read: a `wireAddon` anywhere else in the root does not count.
+ *
+ * The match is by package. A call that names a listed addon's package under any
+ * other name is a typo that would leave the addon's functions callable under a
+ * name nothing expects, and is an error. A listed addon no call points at is
+ * dead weight, and is returned as a warning.
  */
-export const assertAddonsWired = (
+export const checkAddonsWired = (
   configFile: string,
-  addons: readonly { entry: string; namespace: string }[],
-  wired: Iterable<string>
-): void => {
-  const names = new Set(wired)
+  addons: readonly { entry: string; name: string; namespace: string }[],
+  declarations: ReadonlyMap<string, WireAddonDeclaration>,
+  baseDir: string
+): string[] => {
+  const own = resolve(baseDir)
+  const fromBase = [...declarations].filter(
+    ([, declaration]) =>
+      declaration.file === undefined ||
+      !escapes(own, resolve(declaration.file))
+  )
+  const warnings: string[] = []
   for (const addon of addons) {
-    if (!names.has(addon.namespace)) {
+    const calls = fromBase.filter(
+      ([, declaration]) => declaration.package === addon.name
+    )
+    const misnamed = calls.find(([name]) => name !== addon.namespace)
+    if (misnamed) {
       throw new PikkuCLIConfigError(
-        `addons in ${configFile} lists "${addon.entry}", but no wireAddon names its namespace "${addon.namespace}" in the base package's source. Add wireAddon({ name: '${addon.namespace}', package: ... }) there, or remove it from addons.`
+        `wireAddon names the package "${addon.name}" "${misnamed[0]}", but ${addon.entry}/${CONFIG_FILE} declares its namespace as "${addon.namespace}" (addons in ${configFile}). Use one name in both places.`
+      )
+    }
+    if (calls.length === 0) {
+      warnings.push(
+        `addons in ${configFile} lists "${addon.entry}", but no wireAddon in the base package's source points at ${addon.name}. Expected wireAddon({ name: '${addon.namespace}', package: '${addon.name}' }); until it is wired, the addon's functions are not callable from the app. Add it, or remove the entry from addons.`
       )
     }
   }
+  return warnings
 }
 
 /**
