@@ -117,7 +117,7 @@ type FunctionMetaJson = Record<
 >
 
 const readFunctionMetaJson = (dir: string): FunctionMetaJson | undefined => {
-  const functionDir = join(dir, configOf(dir).outDir, 'function')
+  const functionDir = join(dir, OUT_DIR, 'function')
   // The verbose meta keeps sourceFile, which the runtime meta strips.
   for (const file of [
     'pikku-functions-meta-verbose.gen.json',
