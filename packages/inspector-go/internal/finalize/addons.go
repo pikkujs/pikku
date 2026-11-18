@@ -112,9 +112,12 @@ func validateAddonUses(log *diag.Logger, st *state.State) {
 // services, and an addon cannot build them itself. A service declared only as a
 // wire service does not count: it exists per wire, not for the addon.
 //
-// A function whose services were not optimized (nil) may use any service the
-// addon takes from its project, which is how finalize requires them, so each
-// of those is checked for it.
+// What counts is what the addon that owns the function takes from its project,
+// not what every wired addon does. A function whose services were not
+// optimized (nil), or that uses a service which is neither the project's nor
+// the addon's own default, makes finalize require every service its addon takes
+// from the project (the addon's own factory is built from them), so each of
+// those is checked for it.
 func validateAddonParentServices(log *diag.Logger, st *state.State) {
 	if st.ServiceTypes == nil || st.ServiceTypes.SingletonServices == nil || st.AddonServicesFactorySeen {
 		return
@@ -123,10 +126,6 @@ func validateAddonParentServices(log *diag.Logger, st *state.State) {
 	provided := map[string]bool{}
 	for _, s := range agg.AllSingletonServices {
 		provided[s] = true
-	}
-	parent := map[string]bool{}
-	for _, s := range st.AddonRequiredParentServices {
-		parent[s] = true
 	}
 	reported := map[string]bool{}
 	for _, id := range agg.UsedFunctions.Values() {
@@ -142,9 +141,20 @@ func validateAddonParentServices(log *diag.Logger, st *state.State) {
 		if !ok || meta == nil {
 			continue
 		}
+		fromProject := st.AddonRequiredParentServicesByNamespace[ns]
+		parent := map[string]bool{}
+		for _, s := range fromProject {
+			parent[s] = true
+		}
 		needs := meta.Services.Services
-		if needs == nil {
-			needs = st.AddonRequiredParentServices
+		factoryNeeded := needs == nil
+		for _, service := range needs {
+			if !parent[service] && !internalServices[service] && !defaultServices[service] {
+				factoryNeeded = true
+			}
+		}
+		if factoryNeeded {
+			needs = append(append([]string{}, needs...), fromProject...)
 		}
 		for _, service := range needs {
 			if !parent[service] || !agg.RequiredServices.Has(service) || provided[service] || reported[id+" "+service] {

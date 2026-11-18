@@ -681,7 +681,7 @@ func (s *Context) loadAddonServices(ns string, decl *addonDecl, req addonResolve
 			s.State.AddonServerlessIncompatible.Set(ns, si.strings())
 		}
 		if rp := meta.get("requiredParentServices"); rp != nil && rp.isArr && len(rp.arr) > 0 {
-			s.State.AddonRequiredParentServices = append(s.State.AddonRequiredParentServices, rp.strings()...)
+			s.addRequiredParentServices(ns, rp.strings())
 			loadedParent = true
 		}
 	}
@@ -693,8 +693,18 @@ func (s *Context) loadAddonServices(ns string, decl *addonDecl, req addonResolve
 		return
 	}
 	if services, ok := readRequiredParentServices(path); ok {
-		s.State.AddonRequiredParentServices = append(s.State.AddonRequiredParentServices, services...)
+		s.addRequiredParentServices(ns, services)
 	}
+}
+
+// addRequiredParentServices records what the addon wired as ns takes from its
+// project, both in the list across every addon and under its own namespace.
+func (s *Context) addRequiredParentServices(ns string, services []string) {
+	s.State.AddonRequiredParentServices = append(s.State.AddonRequiredParentServices, services...)
+	if s.State.AddonRequiredParentServicesByNamespace == nil {
+		s.State.AddonRequiredParentServicesByNamespace = map[string][]string{}
+	}
+	s.State.AddonRequiredParentServicesByNamespace[ns] = append(s.State.AddonRequiredParentServicesByNamespace[ns], services...)
 }
 
 func (s *Context) loadAddonWebhookSources(ns string, decl *addonDecl, req addonResolver) {

@@ -17,6 +17,7 @@ func adminAddonState(blanket bool) *state.State {
 	}
 	st.AddonFunctions.Set("admin", fns)
 	st.AddonRequiredParentServices = state.Strings{"scopeService", "incomingWebhookService"}
+	st.AddonRequiredParentServicesByNamespace = map[string][]string{"admin": {"scopeService", "incomingWebhookService"}}
 	st.ServiceAggregation.UsedFunctions.Add("admin:listIncomingWebhookReceipts")
 	st.ServiceAggregation.UsedFunctions.Add("admin:listScopes")
 	return st

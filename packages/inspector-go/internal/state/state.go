@@ -18,22 +18,26 @@ import (
 )
 
 type State struct {
-	RootDir                        string                  `json:"rootDir"`
-	SingletonServicesTypeImportMap PathToNameAndType       `json:"singletonServicesTypeImportMap"`
-	WireServicesTypeImportMap      PathToNameAndType       `json:"wireServicesTypeImportMap"`
-	UserSessionTypeImportMap       PathToNameAndType       `json:"userSessionTypeImportMap"`
-	ConfigTypeImportMap            PathToNameAndType       `json:"configTypeImportMap"`
-	SingletonServicesFactories     PathToNameAndType       `json:"singletonServicesFactories"`
-	WireServicesFactories          PathToNameAndType       `json:"wireServicesFactories"`
-	WireServicesMeta               Map[Strings]            `json:"wireServicesMeta"`
-	AddonRequiredParentServices    Strings                 `json:"addonRequiredParentServices"`
-	AddonCreatedServices           Strings                 `json:"addonCreatedServices"`
-	AddonServicesFactorySeen       bool                    `json:"addonServicesFactorySeen"`
-	Analytics                      []*AnalyticsDeclaration `json:"analytics,omitempty"`
-	OutgoingWebhooks               []*OutgoingWebhook      `json:"outgoingWebhooks,omitempty"`
-	AddonServerlessIncompatible    Map[Strings]            `json:"addonServerlessIncompatible"`
-	ConfigFactories                PathToNameAndType       `json:"configFactories"`
-	ServerLifecycleFactories       PathToNameAndType       `json:"serverLifecycleFactories"`
+	RootDir                        string            `json:"rootDir"`
+	SingletonServicesTypeImportMap PathToNameAndType `json:"singletonServicesTypeImportMap"`
+	WireServicesTypeImportMap      PathToNameAndType `json:"wireServicesTypeImportMap"`
+	UserSessionTypeImportMap       PathToNameAndType `json:"userSessionTypeImportMap"`
+	ConfigTypeImportMap            PathToNameAndType `json:"configTypeImportMap"`
+	SingletonServicesFactories     PathToNameAndType `json:"singletonServicesFactories"`
+	WireServicesFactories          PathToNameAndType `json:"wireServicesFactories"`
+	WireServicesMeta               Map[Strings]      `json:"wireServicesMeta"`
+	AddonRequiredParentServices    Strings           `json:"addonRequiredParentServices"`
+	// AddonRequiredParentServicesByNamespace is the same list per wired addon,
+	// which PKU368 needs to blame a function only for what its own addon takes
+	// from the project. It is not written to the serialized state.
+	AddonRequiredParentServicesByNamespace map[string][]string     `json:"-"`
+	AddonCreatedServices                   Strings                 `json:"addonCreatedServices"`
+	AddonServicesFactorySeen               bool                    `json:"addonServicesFactorySeen"`
+	Analytics                              []*AnalyticsDeclaration `json:"analytics,omitempty"`
+	OutgoingWebhooks                       []*OutgoingWebhook      `json:"outgoingWebhooks,omitempty"`
+	AddonServerlessIncompatible            Map[Strings]            `json:"addonServerlessIncompatible"`
+	ConfigFactories                        PathToNameAndType       `json:"configFactories"`
+	ServerLifecycleFactories               PathToNameAndType       `json:"serverLifecycleFactories"`
 	// InspectorFilesAndMethods: written by getFilesAndMethods (finalize).
 	FilesAndMethods       Record[Raw]                    `json:"filesAndMethods"`
 	FilesAndMethodsErrors Map[PathToNameAndType]         `json:"filesAndMethodsErrors"`

@@ -122,6 +122,11 @@ pub struct State {
     /// InspectorState members the serializer does not write.
     #[serde(skip)]
     pub stats: Option<Stats>,
+    /// What each wired addon takes from its project, by namespace: the same
+    /// services as `addon_required_parent_services`, which spans every addon.
+    /// PKU368 blames a function only for its own addon's. Not serialized.
+    #[serde(skip)]
+    pub addon_required_parent_services_by_namespace: std::collections::HashMap<String, Vec<String>>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

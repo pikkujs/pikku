@@ -884,7 +884,7 @@ impl Loader<'_> {
             if let Some(rp @ OJson::Arr(a)) = meta.get("requiredParentServices")
                 && !a.is_empty()
             {
-                self.state.addon_required_parent_services.extend(rp.string_members());
+                self.add_required_parent_services(ns, rp.string_members());
                 loaded_parent = true;
             }
         }
@@ -893,8 +893,15 @@ impl Loader<'_> {
         }
         let Some(path) = req.resolve(&format!("{}/.pikku/pikku-services.gen.js", decl.pkg)) else { return };
         if let Some(services) = read_required_parent_services(&path) {
-            self.state.addon_required_parent_services.extend(services);
+            self.add_required_parent_services(ns, services);
         }
+    }
+
+    /// Records what the addon wired as `ns` takes from its project, both in the
+    /// list across every addon and under its own namespace.
+    fn add_required_parent_services(&mut self, ns: &str, services: Vec<String>) {
+        self.state.addon_required_parent_services.extend(services.iter().cloned());
+        self.state.addon_required_parent_services_by_namespace.entry(ns.to_string()).or_default().extend(services);
     }
 
     fn load_addon_webhook_sources(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) {
