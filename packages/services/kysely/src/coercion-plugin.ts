@@ -10,7 +10,7 @@ import type { KyselyPlugin, RootOperationNode, UnknownRow } from 'kysely'
  * codegen filters it out of `coercion.gen.ts` for exactly that reason — a UUID
  * is a string in both Postgres and SQLite.
  */
-export type ColumnKind = 'date' | 'bool' | 'json'
+export type ColumnKind = 'date' | 'bool' | 'json' | 'bigint'
 
 /**
  * Per-table column kind map. Keys are the table names queries are written
@@ -24,9 +24,37 @@ export interface CreateCoercionPluginOptions {
   map: CoercionMap
 }
 
-function fromDb(value: unknown, kind: ColumnKind): unknown {
+const MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER)
+const MIN_SAFE = BigInt(Number.MIN_SAFE_INTEGER)
+
+/**
+ * A 64-bit integer read as a JS number. Drivers hand int8 back as a number, a
+ * `bigint` or a decimal string; anything a number cannot hold exactly throws
+ * rather than rounding.
+ */
+function bigintToNumber(value: unknown, column: string): unknown {
+  const exact =
+    typeof value === 'number'
+      ? Number.isSafeInteger(value)
+      : typeof value === 'bigint'
+        ? value >= MIN_SAFE && value <= MAX_SAFE
+        : typeof value === 'string' && /^-?\d+$/.test(value)
+          ? BigInt(value) >= MIN_SAFE && BigInt(value) <= MAX_SAFE
+          : undefined
+  if (exact === undefined) return value
+  if (!exact) {
+    throw new RangeError(
+      `Column '${column}' holds ${String(value)}, which a JS number cannot represent exactly (the limit is ±${Number.MAX_SAFE_INTEGER}). Drop the bigint type from the declaration to read it as a string.`
+    )
+  }
+  return typeof value === 'number' ? value : Number(value)
+}
+
+function fromDb(value: unknown, kind: ColumnKind, column: string): unknown {
   if (value == null) return value
   switch (kind) {
+    case 'bigint':
+      return bigintToNumber(value, column)
     case 'date':
       if (typeof value === 'string') {
         const d = new Date(value)
@@ -177,7 +205,7 @@ export function createCoercionPlugin(
         const next: UnknownRow = { ...row }
         for (const [col, val] of Object.entries(row)) {
           const kind = lookupKind(maps, tables, col)
-          if (kind) next[col] = fromDb(val, kind)
+          if (kind) next[col] = fromDb(val, kind, col)
         }
         out.push(next)
       }

@@ -88,3 +88,36 @@ describe('node-sqlite coercion plugin', () => {
     await db.destroy()
   })
 })
+
+describe('kysely-node-sqlite bigint coercion', () => {
+  test('reads a bigint column as a number and refuses one above the safe range', async () => {
+    const db = createNodeSqliteKysely<{
+      ledger: { id: number; total: unknown }
+    }>({
+      filename: ':memory:',
+      plugins: [createCoercionPlugin({ map: { ledger: { total: 'bigint' } } })],
+    })
+    await sql`create table ledger (id integer primary key, total bigint)`.execute(
+      db
+    )
+    await sql`insert into ledger (id, total) values (1, 9007199254740991), (2, 9007199254740993)`.execute(
+      db
+    )
+
+    const safe = await db
+      .selectFrom('ledger')
+      .select('total')
+      .where('id', '=', 1)
+      .executeTakeFirstOrThrow()
+    assert.equal(safe.total, Number.MAX_SAFE_INTEGER)
+
+    await assert.rejects(
+      db
+        .selectFrom('ledger')
+        .select('total')
+        .where('id', '=', 2)
+        .executeTakeFirstOrThrow()
+    )
+    await db.destroy()
+  })
+})

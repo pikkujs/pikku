@@ -158,3 +158,35 @@ describe('createCoercionPlugin', () => {
     assert.ok(rows[0]!.createdAt instanceof Date)
   })
 })
+
+describe('bigint coercion', () => {
+  test('reads int8 as a number whatever shape the driver returns it in', async () => {
+    const rows = await runTransform({ ledger: { total: 'bigint' } }, [
+      { total: 42 },
+      { total: 42n },
+      { total: '42' },
+      { total: '-9007199254740991' },
+      { total: null },
+    ])
+    assert.deepEqual(
+      rows.map((r) => r.total),
+      [42, 42, 42, -9007199254740991, null]
+    )
+  })
+
+  test('throws rather than round a value a number cannot hold', async () => {
+    for (const total of [9007199254740993n, '9007199254740993', 2 ** 60]) {
+      await assert.rejects(
+        runTransform({ ledger: { total: 'bigint' } }, [{ total }]),
+        /Column 'total' holds .*cannot represent exactly/
+      )
+    }
+  })
+
+  test('the largest safe integer is accepted', async () => {
+    const rows = await runTransform({ ledger: { total: 'bigint' } }, [
+      { total: String(Number.MAX_SAFE_INTEGER) },
+    ])
+    assert.equal(rows[0]!.total, Number.MAX_SAFE_INTEGER)
+  })
+})
