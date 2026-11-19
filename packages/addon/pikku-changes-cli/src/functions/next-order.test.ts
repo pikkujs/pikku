@@ -14,6 +14,8 @@ describe('next --parallel with a dependency', () => {
   test('a change waits until the change it depends on is merged, not only done', async () => {
     const root = realpathSync(await mkdtemp(join(tmpdir(), 'next-order-')))
     await git(['init', '-q', '-b', 'main'], root)
+    await git(['config', 'user.email', 't@example.com'], root)
+    await git(['config', 'user.name', 't'], root)
     await writeFile(join(root, 'pikku.config.json'), '{}\n')
     await git(['add', '.'], root)
     await git([...ID, 'commit', '-q', '-m', 'init'], root)
@@ -62,6 +64,8 @@ describe('next with merges held', () => {
   test('--no-merge and PIKKU_CHANGES_NO_MERGE=1 list the work without merging a finished changeset', async () => {
     const root = realpathSync(await mkdtemp(join(tmpdir(), 'next-hold-')))
     await git(['init', '-q', '-b', 'main'], root)
+    await git(['config', 'user.email', 't@example.com'], root)
+    await git(['config', 'user.name', 't'], root)
     await writeFile(join(root, 'pikku.config.json'), '{}\n')
     await git(['add', '.'], root)
     await git([...ID, 'commit', '-q', '-m', 'init'], root)
@@ -115,6 +119,8 @@ describe('next --parallel offering every kind of change at once (PIKKU_CHANGES_M
   const setup = async () => {
     const root = realpathSync(await mkdtemp(join(tmpdir(), 'next-mixed-')))
     await git(['init', '-q', '-b', 'main'], root)
+    await git(['config', 'user.email', 't@example.com'], root)
+    await git(['config', 'user.name', 't'], root)
     await writeFile(join(root, 'pikku.config.json'), '{}\n')
     await git(['add', '.'], root)
     await git([...ID, 'commit', '-q', '-m', 'init'], root)

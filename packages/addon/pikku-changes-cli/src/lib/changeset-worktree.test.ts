@@ -21,6 +21,8 @@ const ID = ['-c', 'user.email=t@example.com', '-c', 'user.name=t']
 const repo = async () => {
   const dir = realpathSync(await mkdtemp(join(tmpdir(), 'pikku-wt-')))
   await git(['init', '-q', '-b', 'main'], dir)
+  await git(['config', 'user.email', 't@example.com'], dir)
+  await git(['config', 'user.name', 't'], dir)
   await writeFile(join(dir, '.gitignore'), 'node_modules/\ndist/\n.pikku/\n')
   await git(['add', '.gitignore'], dir)
   await git([...ID, 'commit', '-q', '-m', 'init'], dir)
