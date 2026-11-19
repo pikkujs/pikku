@@ -117,6 +117,7 @@
     "./validate": "./dist/src/functions/validate/validate-registry.js",
     "./server/spawn-dev-server": "./dist/src/server/spawn-dev-server.js",
     "./server/server-ready": "./dist/src/server/server-ready.js",
+    "./otlp-runs": "./dist/src/functions/wirings/otlp/register-otlp-runs.js",
     "./utils/virtual-user-signer": "./dist/src/utils/virtual-user-signer.js",
     "./surface.json": "./surface.json",
     "./addon-support/validate": {

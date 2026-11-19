@@ -25,6 +25,7 @@ const scaffoldFiles = (config: PikkuCLIConfig): (string | undefined)[] => {
     config.corsFile,
     config.corsOriginsFile,
     config.featureFlagsFile,
+    config.otlpRunsFile,
     config.meshRpcWorkersFile,
     config.meshRpcSchemasFile,
     config.remoteJobsFile,

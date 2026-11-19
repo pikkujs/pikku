@@ -134,6 +134,10 @@ export interface PikkuCLICoreOutputFiles {
   // scaffold.pikkuDir when scaffold.featureFlags is enabled).
   // Optional: left undefined when the feature is off, so consumers must guard.
   featureFlagsFile?: string
+  // The live runs routes, scope and functions (derived from scaffold.pikkuDir
+  // when scaffold.otlpRuns is enabled).
+  // Optional: left undefined when the feature is off, so consumers must guard.
+  otlpRunsFile?: string
   publicAgentFile: string
   publicAgentSchemasFile?: string
   // The admin addon wiring and the workflow-run stream route (derived from
@@ -543,16 +547,6 @@ export type PikkuCLIInput = {
    * the host's instance is the configured one and the replacement starts empty.
    */
   allowShadowedServices?: string[]
-
-  /**
-   * Serve the live runs of this process from `pikku serve`: `GET
-   * /otlp/runs/snapshot` and the SSE stream `GET /otlp/runs/stream`, both
-   * requiring the `pikku:otlp:runs` scope. Off by default, because it exposes
-   * what the process is doing; `pikku dev` always serves it. Both commands skip
-   * the routes, without a log entry, when telemetry is off (`PIKKU_TELEMETRY`
-   * set to `0`, `false` or `off`).
-   */
-  liveRuns?: boolean
 
   /**
    * The language the project's **meta** is authored in — the human-readable
@@ -973,6 +967,18 @@ export type PikkuCLIInput = {
      * the `FeatureFlagStore` behind the admin addon.
      */
     featureFlags?: PikkuScaffoldFeature
+    /**
+     * The live runs of this process: `GET /otlp/runs/snapshot` and the SSE
+     * stream `GET /otlp/runs/stream`, both requiring the `pikku:otlp:runs`
+     * scope and answering 404 unless the process started the feed. The scaffold
+     * declares the `pikku:otlp:runs` scope itself, so a project that leaves this
+     * off gains no scope and no routes. Off by default, because it exposes what
+     * the process is doing. `pikku dev` and `pikku serve` start the feed for a
+     * project that turns it on, and skip it when telemetry is off
+     * (`PIKKU_TELEMETRY` set to `0`, `false` or `off`). The scaffold imports
+     * `@pikku/cli/otlp-runs`, so a deployed bundle should leave it off.
+     */
+    otlpRuns?: PikkuScaffoldFeature
     /**
      * Wire `@pikku/addon-admin` and the `/workflow-run/:runId/stream` route onto
      * `admin:streamWorkflowRun`. The addon's functions are ordinary scoped RPCs,

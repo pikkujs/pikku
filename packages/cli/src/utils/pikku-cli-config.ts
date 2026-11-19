@@ -846,6 +846,7 @@ const _getPikkuCLIConfig = async (
       analytics: 'analyticsFile',
       cors: 'corsFile',
       featureFlags: 'featureFlagsFile',
+      otlpRuns: 'otlpRunsFile',
       agent: 'publicAgentFile',
       admin: 'adminFunctionsFile',
       scenarios: 'scenariosFunctionsFile',
@@ -964,6 +965,13 @@ const _getPikkuCLIConfig = async (
         resolvedScaffoldDir,
         'feature-flags',
         'feature-flags.gen.ts'
+      )
+    }
+    if (result.scaffold?.otlpRuns && !result.otlpRunsFile) {
+      result.otlpRunsFile = join(
+        resolvedScaffoldDir,
+        'otlp',
+        'otlp-runs.gen.ts'
       )
     }
     if (result.scaffold?.rpc && !result.publicRpcFile) {

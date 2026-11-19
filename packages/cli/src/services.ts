@@ -462,6 +462,8 @@ export const createSingletonServices: CreateSingletonServices<
         config.corsOriginsFile,
         // Same for the feature flag read wire.
         config.featureFlagsFile,
+        // Same for the live runs routes.
+        config.otlpRunsFile,
         // The auth scaffold (catch-all routes + session middleware) and its
         // sibling secrets file (defineSecret per provider) are generated into the
         // scaffold dir, which may live outside sourceDirs (e.g. a project's
