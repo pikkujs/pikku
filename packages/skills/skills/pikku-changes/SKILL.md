@@ -42,6 +42,13 @@ In a clone, every `frontend` change lists the pages it builds in `"pages"`, as r
 `"pages": ["/", "/about"]`. At most 5 pages per change: split the pages into changes of at most 5.
 The frame change lists the pages it is checked on. `pikku changes done` compares exactly those pages
 with the original, and refuses until each one matches.
+A page the original does not have (an owner screen, a sign-in, an admin list, a page that is new in
+the rebuilt site) cannot be compared: list it in `"newPages"`, not in `"pages"`, e.g.
+`"newPages": ["/app/calendar"]`. A change with only new pages is not held to a compare.
+The starter's `/` redirects to the owner login and its sign-in and shell carry the starter's own
+wording ("Cloud Starter"). The frame change makes `/` serve the site's main page, and replaces every
+starter string in `apps/app/messages` with the site's own, so a visitor never lands on a login
+screen and the owner area says whose it is.
 
 Otherwise, file from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
 says what each piece does for the person, and the agent that builds it reads the code. Write the whole

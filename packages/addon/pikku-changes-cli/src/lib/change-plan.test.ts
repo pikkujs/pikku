@@ -306,3 +306,37 @@ describe('a plan that names a site', () => {
     assert.match(text, /artifacts\/plan\.json/)
   })
 })
+
+describe('newPages', () => {
+  const frontend = (extra: Record<string, unknown>) => [
+    recipeBox()[0]!,
+    {
+      ref: 'owner',
+      title: 'The owner calendar',
+      body: 'A signed-in calendar for the owner to set availability. Done when the owner can see and change openings.',
+      specialist: 'frontend',
+      dependsOn: ['data'],
+      ...extra,
+    },
+  ]
+
+  test('a clone change that builds only new pages needs no pages list', () => {
+    const { problems } = planProblems(
+      frontend({ newPages: ['/app/calendar'] }),
+      {
+        clone: true,
+      }
+    )
+    assert.deepEqual(problems, [])
+  })
+
+  test('is filed on its own line', () => {
+    const [, owner] = validatePlan(frontend({ newPages: ['/app/calendar'] }), {
+      clone: true,
+    })
+    assert.match(
+      bodyWithPages(owner!),
+      /\n\nNew pages \(no original\): \/app\/calendar$/
+    )
+  })
+})
