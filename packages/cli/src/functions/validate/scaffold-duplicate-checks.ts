@@ -73,6 +73,7 @@ export const SCAFFOLD_OUTPUTS: ReadonlyArray<{
     'feature-flags.gen.ts',
     true,
   ],
+  ['otlpRuns', 'otlpRunsFile', 'otlp', 'otlp-runs.gen.ts', true],
   ['agent', 'publicAgentFile', 'agent', 'agent.gen.ts', true],
   ['agent', 'publicAgentSchemasFile', 'agent', 'agent.schemas.gen.ts', false],
   ['admin', 'adminFunctionsFile', 'admin', 'admin.gen.ts', true],

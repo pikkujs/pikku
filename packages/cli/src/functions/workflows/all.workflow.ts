@@ -47,6 +47,7 @@ type ScaffoldGenerator =
   | 'pikkuAnalytics'
   | 'pikkuCors'
   | 'pikkuFeatureFlagsScaffold'
+  | 'pikkuOtlpRunsScaffold'
   | 'pikkuAdminFunctions'
   | 'pikkuVirtualUserFunctions'
   | 'pikkuPublicAgent'
@@ -74,6 +75,11 @@ const scaffoldFiles = (
     files.push({
       file: config.featureFlagsFile,
       generator: 'pikkuFeatureFlagsScaffold',
+    })
+  if (config.scaffold?.otlpRuns && config.otlpRunsFile)
+    files.push({
+      file: config.otlpRunsFile,
+      generator: 'pikkuOtlpRunsScaffold',
     })
   if (config.scaffold?.admin && config.adminFunctionsFile)
     files.push({
@@ -342,6 +348,13 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
               null
             )
             break
+          case 'pikkuOtlpRunsScaffold':
+            await workflow.do(
+              'Scaffold pikkuOtlpRunsScaffold',
+              'pikkuOtlpRunsScaffold',
+              null
+            )
+            break
           case 'pikkuVirtualUserFunctions':
             await workflow.do(
               'Scaffold pikkuVirtualUserFunctions',
@@ -480,6 +493,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('CORS scaffold', 'pikkuCors', null),
       workflow.do('Analytics ingest', 'pikkuAnalytics', null),
       workflow.do('Feature flag wire', 'pikkuFeatureFlagsScaffold', null),
+      workflow.do('Live runs scaffold', 'pikkuOtlpRunsScaffold', null),
       workflow.do('Admin functions', 'pikkuAdminFunctions', null),
       workflow.do('Virtual user functions', 'pikkuVirtualUserFunctions', null),
       workflow.do('Events scaffold', 'pikkuEventsScaffold', null),

@@ -215,28 +215,29 @@ describe('getPikkuCLIConfig', () => {
     assert.equal(config.analyticsFile, undefined)
   })
 
-  test('liveRuns must be a boolean: the string "false" is refused, not truthy', async () => {
-    const root = await writeConfig({ liveRuns: 'false' })
-    await assert.rejects(
-      () =>
-        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /liveRuns .* must be true or false/
+  test('scaffold.otlpRuns derives the live runs file under the scaffold dir', async () => {
+    const root = await writeConfig({ scaffold: { otlpRuns: true } })
+
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
     )
+
+    assert.match(config.otlpRunsFile ?? '', /otlp[\\/]otlp-runs\.gen\.ts$/)
   })
 
-  for (const liveRuns of [true, false]) {
-    test(`liveRuns: ${liveRuns} loads and is preserved`, async () => {
-      const root = await writeConfig({ liveRuns })
+  test('without scaffold.otlpRuns there is no live runs file', async () => {
+    const root = await writeConfig({})
 
-      const config = await getPikkuCLIConfig(
-        silentLogger,
-        join(root, 'pikku.config.json'),
-        []
-      )
+    const config = await getPikkuCLIConfig(
+      silentLogger,
+      join(root, 'pikku.config.json'),
+      []
+    )
 
-      assert.equal(config.liveRuns, liveRuns)
-    })
-  }
+    assert.equal(config.otlpRunsFile, undefined)
+  })
 
   test('rejects the old startServerFnsFile key by name', async () => {
     const root = await writeConfig({
