@@ -224,6 +224,20 @@ describe('getPikkuCLIConfig', () => {
     )
   })
 
+  for (const liveRuns of [true, false]) {
+    test(`liveRuns: ${liveRuns} loads and is preserved`, async () => {
+      const root = await writeConfig({ liveRuns })
+
+      const config = await getPikkuCLIConfig(
+        silentLogger,
+        join(root, 'pikku.config.json'),
+        []
+      )
+
+      assert.equal(config.liveRuns, liveRuns)
+    })
+  }
+
   test('rejects the old startServerFnsFile key by name', async () => {
     const root = await writeConfig({
       clientFiles: { startServerFnsFile: './src/lib/pikku-start.gen.ts' },
