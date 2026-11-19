@@ -132,6 +132,73 @@ describe('registerOtlpLive', () => {
   })
 })
 
+describe('registerOtlpLive lifecycle', () => {
+  test('a maxBatch below one is refused before a sink is attached', () => {
+    for (const maxBatch of [0, -1, 1.5, Number.NaN]) {
+      const otlpSinks = createOtlpSinks()
+      assert.throws(
+        () =>
+          registerOtlpLive({
+            otlpSinks,
+            serviceName: 'test',
+            publish: () => {},
+            maxBatch,
+          }),
+        /maxBatch/
+      )
+      assert.equal(otlpSinks.list().length, 0)
+    }
+  })
+
+  test('the snapshot publishes the update it emits, with no sweep in between', () => {
+    const { live, sink, clock, published } = setup()
+    finish(sink, 'r')
+    clock.tick()
+    const dbSpan = syn({
+      id: 'd0',
+      trace: 'r',
+      parent: 'r',
+      startMs: T0 + 1,
+      endMs: T0 + 6,
+      attributes: { 'db.system': 'pg', 'db.operation.name': 'select' },
+    })
+    sink.exportSpans([dbSpan])
+
+    const snapshot = live.snapshot()
+
+    const last = published()[published().length - 1]
+    assert.equal(last.seq, snapshot.seq)
+    assert.equal(last.type, 'run.hop')
+    assert.equal((last as { phase?: string }).phase, 'update')
+  })
+
+  test('flushing the sink publishes what is queued', async () => {
+    const { sink, published } = setup()
+    finish(sink, 'a')
+    assert.equal(published().length, 0)
+    await sink.flush()
+    assert.ok(published().length > 0)
+  })
+
+  test('closing the sink closes the handle and unregisters it', async () => {
+    const { otlpSinks, live, sink, published } = setup()
+    finish(sink, 'a')
+    await sink.close()
+    assert.ok(published().length > 0)
+    assert.equal(otlpSinks.list().length, 0)
+    sink.exportSpans([syn({ id: 'b', trace: 'b', startMs: T0, endMs: T0 + 1 })])
+    assert.equal(live.stats().queued, 0)
+  })
+
+  test('closing the handle unregisters its sink, and a fresh registration adds one', () => {
+    const { otlpSinks, live } = setup()
+    live.close()
+    assert.equal(otlpSinks.list().length, 0)
+    registerOtlpLive({ otlpSinks, serviceName: 'test', publish: () => {} })
+    assert.equal(otlpSinks.list().length, 1)
+  })
+})
+
 describe('failure reporting', () => {
   const logged: string[] = []
   const logger = { warn: (m: unknown) => void logged.push(String(m)) }

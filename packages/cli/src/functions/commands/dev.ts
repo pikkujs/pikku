@@ -488,7 +488,7 @@ export const dev = pikkuSessionlessFunc<
     registerStudioSession()
     // The live runs feed needs the telemetry of a process that serves: the
     // supervising parent of several backends runs with telemetry off.
-    const wireLiveRuns = () => {
+    const wireLiveRuns = (): undefined => {
       if (!telemetry.enabled) return
       registerOtlpRuns({
         otlpSinks: telemetry.otlpSinks,
