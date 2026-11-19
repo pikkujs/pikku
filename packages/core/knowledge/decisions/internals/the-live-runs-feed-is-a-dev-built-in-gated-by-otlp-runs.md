@@ -7,10 +7,8 @@ tags: core, cli, observability, security
 
 # The live runs feed is a dev built-in gated by pikku:otlp:runs
 
-`registerOtlpLive` (`@pikku/core/otlp/runs`) feeds the run stitcher from the
-process's own OTLP sink on a timer, off the request path, and publishes batches
-`{ v: 1, events }` to the event hub topic `otlp.runs`. The CLI wires the routes
-from `packages/cli/src/functions/wirings/otlp/register-otlp-runs.ts`.
+The live run feed is wired by the CLI at runtime, not generated into the project.
+The code defines the routes, the topic and the payload.
 
 - **Registered at runtime, not generated.** Like the scenario instrumentation, so
   a deployed bundle never carries a data surface over its own traces. An addon
@@ -31,14 +29,13 @@ from `packages/cli/src/functions/wirings/otlp/register-otlp-runs.ts`.
   `pikku serve` leaves it out unless `liveRuns` is true. The inspector does not
   know it, so a system role granting it needs the project's own `defineScope`
   for `pikku` (PKU124).
-- **Only the owning function reaches the topic.** `subscribeChannelToTopic`
-  refuses a topic the calling subscribe function's `topicPattern` does not
-  match, over SSE and WebSocket. `otlp.runs` is local to the process: the
-  distributor neither forwards it to a relay nor delivers it from one.
-- **Failures are logged**: the first publish failure, stitcher exception or queue
-  drop, then at most once a minute with counts.
+- **The topic is guarded by scope, whichever function returns it.** A subscribe
+  function reaches only a topic its own `topicPattern` covers, and a
+  subscription to the runs topic needs `pikku:otlp:runs`, over SSE and
+  WebSocket, again on every sweep. The topic is local to the process: it is
+  never relayed in or out.
 - **Client order.** Subscribe to the stream first, then fetch the snapshot, then
   drop stream events whose `seq` is at or below the snapshot's. The other order
-  loses events that land between the two.
-- **The stitcher source test skips `live.ts`.** The listener owns the clock; the
-  stitcher stays free of it.
+  loses events that land between the two. Use the same backend instance for the
+  stream and the snapshot: `seq` is per process, so another instance's snapshot
+  says nothing about this stream.

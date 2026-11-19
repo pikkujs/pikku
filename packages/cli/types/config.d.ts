@@ -547,8 +547,10 @@ export type PikkuCLIInput = {
   /**
    * Serve the live runs of this process from `pikku serve`: `GET
    * /otlp/runs/snapshot` and the SSE stream `GET /otlp/runs/stream`, both
-   * requiring the `otlp:runs` scope. Off by default, because it exposes what
-   * the process is doing; `pikku dev` always serves it.
+   * requiring the `pikku:otlp:runs` scope. Off by default, because it exposes
+   * what the process is doing; `pikku dev` always serves it. Both commands skip
+   * the routes, without a log entry, when telemetry is off (`PIKKU_TELEMETRY`
+   * set to `0`, `false` or `off`).
    */
   liveRuns?: boolean
 
