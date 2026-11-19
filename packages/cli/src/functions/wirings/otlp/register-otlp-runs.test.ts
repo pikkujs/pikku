@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { beforeEach, describe, test } from 'node:test'
+import { mock } from 'bun:test'
 import { fetchData, httpRouter, wireHTTP } from '@pikku/core/http'
 import { addGlobalMiddleware, pikkuMiddleware } from '@pikku/core/middleware'
 import { createOtlpSinks, type OtlpSinkBase } from '@pikku/core/otlp'
@@ -12,11 +13,21 @@ import {
   setEventHubDistributor,
 } from '@pikku/core/internal/event-hub'
 import {
+  getOtlpRuns,
   OTLP_RUNS_SNAPSHOT_ROUTE,
   OTLP_RUNS_STREAM_ROUTE,
   registerOtlpRuns,
   withOtlpRunsScope,
 } from './register-otlp-runs.js'
+
+// `#pikku/*` resolves into dist, which a unit run has not built: the generated
+// leaves it points at are in .pikku next to the source.
+const functionLeaf = await import('../../../../.pikku/function/index.js')
+const middlewareLeaf = await import('../../../../.pikku/middleware/index.js')
+void mock.module('#pikku/function', () => functionLeaf)
+void mock.module('#pikku/middleware', () => middlewareLeaf)
+const { wireHTTPRoutes } = await import('../../../../.pikku/http/index.js')
+const { otlpRunsRoutes } = await import('../../../otlp-runs.wiring.js')
 
 class Request {
   private params: Record<string, string | string[] | undefined> = {}
@@ -110,7 +121,44 @@ describe('registerOtlpRuns', () => {
       serviceName: 'app',
     })
 
+  const wireRoutes = () => {
+    const funcMeta = pikkuState(null, 'function', 'meta') as any
+    const common = {
+      inputSchemaName: null,
+      outputSchemaName: null,
+      scopes: ['pikku:otlp:runs'],
+      tags: ['pikku'],
+    }
+    funcMeta.pikkuOtlpRunsSnapshot = {
+      ...common,
+      pikkuFuncId: 'pikkuOtlpRunsSnapshot',
+    }
+    funcMeta.pikkuOtlpRunsSubscribe = {
+      ...common,
+      pikkuFuncId: 'pikkuOtlpRunsSubscribe',
+      subscribe: { topicPattern: OTLP_RUNS_TOPIC },
+    }
+    const httpMeta = pikkuState(null, 'http', 'meta') as any
+    for (const [route, pikkuFuncId, sse] of [
+      [OTLP_RUNS_SNAPSHOT_ROUTE, 'pikkuOtlpRunsSnapshot', false],
+      [OTLP_RUNS_STREAM_ROUTE, 'pikkuOtlpRunsSubscribe', true],
+    ] as const) {
+      httpMeta.get[route] = {
+        pikkuFuncId,
+        route,
+        method: 'get',
+        auth: true,
+        requiresSession: true,
+        tags: ['pikku'],
+        ...(sse ? { sse } : {}),
+      }
+    }
+    wireHTTPRoutes({ routes: { otlpRuns: otlpRunsRoutes } })
+    httpRouter.reset()
+  }
+
   beforeEach(() => {
+    getOtlpRuns()?.close()
     resetPikkuState()
     pikkuState(null, 'package', 'singletonServices', { logger } as any)
     pikkuState(null, 'package', 'factories', {
@@ -122,6 +170,7 @@ describe('registerOtlpRuns', () => {
     otlpSinks = createOtlpSinks()
     session = undefined
     httpRouter.reset()
+    wireRoutes()
     addGlobalMiddleware([
       pikkuMiddleware(async (_services, { setInitialSession }, next) => {
         if (session) setInitialSession?.(session as any)
@@ -255,24 +304,41 @@ describe('registerOtlpRuns', () => {
     live.close()
   })
 
-  test('registering again, as a dev reload does, adds no second sink and re-wires the routes after the HTTP meta is replaced', async () => {
+  test('registering again, as a dev reload does, adds no second sink and keeps serving', async () => {
     register()
     register()
     assert.equal(otlpSinks.list().length, 1)
-
-    pikkuState(null, 'http', 'meta', {
-      get: {},
-      post: {},
-      put: {},
-      patch: {},
-      delete: {},
-      head: {},
-      options: {},
-    } as any)
-    register()
     session = { userId: 'u', scopes: ['pikku:otlp:runs'] }
     assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 200)
     assert.equal(otlpSinks.list().length, 1)
+  })
+
+  describe('the live gate', () => {
+    test('both routes are 404 while no feed is registered, whatever the caller holds', async () => {
+      assert.equal(getOtlpRuns(), undefined)
+      for (const current of [
+        undefined,
+        { userId: 'u', scopes: ['pikku:otlp:runs'] },
+        { userId: 'u', scopes: ['*'] },
+      ]) {
+        session = current
+        assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 404)
+        const stream = await call(OTLP_RUNS_STREAM_ROUTE)
+        assert.equal(stream.status_, 404)
+        assert.equal(stream.mode, null)
+      }
+      assert.equal(distributor.subscriptionCount(), 0)
+    })
+
+    test('the routes pass once a feed is registered and are 404 again after it closes', async () => {
+      session = { userId: 'u', scopes: ['pikku:otlp:runs'] }
+      assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 404)
+      const live = register()
+      assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 200)
+      assert.equal((await call(OTLP_RUNS_STREAM_ROUTE)).mode, 'stream')
+      live.close()
+      assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 404)
+    })
   })
 })
 
