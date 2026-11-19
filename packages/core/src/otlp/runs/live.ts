@@ -1,5 +1,4 @@
 import type { Logger } from '../../services/logger.js'
-import type { ScopeDefinitionMeta } from '../../wirings/scope/scope.types.js'
 import type { OtlpSinkBase, OtlpSinkRegistry } from '../otlp-sink.js'
 import { createRunStitcher } from './run-stitcher.js'
 import type {
@@ -12,26 +11,6 @@ import type {
 
 /** What a caller must hold to read the live runs: the snapshot and the stream. */
 export const OTLP_RUNS_SCOPE = 'pikku:otlp:runs'
-
-/** The scope tree core declares for {@link OTLP_RUNS_SCOPE}. */
-export const otlpRunsScopeDefinition = (): ScopeDefinitionMeta => ({
-  name: 'pikku',
-  displayName: 'Pikku',
-  description: 'What the Pikku runtime itself offers',
-  scopes: {
-    otlp: {
-      displayName: 'Telemetry',
-      description: 'Watching what this backend is doing, live',
-      scopes: {
-        runs: {
-          description:
-            'Read the live runs of this backend: the snapshot and the stream',
-        },
-      },
-    },
-  },
-  origin: { kind: 'generated' },
-})
 
 /** The topic every run event and health sample is published to. */
 export const OTLP_RUNS_TOPIC = 'otlp.runs'

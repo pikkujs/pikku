@@ -556,7 +556,6 @@
     "OTLP_RUNS_SCOPE",
     "OTLP_RUNS_TOPIC",
     "createRunStitcher",
-    "otlpRunsScopeDefinition",
     "registerOtlpLive"
   ],
   "./flag": [

@@ -16,12 +16,7 @@ export type {
   StitcherLimits,
   StitcherOptions,
 } from './types.js'
-export {
-  OTLP_RUNS_SCOPE,
-  OTLP_RUNS_TOPIC,
-  otlpRunsScopeDefinition,
-  registerOtlpLive,
-} from './live.js'
+export { OTLP_RUNS_SCOPE, OTLP_RUNS_TOPIC, registerOtlpLive } from './live.js'
 export type {
   OtlpLive,
   OtlpLiveClock,
