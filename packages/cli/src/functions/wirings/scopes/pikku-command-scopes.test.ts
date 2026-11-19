@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { flattenScopeDefinitions } from '@pikku/core/scope'
-import { serializeScopesTypes } from './serialize-scopes-types.js'
 import {
   projectScopeDefinitions,
   withAddonOrigin,
@@ -98,7 +96,7 @@ describe('projectScopeDefinitions', () => {
     } as any
 
     assert.deepEqual(
-      projectScopeDefinitions(state, {}, false).map((d) => d.name),
+      projectScopeDefinitions(state, {}).map((d) => d.name),
       ['billing', 'app']
     )
     assert.deepEqual(
@@ -106,34 +104,5 @@ describe('projectScopeDefinitions', () => {
         ?.origin,
       { kind: 'addon', package: '@acme/addon-billing', displayName: undefined }
     )
-  })
-})
-
-describe('projectScopeDefinitions and the live runs scope', () => {
-  const state = {
-    scopes: { definitions: [] },
-    virtualUsers: { definitions: [] },
-  } as any
-  const names = (definitions: any[]) =>
-    flattenScopeDefinitions(definitions).map((s: any) => s.id)
-
-  test('declares the live runs scope, so generated types and meta see it', () => {
-    const definitions = projectScopeDefinitions(state, {} as any)
-    assert.ok(names(definitions).includes('pikku:otlp:runs'))
-    const types = serializeScopesTypes({ definitions })
-    assert.match(types, /'pikku:otlp:runs'|"pikku:otlp:runs"/)
-  })
-
-  test('leaves it out when the process does not serve the feed', () => {
-    const definitions = projectScopeDefinitions(state, {} as any, false)
-    assert.ok(!names(definitions).includes('pikku:otlp:runs'))
-  })
-
-  test('an app scope root named otlp does not satisfy it', () => {
-    const definitions = projectScopeDefinitions(
-      { ...state, scopes: { definitions: [scope('otlp')] } },
-      {} as any
-    )
-    assert.ok(names(definitions).includes('pikku:otlp:runs'))
   })
 })

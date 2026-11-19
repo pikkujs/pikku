@@ -5,6 +5,7 @@ import { codegenStateFile, runCodegenChild } from './codegen-child.js'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { flattenScopeDefinitions } from '@pikku/core/scope'
+import { resolveScaffoldFeature } from '../../utils/resolve-scaffold-feature.js'
 import { registerOtlpRuns } from '../wirings/otlp/register-otlp-runs.js'
 import { projectScopeDefinitions } from '../wirings/scopes/pikku-command-scopes.js'
 import { flattenSystemRoleDefinitions } from '@pikku/core/role'
@@ -132,7 +133,10 @@ export const serve = pikkuSessionlessFunc<
       registerScenarioInstrumentation()
     }
 
-    if (config.liveRuns === true && telemetry.enabled) {
+    if (
+      resolveScaffoldFeature('otlpRuns', config.scaffold?.otlpRuns).enabled &&
+      telemetry.enabled
+    ) {
       registerOtlpRuns({
         otlpSinks: telemetry.otlpSinks,
         eventHub: eventHubServices.eventHub,
@@ -227,11 +231,7 @@ export const serve = pikkuSessionlessFunc<
         logger,
         requiredServices,
         scopes: flattenScopeDefinitions(
-          projectScopeDefinitions(
-            inspectorState,
-            config,
-            config.liveRuns === true
-          )
+          projectScopeDefinitions(inspectorState, config)
         ),
         systemRoles: flattenSystemRoleDefinitions(
           inspectorState.systemRoles.definitions

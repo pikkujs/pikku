@@ -4,7 +4,6 @@ import { createOtlpSinks } from '../otlp-sink.js'
 import {
   OTLP_RUNS_SCOPE,
   OTLP_RUNS_TOPIC,
-  otlpRunsScopeDefinition,
   registerOtlpLive,
   type OtlpLiveClock,
   type OtlpRunsBatch,
@@ -248,13 +247,5 @@ describe('failure reporting', () => {
     finish(sink, 'b')
     clock.tick()
     assert.ok(logged.some((m) => /queue full/.test(m)))
-  })
-})
-
-describe('otlpRunsScopeDefinition', () => {
-  test('declares pikku:otlp:runs', () => {
-    const def = otlpRunsScopeDefinition()
-    assert.equal(`${def.name}:otlp:runs`, OTLP_RUNS_SCOPE)
-    assert.ok(def.scopes?.otlp?.scopes?.runs)
   })
 })

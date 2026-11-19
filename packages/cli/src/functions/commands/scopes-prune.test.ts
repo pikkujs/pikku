@@ -12,8 +12,6 @@ import {
 } from '@pikku/kysely'
 import { createKysely } from '../db/local-db.js'
 import { scopesPrune } from './scopes-prune.js'
-import { projectScopeDefinitions } from '../wirings/scopes/pikku-command-scopes.js'
-import { validateAndBuildScopeDefinitionsMeta } from '@pikku/core/scope'
 import { scopesAudit } from './scopes-audit.js'
 
 /**
@@ -204,50 +202,5 @@ describe('pikku scopes audit', () => {
       logs.join('\n'),
       /every scope in the database is still declared/
     )
-  })
-})
-
-describe('pikku scopes prune and the live runs scope', () => {
-  test('keeps a grant of pikku:otlp:runs when the meta comes from the project definitions', async () => {
-    const meta = validateAndBuildScopeDefinitionsMeta(
-      projectScopeDefinitions(
-        {
-          scopes: { definitions: [] },
-          virtualUsers: { definitions: [] },
-        } as any,
-        {} as any
-      )
-    )
-    writeFileSync(
-      join(root, '.pikku', 'scopes', 'meta.gen.json'),
-      JSON.stringify(meta),
-      'utf8'
-    )
-    const db = await openDb()
-    const service = new KyselyScopeService(db)
-    await service.syncScopes([
-      { id: 'pikku' },
-      { id: 'pikku:otlp' },
-      { id: 'pikku:otlp:runs' },
-      { id: 'stale:gone' },
-    ])
-    await service.createRole({ name: 'watcher', scopes: ['pikku:otlp:runs'] })
-    await db.destroy()
-
-    await run(scopesPrune, { yes: true })
-
-    const after = await openDb()
-    const remaining = await scopeNames(after)
-    assert.ok(
-      !remaining.includes('stale:gone'),
-      'prune ran and removed the unrelated scope'
-    )
-    assert.ok(remaining.includes('pikku:otlp:runs'))
-    const grants = await after
-      .selectFrom('pikkuRoleScopes')
-      .selectAll()
-      .execute()
-    assert.ok(grants.some((g: any) => g.scope === 'pikku:otlp:runs'))
-    await after.destroy()
   })
 })

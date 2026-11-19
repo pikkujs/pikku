@@ -5,20 +5,22 @@ import { fetchData, httpRouter, wireHTTP } from '@pikku/core/http'
 import { addGlobalMiddleware, pikkuMiddleware } from '@pikku/core/middleware'
 import { createOtlpSinks, type OtlpSinkBase } from '@pikku/core/otlp'
 import { OTLP_RUNS_TOPIC, type RunSnapshot } from '@pikku/core/otlp/runs'
-import { flattenScopeDefinitions } from '@pikku/core/scope'
+import * as coreScope from '@pikku/core/scope'
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
 import {
   createEventHubDistributor,
   createLocalDeliveryBackend,
   setEventHubDistributor,
 } from '@pikku/core/internal/event-hub'
-import {
-  getOtlpRuns,
-  OTLP_RUNS_SNAPSHOT_ROUTE,
-  OTLP_RUNS_STREAM_ROUTE,
-  registerOtlpRuns,
-  withOtlpRunsScope,
-} from './register-otlp-runs.js'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import * as holder from './register-otlp-runs.js'
+import { serializeOtlpRunsScaffold } from './serialize-otlp-runs-scaffold.js'
+
+const { getOtlpRuns, registerOtlpRuns } = holder
+const OTLP_RUNS_SNAPSHOT_ROUTE = '/otlp/runs/snapshot'
+const OTLP_RUNS_STREAM_ROUTE = '/otlp/runs/stream'
 
 // `#pikku/*` resolves into dist, which a unit run has not built: the generated
 // leaves it points at are in .pikku next to the source.
@@ -26,8 +28,25 @@ const functionLeaf = await import('../../../../.pikku/function/index.js')
 const middlewareLeaf = await import('../../../../.pikku/middleware/index.js')
 void mock.module('#pikku/function', () => functionLeaf)
 void mock.module('#pikku/middleware', () => middlewareLeaf)
-const { wireHTTPRoutes } = await import('../../../../.pikku/http/index.js')
-const { otlpRunsRoutes } = await import('../../../otlp-runs.wiring.js')
+const httpLeaf = await import('../../../../.pikku/http/index.js')
+void mock.module('#pikku/http', () => httpLeaf)
+void mock.module('#pikku/scopes', () => coreScope)
+void mock.module('@pikku/cli/otlp-runs', () => holder)
+const { wireHTTPRoutes } = httpLeaf
+
+// The routes under test are the scaffold's own output, written beside the
+// package and loaded the way a project loads it.
+const generatedDir = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../../../.tmp/otlp-runs-test'
+)
+mkdirSync(generatedDir, { recursive: true })
+const generatedFile = join(generatedDir, 'otlp-runs.gen.ts')
+writeFileSync(
+  generatedFile,
+  serializeOtlpRunsScaffold((name) => `#pikku/${name}`)
+)
+const { otlpRunsRoutes } = await import(generatedFile)
 
 class Request {
   private params: Record<string, string | string[] | undefined> = {}
@@ -339,46 +358,5 @@ describe('registerOtlpRuns', () => {
       live.close()
       assert.equal((await call(OTLP_RUNS_SNAPSHOT_ROUTE)).status_, 404)
     })
-  })
-})
-
-describe('withOtlpRunsScope', () => {
-  test('adds the pikku tree once and leaves a project that declares it alone', () => {
-    const added = withOtlpRunsScope([])
-    assert.deepEqual(
-      added.map((scope) => scope.name),
-      ['pikku']
-    )
-    const own = [{ name: 'pikku', origin: { kind: 'app' as const } }]
-    assert.deepEqual(withOtlpRunsScope(own).length, 1)
-    assert.equal(
-      withOtlpRunsScope(own)[0].scopes?.otlp?.scopes?.runs !== undefined,
-      true
-    )
-  })
-
-  test('merges the missing nodes into a pikku root without dropping project children', () => {
-    const own = [
-      {
-        name: 'pikku',
-        origin: { kind: 'app' as const },
-        scopes: {
-          studio: { description: 'Studio' },
-          otlp: { scopes: { other: { description: 'Mine' } } },
-        },
-      },
-    ]
-    const merged = withOtlpRunsScope(own)
-    assert.equal(merged.length, 1)
-    const ids = flattenScopeDefinitions(merged).map((scope) => scope.id)
-    for (const id of ['pikku:studio', 'pikku:otlp:other', 'pikku:otlp:runs'])
-      assert.ok(ids.includes(id), id)
-    assert.equal(own[0].scopes.otlp.scopes.other.description, 'Mine')
-    assert.equal(Object.keys(own[0].scopes).length, 2)
-    assert.equal(
-      Object.keys(own[0].scopes.otlp.scopes).length,
-      1,
-      'the input is not mutated'
-    )
   })
 })

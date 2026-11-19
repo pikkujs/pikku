@@ -66,6 +66,7 @@ import { startCoverageService } from './start-coverage.js'
 import { resolveDevEnvironmentName } from './environment.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { registerStudioSession } from '../wirings/studio/register-studio-session.js'
+import { resolveScaffoldFeature } from '../../utils/resolve-scaffold-feature.js'
 import { registerOtlpRuns } from '../wirings/otlp/register-otlp-runs.js'
 import { serverReadyLine } from '../../server/server-ready.js'
 import {
@@ -486,10 +487,13 @@ export const dev = pikkuSessionlessFunc<
       registerScenarioInstrumentation()
     }
     registerStudioSession()
-    // The live runs feed needs the telemetry of a process that serves: the
-    // supervising parent of several backends runs with telemetry off.
-    const wireLiveRuns = (): undefined => {
-      if (!telemetry.enabled) return
+    // The live runs feed is for a project that turned scaffold.otlpRuns on, and
+    // needs the telemetry of a process that serves: the supervising parent of
+    // several backends runs with telemetry off.
+    if (
+      resolveScaffoldFeature('otlpRuns', config.scaffold?.otlpRuns).enabled &&
+      telemetry.enabled
+    ) {
       registerOtlpRuns({
         otlpSinks: telemetry.otlpSinks,
         eventHub: eventHubServices.eventHub,
@@ -497,7 +501,6 @@ export const dev = pikkuSessionlessFunc<
         logger,
       })
     }
-    wireLiveRuns()
 
     const configModule = await loadUserModule(pikkuConfigFactory.file)
     const servicesModule = await loadUserModule(singletonServicesFactory.file)
@@ -804,7 +807,6 @@ export const dev = pikkuSessionlessFunc<
         pikkuDir,
         logger,
         schemaService: resolvedServices.schema,
-        onHttpMetaReplaced: wireLiveRuns,
       })
       // Re-import recently changed files now that the fresh meta is
       // in state: wire* calls skip routes whose meta doesn't exist,
