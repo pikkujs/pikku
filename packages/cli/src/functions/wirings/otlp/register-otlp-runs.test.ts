@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import { beforeEach, describe, test } from 'node:test'
-import { fetchData, wireHTTP } from '@pikku/core/http'
+import { fetchData, httpRouter, wireHTTP } from '@pikku/core/http'
 import { addGlobalMiddleware, pikkuMiddleware } from '@pikku/core/middleware'
 import { createOtlpSinks, type OtlpSinkBase } from '@pikku/core/otlp'
 import { OTLP_RUNS_TOPIC, type RunSnapshot } from '@pikku/core/otlp/runs'
+import { flattenScopeDefinitions } from '@pikku/core/scope'
 import { pikkuState, resetPikkuState } from '@pikku/core/state'
 import {
   createEventHubDistributor,
@@ -75,7 +76,6 @@ class Response {
 const logger = { info() {}, warn() {}, error() {}, debug() {} }
 
 let session: { userId: string; scopes: string[] } | undefined
-let installed = false
 
 const call = async (route: string) => {
   const response = new Response()
@@ -121,15 +121,13 @@ describe('registerOtlpRuns', () => {
     setEventHubDistributor(distributor)
     otlpSinks = createOtlpSinks()
     session = undefined
-    if (!installed) {
-      addGlobalMiddleware([
-        pikkuMiddleware(async (_services, { setInitialSession }, next) => {
-          if (session) setInitialSession?.(session as any)
-          return next()
-        }),
-      ])
-      installed = true
-    }
+    httpRouter.reset()
+    addGlobalMiddleware([
+      pikkuMiddleware(async (_services, { setInitialSession }, next) => {
+        if (session) setInitialSession?.(session as any)
+        return next()
+      }),
+    ])
   })
 
   test('without a session both routes are 401 and the stream never opens', async () => {
@@ -172,14 +170,13 @@ describe('registerOtlpRuns', () => {
     assert.equal(distributor.subscriptions()[0].topic, OTLP_RUNS_TOPIC)
   })
 
-  test('another subscribe function cannot read the live runs topic', async () => {
-    register()
+  const wireOtherSubscribe = (pattern: string, onRun: () => void) => {
     const meta = pikkuState(null, 'function', 'meta') as any
     meta.otherSubscribe = {
       pikkuFuncId: 'otherSubscribe',
       inputSchemaName: null,
       outputSchemaName: null,
-      subscribe: { topicPattern: 'order:${string}' },
+      subscribe: { topicPattern: pattern },
     }
     const httpMeta = pikkuState(null, 'http', 'meta') as any
     httpMeta.get['/other/stream'] = {
@@ -192,11 +189,41 @@ describe('registerOtlpRuns', () => {
       route: '/other/stream',
       method: 'get',
       sse: true,
-      func: { func: async () => OTLP_RUNS_TOPIC },
+      func: {
+        func: async () => {
+          onRun()
+          return OTLP_RUNS_TOPIC
+        },
+      },
     } as any)
+    httpRouter.reset()
+  }
+
+  test('another subscribe function cannot read the live runs topic outside its pattern', async () => {
+    register()
+    let ran = 0
+    wireOtherSubscribe('order:${string}', () => ran++)
     session = { userId: 'u', scopes: [] }
-    await call('/other/stream')
+    const response = await call('/other/stream')
+    assert.equal(ran, 1)
+    assert.notEqual(response.mode, 'stream')
     assert.equal(distributor.subscriptionCount(), 0)
+  })
+
+  test('a subscribe function whose pattern covers the runs topic still needs pikku:otlp:runs', async () => {
+    register()
+    let ran = 0
+    wireOtherSubscribe('${string}', () => ran++)
+    session = { userId: 'u', scopes: [] }
+    const refused = await call('/other/stream')
+    assert.equal(ran, 1)
+    assert.notEqual(refused.mode, 'stream')
+    assert.equal(distributor.subscriptionCount(), 0)
+
+    session = { userId: 'u', scopes: ['pikku:otlp:runs'] }
+    const allowed = await call('/other/stream')
+    assert.equal(allowed.mode, 'stream')
+    assert.equal(distributor.subscriptionCount(), 1)
   })
 
   test('the snapshot lists the run and its seq matches what the stream carries', async () => {
@@ -209,12 +236,22 @@ describe('registerOtlpRuns', () => {
     assert.ok(snapshot.seq > 0)
     assert.ok(snapshot.recent.some((run) => run.rootSpanId === 'a'))
 
-    await new Promise((resolve) => setTimeout(resolve, 200))
-    const seqs = stream.frames
-      .map((frame) => JSON.parse(frame))
-      .flatMap((batch) => batch.events.map((event: any) => event.seq))
-    assert.ok(seqs.length > 0)
-    assert.equal(Math.max(...seqs), snapshot.seq)
+    const seqs = (): number[] =>
+      stream.frames
+        .flatMap((frame) => {
+          try {
+            const batch = JSON.parse(frame)
+            return Array.isArray(batch?.events) ? batch.events : []
+          } catch {
+            return []
+          }
+        })
+        .map((event: any) => event.seq)
+    const deadline = Date.now() + 5000
+    while (!seqs().includes(snapshot.seq) && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+    assert.ok(seqs().includes(snapshot.seq))
     live.close()
   })
 
@@ -247,6 +284,35 @@ describe('withOtlpRunsScope', () => {
       ['pikku']
     )
     const own = [{ name: 'pikku', origin: { kind: 'app' as const } }]
-    assert.deepEqual(withOtlpRunsScope(own), own)
+    assert.deepEqual(withOtlpRunsScope(own).length, 1)
+    assert.equal(
+      withOtlpRunsScope(own)[0].scopes?.otlp?.scopes?.runs !== undefined,
+      true
+    )
+  })
+
+  test('merges the missing nodes into a pikku root without dropping project children', () => {
+    const own = [
+      {
+        name: 'pikku',
+        origin: { kind: 'app' as const },
+        scopes: {
+          studio: { description: 'Studio' },
+          otlp: { scopes: { other: { description: 'Mine' } } },
+        },
+      },
+    ]
+    const merged = withOtlpRunsScope(own)
+    assert.equal(merged.length, 1)
+    const ids = flattenScopeDefinitions(merged).map((scope) => scope.id)
+    for (const id of ['pikku:studio', 'pikku:otlp:other', 'pikku:otlp:runs'])
+      assert.ok(ids.includes(id), id)
+    assert.equal(own[0].scopes.otlp.scopes.other.description, 'Mine')
+    assert.equal(Object.keys(own[0].scopes).length, 2)
+    assert.equal(
+      Object.keys(own[0].scopes.otlp.scopes).length,
+      1,
+      'the input is not mutated'
+    )
   })
 })

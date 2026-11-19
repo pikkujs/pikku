@@ -3,6 +3,7 @@ import { pikkuState } from '@pikku/core/state'
 import type { FunctionsMeta } from '@pikku/core/services'
 import type { Logger } from '@pikku/core/services'
 import type { ScopeDefinitions } from '@pikku/core/scope'
+import type { ScopeNodeMeta } from '@pikku/core/scope'
 import type { OtlpSinkRegistry } from '@pikku/core/otlp'
 import {
   OTLP_RUNS_SCOPE,
@@ -18,17 +19,41 @@ export const OTLP_RUNS_STREAM_ROUTE = '/otlp/runs/stream'
 const SNAPSHOT_FUNC = 'pikkuOtlpRunsSnapshot'
 const STREAM_FUNC = 'pikkuOtlpRunsSubscribe'
 
+/** Adds the nodes of `from` that `into` lacks, at every depth, keeping what `into` declares. */
+const mergeMissingNodes = (
+  into: Record<string, ScopeNodeMeta> | undefined,
+  from: Record<string, ScopeNodeMeta> | undefined
+): Record<string, ScopeNodeMeta> | undefined => {
+  if (!from) return into
+  const merged = { ...into }
+  for (const [name, node] of Object.entries(from)) {
+    const own = merged[name]
+    merged[name] = own
+      ? { ...own, scopes: mergeMissingNodes(own.scopes, node.scopes) }
+      : node
+    if (merged[name].scopes === undefined) delete merged[name].scopes
+  }
+  return merged
+}
+
 /**
  * The scope tree `registerOtlpRuns` gates on, added to every scope list the
  * project's generated types, meta and syncs are built from. Core owns the
- * `pikku` root, so a project that declares its own keeps it and gets no second.
+ * `pikku` root: a project that declares its own keeps it and every child it
+ * declared, gains the nodes it lacks, and gets no second root.
  */
 export const withOtlpRunsScope = (
   scopes: ScopeDefinitions
-): ScopeDefinitions =>
-  scopes.some((scope) => scope.name === otlpRunsScopeDefinition().name)
-    ? scopes
-    : [...scopes, otlpRunsScopeDefinition()]
+): ScopeDefinitions => {
+  const core = otlpRunsScopeDefinition()
+  if (!scopes.some((scope) => scope.name === core.name))
+    return [...scopes, core]
+  return scopes.map((scope) =>
+    scope.name === core.name
+      ? { ...scope, scopes: mergeMissingNodes(scope.scopes, core.scopes) }
+      : scope
+  )
+}
 
 /**
  * The live runs of this process: `GET /otlp/runs/snapshot` and the SSE stream

@@ -229,6 +229,7 @@ describe('pikku scopes prune and the live runs scope', () => {
       { id: 'pikku' },
       { id: 'pikku:otlp' },
       { id: 'pikku:otlp:runs' },
+      { id: 'stale:gone' },
     ])
     await service.createRole({ name: 'watcher', scopes: ['pikku:otlp:runs'] })
     await db.destroy()
@@ -236,7 +237,12 @@ describe('pikku scopes prune and the live runs scope', () => {
     await run(scopesPrune, { yes: true })
 
     const after = await openDb()
-    assert.ok((await scopeNames(after)).includes('pikku:otlp:runs'))
+    const remaining = await scopeNames(after)
+    assert.ok(
+      !remaining.includes('stale:gone'),
+      'prune ran and removed the unrelated scope'
+    )
+    assert.ok(remaining.includes('pikku:otlp:runs'))
     const grants = await after
       .selectFrom('pikkuRoleScopes')
       .selectAll()
