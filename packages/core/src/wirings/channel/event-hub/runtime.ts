@@ -3,6 +3,8 @@ import type { EventHubDistributor } from './event-hub-distributor.js'
 import type { PikkuChannelHandler } from '../channel.types.js'
 import type { StoredSubscription } from './event-hub.types.js'
 import { matchesTopicPattern } from './topic-pattern.js'
+import { OTLP_RUNS_SCOPE, OTLP_RUNS_TOPIC } from '../../../otlp/runs/live.js'
+import { hasScopes } from '../../../scopes.js'
 
 /**
  * The distributor this process delivers through, or undefined when the host
@@ -55,6 +57,17 @@ export const subscribeChannelToTopic = (
       `Subscribe function '${subscription.pikkuFuncId}' returned a topic outside the pattern it declared`
     )
   }
+  if (
+    topic === OTLP_RUNS_TOPIC &&
+    !hasScopes(
+      [OTLP_RUNS_SCOPE],
+      (subscription.session as { scopes?: string[] } | undefined)?.scopes
+    )
+  ) {
+    throw new Error(
+      `Subscribe function '${subscription.pikkuFuncId}' returned '${OTLP_RUNS_TOPIC}', which needs the '${OTLP_RUNS_SCOPE}' scope`
+    )
+  }
   distributor.addSubscription(
     channel.getChannel().channelId,
     topic,
@@ -67,6 +80,26 @@ export const subscribeChannelToTopic = (
  * function meta at each call. This is what the distributor checks a publish
  * and a subscription against when the host gives it no list of its own.
  */
+/**
+ * True when a subscription that returned `topic` may keep it: the function
+ * still declares a pattern covering it, and the runs topic still has its scope.
+ */
+export const subscriptionKeepsTopic = (
+  subscription: StoredSubscription,
+  topic: string,
+  session: { scopes?: string[] } | undefined
+): boolean => {
+  const declared = getSubscribeMeta(
+    subscription.pikkuFuncId,
+    subscription.packageName
+  )?.topicPattern
+  if (declared === undefined || !matchesTopicPattern(declared, topic))
+    return false
+  return (
+    topic !== OTLP_RUNS_TOPIC || hasScopes([OTLP_RUNS_SCOPE], session?.scopes)
+  )
+}
+
 export const getDeclaredEventHubTopics = (): string[] => {
   const patterns = new Set<string>()
   for (const state of getAllPackageStates().values()) {

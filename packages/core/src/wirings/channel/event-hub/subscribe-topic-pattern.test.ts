@@ -89,13 +89,25 @@ describe('subscribeChannelToTopic', () => {
     assert.equal(distributor.subscriptionCount(), 0)
   })
 
-  test('the function that owns the topic still subscribes to it', () => {
-    subscribeChannelToTopic(
-      distributor,
-      channel,
-      'otlp.runs',
-      subscription('runsEvents')
-    )
+  test('the function that owns the topic subscribes to it with the scope', () => {
+    subscribeChannelToTopic(distributor, channel, 'otlp.runs', {
+      ...subscription('runsEvents'),
+      session: { userId: 'u', scopes: ['pikku:otlp:runs'] },
+    })
     assert.equal(distributor.subscriptionCount(), 1)
+  })
+
+  test('the runs topic is refused without pikku:otlp:runs, whichever function returned it', () => {
+    assert.throws(
+      () =>
+        subscribeChannelToTopic(
+          distributor,
+          channel,
+          'otlp.runs',
+          subscription('runsEvents')
+        ),
+      /pikku:otlp:runs/
+    )
+    assert.equal(distributor.subscriptionCount(), 0)
   })
 })
