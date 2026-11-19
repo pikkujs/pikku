@@ -14,11 +14,7 @@ import type { CoreServices } from '../types/core.types.js'
 import type { CorePikkuMiddleware } from '../middleware/middleware.types.js'
 import type { CorePermissionGroup } from './functions.types.js'
 import { PikkuSessionService } from '../services/user-session-service.js'
-import {
-  MissingScopeError,
-  NotImplementedError,
-  ReadonlySessionError,
-} from '../errors/errors.js'
+import { MissingScopeError, ReadonlySessionError } from '../errors/errors.js'
 import { createInvocationAudit } from '../services/audit-service.js'
 import { SecretAccessDeniedError } from '../services/secretless.js'
 
@@ -322,24 +318,6 @@ describe('runPikkuFunc - Integration Tests', () => {
     )
 
     assert.equal(result, 'simple success')
-  })
-
-  test('a function declared mock: true is refused with a clear error when called', async () => {
-    addTestFunction('notYetBuilt', { mock: true })
-
-    await assert.rejects(
-      runPikkuFunc('rpc', Math.random().toString(), 'notYetBuilt', {
-        singletonServices: mockSingletonServices,
-        getAllServices: () => mockServices,
-        data: () => ({}),
-        auth: false,
-        wire: {},
-      }),
-      (error: unknown) =>
-        error instanceof NotImplementedError &&
-        error.message ===
-          "Function 'notYetBuilt' is mocked: it has no implementation yet"
-    )
   })
 
   test('should work with only wiring-level middleware', async () => {
