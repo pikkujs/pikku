@@ -40,6 +40,13 @@ then a frame change (`frontend`: header, footer, theme; depends on the capture),
 change depend on the frame change, so no page is built before the capture and the frame exist.
 In a clone, every `frontend` change lists the pages it builds in `"pages"`, as route paths:
 `"pages": ["/", "/about"]`. At most 5 pages per change: split the pages into changes of at most 5.
+Pages that share a template are one change, not one change each: every product page of a shop, every
+collection or category, every article, every event. Write one change for the template (a product page,
+a collection page, an article page) that builds it once from stored data, list two or three of its
+routes as `"pages"` to check it on, and say in the body how many pages follow the template. The
+catalogue itself (the products, the articles) belongs in the data change as records, not in pages. A
+plan of dozens of changes with one page each is a plan nobody can build or review: group by what is
+built, not by the page list.
 The frame change lists the pages it is checked on. `pikku changes done` compares exactly those pages
 with the original, and refuses until each one matches.
 A page the original does not have (an owner screen, a sign-in, an admin list, a page that is new in

@@ -353,8 +353,7 @@ export function outsideSites(plan: PlannedChange[]): string[] {
 
 /**
  * A plan that names a site to rebuild is planned from what the site holds, so
- * it is refused until the project has the capture or the archaeology notes
- * (`isCloneProject`): a plan written from the address alone is a guess.
+ * it is refused until the project has the archaeology notes (`knowledge/site/index.md`): a plan written from the address alone is a guess.
  */
 export function siteNotLookedAtRefusal(sites: string[]): string {
   return [
@@ -363,7 +362,7 @@ export function siteNotLookedAtRefusal(sites: string[]): string {
       ').',
     'Look first, then file the plan from what you found:',
     '- follow the pikku-site-archaeology skill: capture the pages with `pikku ui pages capture <url> --out artifacts/references/<site>`,',
-    '- write what every page, form and button does and stores into `knowledge/site/` (notes only),',
+    '- write what every page, form and button does and stores into `knowledge/site/` (notes only, starting with `knowledge/site/index.md`): a capture alone is not enough,',
     '- then run the same `pikku changes file --plan artifacts/plan.json` again.',
   ].join('\n')
 }

@@ -1,4 +1,6 @@
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
@@ -17,7 +19,7 @@ import {
   siteNotLookedAtRefusal,
   validatePlan,
 } from '../lib/change-plan.js'
-import { isCloneProject } from '../lib/page-gate.js'
+import { SITE_NOTES, isCloneProject } from '../lib/page-gate.js'
 import { git } from '@pikku/cli/addon-support'
 
 export const ChangesFileInput = z.object({
@@ -131,7 +133,7 @@ async function filePlan(
     clone: isCloneProject(top),
   })
   const sites = outsideSites(plan)
-  if (sites.length && !isCloneProject(top))
+  if (sites.length && !existsSync(join(top, SITE_NOTES)))
     throw new CloudPreconditionError(siteNotLookedAtRefusal(sites))
 
   const { rpc, projectId } = await changesContext(input.apiUrl, input.projectId)
