@@ -147,6 +147,15 @@ export const registerOtlpLive = (
   const existing = registered.get(options.otlpSinks)
   if (existing && !existing.closed) return existing
 
+  if (
+    options.maxBatch !== undefined &&
+    !(Number.isInteger(options.maxBatch) && options.maxBatch >= 1)
+  ) {
+    throw new Error(
+      `Live runs: maxBatch must be a positive integer, got ${String(options.maxBatch)}`
+    )
+  }
+
   const {
     otlpSinks,
     publish,
@@ -260,8 +269,12 @@ export const registerOtlpLive = (
     },
     exportLogs() {},
     exportMetrics() {},
-    flush: async () => {},
-    close: async () => {},
+    flush: async () => {
+      if (!closed) drain()
+    },
+    close: async () => {
+      live.close()
+    },
   }
   otlpSinks.add(sink)
 
@@ -274,7 +287,10 @@ export const registerOtlpLive = (
     },
     snapshot: () => {
       drain()
-      return stitcher.snapshot(clock.now())
+      const snapshot = stitcher.snapshot(clock.now())
+      // A late span can leave an update the snapshot itself emits; the stream must carry it.
+      publishPending()
+      return snapshot
     },
     close: () => {
       if (closed) return
@@ -283,6 +299,7 @@ export const registerOtlpLive = (
       stopDrain()
       stopSweep()
       registered.delete(otlpSinks)
+      otlpSinks.remove(sink)
     },
     stats: () => ({
       queued: queue.length,

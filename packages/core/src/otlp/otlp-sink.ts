@@ -82,6 +82,12 @@ export class OtlpSinkRegistry {
     this.sinks.push(sink)
   }
 
+  /** Unregisters a sink. Does nothing for one that is not registered. */
+  remove(sink: OtlpSinkBase): void {
+    const at = this.sinks.indexOf(sink)
+    if (at !== -1) this.sinks.splice(at, 1)
+  }
+
   /** Tells the registry, and every sink registered now or later, what this process is. */
   setResource(resource: OtlpResource): void {
     this.resource = resource
