@@ -325,7 +325,7 @@ export function outsideSites(plan: PlannedChange[]): string[] {
     )) {
       const host = match[1].toLowerCase()
       if (!IGNORED_HOSTS.test(host) && !hosts.has(host))
-        hosts.set(host, match[0])
+        hosts.set(host, match[0].replace(/[.:;!?]+$/, ''))
     }
   return [...hosts.values()]
 }

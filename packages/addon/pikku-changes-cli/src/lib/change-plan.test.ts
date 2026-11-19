@@ -281,6 +281,15 @@ describe('a plan that names a site', () => {
     )
   })
 
+  test('leaves trailing punctuation off the address', () => {
+    assert.deepEqual(
+      outsideSites(
+        planWith('Rebuild https://acme.as.me/schedule/abc: every page.')
+      ),
+      ['https://acme.as.me/schedule/abc']
+    )
+  })
+
   test('ignores local and documentation addresses', () => {
     assert.deepEqual(
       outsideSites(
