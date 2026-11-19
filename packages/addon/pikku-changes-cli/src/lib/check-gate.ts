@@ -11,8 +11,9 @@ import { CloudPreconditionError } from '@pikku/cli/addon-support'
  * (PIKKU_CHANGES_BUILDER=1), which cannot turn off its own gate; a repository with no
  * pikku.config.json has nothing to check and passes.
  *
- * `artifacts/tmp/` (the compare reports and diff images `pikku ui pages compare` writes) is
- * scratch: it is not part of the commit and does not make the tree dirty.
+ * `artifacts/compare/` (the compare reports and diff images `pikku ui pages compare` writes) is an
+ * artifact kept in git (the images in LFS), but a change need not commit it: `done` writes a fresh
+ * compare itself, so it does not make the tree dirty.
  */
 export type CheckRun = (cwd: string) => { code: number; output: string }
 
@@ -46,15 +47,15 @@ export const hasPikkuProject = (top: string): boolean => {
   return false
 }
 
-/** Scratch output that is never committed: compare reports and diff images. */
-export const SCRATCH_PATH = /^"?(?:.*\/)?artifacts\/tmp\//
+/** Compare reports and diff images: kept in git, never required to be committed. */
+export const COMPARE_OUTPUT_PATH = /^"?(?:.*\/)?artifacts\/compare\//
 
 /** The `git status --porcelain` lines that are real uncommitted work. */
 export const uncommitted = (porcelain: string): string[] =>
   porcelain
     .split('\n')
     .filter((line) => line.trim())
-    .filter((line) => !SCRATCH_PATH.test(line.slice(3)))
+    .filter((line) => !COMPARE_OUTPUT_PATH.test(line.slice(3)))
 
 export async function refuseUntilChecked({
   git,

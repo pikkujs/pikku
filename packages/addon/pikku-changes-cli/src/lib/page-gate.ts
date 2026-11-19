@@ -601,7 +601,7 @@ export async function checkPageGate({
       message: `${label} touched pages of a site rebuilt from an original (${touched.map((p) => p.path).join(', ')}), and it is done only when they are compared with a capture of the original.\n${problem}\nThen build the pages from that capture: its <page>.json, its style.json colours and fonts, and its pictures. Compare, commit, and run done again.`,
     }
 
-  // where pages compare writes (artifacts/tmp/compare/<app>), and where it
+  // where pages compare writes (artifacts/compare/<app>), and where it
   // wrote before (.pikku/pages/compare/<app>); the newest report wins
   const reportPaths = (app: string) => [
     ...new Set([

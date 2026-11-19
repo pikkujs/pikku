@@ -270,7 +270,7 @@ export function routeFor(id: string, map: Record<string, string> = {}): string {
 
 /** Where `pages compare` writes by default: under the workspace, where an agent may read it (not `.pikku/`). */
 export function defaultCompareDir(workspaceRoot: string, app: string): string {
-  return join(workspaceRoot, 'artifacts', 'tmp', 'compare', basename(app))
+  return join(workspaceRoot, 'artifacts', 'compare', basename(app))
 }
 
 /** Does a concrete path match one of the app's route paths (`$param` one segment, a bare `$` the rest)? */

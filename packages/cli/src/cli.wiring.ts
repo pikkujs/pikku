@@ -1664,7 +1664,7 @@ wireCLI({
                 },
                 out: {
                   description:
-                    'Directory for the diff images and report.json. Defaults to artifacts/tmp/compare/<app> in the workspace',
+                    'Directory for the diff images and report.json. Defaults to artifacts/compare/<app> in the workspace',
                   type: 'string',
                 },
                 widths: {

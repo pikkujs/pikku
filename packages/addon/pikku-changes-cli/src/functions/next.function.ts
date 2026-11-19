@@ -384,7 +384,7 @@ ${prompt}
 
 # Turning it into changes
 
-Read the knowledge base for what the app already is, then file the whole request in one call: write the plan as a JSON file and run \`pikku changes file --plan plan.json\` (or \`--plan -\` with the JSON on stdin).
+Read the knowledge base for what the app already is, then file the whole request in one call: write the plan as a JSON file at artifacts/plan.json and run \`pikku changes file --plan artifacts/plan.json\` (or \`--plan -\` with the JSON on stdin).
 
 \`\`\`json
 [{ "ref": "data", "title": "<one line>", "body": "<what is built>. Done when you can <what the person sees>.", "specialist": "build", "dependsOn": [] }]

@@ -108,7 +108,7 @@ const row = (
 const report = (
   dir: string,
   body: Record<string, unknown>,
-  where = join('artifacts', 'tmp', 'compare', 'app')
+  where = join('artifacts', 'compare', 'app')
 ) =>
   write(
     join(dir, where, 'report.json'),
@@ -222,7 +222,7 @@ describe('the page gate on changes done', () => {
     assert.ok(message.indexOf('about @390') < message.indexOf('about @1440'))
     assert.match(
       message,
-      /70% of pixels differ, height 2400 px vs 3000 px in the original\. Diff: artifacts\/tmp\/compare\/app\/about-390\.diff\.png/
+      /70% of pixels differ, height 2400 px vs 3000 px in the original\. Diff: artifacts\/compare\/app\/about-390\.diff\.png/
     )
   })
 

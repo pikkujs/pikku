@@ -6,7 +6,7 @@ describe('the intake route', () => {
   const { context } = intake('A recipe box where I keep my recipes')
 
   test('files the whole request with --plan', () => {
-    assert.match(context!, /pikku changes file --plan plan\.json/)
+    assert.match(context!, /pikku changes file --plan artifacts\/plan\.json/)
     assert.match(context!, /mock: true/)
   })
 

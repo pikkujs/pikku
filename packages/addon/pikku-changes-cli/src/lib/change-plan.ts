@@ -312,3 +312,37 @@ function findCycle(
   }
   return null
 }
+
+const IGNORED_HOSTS =
+  /^(localhost|127\.|0\.0\.0\.0|\[::1\]|example\.|.*\.local$|pikku\.dev$)/
+
+/** The outside sites a plan names (a scheme-qualified address in a title or body), one per host. */
+export function outsideSites(plan: PlannedChange[]): string[] {
+  const hosts = new Map<string, string>()
+  for (const change of plan)
+    for (const match of `${change.title}\n${change.body}`.matchAll(
+      /https?:\/\/([^\s/)\]"'<>,]+)[^\s)\]"'<>,]*/g
+    )) {
+      const host = match[1].toLowerCase()
+      if (!IGNORED_HOSTS.test(host) && !hosts.has(host))
+        hosts.set(host, match[0])
+    }
+  return [...hosts.values()]
+}
+
+/**
+ * A plan that names a site to rebuild is planned from what the site holds, so
+ * it is refused until the project has the capture or the archaeology notes
+ * (`isCloneProject`): a plan written from the address alone is a guess.
+ */
+export function siteNotLookedAtRefusal(sites: string[]): string {
+  return [
+    'The plan was not filed: it names a site you have not looked at yet (' +
+      sites.join(', ') +
+      ').',
+    'Look first, then file the plan from what you found:',
+    '- follow the pikku-site-archaeology skill: capture the pages with `pikku ui pages capture <url> --out artifacts/references/<site>`,',
+    '- write what every page, form and button does and stores into `knowledge/site/` (notes only),',
+    '- then run the same `pikku changes file --plan artifacts/plan.json` again.',
+  ].join('\n')
+}

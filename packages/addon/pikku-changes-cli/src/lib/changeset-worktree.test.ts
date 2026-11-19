@@ -149,15 +149,15 @@ describe('merging a changeset that committed scratch output', () => {
   test('a compare report the branch committed does not stop the merge when the checkout holds one untracked', async () => {
     const dir = await repo()
     const tree = await addChangesetWorktree('Clone home', { cwd: dir })
-    const report = join('artifacts', 'tmp', 'compare', 'app', 'report.json')
-    await mkdir(join(tree, 'artifacts', 'tmp', 'compare', 'app'), {
+    const report = join('artifacts', 'compare', 'app', 'report.json')
+    await mkdir(join(tree, 'artifacts', 'compare', 'app'), {
       recursive: true,
     })
     await writeFile(join(tree, report), '{"branch":true}')
     await writeFile(join(tree, 'home.tsx'), 'export const home = 1\n')
     await git(['add', '.'], tree)
     await git([...ID, 'commit', '-q', '-m', '#1 Clone home'], tree)
-    await mkdir(join(dir, 'artifacts', 'tmp', 'compare', 'app'), {
+    await mkdir(join(dir, 'artifacts', 'compare', 'app'), {
       recursive: true,
     })
     await writeFile(join(dir, report), '{"main":true}')
