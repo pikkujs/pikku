@@ -805,3 +805,22 @@ describe("a page that is the original's screenshot", () => {
     assert.strictEqual(off.kind, 'refuse')
   })
 })
+
+describe('new pages with no original', () => {
+  test('a change that only builds a new page is not held to a compare', async () => {
+    const dir = project()
+    write(
+      join(dir, 'apps', 'app', 'src', 'routes', 'app.calendar.tsx'),
+      "export const Route = createFileRoute('/app/calendar')({})"
+    )
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ['apps/app/src/routes/app.calendar.tsx']),
+      cwd: dir,
+      env: {},
+      pages: [],
+      newPages: ['/app/calendar'],
+      frontend: true,
+    })
+    assert.strictEqual(outcome.kind, 'skip')
+  })
+})

@@ -17,6 +17,8 @@ export const PlanChange = z
     dependsOn: z.array(z.string().trim().min(1)).default([]),
     /** The pages (route paths) a frontend change builds; required in a clone project. */
     pages: z.array(z.string().trim().min(1)).optional(),
+    /** New pages with no page on the original to compare with (owner-only screens, pages the original never had). */
+    newPages: z.array(z.string().trim().min(1)).optional(),
   })
   .strict()
 
@@ -44,11 +46,27 @@ export const MAX_CLONE_PAGES = 5
 /** The `Pages:` line a filed change carries its plan's `pages` in. */
 const PAGES_LINE = /^Pages:[ \t]*(.+)$/m
 
-/** The body as filed: with the change's pages on a `Pages:` line the done gate reads back. */
+/** The line a filed change carries its plan's `newPages` in: pages with no original to compare with. */
+const NEW_PAGES_LINE = /^New pages \(no original\):[ \t]*(.+)$/m
+
+/** The body as filed: with the change's pages on a `Pages:` line, and its new pages on a `New pages` line, the done gate reads back. */
 export const bodyWithPages = (change: PlannedChange): string =>
-  change.pages?.length
-    ? `${change.body}\n\nPages: ${change.pages.join(', ')}`
-    : change.body
+  [
+    change.body,
+    change.pages?.length ? `Pages: ${change.pages.join(', ')}` : '',
+    change.newPages?.length
+      ? `New pages (no original): ${change.newPages.join(', ')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+
+/** The new pages a filed change declared (its `New pages (no original):` line), or none. */
+export const declaredNewPages = (body: string | null | undefined): string[] =>
+  (body?.match(NEW_PAGES_LINE)?.[1] ?? '')
+    .split(',')
+    .map((page) => page.trim())
+    .filter(Boolean)
 
 /** The pages a filed change declared (its `Pages:` line), or none. */
 export const declaredPages = (body: string | null | undefined): string[] =>
@@ -107,7 +125,7 @@ export function planProblems(
       const item = (Array.isArray(raw) ? raw[index] : undefined) ?? {}
       const where = label(item as Partial<PlannedChange>, index)
       if (issue.code === 'unrecognized_keys')
-        return `${where}: remove ${issue.keys.map((k) => `"${k}"`).join(', ')}; a change has only ref, title, body, specialist, dependsOn and pages. Write open points as "Decision: ..." in the body.`
+        return `${where}: remove ${issue.keys.map((k) => `"${k}"`).join(', ')}; a change has only ref, title, body, specialist, dependsOn, pages and newPages. Write open points as "Decision: ..." in the body.`
       if (field === 'specialist')
         return `${where}: "specialist" must be one of ${SPECIALISTS.join(', ')}.`
       if (field === 'dependsOn')
@@ -144,7 +162,7 @@ export function planProblems(
     }
     if (clone && buildsPages(change)) {
       const pages = change.pages ?? []
-      if (!pages.length)
+      if (!pages.length && !change.newPages?.length)
         problems.push(
           `${label(change, index)}: this project rebuilds an existing site, so a change that builds pages (a frontend change, or one whose title or body is about pages, screens or layout) lists the pages it builds in "pages", e.g. ["/", "/about"], at most ${MAX_CLONE_PAGES}. Each listed page must match the original before the change is done.`
         )
@@ -224,6 +242,9 @@ function lenient(raw: unknown[]): PlannedChange[] {
         : [],
       pages: Array.isArray(change.pages)
         ? change.pages.map(text).filter(Boolean)
+        : undefined,
+      newPages: Array.isArray(change.newPages)
+        ? change.newPages.map(text).filter(Boolean)
         : undefined,
     }
   })

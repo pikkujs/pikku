@@ -81,6 +81,8 @@ export interface PageGateInput {
    * `$slug` route then answers for its own pages, not for every page.
    */
   pages?: string[]
+  /** The new pages the change declared (no original to compare with): not held to a compare. */
+  newPages?: string[]
   /** The change is a frontend change: in a clone it has to declare its pages. */
   frontend?: boolean
   /** Runs `pikku ui pages compare` (a builder's done runs it itself). */
@@ -502,6 +504,7 @@ export async function checkPageGate({
   label = 'This change',
   discover = (root) => discoverPages(root),
   pages: declaredPages = [],
+  newPages = [],
   frontend = false,
   compare = runCompare,
 }: PageGateInput): Promise<PageGateOutcome> {
@@ -560,7 +563,7 @@ export async function checkPageGate({
   const declared = [...new Set(declaredPages.map(asPath))]
   // each declared page as its route's page (named by its own path); one with
   // no route yet stands in as itself, so its compare row says MISSING
-  const touched = declared.length
+  const allTouched = declared.length
     ? pages.length
       ? declared.map((path): AppPage => ({
           ...(pages.find((p) => routeExists(path, [p.path])) ?? {
@@ -576,6 +579,14 @@ export async function checkPageGate({
         workspaceRoot,
         files.map((f) => resolve(top, f))
       )
+  // new pages have no original to compare with: they are not held to a compare
+  const isNew = (path: string) => newPages.some((page) => asPath(page) === path)
+  const touched = allTouched.filter((page) => !isNew(page.path))
+  if (newPages.length && allTouched.length && !touched.length)
+    return {
+      kind: 'skip',
+      why: `only new pages with no original (${newPages.join(', ')})`,
+    }
   // a frontend change filed with no `Pages:` line (the plan was filed before
   // the project was a clone) is held to the pages whose files it touched;
   // only one that touched none is refused

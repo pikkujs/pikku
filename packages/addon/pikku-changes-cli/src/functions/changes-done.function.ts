@@ -10,7 +10,11 @@ import {
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { planRefusal } from '../lib/plan-gate.js'
 import { refuseUntilPagesCompared } from '../lib/page-gate.js'
-import { buildsPages, declaredPages } from '../lib/change-plan.js'
+import {
+  buildsPages,
+  declaredNewPages,
+  declaredPages,
+} from '../lib/change-plan.js'
 import { refuseUntilChecked } from '../lib/check-gate.js'
 import {
   changesetBranch,
@@ -90,6 +94,7 @@ export const ChangesDone = pikkuSessionlessFunc({
         git: (args) => git(args),
         waive: input.waive,
         pages: declaredPages(change?.body),
+        newPages: declaredNewPages(change?.body),
         frontend: change ? buildsPages(change) : false,
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
       })
