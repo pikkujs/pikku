@@ -1,0 +1,52 @@
+import { NotFoundError } from '@pikku/core/errors'
+import { OTLP_RUNS_TOPIC } from '@pikku/core/otlp/runs'
+import { pikkuSessionlessFunc, pikkuSubscribeFunc } from '#pikku/function'
+import { pikkuMiddleware } from '#pikku/middleware'
+import { defineHTTPRoutes, wireHTTPRoutes } from '../.pikku/http/index.js'
+import { getOtlpRuns } from './functions/wirings/otlp/register-otlp-runs.js'
+
+// The live runs of the process the CLI runs in. The routes are only served
+// where a command started the feed (registerOtlpRuns): everywhere else the gate
+// answers 404, so the handlers can assume the feed exists.
+const otlpRunsLiveGate = pikkuMiddleware(async (_services, _wire, next) => {
+  if (!getOtlpRuns()) throw new NotFoundError()
+  return next()
+})
+
+export const pikkuOtlpRunsSnapshot = pikkuSessionlessFunc({
+  title: 'Live Runs Snapshot',
+  description:
+    'The open runs, the recent closed ones and the health window of this process, with the seq they reflect.',
+  scopes: ['pikku:otlp:runs'],
+  tags: ['pikku'],
+  func: async () => getOtlpRuns()!.snapshot(),
+})
+
+export const pikkuOtlpRunsSubscribe = pikkuSubscribeFunc<void, 'otlp.runs'>({
+  title: 'Live Runs Stream',
+  description: 'Subscribes the stream to the live run events of this process.',
+  scopes: ['pikku:otlp:runs'],
+  tags: ['pikku'],
+  func: async () => OTLP_RUNS_TOPIC,
+})
+
+export const otlpRunsRoutes = defineHTTPRoutes({
+  auth: true,
+  tags: ['pikku'],
+  middleware: [otlpRunsLiveGate],
+  routes: {
+    snapshot: {
+      route: '/otlp/runs/snapshot',
+      method: 'get',
+      func: pikkuOtlpRunsSnapshot,
+    },
+    stream: {
+      route: '/otlp/runs/stream',
+      method: 'get',
+      sse: true,
+      func: pikkuOtlpRunsSubscribe,
+    },
+  },
+})
+
+wireHTTPRoutes({ routes: { otlpRuns: otlpRunsRoutes } })
