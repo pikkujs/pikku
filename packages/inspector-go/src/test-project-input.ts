@@ -3,6 +3,10 @@ import { dirname, join, resolve } from 'node:path'
 import { glob } from 'tinyglobby'
 import type { InspectorOptions } from '@pikku/inspector'
 
+// Never a project's own source, whatever `ignoreFiles` names: the CLI skips
+// these directories in every project (SKIP_DIRS).
+const ALWAYS_IGNORE = ['**/node_modules/**', '**/dist/**', '**/build/**']
+
 const DEFAULT_IGNORE = [
   '**/*.test.ts',
   '**/*.spec.ts',
@@ -57,7 +61,7 @@ export const projectInput = async (
       ['.'].map((dir: string) =>
         glob('**/*.ts', {
           cwd: join(rootDir, dir),
-          ignore: config.ignoreFiles ?? DEFAULT_IGNORE,
+          ignore: [...ALWAYS_IGNORE, ...(config.ignoreFiles ?? DEFAULT_IGNORE)],
           absolute: true,
         })
       )
