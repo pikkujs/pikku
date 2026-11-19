@@ -7,7 +7,7 @@ description: >-
 # Working a changes queue
 
 **If the request is a brief to plan (an app or feature to build), your whole job is one
-`pikku changes file --plan plan.json`, then one closing message listing what you filed. Do not claim, plan, build or
+`pikku changes file --plan artifacts/plan.json`, then one closing message listing what you filed. Do not claim, plan, build or
 mark anything done; that is the next agents' work, and doing it here breaks their plan.**
 
 Someone walked the deployed app and circled things. Each item is their words, a
@@ -45,7 +45,7 @@ with the original, and refuses until each one matches.
 
 Otherwise, file from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
 says what each piece does for the person, and the agent that builds it reads the code. Write the whole
-plan as one JSON file and file it in one call: `pikku changes file --plan plan.json` (`--plan -` reads stdin).
+plan as one JSON file and file it in one call: `pikku changes file --plan artifacts/plan.json` (`--plan -` reads stdin).
 
 Each change is one a person could check, and its body says what they see or do when it is done
 ("Done when you can ..."). Plan in verticals: the first change is the data, and declares the

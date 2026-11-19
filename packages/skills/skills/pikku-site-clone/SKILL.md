@@ -66,7 +66,7 @@ pikku ui pages compare --reference $REF --page <page>   # every width in $REF; s
 ```
 
 It photographs your page at each width the reference has, writes `<page>-<width>.diff.png` (original | changed pixels in
-red | yours) and `report.json` under `artifacts/tmp/compare/<app>/` (or `--out`), and prints the changed-pixel share, both page
+red | yours) and `report.json` under `artifacts/compare/<app>/` (or `--out`), and prints the changed-pixel share, both page
 heights, the style differences and the biggest section differences, worst first. A reference page your app has no route for is
 reported MISSING (`home` and `index` are `/`; when your paths differ, put `{ "<page>": "/your/path" }` in `$REF/map.json`).
 Read the `style` lines first and fix those first: they say what differs without an image (`h1: original 56px 700 #a3132f

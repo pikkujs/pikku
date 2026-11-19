@@ -104,20 +104,17 @@ describe('refuseUntilChecked', () => {
     assert.equal(hasPikkuProject(repo()), false)
   })
 
-  test('a real repo with a pikku.config.json: an untracked compare report under artifacts/tmp is not uncommitted work, other untracked files are', async () => {
+  test('a real repo with a pikku.config.json: an untracked compare report under artifacts/compare is not uncommitted work, other untracked files are', async () => {
     const top = repo('packages/functions/pikku.config.json')
     const sh = (...args: string[]) =>
       spawnSync('git', args, { cwd: top, encoding: 'utf8' }).stdout
     sh('init', '-q', '-b', 'main')
     sh('add', '.')
     sh('-c', 'user.email=t@e', '-c', 'user.name=t', 'commit', '-qm', 'init')
-    mkdirSync(join(top, 'artifacts', 'tmp', 'compare', 'app'), {
+    mkdirSync(join(top, 'artifacts', 'compare', 'app'), {
       recursive: true,
     })
-    writeFileSync(
-      join(top, 'artifacts', 'tmp', 'compare', 'app', 'report.json'),
-      '{}'
-    )
+    writeFileSync(join(top, 'artifacts', 'compare', 'app', 'report.json'), '{}')
     const git = async (args: string[]) => sh(...args)
     let checked = 0
     await refuseUntilChecked({
@@ -140,7 +137,7 @@ describe('refuseUntilChecked', () => {
   test('uncommitted leaves out scratch paths at any depth', () => {
     assert.deepEqual(
       uncommitted(
-        '?? artifacts/tmp/compare/app/report.json\n?? apps/web/artifacts/tmp/x.png\n M src/a.ts\n'
+        '?? artifacts/compare/app/report.json\n?? apps/web/artifacts/compare/x.png\n M src/a.ts\n'
       ),
       [' M src/a.ts']
     )
