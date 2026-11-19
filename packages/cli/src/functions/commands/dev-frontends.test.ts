@@ -162,7 +162,7 @@ describe('startDevFrontends (real processes)', () => {
         lines.some((l) => l.startsWith('[app  ] up'))
     )
     assert.deepEqual(Object.keys(seen), ['app', 'admin'])
-    running.stop()
+    void running.stop()
     const res = await Promise.race([
       running.failure,
       new Promise((r) => setTimeout(() => r('quiet'), 300)),

@@ -134,7 +134,7 @@ const runFrontendsOnly = async ({
     logger.info(`  ${name}${primary ? ' (primary)' : ''}: ${url}`)
   }
   const stop = (exitCode: number) => {
-    running.stop()
+    void running.stop()
     process.exit(exitCode)
   }
   void running.failure.then(({ name, reason }) => {
@@ -394,7 +394,7 @@ export const dev = pikkuSessionlessFunc<
       // Codegen already ran once (shared tree, then one tree per backend). From
       // here this process only watches and supervises.
       const shutdownParent = async (exitCode: number) => {
-        runningFrontends?.stop()
+        void runningFrontends?.stop()
         await runningBackends?.stop()
         await watcher?.close()
         clearDevAddress(resolvedRuntimeDir)
@@ -757,7 +757,7 @@ export const dev = pikkuSessionlessFunc<
     )
 
     const shutdown = async (exitCode: number) => {
-      runningFrontends?.stop()
+      void runningFrontends?.stop()
       try {
         resolvedServices.workflowService?.stopRecovery?.()
         await lifecycle.beforeStop?.(resolvedServices)
