@@ -20,8 +20,10 @@ export interface ReloadGeneratedMetaOptions {
   /**
    * Called in the same synchronous step that replaces the HTTP meta, so routes
    * a host registers at runtime are back before any request can see them gone.
+   * It must finish inline: a returned promise is not awaited. If it throws, the
+   * previous HTTP meta is put back and the error propagates.
    */
-  onHttpMetaReplaced?: () => void
+  onHttpMetaReplaced?: () => undefined
 }
 
 const readJson = async (
@@ -72,8 +74,14 @@ export async function reloadGeneratedMeta(
     join(dir, 'http/pikku-http-wirings-meta.gen.json')
   )
   if (httpMeta) {
+    const previous = pikkuState(null, 'http', 'meta')
     pikkuState(null, 'http', 'meta', httpMeta)
-    onHttpMetaReplaced?.()
+    try {
+      onHttpMetaReplaced?.()
+    } catch (err) {
+      pikkuState(null, 'http', 'meta', previous)
+      throw err
+    }
   }
 
   const rpcMeta = await readJson(
