@@ -11,6 +11,7 @@ import { withLiveScopes } from '../../../scopes.js'
 import type { CoreUserSession } from '../../../types/core.types.js'
 import type { EventHubDistributor } from './event-hub-distributor.js'
 import type { EventHubSubscription } from './event-hub.types.js'
+import { subscriptionKeepsTopic } from './runtime.js'
 
 export interface SubscriptionSweeperOptions {
   distributor: EventHubDistributor
@@ -49,9 +50,15 @@ export const createSubscriptionSweeper = (
   options: SubscriptionSweeperOptions
 ): SubscriptionSweeper => {
   const { distributor } = options
-  const rerun = options.rerun ?? rerunSubscribeFunction(distributor)
+  const rerun =
+    options.rerun ??
+    rerunSubscribeFunction(distributor, (subscription, session) =>
+      liveSessions.set(subscription, session)
+    )
   let timer: ReturnType<typeof setInterval> | undefined
   let sweeping: Promise<void> | undefined
+  // The session the default re-run read scopes into, so the runs-topic scope check sees the live grant.
+  const liveSessions = new WeakMap<EventHubSubscription, unknown>()
 
   const check = async (subscription: EventHubSubscription): Promise<void> => {
     const { channelId, topic } = subscription
@@ -64,7 +71,16 @@ export const createSubscriptionSweeper = (
     }
     try {
       const next = await rerun(subscription)
-      if (next === topic) return
+      if (
+        next === topic &&
+        subscriptionKeepsTopic(
+          subscription,
+          topic,
+          (liveSessions.get(subscription) ?? subscription.session) as
+            { scopes?: string[] } | undefined
+        )
+      )
+        return
     } catch (error) {
       options.onError?.(error, subscription)
     }
@@ -107,7 +123,10 @@ const distributorError = (
 }
 
 const rerunSubscribeFunction =
-  (distributor: EventHubDistributor) =>
+  (
+    distributor: EventHubDistributor,
+    onSession: (subscription: EventHubSubscription, session: unknown) => void
+  ) =>
   async (subscription: EventHubSubscription): Promise<unknown> => {
     const packageName = subscription.packageName ?? null
     const singletonServices = getSingletonServices()
@@ -124,6 +143,7 @@ const rerunSubscribeFunction =
       subscription.session as CoreUserSession | undefined,
       (singletonServices as { scopeService?: any }).scopeService
     )
+    onSession(subscription, session)
     const sessionService = new PikkuSessionService<CoreUserSession>()
     if (session) sessionService.setInitial(session)
     return runPikkuFunc(

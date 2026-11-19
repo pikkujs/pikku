@@ -124,6 +124,22 @@ describe('the subscription sweeper', () => {
     assert.equal(distributor.isAttached('a'), false)
   })
 
+  test('a reload that narrows the declared pattern drops a subscription the function still answers', async () => {
+    const { distributor, backend } = setup()
+    open(distributor, backend, 'a', resolved)
+    const sweeper = createSubscriptionSweeper({
+      distributor,
+      recheckIntervalMs: 1000,
+    })
+    await sweeper.sweep()
+    assert.equal(distributor.subscriptionCount(), 1)
+
+    const meta = pikkuState(null, 'function', 'meta') as any
+    meta.orderEvents.subscribe = { topicPattern: 'invoice:${string}' }
+    await sweeper.sweep()
+    assert.equal(distributor.subscriptionCount(), 0)
+  })
+
   test('a permission that now throws drops the subscription', async () => {
     const { distributor, backend } = setup()
     open(distributor, backend, 'a', resolved)
