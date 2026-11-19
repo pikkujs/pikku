@@ -1,13 +1,12 @@
-import { wireHTTP } from '@pikku/core/http'
 import { pikkuState } from '@pikku/core/state'
-import type { FunctionsMeta } from '@pikku/core/services'
-import type { Logger } from '@pikku/core/services'
+import type { FunctionsMeta, Logger } from '@pikku/core/services'
+import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { ScopeNodeMeta } from '@pikku/core/scope'
 import type { OtlpSinkRegistry } from '@pikku/core/otlp'
+import cliFunctionsMeta from '../../../../.pikku/function/pikku-functions-meta.gen.json' with { type: 'json' }
+import cliHttpMeta from '../../../../.pikku/http/pikku-http-wirings-meta.gen.json' with { type: 'json' }
 import {
-  OTLP_RUNS_SCOPE,
-  OTLP_RUNS_TOPIC,
   otlpRunsScopeDefinition,
   registerOtlpLive,
   type OtlpLive,
@@ -16,8 +15,12 @@ import {
 export const OTLP_RUNS_SNAPSHOT_ROUTE = '/otlp/runs/snapshot'
 export const OTLP_RUNS_STREAM_ROUTE = '/otlp/runs/stream'
 
-const SNAPSHOT_FUNC = 'pikkuOtlpRunsSnapshot'
-const STREAM_FUNC = 'pikkuOtlpRunsSubscribe'
+const FUNCTION_IDS = ['pikkuOtlpRunsSnapshot', 'pikkuOtlpRunsSubscribe']
+
+let current: OtlpLive | undefined
+
+/** The live feed of this process, set by `registerOtlpRuns`; undefined where the feed is off. */
+export const getOtlpRuns = (): OtlpLive | undefined => current
 
 /** Adds the nodes of `from` that `into` lacks, at every depth, keeping what `into` declares. */
 const mergeMissingNodes = (
@@ -56,14 +59,32 @@ export const withOtlpRunsScope = (
 }
 
 /**
- * The live runs of this process: `GET /otlp/runs/snapshot` and the SSE stream
- * `GET /otlp/runs/stream`, both requiring `otlp:runs`.
+ * A project's generated meta replaces the CLI's own when it loads, which takes
+ * the meta of the routes in `otlp-runs.wiring.ts` with it. Puts the CLI's
+ * generated entries for them back, leaving anything the project declares.
+ */
+const restoreGeneratedMeta = (): void => {
+  const functions = pikkuState(null, 'function', 'meta') as FunctionsMeta
+  for (const id of FUNCTION_IDS) {
+    const generated = (cliFunctionsMeta as unknown as FunctionsMeta)[id]
+    if (generated && !functions[id]) functions[id] = generated
+  }
+  const http = pikkuState(null, 'http', 'meta') as HTTPWiringsMeta
+  const generated = (cliHttpMeta as unknown as HTTPWiringsMeta).get ?? {}
+  for (const route of [OTLP_RUNS_SNAPSHOT_ROUTE, OTLP_RUNS_STREAM_ROUTE]) {
+    if (generated[route] && !http.get[route]) http.get[route] = generated[route]
+  }
+}
+
+/**
+ * Starts the live runs feed of this process and makes it the one the routes in
+ * `otlp-runs.wiring.ts` serve. Those routes answer 404 until this has run, so
+ * the callers decide whether a process has a feed at all.
  *
- * Registered here rather than generated into the project, as the scenario
- * instrumentation is: an app bootstrap is what a deployed bundle imports, and a
- * data surface over a process's own traces has no business in one. Call it again
- * after the generated meta is reloaded — a reload replaces the HTTP meta this
- * puts back. The listener is made once per sink registry.
+ * It is called from the commands rather than generated into the project: an app
+ * bootstrap is what a deployed bundle imports, and a data surface over a
+ * process's own traces has no business in one. Call it again after the
+ * generated meta is reloaded. The listener is made once per sink registry.
  */
 export const registerOtlpRuns = (options: {
   otlpSinks: OtlpSinkRegistry
@@ -78,62 +99,14 @@ export const registerOtlpRuns = (options: {
     publish: (topic, batch) => options.eventHub.publish(topic, batch),
   })
 
-  const meta = pikkuState(null, 'function', 'meta') as FunctionsMeta
-  const common = {
-    inputSchemaName: null,
-    outputSchemaName: null,
-    scopes: [OTLP_RUNS_SCOPE],
-    tags: ['pikku'],
+  const served: OtlpLive = {
+    ...live,
+    close: () => {
+      if (current === served) current = undefined
+      live.close()
+    },
   }
-  meta[SNAPSHOT_FUNC] = {
-    ...common,
-    pikkuFuncId: SNAPSHOT_FUNC,
-    title: 'Live Runs Snapshot',
-    description:
-      'The open runs, the recent closed ones and the health window of this process, with the seq they reflect.',
-  }
-  meta[STREAM_FUNC] = {
-    ...common,
-    pikkuFuncId: STREAM_FUNC,
-    subscribe: { topicPattern: OTLP_RUNS_TOPIC },
-    title: 'Live Runs Stream',
-    description:
-      'Subscribes the stream to the live run events of this process.',
-  }
-  pikkuState(null, 'function', 'meta', meta)
-
-  const httpMeta = pikkuState(null, 'http', 'meta')
-  const route = (pikkuFuncId: string, path: string, sse?: true) => ({
-    pikkuFuncId,
-    route: path,
-    method: 'get' as const,
-    auth: true,
-    requiresSession: true,
-    tags: ['pikku'],
-    ...(sse ? { sse } : {}),
-  })
-  httpMeta.get[OTLP_RUNS_SNAPSHOT_ROUTE] = route(
-    SNAPSHOT_FUNC,
-    OTLP_RUNS_SNAPSHOT_ROUTE
-  )
-  httpMeta.get[OTLP_RUNS_STREAM_ROUTE] = route(
-    STREAM_FUNC,
-    OTLP_RUNS_STREAM_ROUTE,
-    true
-  )
-
-  wireHTTP({
-    route: OTLP_RUNS_SNAPSHOT_ROUTE,
-    method: 'get',
-    auth: true,
-    func: { func: async () => live.snapshot() },
-  } as any)
-  wireHTTP({
-    route: OTLP_RUNS_STREAM_ROUTE,
-    method: 'get',
-    sse: true,
-    auth: true,
-    func: { func: async () => OTLP_RUNS_TOPIC },
-  } as any)
-  return live
+  current = served
+  restoreGeneratedMeta()
+  return served
 }
