@@ -1,7 +1,7 @@
 import { NotFoundError } from '@pikku/core/errors'
 import { OTLP_RUNS_TOPIC } from '@pikku/core/otlp/runs'
 import { defineScope } from '@pikku/core/scope'
-import { pikkuSessionlessFunc, pikkuSubscribeFunc } from '#pikku/function'
+import { pikkuFunc, pikkuSubscribeFunc } from '#pikku/function'
 import { pikkuMiddleware } from '#pikku/middleware'
 import { defineHTTPRoutes, wireHTTPRoutes } from '../.pikku/http/index.js'
 import { getOtlpRuns } from './functions/wirings/otlp/register-otlp-runs.js'
@@ -36,7 +36,7 @@ const otlpRunsLiveGate = pikkuMiddleware(async (_services, _wire, next) => {
   return next()
 })
 
-export const pikkuOtlpRunsSnapshot = pikkuSessionlessFunc({
+export const pikkuOtlpRunsSnapshot = pikkuFunc({
   title: 'Live Runs Snapshot',
   description:
     'The open runs, the recent closed ones and the health window of this process, with the seq they reflect.',
