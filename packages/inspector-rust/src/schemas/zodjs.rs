@@ -148,14 +148,14 @@ fn entry_source(refs: &[VendorRef]) -> Result<String, ConvertError> {
     let file_list: Vec<String> = files.iter().map(|f| quote(f)).collect();
     Ok(format!(
         "import * as z from 'zod'\n\
-         import {{ zodToTypeText, findZodTransform }} from '{HELPERS_MODULE}'\n\
+         import {{ zodToTypeText, findZodTransform, declaredUnknownPathsOfZod }} from '{HELPERS_MODULE}'\n\
          import {{ run }} from '{RUNNER_MODULE}'\n\
          const FILES = [{}]\n\
          const loaded = new Map()\n\
          for (const file of FILES) {{\n\
          \x20 try {{ loaded.set(file, {{ module: await import(file) }}) }} catch (e) {{ loaded.set(file, {{ failed: e }}) }}\n\
          }}\n\
-         globalThis.__pikkuResult = JSON.stringify(run({{ z, zodToTypeText, findZodTransform,\n\
+         globalThis.__pikkuResult = JSON.stringify(run({{ z, zodToTypeText, findZodTransform, declaredUnknownPathsOfZod,\n\
          \x20 files: FILES.map((file) => ({{ file, load: () => {{ const r = loaded.get(file); if (r.failed) throw r.failed; return r.module }} }})),\n\
          \x20 lookup: [{}] }}))\n",
         file_list.join(", "),
