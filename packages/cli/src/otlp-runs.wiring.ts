@@ -1,9 +1,32 @@
 import { NotFoundError } from '@pikku/core/errors'
 import { OTLP_RUNS_TOPIC } from '@pikku/core/otlp/runs'
+import { defineScope } from '@pikku/core/scope'
 import { pikkuSessionlessFunc, pikkuSubscribeFunc } from '#pikku/function'
 import { pikkuMiddleware } from '#pikku/middleware'
 import { defineHTTPRoutes, wireHTTPRoutes } from '../.pikku/http/index.js'
 import { getOtlpRuns } from './functions/wirings/otlp/register-otlp-runs.js'
+
+// The inspector checks a function's scopes against the scopes its own project
+// declares, so the CLI declares the tree core owns (otlpRunsScopeDefinition);
+// a project's generated scope list merges the two.
+defineScope({
+  pikku: {
+    displayName: 'Pikku',
+    description: 'What the Pikku runtime itself offers',
+    scopes: {
+      otlp: {
+        displayName: 'Telemetry',
+        description: 'Watching what this backend is doing, live',
+        scopes: {
+          runs: {
+            description:
+              'Read the live runs of this backend: the snapshot and the stream',
+          },
+        },
+      },
+    },
+  },
+})
 
 // The live runs of the process the CLI runs in. The routes are only served
 // where a command started the feed (registerOtlpRuns): everywhere else the gate
