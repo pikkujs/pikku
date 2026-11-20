@@ -1,7 +1,7 @@
 ---
 name: pikku-site-clone
 description: >-
-  Clone, copy or recreate an existing website faithfully (look, layout, colours, fonts, copy, pictures, menu, page structure): capture every page of the original from the rendered page (HTML, structure, layout of columns and pictures, screenshots at phone, laptop and large-screen widths, small tiles you can look at), build the layout first and then the style, and compare each page with the original after you build it. Use whenever a request says to clone, copy, replicate or recreate a site or page.
+  Clone, copy or recreate an existing website faithfully (look, layout, colours, fonts, copy, pictures, menu, page structure): capture every page of the original from the rendered page (HTML, structure, layout of columns and pictures, screenshots at phone, laptop and large-screen widths, small tiles you can look at), build the layout first and then the style, and compare each page with the original after you build it. Also covers planning the work (what to file, in which order) when a brief names a site to rebuild or to free from outside services. Use whenever a request says to clone, copy, replicate, recreate or convert a site or page.
 installGroups: [core]
 ---
 
@@ -19,6 +19,32 @@ SC=<this skill's folder>/scripts/site_capture.mjs   # for the quick checks in st
 
 The reference is an artifact of the project: it lives in `artifacts/references/<site>/` at the project root, and every
 command below reads it from there.
+
+## Planning a clone (what to file)
+
+A brief that names a site is planned from what the site holds, not from its address. Before filing anything, follow the
+`pikku-site-archaeology` skill: look at every page, and write what you find into `knowledge/site/` (notes only, no code),
+starting with `knowledge/site/index.md`. `pikku changes file --plan` refuses a plan that names a site while those notes do not exist.
+Then file the plan from the notes, with the general rules of the `pikku-changes` skill, and these on top:
+
+- The data change stores what `things-kept.md` and `forms.md` say, in the currency and languages `prices-and-languages.md` says,
+  and the plan covers every form and page you found.
+- A clone needs its look first: after the data change, a capture change (`artifacts`: run
+  `pikku ui pages capture <url> --out artifacts/references/<site>`, done when every page on the list has its screenshots and
+  style.json there and the pictures are in its `pictures/` folder), then a frame change (`frontend`: header, footer, theme;
+  depends on the capture). Every page change depends on the frame change, so no page is built before the capture and the frame exist.
+- Every `frontend` change lists the pages it builds in `"pages"`, as route paths: `"pages": ["/", "/about"]`. At most 5 pages per
+  change. `pikku changes done` compares exactly those pages with the original and refuses until each one matches.
+- Pages that share a template are one change, not one change each: every product page of a shop, every collection, every article,
+  every event. Write one change for the template, list two or three of its routes as `"pages"` to check it on, and say in the body how
+  many pages follow it. The catalogue (the products, the articles) belongs in the data change as records, not in pages. A plan of
+  dozens of changes with one page each is a plan nobody can build or review.
+- A page the original does not have (an owner screen, a sign-in, an admin list, a page that is new in the rebuilt site) cannot be
+  compared: list it in `"newPages"`, not in `"pages"`, e.g. `"newPages": ["/app/calendar"]`. A change with only new pages is not
+  held to a compare.
+- The starter's `/` redirects to the owner login, and its sign-in and shell carry the starter's own wording ("Cloud Starter").
+  The frame change makes `/` serve the site's main page and replaces every starter string in `apps/app/messages` with the site's
+  own, so a visitor never lands on a login screen and the owner area says whose it is.
 
 ## 1. Capture the original, once, before you build
 
@@ -113,3 +139,14 @@ node $SC check http://localhost:<port> $REF --all > check.txt &    # every page,
 Fetch each page with `curl -sL -A 'Mozilla/5.0' <url>`, read the HTML for headings, menu, colours, fonts and the
 `@media (max-width: …)` rules in the stylesheets, and build from those. You cannot see or measure the layout this way,
 so say so in your notes.
+
+## The done gate for pages
+
+In a project with a reference (`artifacts/references/<site>/`), a change that touched pages is done
+only when `pikku ui pages compare --reference artifacts/references/<site> --page <ids>`, run after
+your last commit, has every touched page at every width within the threshold; otherwise `done`
+refuses and says which pages, by how much, and the command. Fix the `style` lines of the compare
+first (they name the size, weight, colour and alignment that differ), then open the
+`<id>-<width>.diff.png` of the worst page (original | red where pixels differ | yours); commit,
+compare again. A waiver is only for phone widths (under 1000 px):
+`done ... --waive "<why it cannot match, 30+ characters>"`; desktop widths must pass.
