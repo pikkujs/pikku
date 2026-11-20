@@ -446,23 +446,18 @@ impl Context<'_> {
         let mut input_names: Vec<String> = Vec::new();
         let mut output_names: Vec<String>;
         let mut input_types: Vec<P<Type>> = Vec::new();
+        let list_config = if is_list_func { self.resolve_list_config(node) } else { None };
         if input_schema_ref.is_some() {
             input_names = vec![format!("{capitalized}Input")];
             self.state.schema_lookup.set(input_names[0].clone(), input_schema_ref.clone().unwrap());
             self.types_map().add_custom_type(&input_names[0], "unknown", vec![]);
-        } else if is_list_func && !generics.is_empty() {
-            input_names = vec![format!("{capitalized}Input")];
-            let refs = self.resolve_type_imports(generics[0], true);
-            let ts = self.type_to_string(generics[0]);
-            self.types_map().add_custom_type(
-                &input_names[0],
-                &format!("{{ cursor?: string; limit?: number; sort?: Array<{{ column: string; direction: 'asc' | 'desc' }}>; filter?: unknown; search?: string; }} & {ts}"),
-                tsutil::dedupe(&refs),
-            );
+        } else if let (true, Some(lc)) = (is_list_func, list_config.as_ref()) {
+            let (n, list_input) = self.register_list_input(&capitalized, lc);
+            input_names = vec![n];
             if let Some(p) = handler.and_then(|h| param_at(h, 1)) {
                 input_types = vec![self.checker.get_type_at_location(p)];
             } else {
-                input_types = vec![generics[0]];
+                input_types = vec![list_input];
             }
         } else if !is_channel_conn && !is_list_func && !generics.is_empty() {
             let (n, t) = self.get_names_and_types("Input", &name, Some(generics[0]));
@@ -482,10 +477,11 @@ impl Context<'_> {
             output_names = vec![format!("{capitalized}Output")];
             self.state.schema_lookup.set(output_names[0].clone(), output_schema_ref.clone().unwrap());
             self.types_map().add_custom_type(&output_names[0], "unknown", vec![]);
-        } else if is_list_func && generics.len() >= 2 {
+        } else if let (true, Some(Some(out))) = (is_list_func, list_config.as_ref().map(|l| l.output)) {
             output_names = vec![format!("{capitalized}Output")];
-            let refs = self.resolve_type_imports(generics[1], true);
-            let ts = self.type_to_string(generics[1]);
+            let row = self.list_row(out);
+            let ts = self.type_to_string(row);
+            let refs = self.resolve_type_imports(row, true);
             self.types_map().add_custom_type(
                 &output_names[0],
                 &format!("{{ rows: Array<{ts}>; nextCursor: string | null; totalCount?: number; }}"),
@@ -501,6 +497,11 @@ impl Context<'_> {
         } else {
             output_names = Vec::new();
         }
+        self.record_declared_unknowns(&input_names, &input_types);
+        if let Some(output_type) = self.declared_output_type(is_list_func, list_config.as_ref(), &generics, handler) {
+            self.record_declared_unknowns(&output_names, &[output_type]);
+        }
+
         let mcp_output_type = match wrapper.as_str() {
             "pikkuMCPResourceFunc" => Some("MCPResourceResponse"),
             "pikkuMCPToolFunc" => Some("MCPToolResponse"),

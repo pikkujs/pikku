@@ -74,7 +74,12 @@ impl VendorSchemaConverter for ZodjsConverter {
         for (name, body) in out.schemas {
             let schema = body.get("schema").cloned().unwrap_or(Value::Null);
             let type_text = body.get("typeText").and_then(Value::as_str).unwrap_or_default().to_string();
-            converted.insert(name.clone(), VendorSchema { name, schema: Raw::of(schema), type_text });
+            let declared_unknowns: Vec<String> = body
+                .get("declaredUnknowns")
+                .and_then(Value::as_array)
+                .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_string)).collect())
+                .unwrap_or_default();
+            converted.insert(name.clone(), VendorSchema { name, schema: Raw::of(schema), type_text, declared_unknowns });
         }
         let mut res = VendorResult { schemas: Vec::new(), errors: out.errors };
         let reasons: HashMap<&str, &str> = out.fallback.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();

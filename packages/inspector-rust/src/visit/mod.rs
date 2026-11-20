@@ -47,6 +47,8 @@ pub mod group_feature_flag;
 pub mod group_channel;
 pub mod group_cli;
 pub mod group_functions;
+pub mod group_functions_list;
+pub mod declared_unknowns;
 pub mod group_gateway;
 pub mod group_mcp;
 pub mod group_functions_node;
@@ -173,6 +175,9 @@ pub struct Context<'a> {
     /// Go `contributorWirings`: the wireContributors calls, build-time opt-ins
     /// to a package's contributors that is not an addon.
     pub contributor_wirings: Vec<addon_load::AddonDecl>,
+    /// Read by the generated-schema check once schemas exist; it is not part of
+    /// the serialized state.
+    pub declared_unknowns: HashMap<String, std::collections::HashSet<String>>,
 }
 
 /// Go `coreType`: a core interface's name and its symbol.
@@ -196,6 +201,7 @@ impl<'a> Context<'a> {
             core_types: Vec::new(),
             cli_config_type_warned: false,
             contributor_wirings: Vec::new(),
+            declared_unknowns: HashMap::new(),
         }
     }
 

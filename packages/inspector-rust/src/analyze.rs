@@ -84,6 +84,7 @@ fn run_inner(
     let allow = req.options.allow.clone().unwrap_or_default();
     let setup_only = req.options.setup_only;
     let files = prog.project_files.clone();
+    let mut declared;
     {
         let mut ctx = Context::new(
             prog.checker(),
@@ -113,6 +114,7 @@ fn run_inner(
 
         ctx.finish_core_type_properties();
         ctx.finish_service_types();
+        declared = std::mem::take(&mut ctx.declared_unknowns);
     }
 
     // The counts lock every checker, so the handle goes first.
@@ -133,10 +135,11 @@ fn run_inner(
 
     if let Some(sc) = req.options.schema_config.as_ref().filter(|_| !setup_only) {
         let cfg = crate::schemas::config_from_protocol(sc, &st.root_dir);
-        match crate::schemas::generate_all(log, &cfg, &mut st, cache) {
+        match crate::schemas::generate_all(log, &cfg, &mut st, cache, Some(&mut declared)) {
             Ok(out) => st.schemas = out,
             Err(message) => return Err(RunError::Failure(Failure { message, diagnostics: log.entries() })),
         }
+        crate::schemas::check_generated(log, &st, &declared);
     }
 
     Ok(Response {

@@ -43,7 +43,7 @@ fn an_unresolved_base_type_is_any_not_a_panic() {
         cache_dir: String::new(),
         vendor: None,
     };
-    let got = generate_all(&mut log, &cfg, &mut st, None).unwrap();
+    let got = generate_all(&mut log, &cfg, &mut st, None, None).unwrap();
     let text = serde_json::to_string(got.get("RunOutput").expect("RunOutput schema").value().unwrap()).unwrap();
     assert!(text.contains(r#""id":{"type":"string"}"#), "{text}");
     assert!(log.entries().is_empty(), "{:?}", log.entries());

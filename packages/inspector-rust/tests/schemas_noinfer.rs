@@ -43,7 +43,7 @@ fn no_infer_is_its_argument_not_an_unknown_intrinsic() {
         cache_dir: String::new(),
         vendor: None,
     };
-    let got = generate_all(&mut log, &cfg, &mut st, None).unwrap();
+    let got = generate_all(&mut log, &cfg, &mut st, None, None).unwrap();
     assert!(log.entries().is_empty(), "{:?}", log.entries());
     let text = serde_json::to_string(got.get("WireOutput").expect("WireOutput schema").value().unwrap()).unwrap();
     assert!(text.contains(r#""id":{"type":"string"}"#), "{text}");
