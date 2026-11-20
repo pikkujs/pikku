@@ -309,14 +309,16 @@ type PikkuMockFunctionConfigWithSchema<
 > = Omit<PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>, 'func' | 'mock'> & {
   /** Declared, not implemented: there is no body yet. */
   mock: true
-  func?: never
+  /** Typed like a real body, so trying this overload first leaves a real body's inferred types alone; no body can be given. */
+  func?: PikkuFunctionConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>['func'] & { readonly __mockHasNoBody: never }
 }
 
 /** {@link PikkuMockFunctionConfigWithSchema} for a function typed with generics. */
 type PikkuMockFunctionConfig<In, Out> = Omit<PikkuFunctionConfig<In, Out, 'session' | 'rpc'>, 'func' | 'mock'> & {
   /** Declared, not implemented: there is no body yet. */
   mock: true
-  func?: never
+  /** Typed like a real body, so trying this overload first leaves a real body's inferred types alone; no body can be given. */
+  func?: PikkuFunctionConfig<In, Out, 'session' | 'rpc'>['func'] & { readonly __mockHasNoBody: never }
 }
 
 /** {@link PikkuMockFunctionConfigWithSchema} for a sessionless function. */
@@ -326,7 +328,8 @@ type PikkuMockSessionlessFunctionConfigWithSchema<
 > = Omit<PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>, 'func' | 'mock'> & {
   /** Declared, not implemented: there is no body yet. */
   mock: true
-  func?: never
+  /** Typed like a real body, so trying this overload first leaves a real body's inferred types alone; no body can be given. */
+  func?: PikkuFunctionSessionlessConfigWithSchema<InputSchema, OutputSchema, 'session' | 'rpc'>['func'] & { readonly __mockHasNoBody: never }
 }
 
 /** {@link PikkuMockFunctionConfig} for a sessionless function. */
@@ -337,6 +340,7 @@ type PikkuMockSessionlessFunctionConfig<In, Out> = Omit<PikkuFunctionSessionless
    * Typed like a real body so a mock overload tried first does not change how
    * the body of a real function is inferred, but no body can be given.
    */
+  /** Typed like a real body, so trying this overload first leaves a real body's inferred types alone; no body can be given. */
   func?: PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc'>['func'] & { readonly __mockHasNoBody: never }
 }
 
