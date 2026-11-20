@@ -2,4 +2,4 @@
 '@pikku/cli': patch
 ---
 
-`pikkuFunc` and `pikkuSessionlessFunc` take the mock declaration as part of the config parameter instead of a separate overload. A body that returns a literal under explicit generics, such as `pikkuFunc<null, { pong: true }>`, keeps its literal type, and a bad `scopes` or `permissions` value is reported on that property.
+The `mock: true` overloads of `pikkuFunc` and `pikkuSessionlessFunc` come first and type `func` like a real body, so a mock overload tried before the real one does not widen the literal a real body returns (`pikkuFunc<null, { pong: true }>`), and the real overload stays last so a bad `scopes`, `permissions` or `node.category` value is reported on that property.

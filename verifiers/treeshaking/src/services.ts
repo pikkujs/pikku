@@ -32,6 +32,8 @@ export const createSingletonServices = pikkuServices(async (_config) => {
     tracker: new TrackerService(),
     storage: new StorageService(),
     notification: new NotificationService(),
+    greetingStore: { greet: (name: string) => `Hello from store, ${name}!` },
+    auditSink: { record: () => {} },
   }
 })
 

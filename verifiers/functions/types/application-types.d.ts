@@ -15,6 +15,8 @@ export interface UserSession extends CoreUserSession {
 }
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
+  greetingStore: { greet(name: string): string }
+  auditSink: { record(event: string): void }
   logger: CustomLogger
   jwt?: JWTService
   queueService?: QueueService

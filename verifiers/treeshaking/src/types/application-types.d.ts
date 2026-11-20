@@ -16,6 +16,8 @@ import type { UserPreferencesService } from '../services/user-preferences.servic
 export interface Config extends CoreConfig {}
 
 export interface SingletonServices extends CoreSingletonServices<Config> {
+  greetingStore: { greet(name: string): string }
+  auditSink: { record(event: string): void }
   email: EmailService
   sms: SMSService
   payment: PaymentService
