@@ -98,3 +98,7 @@ const _nested: Filter<SessionFilter> = [
   { uploadedAt: { gt: '2026-04-10' } },
 ]
 void _nested
+
+// @ts-expect-error — undefined is not a valid Filter element
+const _undefinedElement: Filter<SessionFilter> = [undefined]
+void _undefinedElement

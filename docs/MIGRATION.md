@@ -39,7 +39,7 @@ Version numbers in brackets are the release of the named package that shipped th
 
 The generated input schema of a `pikkuListFunc` no longer merges the fields of `F` at the top level. Filters belong under `filter`, a recursive `Filter<F>`, and `sort.column` is limited to the declared sort columns. A client that sent filter fields flat now fails validation; nest them under `filter`. Search for `pikkuListFunc` and the callers of those RPCs.
 
-`pikku verify` also fails with `PKU492` when a generated input or output schema contains `unknown` or `never` that the source did not write. Write `unknown` explicitly in the type or Zod schema where it is meant.
+`pikku verify` also fails with `PKU492` when a generated input or output schema contains an `unknown` that the source did not write, or any `never`. Write `unknown` explicitly in the type or Zod schema where it is meant; a `never` always fails, even when declared.
 
 ### `WiringService` moved to `@pikku/core`; `agentCredentialCheck` moved to `@pikku/addon-admin`
 
