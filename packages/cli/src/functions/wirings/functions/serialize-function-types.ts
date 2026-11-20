@@ -336,6 +336,17 @@ type PikkuMockSessionlessFunctionConfig<In, Out> = Omit<PikkuFunctionSessionless
   func?: never
 }
 
+/** Declares a function without a body: \`input\`, \`output\` and \`mock: true\`. */
+export function pikkuFunc<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuMockFunctionConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+export function pikkuFunc<In, Out = unknown>(
+  config: PikkuMockFunctionConfig<In, Out>
+): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
+
 /**
  * Creates a Pikku function that can be either session-aware or sessionless.
  * This is the main function wrapper for creating API endpoints.
@@ -366,15 +377,6 @@ export function pikkuFunc<In, Out = unknown>(
   func:
     | PikkuFunction<In, Out, 'session' | 'rpc'>
     | PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
-): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
-export function pikkuFunc<
-  InputSchema extends StandardSchemaV1 | undefined = undefined,
-  OutputSchema extends StandardSchemaV1 | undefined = undefined
->(
-  config: PikkuMockFunctionConfigWithSchema<InputSchema, OutputSchema>
-): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
-export function pikkuFunc<In, Out = unknown>(
-  config: PikkuMockFunctionConfig<In, Out>
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 export function pikkuFunc(func: any) {
   return typeof func === 'function' ? { func } : func
@@ -468,6 +470,17 @@ type PikkuFunctionSessionlessConfigWithSchema<
     : never
 }
 
+/** Declares a function without a body: \`input\`, \`output\` and \`mock: true\`. */
+export function pikkuSessionlessFunc<
+  InputSchema extends StandardSchemaV1 | undefined = undefined,
+  OutputSchema extends StandardSchemaV1 | undefined = undefined
+>(
+  config: PikkuMockSessionlessFunctionConfigWithSchema<InputSchema, OutputSchema>
+): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+export function pikkuSessionlessFunc<In, Out = unknown>(
+  config: PikkuMockSessionlessFunctionConfig<In, Out>
+): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
+
 /**
  * Creates a sessionless Pikku function that doesn't require user authentication.
  * Use this for public endpoints, webhooks, or background tasks.
@@ -492,15 +505,6 @@ export function pikkuSessionlessFunc<In, Out = unknown, RequiredServices extends
   func:
     | PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>
     | PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc', PikkuFunctionSessionless<In, Out, 'session' | 'rpc', RequiredServices>>
-): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
-export function pikkuSessionlessFunc<
-  InputSchema extends StandardSchemaV1 | undefined = undefined,
-  OutputSchema extends StandardSchemaV1 | undefined = undefined
->(
-  config: PikkuMockSessionlessFunctionConfigWithSchema<InputSchema, OutputSchema>
-): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
-export function pikkuSessionlessFunc<In, Out = unknown>(
-  config: PikkuMockSessionlessFunctionConfig<In, Out>
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
 export function pikkuSessionlessFunc(func: any) {
   return typeof func === 'function' ? { func } : func
