@@ -304,12 +304,14 @@ export const serializeAuthGen = (
     '',
     // createAuthHandler is called once at module load; the exported handler is a
     // plain arrow (so the inspector can resolve a valid `func`) that delegates to
-    // it. The handler's required services are stamped onto its meta by the
+    // it. The result is typed `unknown` in the source: the response is not a
+    // schema, and an inferred `unknown` is a PKU492 while a written one is not.
+    // The handler's required services are stamped onto its meta by the
     // inspector from the pikkuBetterAuth factory.
     `const authConfigHandler = createAuthHandler()`,
     `export const ${AUTH_HANDLER_FUNC_ID} = pikkuSessionlessFunc({`,
     `  tags: ['pikku'],`,
-    `  func: (services: any, data: any, interaction: any) =>`,
+    `  func: (services: any, data: any, interaction: any): Promise<unknown> =>`,
     `    authConfigHandler.func(services, data, interaction),`,
     `})`,
     '',

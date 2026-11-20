@@ -115,7 +115,7 @@ describe('serializeAuthGen', () => {
     assert.match(output, /export const authHandler = pikkuSessionlessFunc\(\{/)
     assert.match(
       output,
-      /func: \(services: any, data: any, interaction: any\) =>/
+      /func: \(services: any, data: any, interaction: any\): Promise<unknown> =>/
     )
     assert.match(
       output,
