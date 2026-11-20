@@ -44,9 +44,14 @@ void usePikkuInfiniteQuery('listItems', {
   sort: [{ column: 'label', direction: 'asc' }],
 })
 
-// @ts-expect-error — 'id' is not a declared sort column
 usePikkuInfiniteQuery('listItems', {
-  sort: [{ column: 'id', direction: 'asc' }],
+  sort: [
+    {
+      // @ts-expect-error — 'id' is not a declared sort column
+      column: 'id',
+      direction: 'asc',
+    },
+  ],
 })
 
 // @ts-expect-error — the filter fields are nested under filter, not merged flat

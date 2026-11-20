@@ -22,7 +22,9 @@ export const scenarios: TestScenario[] = [
     name: 'Baseline (no filters)',
     filter: '',
     expectedSingletonServices: [
+      'auditSink',
       'email',
+      'greetingStore',
       'logger',
       'notification',
       'payment',
@@ -132,7 +134,9 @@ export const scenarios: TestScenario[] = [
     name: 'Wire: http',
     filter: '--wires=http',
     expectedSingletonServices: [
+      'auditSink',
       'email',
+      'greetingStore',
       'logger',
       'payment',
       'secrets',
@@ -155,7 +159,9 @@ export const scenarios: TestScenario[] = [
     name: 'Exclude Wires: queue,scheduler',
     filter: '--excludeWires=queue,scheduler',
     expectedSingletonServices: [
+      'auditSink',
       'email',
+      'greetingStore',
       'logger',
       'payment',
       'secrets',
@@ -203,7 +209,9 @@ export const scenarios: TestScenario[] = [
     name: 'HTTP Method: POST',
     filter: '--httpMethods=POST',
     expectedSingletonServices: [
+      'auditSink',
       'email',
+      'greetingStore',
       'logger',
       'notification',
       'payment',
@@ -271,7 +279,9 @@ export const scenarios: TestScenario[] = [
     name: 'Directory: src/functions',
     filter: '--directories=src/functions',
     expectedSingletonServices: [
+      'auditSink',
       'email',
+      'greetingStore',
       'logger',
       'notification',
       'payment',
@@ -287,7 +297,14 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Directory: src/nonexistent',
     filter: '--directories=src/nonexistent',
-    expectedSingletonServices: ['email', 'logger', 'notification', 'secrets'],
+    expectedSingletonServices: [
+      'auditSink',
+      'email',
+      'greetingStore',
+      'logger',
+      'notification',
+      'secrets',
+    ],
     expectedWireServices: [],
     description:
       'No wirings in nonexistent directory, only email/logger from session creation',
@@ -365,7 +382,13 @@ export const scenarios: TestScenario[] = [
   {
     name: 'Addon: testAddon included',
     filter: '--names=testAddon',
-    expectedSingletonServices: ['email', 'logger', 'secrets'],
+    expectedSingletonServices: [
+      'auditSink',
+      'email',
+      'greetingStore',
+      'logger',
+      'secrets',
+    ],
     expectedWireServices: [],
     expectedAddonBootstrap: true,
     description:

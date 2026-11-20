@@ -17,7 +17,8 @@
   "files": [
     "src",
     "types",
-    ".pikku"
+    ".pikku",
+    "pikku.config.json"
   ],
   "scripts": {
     "prebuild": "pikku all",
