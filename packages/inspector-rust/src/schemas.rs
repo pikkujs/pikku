@@ -9,8 +9,10 @@ pub mod transpile;
 pub mod zodjs;
 pub mod cli;
 pub mod generate;
+pub mod unknowns;
 
 pub use generate::{Config, generate_all};
+pub use unknowns::check_generated;
 
 use crate::protocol::SchemaConfig;
 

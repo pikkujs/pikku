@@ -28,6 +28,8 @@ pub struct VendorSchema {
     pub schema: Raw,
     /// zodToTypeText's rendering, added to the typesMap as a custom type.
     pub type_text: String,
+    /// The paths at which the Zod schema itself says z.unknown() or z.any().
+    pub declared_unknowns: Vec<String>,
 }
 
 /// generateZodSchemas' outcome: the schemas converted, in processing order,

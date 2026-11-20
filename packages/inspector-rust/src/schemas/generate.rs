@@ -1,6 +1,6 @@
 //! Port of Go `internal/schemas/generate.go`: `generateAllSchemas`.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use super::customtypes::generate_custom_types;
@@ -36,8 +36,22 @@ pub struct Config {
 /// generateAllSchemas. Like the TS it adds each converted Zod schema's type to
 /// the typesMap as a custom type, and its result replaces `state.schemas`. An
 /// error means inspection failed, as the TS throw does.
-pub fn generate_all(log: &mut Logger, cfg: &Config, st: &mut State, cache: Option<&Cache>) -> Result<Record<Raw>, String> {
+pub fn generate_all(
+    log: &mut Logger,
+    cfg: &Config,
+    st: &mut State,
+    cache: Option<&Cache>,
+    declared_unknowns: Option<&mut HashMap<String, HashSet<String>>>,
+) -> Result<Record<Raw>, String> {
     let vendor_schemas = generate_vendor_schemas(log, cfg.vendor.as_deref(), st)?;
+    if let Some(declared) = declared_unknowns {
+        for s in &vendor_schemas {
+            let paths = declared.entry(s.name.clone()).or_default();
+            for p in &s.declared_unknowns {
+                paths.insert(p.clone());
+            }
+        }
+    }
     let covered: HashSet<String> = vendor_schemas.iter().map(|s| s.name.clone()).collect();
 
     let ts_schemas = generate_ts_schemas(log, cfg, st, &covered, cache);
