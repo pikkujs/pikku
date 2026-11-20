@@ -12,9 +12,7 @@ import {
   bodyWithPages,
   declaredPages,
   filingOrder,
-  outsideSites,
   parsePlanText,
-  siteNotLookedAtRefusal,
   validatePlan,
 } from '../lib/change-plan.js'
 import { isCloneProject } from '../lib/page-gate.js'
@@ -130,9 +128,6 @@ async function filePlan(
   const plan = validatePlan(parsePlanText(text, source), {
     clone: isCloneProject(top),
   })
-  const sites = outsideSites(plan)
-  if (sites.length && !isCloneProject(top))
-    throw new CloudPreconditionError(siteNotLookedAtRefusal(sites))
 
   const { rpc, projectId } = await changesContext(input.apiUrl, input.projectId)
   if (input.backlog && projectId !== LOCAL_PROJECT_ID)

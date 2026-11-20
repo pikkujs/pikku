@@ -4,9 +4,7 @@ import {
   bodyWithPages,
   declaredPages,
   filingOrder,
-  outsideSites,
   planProblems,
-  siteNotLookedAtRefusal,
   validatePlan,
 } from './change-plan.js'
 
@@ -256,54 +254,6 @@ describe('a plan for a clone of an existing site', () => {
     assert.deepStrictEqual(declaredPages(body), ['/recipes', '/recipes/$id'])
     assert.deepStrictEqual(declaredPages('No pages here.'), [])
     assert.deepStrictEqual(declaredPages(null), [])
-  })
-})
-
-describe('a plan that names a site', () => {
-  const planWith = (body: string) => [
-    {
-      ref: 'data',
-      title: 'Bookings are kept',
-      body,
-      specialist: 'build' as const,
-      dependsOn: [],
-    },
-  ]
-
-  test('lists the outside sites once per host', () => {
-    assert.deepEqual(
-      outsideSites(
-        planWith(
-          'Replace https://acme.as.me/schedule/abc, then https://acme.as.me/pay.'
-        )
-      ),
-      ['https://acme.as.me/schedule/abc']
-    )
-  })
-
-  test('leaves trailing punctuation off the address', () => {
-    assert.deepEqual(
-      outsideSites(
-        planWith('Rebuild https://acme.as.me/schedule/abc: every page.')
-      ),
-      ['https://acme.as.me/schedule/abc']
-    )
-  })
-
-  test('ignores local and documentation addresses', () => {
-    assert.deepEqual(
-      outsideSites(
-        planWith('Run on http://localhost:7104, read https://pikku.dev/docs/x')
-      ),
-      []
-    )
-  })
-
-  test('the refusal names the site and the look-first steps', () => {
-    const text = siteNotLookedAtRefusal(['https://acme.as.me/schedule/abc'])
-    assert.match(text, /acme\.as\.me/)
-    assert.match(text, /pikku-site-archaeology/)
-    assert.match(text, /artifacts\/plan\.json/)
   })
 })
 
