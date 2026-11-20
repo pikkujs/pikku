@@ -49,5 +49,6 @@ or a field.
 
 ## 4. Then plan from it
 
-Do not build. Go back to the pikku-changes skill and file the plan from your notes. Finish with
+Do not build. Go back to the pikku-changes skill and file the plan from your notes, following
+`references/planning-from-the-notes.md` (what a plan for a site holds: the capture and frame changes, pages, new pages, templates, the starter's defaults). Finish with
 a few lines: how many pages you looked at, the forms you found, and the open questions.
