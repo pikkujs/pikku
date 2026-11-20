@@ -19,6 +19,8 @@ export const createSingletonServices = pikkuServices(async (config) => {
     logger: new ConsoleLogger(),
     variables,
     secrets: new LocalSecretService(variables),
+    greetingStore: { greet: (name: string) => `Hello from store, ${name}!` },
+    auditSink: { record: () => {} },
   }
 })
 

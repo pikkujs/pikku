@@ -51,6 +51,8 @@ export const createSingletonServices = pikkuServices(
       workflowService: existingServices?.workflowService,
       queueService: existingServices?.queueService,
       schedulerService: existingServices?.schedulerService,
+      greetingStore: { greet: (name: string) => `Hello from store, ${name}!` },
+      auditSink: { record: () => {} },
     }
   }
 )

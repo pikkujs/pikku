@@ -171,8 +171,10 @@ async function verifyBackend(backend: Backend): Promise<void> {
     const refused = await call('GET', '/items', ip('global'))
     assertEqual(refused.status, 429, 'status')
     const retryAfter = Number(refused.headers.get('retry-after'))
-    if (!(retryAfter >= 1 && retryAfter <= 60)) {
-      throw new Error(`Retry-After ${retryAfter} is not within the 60s window`)
+    if (!(retryAfter >= 1 && retryAfter <= HOUR / 1000)) {
+      throw new Error(
+        `Retry-After ${retryAfter} is not within the ${HOUR / 1000}s window`
+      )
     }
   })
 

@@ -9,6 +9,9 @@ export interface Config extends CoreConfig {}
 
 export interface UserSession extends CoreUserSession {}
 
-export interface SingletonServices extends CoreSingletonServices<Config> {}
+export interface SingletonServices extends CoreSingletonServices<Config> {
+  greetingStore: { greet(name: string): string }
+  auditSink: { record(event: string): void }
+}
 
 export interface Services extends CoreServices<SingletonServices> {}
