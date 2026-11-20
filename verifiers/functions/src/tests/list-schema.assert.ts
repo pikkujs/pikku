@@ -101,6 +101,12 @@ describe('list function schema verifier', () => {
     })
     assert.throws(() =>
       schemas.validateSchema('ListItemsInput', {
+        category: 'books',
+        sort: [{ column: 'label', direction: 'asc' }],
+      })
+    )
+    assert.throws(() =>
+      schemas.validateSchema('ListItemsInput', {
         sort: [{ column: 'id', direction: 'asc' }],
       })
     )

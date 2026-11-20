@@ -30,10 +30,18 @@ func FindSchemaHoles(schema state.Raw) []Hole {
 	if !ok {
 		return nil
 	}
-	definitions, _ := obj["definitions"].(map[string]any)
+	// draft-07 output keeps shared schemas under definitions, 2020-12 under $defs.
+	definitions := map[string]any{}
+	for _, key := range []string{"definitions", "$defs"} {
+		if group, ok := obj[key].(map[string]any); ok {
+			for name, target := range group {
+				definitions[name] = target
+			}
+		}
+	}
 	body := map[string]any{}
 	for k, v := range obj {
-		if k != "definitions" {
+		if k != "definitions" && k != "$defs" {
 			body[k] = v
 		}
 	}
@@ -63,7 +71,7 @@ func FindSchemaHoles(schema state.Raw) []Hole {
 			return
 		}
 		if ref, ok := n["$ref"].(string); ok {
-			name, err := url.PathUnescape(strings.TrimPrefix(ref, "#/definitions/"))
+			name, err := url.PathUnescape(strings.TrimPrefix(strings.TrimPrefix(ref, "#/definitions/"), "#/$defs/"))
 			if err != nil {
 				name = ref
 			}
@@ -79,6 +87,11 @@ func FindSchemaHoles(schema state.Raw) []Hole {
 		if props, ok := n["properties"].(map[string]any); ok {
 			for _, name := range sortedKeys(props) {
 				visit(props[name], path+"."+name, refs)
+			}
+		}
+		if prefix, ok := n["prefixItems"].([]any); ok {
+			for _, child := range prefix {
+				visit(child, path+"[]", refs)
 			}
 		}
 		switch items := n["items"].(type) {

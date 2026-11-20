@@ -264,50 +264,53 @@ function findZodTransform(schema) {
 }
 
 // ../../../src/vendor/declared-unknown-paths.ts
-var MAX_DEPTH = 12;
 var declaredUnknownPathsOfZod = (zodSchema) => {
   const found = /* @__PURE__ */ new Set();
-  const visit = (schema, path, depth) => {
+  const walking = /* @__PURE__ */ new Set();
+  const visit = (schema, path) => {
     const def = schema?._zod?.def;
-    if (!def || depth > MAX_DEPTH) return;
+    if (!def || walking.has(schema)) return;
+    walking.add(schema);
     switch (def.type) {
       case "unknown":
       case "any":
         found.add(path || "$");
-        return;
+        break;
       case "object":
         for (const [name, child] of Object.entries(def.shape ?? {})) {
-          visit(child, `${path}.${name}`, depth + 1);
+          visit(child, `${path}.${name}`);
         }
-        return;
+        if (def.catchall) visit(def.catchall, `${path}[*]`);
+        break;
       case "array":
-        visit(def.element, `${path}[]`, depth + 1);
-        return;
+        visit(def.element, `${path}[]`);
+        break;
       case "tuple":
-        for (const item of def.items ?? []) visit(item, `${path}[]`, depth + 1);
-        return;
+        for (const item of def.items ?? []) visit(item, `${path}[]`);
+        break;
       case "record":
       case "map":
-        visit(def.valueType, `${path}[*]`, depth + 1);
-        return;
+        visit(def.valueType, `${path}[*]`);
+        break;
       case "union":
-        for (const option of def.options ?? []) visit(option, path, depth + 1);
-        return;
+        for (const option of def.options ?? []) visit(option, path);
+        break;
       case "intersection":
-        visit(def.left, path, depth + 1);
-        visit(def.right, path, depth + 1);
-        return;
+        visit(def.left, path);
+        visit(def.right, path);
+        break;
       case "pipe":
-        visit(def.in, path, depth + 1);
-        return;
+        visit(def.out, path);
+        break;
       case "lazy":
-        visit(def.getter?.(), path, depth + 1);
-        return;
+        visit(def.getter?.(), path);
+        break;
       default:
-        if (def.innerType) visit(def.innerType, path, depth + 1);
+        if (def.innerType) visit(def.innerType, path);
     }
+    walking.delete(schema);
   };
-  visit(zodSchema, "", 0);
+  visit(zodSchema, "");
   return found;
 };
 export {

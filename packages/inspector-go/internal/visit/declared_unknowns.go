@@ -93,6 +93,9 @@ func (s *Context) declaredOutputType(isListFunc bool, list *listConfigTypes, gen
 	case len(generics) >= 2:
 		return generics[1]
 	}
+	if handler == nil {
+		return nil
+	}
 	sig := s.Checker.GetSignatureFromDeclaration(handler)
 	if sig == nil {
 		return nil

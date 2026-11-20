@@ -21,6 +21,10 @@ func TestFindSchemaHoles(t *testing.T) {
 			`{"type":"object","properties":{"tree":{"$ref":"#/definitions/Tree"}},"definitions":{"Tree":{"anyOf":[{"type":"array","items":{"$ref":"#/definitions/Tree"}},{"type":"object","additionalProperties":{}}]}}}`,
 			[]Hole{{".tree[*]", "unknown"}},
 		},
+		"follows a $defs ref and reads prefixItems": {
+			`{"type":"object","properties":{"a":{"$ref":"#/$defs/Loose"},"pair":{"type":"array","prefixItems":[{"type":"string"},{}]}},"$defs":{"Loose":{"type":"object","properties":{"x":{}}}}}`,
+			[]Hole{{".a.x", "unknown"}, {".pair[]", "unknown"}},
+		},
 		"no holes":     {`{"type":"object","properties":{"a":{"type":"string"}}}`, nil},
 		"root unknown": {`{}`, []Hole{{"$", "unknown"}}},
 	} {

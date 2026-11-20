@@ -1,7 +1,7 @@
 ---
 type: decision
 title: A list function's input schema is generated from ListInput, and generated unknown or never is PKU492
-description: group_functions reads the real ListInput<F, S> off the pikkuListFunc call and CheckGenerated flags any unknown or never node the source did not declare
+description: group_functions reads the real ListInput<F, S> off the pikkuListFunc call and CheckGenerated flags any unknown node the source did not declare and every never node
 tags: [inspector-go, schemas, list-functions]
 ---
 

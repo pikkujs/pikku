@@ -51,11 +51,14 @@ func GenerateAll(log *diag.Logger, cfg Config, st *state.State, cache *program.C
 	}
 	if cfg.DeclaredUnknowns != nil {
 		for _, s := range vendorSchemas {
-			paths := map[string]bool{}
+			paths := cfg.DeclaredUnknowns[s.Name]
+			if paths == nil {
+				paths = map[string]bool{}
+				cfg.DeclaredUnknowns[s.Name] = paths
+			}
 			for _, p := range s.DeclaredUnknowns {
 				paths[p] = true
 			}
-			cfg.DeclaredUnknowns[s.Name] = paths
 		}
 	}
 	covered := map[string]bool{}
