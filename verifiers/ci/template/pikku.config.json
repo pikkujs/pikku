@@ -3,6 +3,11 @@
   "db": {
     "engine": "sqlite"
   },
+  "validate": {
+    "rules": {
+      "scaffold-dir-noncanonical": "off"
+    }
+  },
   "scaffold": {
     "pikkuDir": "packages/functions/src/scaffold",
     "rpc": true,
