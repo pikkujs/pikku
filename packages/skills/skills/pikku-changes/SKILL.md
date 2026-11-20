@@ -28,29 +28,9 @@ changeset needs to know goes in a commit or a `reply`.
 
 ## Filing a plan from a brief
 
-**A brief to clone, rebuild or convert an existing site** (it names a site or a URL): you cannot plan
-what you have not seen, so look first. Follow the pikku-site-archaeology skill: look at every page of
-the site and write what you find into `knowledge/site/` (notes only, no code). Then file the plan
-from those notes: the data change stores what `things-kept.md` and `forms.md` say, in the currency and
-languages `prices-and-languages.md` says, and the plan covers every form and page you found. File it
-as below, and stop. A clone also needs its look: after the data change, file a capture change
-(`artifacts`: run `pikku ui pages capture <url> --out artifacts/references/<site>`, done when every page
-on the list has its screenshots and style.json there and the pictures are in its `pictures/` folder),
-then a frame change (`frontend`: header, footer, theme; depends on the capture), and make every page
-change depend on the frame change, so no page is built before the capture and the frame exist.
-In a clone, every `frontend` change lists the pages it builds in `"pages"`, as route paths:
-`"pages": ["/", "/about"]`. At most 5 pages per change: split the pages into changes of at most 5.
-The frame change lists the pages it is checked on. `pikku changes done` compares exactly those pages
-with the original, and refuses until each one matches.
-A page the original does not have (an owner screen, a sign-in, an admin list, a page that is new in
-the rebuilt site) cannot be compared: list it in `"newPages"`, not in `"pages"`, e.g.
-`"newPages": ["/app/calendar"]`. A change with only new pages is not held to a compare.
-The starter's `/` redirects to the owner login and its sign-in and shell carry the starter's own
-wording ("Cloud Starter"). The frame change makes `/` serve the site's main page, and replaces every
-starter string in `apps/app/messages` with the site's own, so a visitor never lands on a login
-screen and the owner area says whose it is.
-
-Otherwise, file from the brief alone. Do not read the project, other skills or the knowledge notes first: the plan
+**A brief that names an existing site** (to clone, rebuild or convert it): read the `pikku-site-clone` skill first; its
+"Planning a clone" section comes before everything below. For any other brief, file from the brief alone.
+Do not read the project, other skills or the knowledge notes first: the plan
 says what each piece does for the person, and the agent that builds it reads the code. Write the whole
 plan as one JSON file and file it in one call: `pikku changes file --plan artifacts/plan.json` (`--plan -` reads stdin).
 
@@ -260,11 +240,4 @@ the item's commit by its `Change-Id` trailer, so close items in any order.
 An item you decided not to do is not `done`: `reply` with why and leave it for a
 human to dismiss.
 
-In a project with a reference (`artifacts/references/<site>/`), a change that touched pages is done
-only when `pikku ui pages compare --reference artifacts/references/<site> --page <ids>`, run after
-your last commit, has every touched page at every width within the threshold; otherwise `done`
-refuses and says which pages, by how much, and the command. Fix the `style` lines of the compare
-first (they name the size, weight, colour and alignment that differ), then open the
-`<id>-<width>.diff.png` of the worst page (original | red where pixels differ | yours); commit,
-compare again. A waiver is only for phone widths (under 1000 px):
-`done ... --waive "<why it cannot match, 30+ characters>"`; desktop widths must pass.
+A project with a reference to compare against has an extra gate before `done`: see the `pikku-site-clone` skill.
