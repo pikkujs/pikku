@@ -23,7 +23,7 @@ export const health = pikkuSessionlessFunc<void, { ok: true }>({
  */
 export const fanOut = pikkuSessionlessFunc<void, { calls: number }>({
   func: async (_services, _data, { rpc }) => {
-    for (let i = 0; i < 6; i++) await rpc.invoke('listItems', undefined)
+    for (let i = 0; i < 6; i++) await rpc.invoke('listItems')
     return { calls: 6 }
   },
 })
