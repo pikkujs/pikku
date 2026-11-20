@@ -29,7 +29,7 @@ changeset needs to know goes in a commit or a `reply`.
 ## Filing a plan from a brief
 
 **A brief that names an existing site** (to clone, rebuild or convert it): read the `pikku-site-archaeology` skill first, and plan from
-its notes with its `references/planning-from-the-notes.md`. For any other brief, file from the brief alone.
+its notes, as that skill's planning reference says. For any other brief, file from the brief alone.
 Do not read the project, other skills or the knowledge notes first: the plan
 says what each piece does for the person, and the agent that builds it reads the code. Write the whole
 plan as one JSON file and file it in one call: `pikku changes file --plan artifacts/plan.json` (`--plan -` reads stdin).
