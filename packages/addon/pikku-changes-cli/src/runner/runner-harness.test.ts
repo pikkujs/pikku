@@ -89,12 +89,6 @@ export const scratchRepo = async (titles: string[]) => {
   git(repo, 'config', 'user.email', 't@example.com')
   git(repo, 'config', 'user.name', 't')
   await writeFile(join(repo, '.gitignore'), 'node_modules/\n')
-  await writeFile(
-    join(repo, '.gitattributes'),
-    ['png', 'jpg', 'jpeg', 'webp']
-      .map((ext) => `artifacts/**/*.${ext} filter=lfs diff=lfs merge=lfs -text`)
-      .join('\n') + '\n'
-  )
   git(repo, 'add', '.')
   git(repo, 'commit', '-q', '-m', 'init')
   for (const title of titles) pikku(repo, ['changes', 'file', '--title', title])
