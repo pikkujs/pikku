@@ -179,6 +179,7 @@ export const CONFIG_FREE_COMMANDS = new Set([
   'changes.start',
   'changes.backlog',
   'changes.ready',
+  'changes.run',
   'changes.next',
 ])
 
