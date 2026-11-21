@@ -52,6 +52,10 @@ import {
   ChangesRelease,
   renderChangesRelease,
 } from './functions/changes-release.function.js'
+import {
+  ChangesRun,
+  renderChangesRun,
+} from './functions/changes-run.function.js'
 
 export const changesCommands = defineCLICommands({
   list: pikkuCLICommand({
@@ -354,6 +358,37 @@ export const changesCommands = defineCLICommands({
       ref: {
         description:
           'The changeset’s group id, or a change in it — 2, #2 or its uuid',
+      },
+    },
+  }),
+  run: pikkuCLICommand({
+    func: ChangesRun,
+    render: renderChangesRun,
+    description:
+      'Build the queue with agents, up to --parallel at once, each in its own changeset worktree: claims, prepares and starts them, gives leases back, merges finished changesets, repairs a red main checkout and works merge conflicts, until nothing planned is left or --max-minutes is up. Prints one line per event',
+    options: {
+      agent: {
+        description:
+          'The shell command that runs one agent: the prompt comes on stdin, the change in PIKKU_CHANGE_ID, PIKKU_CHANGESET_GROUP and PIKKU_CHANGESET_WORKTREE',
+      },
+      parallel: {
+        description: 'Agents at once (1 to 3, default 3)',
+        type: 'number',
+      },
+      tries: {
+        description:
+          'Agent starts per change before its worktree is given up (default 2)',
+        type: 'number',
+      },
+      stallMinutes: {
+        description:
+          'Minutes without output before an agent is stopped and its change goes back in the queue (default 10; 0 is off)',
+        type: 'number',
+      },
+      maxMinutes: {
+        description:
+          'Stop the whole run after this many minutes, giving every lease back',
+        type: 'number',
       },
     },
   }),

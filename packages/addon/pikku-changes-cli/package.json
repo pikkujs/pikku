@@ -29,6 +29,10 @@
       "types": "./dist/src/lib/types.d.ts",
       "import": "./dist/src/lib/types.js"
     },
+    "./runner": {
+      "types": "./dist/src/runner/index.d.ts",
+      "import": "./dist/src/runner/index.js"
+    },
     "./backend": {
       "types": "./dist/src/backend.d.ts",
       "import": "./dist/src/backend.js"
