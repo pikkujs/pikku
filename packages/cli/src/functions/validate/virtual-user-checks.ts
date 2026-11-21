@@ -128,7 +128,7 @@ export const runVirtualUserChecks = async (
     findings.push({ id, severity: 'warn', message, path, fixHint })
   }
 
-  const searchDirs = projectSourceDirs(config ?? {})
+  const searchDirs = projectSourceDirs(root)
   const sourceFiles = await listProjectFiles(root, searchDirs, ['.ts', '.tsx'])
 
   const virtualUsers = await countVirtualUsers(root, config ?? {}, sourceFiles)

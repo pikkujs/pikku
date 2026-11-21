@@ -9,8 +9,9 @@ import {
   orderAddonPackages,
   packageDependencyNames,
   projectSourceDirs,
-  resolveAddonPackages,
-  resolveBasePackage,
+  resolveWorkspacePackages,
+  findMainEntry,
+  defaultScaffoldDir,
   checkAddonsWired,
   type AddonPackage,
 } from './project-packages.js'
@@ -116,7 +117,7 @@ describe('orderAddonPackages', () => {
         ),
       {
         message:
-          'addons in /p/pikku.config.json has a dependency cycle: packages/a -> packages/b -> packages/a. Remove one of the dependencies.',
+          'The addon packages of /p/pikku.config.json have a dependency cycle: packages/a -> packages/b -> packages/a. Remove one of the dependencies.',
       }
     )
   })
@@ -138,225 +139,184 @@ describe('orderAddonPackages', () => {
   })
 })
 
-describe('resolveAddonPackages', () => {
+describe('findWorkspaceConfigs and resolveWorkspacePackages', () => {
   const file = 'pikku.config.json'
 
-  test('reads each listed package in the order listed', async () => {
-    const root = await project({
-      'packages/a': { name: 'a', dependencies: { b: '1' } },
-      'packages/b': { name: 'b' },
+  type Member = {
+    config: Record<string, unknown> | null
+    pkg?: Record<string, unknown> | null
+  }
+  const workspace = async (
+    members: Record<string, Member>,
+    workspaces: unknown = ['packages/*'],
+    rootConfig: Record<string, unknown> = {}
+  ): Promise<string> => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-ws-'))
+    roots.push(root)
+    await writeFile(join(root, file), JSON.stringify(rootConfig))
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces })
+    )
+    for (const [dir, member] of Object.entries(members)) {
+      await mkdir(join(root, dir), { recursive: true })
+      if (member.config) {
+        await writeFile(join(root, dir, file), JSON.stringify(member.config))
+      }
+      if (member.pkg !== null) {
+        await writeFile(
+          join(root, dir, 'package.json'),
+          JSON.stringify(member.pkg ?? { name: basename(dir) })
+        )
+      }
+    }
+    return root
+  }
+  const addon = (namespace?: string) => ({
+    config: {
+      addon: { displayName: 'x' },
+      ...(namespace ? { namespace } : {}),
+    },
+  })
+  const main = { config: { main: true } }
+  const load = (root: string) =>
+    resolveWorkspacePackages(join(root, file), root)
+
+  test('a main package and two addons are found by their markers', async () => {
+    const root = await workspace({
+      'packages/functions': main,
+      'packages/a': {
+        ...addon('a'),
+        pkg: { name: 'a', dependencies: { b: '1' } },
+      },
+      'packages/b': addon('b'),
     })
-    const packages = await resolveAddonPackages(file, root, [
-      'packages/a',
-      'packages/b',
-    ])
+    const found = await load(root)
+    assert.equal(found.main?.entry, 'packages/functions')
     assert.deepEqual(
-      packages.map((p) => [p.entry, p.name, p.dependsOn]),
+      found.addons.map((p) => [p.entry, p.name, p.namespace, p.dependsOn]),
       [
-        ['packages/a', 'a', ['b']],
-        ['packages/b', 'b', []],
+        ['packages/a', 'a', 'a', ['b']],
+        ['packages/b', 'b', 'b', []],
       ]
     )
   })
 
-  test('an absent key lists nothing', async () => {
-    assert.deepEqual(await resolveAddonPackages(file, '/x', undefined), [])
+  test('a project with no workspaces, or no package configs, has no packages', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'pikku-ws-'))
+    roots.push(root)
+    await writeFile(join(root, file), '{}')
+    assert.deepEqual(await load(root), { addons: [] })
+    const bare = await workspace({ 'packages/x': { config: null } })
+    assert.deepEqual(await load(bare), { addons: [] })
   })
 
-  test('refuses a value that is not a list of strings', async () => {
-    await assert.rejects(
-      resolveAddonPackages(file, '/x', 'packages/a'),
-      /must be a list of directories/
-    )
-    await assert.rejects(
-      resolveAddonPackages(file, '/x', [1]),
-      /must be a list of directories/
-    )
-  })
-
-  test('refuses the project directory itself', async () => {
-    const root = await project({})
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['.']),
-      /which is this project's own directory/
-    )
-  })
-
-  test('refuses a directory that does not exist', async () => {
-    const root = await project({})
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['nope']),
-      /"nope", which does not exist/
-    )
-  })
-
-  test('refuses a directory without its own pikku.config.json', async () => {
-    const root = await project({})
-    await mkdir(join(root, 'plain'))
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['plain']),
-      /"plain", which has no pikku.config.json/
-    )
-  })
-
-  test('refuses a listed config that sets addons or base itself', async () => {
-    const root = await project({ 'packages/a': { name: 'a' } })
-    await writeFile(join(root, 'packages/a/pikku.config.json'), '{"base":"x"}')
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['packages/a']),
-      /sets addons or base itself/
-    )
-  })
-
-  test('refuses a package.json without a name', async () => {
-    const root = await project({ 'packages/a': {} })
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['packages/a']),
-      /package.json has no name/
-    )
-    const none = await project({ 'packages/a': null })
-    await assert.rejects(
-      resolveAddonPackages(file, none, ['packages/a']),
-      /package.json has no name/
-    )
-  })
-
-  test('refuses a listed package whose config has no namespace', async () => {
-    const root = await project({ 'packages/a': { name: 'a' } })
-    await writeFile(
-      join(root, 'packages/a/pikku.config.json'),
-      '{"addon":true}'
-    )
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['packages/a']),
-      /"packages\/a", whose pikku.config.json has no namespace/
-    )
-  })
-
-  test('refuses a namespace that is not a valid addon name', async () => {
-    const root = await project({ 'packages/a': { name: 'a' } })
-    await writeFile(
-      join(root, 'packages/a/pikku.config.json'),
-      '{"namespace":"Bad Name","addon":true}'
-    )
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['packages/a']),
-      /namespace "Bad Name" in packages\/a\/pikku.config.json is not valid/
-    )
-  })
-
-  test('refuses two packages that declare the same namespace', async () => {
-    const root = await project({
-      'packages/a': { name: 'a' },
-      'packages/b': { name: 'b' },
-    })
-    for (const d of ['a', 'b']) {
-      await writeFile(
-        join(root, 'packages', d, 'pikku.config.json'),
-        '{"namespace":"shared","addon":true}'
-      )
-    }
-    await assert.rejects(
-      resolveAddonPackages(file, root, ['packages/a', 'packages/b']),
-      /"packages\/a" and "packages\/b", which both declare the namespace "shared"/
-    )
-  })
-
-  test('refuses two entries that are the same package', async () => {
-    const root = await project({
-      'packages/a': { name: 'same' },
-      'packages/b': { name: 'same' },
+  test('two main packages are an error naming both', async () => {
+    const root = await workspace({
+      'packages/one': main,
+      'packages/two': main,
     })
     await assert.rejects(
-      resolveAddonPackages(file, root, ['packages/a', 'packages/b']),
-      /both the package "same"/
+      load(root),
+      /packages\/one and packages\/two are both marked "main": true/
     )
   })
-})
 
-describe('resolveBasePackage', () => {
-  const file = 'pikku.config.json'
-
-  test('is undefined when the project is its own base', async () => {
-    assert.equal(await resolveBasePackage(file, '/p', undefined), undefined)
-  })
-
-  test('reads a package with its own config and name', async () => {
-    const root = await project({ 'packages/app': { name: 'app' } })
-    await writeFile(join(root, 'packages/app/pikku.config.json'), '{}')
-    const base = await resolveBasePackage(file, root, 'packages/app')
-    assert.equal(base?.name, 'app')
-    assert.equal(base?.dir, join(root, 'packages/app'))
-  })
-
-  test('refuses a list, an addon, a config that sets addons, and the project itself', async () => {
-    const root = await project({ 'packages/app': { name: 'app' } })
+  test('a workspace package config with neither marker is an error', async () => {
+    const root = await workspace({ 'packages/loose': { config: {} } })
     await assert.rejects(
-      resolveBasePackage(file, root, ['packages/app']),
-      /must be one directory/
-    )
-    await assert.rejects(
-      resolveBasePackage(file, root, 'packages/app'),
-      /which is an addon/
-    )
-    await writeFile(
-      join(root, 'packages/app/pikku.config.json'),
-      '{"addons":[]}'
-    )
-    await assert.rejects(
-      resolveBasePackage(file, root, 'packages/app'),
-      /sets addons or base itself/
-    )
-    await assert.rejects(resolveBasePackage(file, root, '.'), /own directory/)
-  })
-
-  test('refuses a base outside the project root: `..`, absolute, or a symlink out', async () => {
-    const root = await project({ 'inner/placeholder': { name: 'x' } })
-    const outside = await project({ app: { name: 'app' } })
-    await writeFile(join(outside, 'app/pikku.config.json'), '{}')
-    await symlink(join(outside, 'app'), join(root, 'inner/linked'))
-    const inner = join(root, 'inner')
-    for (const entry of [
-      relative(inner, join(outside, 'app')),
-      join(outside, 'app'),
-      'linked',
-    ]) {
-      await assert.rejects(
-        resolveBasePackage(file, inner, entry),
-        /outside the project root \(rootDir, .*must live inside rootDir/,
-        entry
-      )
-    }
-  })
-})
-
-describe('resolveBasePackage root of trust', () => {
-  const file = 'pikku.config.json'
-
-  test('a rootDir that is the filesystem root is refused', async () => {
-    await assert.rejects(
-      resolveBasePackage(file, '/', 'tmp'),
-      /rootDir in pikku.config.json is the filesystem root/
+      load(root),
+      /packages\/loose\/pikku\.config\.json is a workspace package with no role marker/
     )
   })
 
-  test('a rootDir of `..` holds a base below it and refuses one beside it', async () => {
-    const root = await project({
-      'proj/placeholder': { name: 'x' },
-      'sibling/app': { name: 'app' },
+  test('a package marked both main and addon is an error', async () => {
+    const root = await workspace({
+      'packages/x': { config: { main: true, addon: true, namespace: 'x' } },
     })
-    await writeFile(join(root, 'sibling/app/pikku.config.json'), '{}')
-    await writeFile(join(root, 'sibling/app/package.json'), '{"name":"app"}')
-    const config = join(root, 'proj')
-    const up = resolve(config, '..')
-    assert.equal(
-      (await resolveBasePackage(file, up, 'sibling/app'))?.name,
-      'app'
+    await assert.rejects(load(root), /both "main" and "addon"/)
+  })
+
+  test('an addon needs a valid, unique namespace', async () => {
+    await assert.rejects(
+      load(await workspace({ 'packages/a': addon() })),
+      /is an addon with no namespace/
     )
     await assert.rejects(
-      resolveBasePackage(file, up, '../elsewhere'),
-      /outside the project root/
+      load(await workspace({ 'packages/a': addon('Bad Name') })),
+      /namespace "Bad Name".* is not valid/
     )
+    await assert.rejects(
+      load(
+        await workspace({
+          'packages/a': addon('same'),
+          'packages/b': addon('same'),
+        })
+      ),
+      /packages\/a and packages\/b both declare the namespace "same"/
+    )
+  })
+
+  test('a package.json without a name is an error', async () => {
+    const root = await workspace({ 'packages/a': { ...addon('a'), pkg: {} } })
+    await assert.rejects(load(root), /package\.json has no name/)
+  })
+
+  test('only workspace members count: node_modules, dot-directories, nested fixtures and negations are left out', async () => {
+    const root = await workspace(
+      {
+        'packages/main': main,
+        'packages/main/fixtures/inner': { config: {} },
+        'node_modules/dep': { config: {} },
+        'packages/.hidden': { config: {} },
+        'packages/skipped': { config: {} },
+        'other/outside': { config: {} },
+      },
+      ['packages/*', '!packages/skipped', 'node_modules/*']
+    )
+    const found = await load(root)
+    assert.equal(found.main?.entry, 'packages/main')
+    assert.deepEqual(found.addons, [])
+  })
+
+  test('the workspaces object form and ** patterns are read', async () => {
+    const root = await workspace(
+      { 'apps/deep/one': addon('one'), 'apps/two': main },
+      { packages: ['apps/**'] }
+    )
+    const found = await load(root)
+    assert.deepEqual(
+      found.addons.map((p) => p.entry),
+      ['apps/deep/one']
+    )
+    assert.equal(found.main?.entry, 'apps/two')
+  })
+
+  test('a marked config is a package, not a project root, and finds nothing', async () => {
+    const root = await workspace({ 'packages/a': addon('a') }, ['packages/*'], {
+      main: true,
+    })
+    assert.deepEqual(await load(root), { addons: [] })
+  })
+
+  test('a member that resolves outside the project is refused', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'pikku-ws-outside-'))
+    roots.push(outside)
+    await writeFile(join(outside, file), '{"main":true}')
+    await writeFile(join(outside, 'package.json'), '{"name":"out"}')
+    const root = await workspace({})
+    await mkdir(join(root, 'packages'), { recursive: true })
+    await symlink(outside, join(root, 'packages/out'))
+    await assert.rejects(load(root), /resolves outside the project root/)
+  })
+
+  test('findMainEntry is the marked package, and never throws', async () => {
+    const root = await workspace({
+      'packages/m': main,
+      'packages/l': { config: {} },
+    })
+    assert.equal(findMainEntry(root), 'packages/m')
+    assert.equal(findMainEntry('/nonexistent-dir-xyz'), undefined)
   })
 })
 
@@ -370,7 +330,7 @@ describe('checkAddonsWired', () => {
   const call = (name: string, pkg: string, path = '/p/packages/app/src/a.ts') =>
     new Map([[name, { package: pkg, file: path }]])
 
-  test('accepts an addon the base wires under its namespace', () => {
+  test('accepts an addon the main package wires under its namespace', () => {
     assert.deepEqual(
       checkAddonsWired(
         file,
@@ -391,7 +351,7 @@ describe('checkAddonsWired', () => {
           call('tols', '@x/tools'),
           '/p/packages/app'
         ),
-      /"@x\/tools" "tols".*"tools" \(addons in \/p\/pikku.config.json\)/
+      /"@x\/tools" "tols".*"tools" \(an addon in the workspace of \/p\/pikku.config.json\)/
     )
   })
 
@@ -453,18 +413,21 @@ describe('checkAddonsWired', () => {
       '/p/packages/app'
     )
     assert.equal(warnings.length, 1)
-    assert.match(warnings[0]!, /\/p\/pikku.config.json lists "packages\/tools"/)
+    assert.match(
+      warnings[0]!,
+      /workspace of \/p\/pikku.config.json has the addon "packages\/tools"/
+    )
     assert.match(warnings[0]!, /name: 'tools', package: '@x\/tools'/)
   })
 
-  test('only a call in the base source counts', () => {
+  test('only a call in the main package source counts', () => {
     const elsewhere = call('tools', '@x/tools', '/p/src/other.ts')
     assert.equal(
       checkAddonsWired(file, [tools], elsewhere, '/p/packages/app').length,
       1
     )
     assert.deepEqual(checkAddonsWired(file, [tools], elsewhere, '/p'), [])
-    // A misnamed call outside the base is not read either.
+    // A misnamed call outside the main package is not read either.
     assert.equal(
       checkAddonsWired(
         file,
@@ -478,12 +441,19 @@ describe('checkAddonsWired', () => {
 })
 
 describe('project files', () => {
-  test('a project inspects its own directory, plus its base', () => {
-    assert.deepEqual(projectSourceDirs({}), ['.'])
-    assert.deepEqual(projectSourceDirs({ base: 'packages/a' }), [
-      '.',
-      'packages/a',
-    ])
+  test('a project inspects its own directory, plus its main package', async () => {
+    const bare = await project({})
+    assert.deepEqual(projectSourceDirs(bare), ['.'])
+    const root = await project({})
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ workspaces: ['packages/*'] })
+    )
+    await mkdir(join(root, 'packages/a'), { recursive: true })
+    await writeFile(join(root, 'packages/a/pikku.config.json'), '{"main":true}')
+    assert.deepEqual(projectSourceDirs(root), ['.', 'packages/a'])
+    assert.equal(defaultScaffoldDir(root), 'packages/a/src/scaffold')
+    assert.equal(defaultScaffoldDir(bare), 'src/scaffold')
   })
 
   test('the walk skips dependencies, output, dot-directories and nested projects', async () => {

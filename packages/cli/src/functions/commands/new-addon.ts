@@ -1243,7 +1243,7 @@ function findAppProject(
   if (!root || config.addon || !existsSync(join(root, 'pikku.config.json'))) {
     return undefined
   }
-  return { root, srcDir: join(config.basePackage?.dir ?? root, 'src') }
+  return { root, srcDir: join(config.mainPackage?.dir ?? root, 'src') }
 }
 
 export type NewAddonInput = {

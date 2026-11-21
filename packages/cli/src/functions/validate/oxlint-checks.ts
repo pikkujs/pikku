@@ -566,7 +566,7 @@ export const loadProject = async (root: string): Promise<Project | null> => {
     : root
   const abs = (p: string) => (isAbsolute(p) ? p : resolve(configRoot, p))
   // Linting a directory covers the directories inside it.
-  const allDirs = projectSourceDirs(config).map(abs)
+  const allDirs = projectSourceDirs(configRoot).map(abs)
   const srcDirs = allDirs.filter(
     (d) =>
       !allDirs.some(
@@ -576,7 +576,7 @@ export const loadProject = async (root: string): Promise<Project | null> => {
   )
   const scaffold = (config.scaffold ?? {}) as Record<string, unknown>
   const scaffoldDir = abs(
-    stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir(config)
+    stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir(configRoot)
   )
 
   // Every package.json that could carry the dependency or the lint script: the

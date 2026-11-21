@@ -316,13 +316,15 @@ describe('orphans', () => {
     )
   })
 
-  test('with a base, the platform code is src/scaffold of the base package', async () => {
+  test('with a main package, the platform code is src/scaffold of that package', async () => {
     const root = await project({
       '.pikku/function/pikku-functions-meta.gen.json': {
         agentCaller: {},
         checkout: {},
       },
-      'pikku.config.json': { base: 'packages/app' },
+      'package.json': { workspaces: ['packages/*'] },
+      'packages/app/pikku.config.json': { main: true },
+      'pikku.config.json': {},
       '.pikku/function/pikku-functions-meta-verbose.gen.json': {
         agentCaller: {
           sourceFile: `${'ROOT'}/packages/app/src/scaffold/agent/agent.gen.ts`,
@@ -347,13 +349,15 @@ describe('orphans', () => {
     )
   })
 
-  test('with a rootDir, the base and the scaffold dir resolve against it', async () => {
+  test('with a rootDir, the main package and the scaffold dir resolve against it', async () => {
     const root = await project({
       '.pikku/function/pikku-functions-meta.gen.json': {
         agentCaller: {},
         checkout: {},
       },
-      'pikku.config.json': { rootDir: 'code', base: 'packages/app' },
+      'code/package.json': { workspaces: ['packages/*'] },
+      'code/packages/app/pikku.config.json': { main: true },
+      'pikku.config.json': { rootDir: 'code' },
       '.pikku/function/pikku-functions-meta-verbose.gen.json': {
         agentCaller: {
           sourceFile: `${'ROOT'}/code/packages/app/src/scaffold/agent/agent.gen.ts`,

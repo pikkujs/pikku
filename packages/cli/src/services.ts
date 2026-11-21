@@ -495,7 +495,7 @@ export const createSingletonServices: CreateSingletonServices<
       unfilteredState = await inspectWithGo(logger, wiringFiles, {
         setupOnly,
         rootDir,
-        baseDir: config.basePackage?.dir,
+        baseDir: config.mainPackage?.dir,
         isAddon: !!config.addon,
         tsconfig: config.tsconfig,
         types: {
@@ -560,7 +560,7 @@ export const createSingletonServices: CreateSingletonServices<
           config.configPath,
           config.addonPackages,
           unfilteredState.rpc.wireAddonDeclarations,
-          config.basePackage?.dir ?? rootDir,
+          config.mainPackage?.dir ?? rootDir,
           (declaration) => {
             try {
               const manifest = createAddonResolver(

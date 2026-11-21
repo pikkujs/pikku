@@ -43,6 +43,25 @@ describe('getPikkuCLIConfig', () => {
     return root
   }
 
+  const writeWorkspace = async (root: string, members: string[]) => {
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ name: 'root', workspaces: members })
+    )
+  }
+
+  const writeMain = async (root: string, dir: string) => {
+    await mkdir(join(root, dir), { recursive: true })
+    await writeFile(
+      join(root, dir, 'pikku.config.json'),
+      JSON.stringify({ main: true })
+    )
+    await writeFile(
+      join(root, dir, 'package.json'),
+      JSON.stringify({ name: dir.replace('packages/', '') })
+    )
+  }
+
   const writePackage = async (
     root: string,
     dir: string,
@@ -62,19 +81,12 @@ describe('getPikkuCLIConfig', () => {
     )
   }
 
-  test('addons are ordered by their dependencies, and a base is inspected in place', async () => {
-    const root = await writeConfig({
-      addons: ['packages/app', 'packages/lib'],
-      base: 'packages/main',
-    })
+  test('addons are ordered by their dependencies, and the main package is inspected in place', async () => {
+    const root = await writeConfig()
+    await writeWorkspace(root, ['packages/*'])
     await writePackage(root, 'packages/app', { lib: '1' })
     await writePackage(root, 'packages/lib')
-    await mkdir(join(root, 'packages/main'), { recursive: true })
-    await writeFile(join(root, 'packages/main/pikku.config.json'), '{}')
-    await writeFile(
-      join(root, 'packages/main/package.json'),
-      JSON.stringify({ name: 'main' })
-    )
+    await writeMain(root, 'packages/main')
 
     const config = await getPikkuCLIConfig(
       silentLogger,
@@ -86,39 +98,54 @@ describe('getPikkuCLIConfig', () => {
       config.addonPackages.map((p) => p.entry),
       ['packages/lib', 'packages/app']
     )
-    assert.equal(config.basePackage?.entry, 'packages/main')
+    assert.equal(config.mainPackage?.entry, 'packages/main')
     assert.deepEqual(config.sourceDirs, ['.', 'packages/main'])
   })
 
-  test('a base outside the project root is refused', async () => {
-    const outside = await mkdtemp(join(tmpdir(), 'pikku-config-outside-'))
-    tempDirs.push(outside)
-    await writeFile(join(outside, 'pikku.config.json'), '{}')
-    await writeFile(join(outside, 'package.json'), '{"name":"app"}')
+  test('two main packages are an error naming both', async () => {
     const root = await writeConfig()
-    await writeFile(
-      join(root, 'pikku.config.json'),
-      JSON.stringify({
-        tsconfig: 'tsconfig.json',
-        backends: { api: { filter: {} } },
-        base: relative(root, outside),
-      })
-    )
-
+    await writeWorkspace(root, ['packages/*'])
+    await writeMain(root, 'packages/one')
+    await writeMain(root, 'packages/two')
     await assert.rejects(
       getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /base in .* is "\.\.\/.*", which is outside the project root/
+      /packages\/one and packages\/two are both marked "main": true/
     )
   })
 
-  test('the scaffold lands in the base package, where its dependencies resolve', async () => {
-    const root = await writeConfig({ base: 'packages/main' })
-    await mkdir(join(root, 'packages/main'), { recursive: true })
-    await writeFile(join(root, 'packages/main/pikku.config.json'), '{}')
+  test('a workspace package config with no marker is an error', async () => {
+    const root = await writeConfig()
+    await writeWorkspace(root, ['packages/*'])
+    await mkdir(join(root, 'packages/loose'), { recursive: true })
+    await writeFile(join(root, 'packages/loose/pikku.config.json'), '{}')
     await writeFile(
-      join(root, 'packages/main/package.json'),
-      JSON.stringify({ name: 'main' })
+      join(root, 'packages/loose/package.json'),
+      '{"name":"loose"}'
     )
+    await assert.rejects(
+      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+      /packages\/loose\/pikku\.config\.json is a workspace package with no role marker/
+    )
+  })
+
+  test('base and addons are refused with a pointer to the markers', async () => {
+    for (const key of ['base', 'addons']) {
+      const root = await writeConfig({
+        [key]: key === 'base' ? 'packages/main' : ['packages/a'],
+      })
+      await assert.rejects(
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+        new RegExp(
+          `${key} .*no longer a key.*"main": true|${key} .*no longer a key.*"addon"`
+        )
+      )
+    }
+  })
+
+  test('the scaffold lands in the main package, where its dependencies resolve', async () => {
+    const root = await writeConfig()
+    await writeWorkspace(root, ['packages/*'])
+    await writeMain(root, 'packages/main')
     const config = await getPikkuCLIConfig(
       silentLogger,
       join(root, 'pikku.config.json'),
@@ -155,25 +182,15 @@ describe('getPikkuCLIConfig', () => {
     }
   })
 
-  test('a config without base is its own base', async () => {
+  test('a project with no marked package is its own main', async () => {
     const root = await writeConfig()
     const config = await getPikkuCLIConfig(
       silentLogger,
       join(root, 'pikku.config.json'),
       []
     )
-    assert.equal(config.basePackage, undefined)
+    assert.equal(config.mainPackage, undefined)
     assert.deepEqual(config.sourceDirs, ['.'])
-  })
-
-  test('addons naming a directory with no pikku.config.json is an error', async () => {
-    const root = await writeConfig({ addons: ['packages/none'] })
-    await mkdir(join(root, 'packages/none'), { recursive: true })
-
-    await assert.rejects(
-      getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
-      /"packages\/none", which has no pikku.config.json/
-    )
   })
 
   test('srcDirectories is accepted and reads nothing', async () => {
@@ -558,13 +575,6 @@ describe('getPikkuCLIConfig', () => {
 
     test('a CLI flag leaked into the config is named as one', async () => {
       await rejects({ security: true }, /`--security` flag/)
-    })
-
-    test('addons is a list of directories', async () => {
-      await rejects(
-        { addons: {} },
-        /addons in .* must be a list of directories/
-      )
     })
 
     test('an addon is held to the same keys', async () => {

@@ -39,7 +39,6 @@ async function setFunctionsDeps(root: string, deps: Record<string, string>) {
 
 async function setLintRule(root: string, severity: string) {
   await writeJson(join(root, 'pikku.config.json'), {
-    base: 'packages/functions',
     outDir: 'packages/functions/.pikku',
     dev: { db: { file: '.pikku-runtime/dev.db' } },
     clientFiles: {
@@ -54,7 +53,6 @@ async function setLintRule(root: string, severity: string) {
 
 async function makeValidWorkspace(root: string) {
   await writeJson(join(root, 'pikku.config.json'), {
-    base: 'packages/functions',
     outDir: 'packages/functions/.pikku',
     dev: {
       db: {
@@ -108,6 +106,9 @@ async function makeValidWorkspace(root: string) {
   })
   await mkdir(join(root, 'packages', 'functions-sdk', 'src', 'pikku'), {
     recursive: true,
+  })
+  await writeJson(join(root, 'packages', 'functions', 'pikku.config.json'), {
+    main: true,
   })
   await writeJson(join(root, 'packages', 'functions', 'package.json'), {
     type: 'module',
@@ -213,7 +214,6 @@ describe('pikku validate', () => {
       await makeValidWorkspace(tmp)
       // Drop scaffold.rpc from the otherwise-valid config.
       await writeJson(join(tmp, 'pikku.config.json'), {
-        base: 'packages/functions',
         outDir: 'packages/functions/.pikku',
         clientFiles: {
           rpcMapDeclarationFile:
@@ -424,7 +424,6 @@ describe('pikku validate', () => {
     try {
       await makeValidWorkspace(tmp)
       await writeJson(join(tmp, 'pikku.config.json'), {
-        base: 'packages/functions',
         outDir: 'packages/functions/.pikku',
         clientFiles: {
           rpcMapDeclarationFile:

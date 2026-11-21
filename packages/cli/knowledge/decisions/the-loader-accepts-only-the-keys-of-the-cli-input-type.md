@@ -20,7 +20,7 @@ type and to that shape together.
 - `entrypoint`, `showcase`, `fabric` and `node` were read by nothing and are
   refused. `content` is kept: its shape and rules are in
   [content buckets are declared at the root and typed per backend](content-buckets-are-declared-at-the-root-and-typed-per-backend.md).
-- `addons` is not a top-level collection yet; `addon` and `registry` stay.
+- `base` and `addons` are refused: packages are found by the markers in their own configs, see [a package is found by its role marker in the workspace](a-package-is-found-by-its-role-marker-in-the-workspace.md). `addon` and `registry` stay.
 
 ## environments
 

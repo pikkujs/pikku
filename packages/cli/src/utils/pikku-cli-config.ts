@@ -21,8 +21,7 @@ import { setScaffoldWriteGuard } from './file-writer.js'
 import {
   orderAddonPackages,
   projectSourceDirs,
-  resolveAddonPackages,
-  resolveBasePackage,
+  resolveWorkspacePackages,
   defaultScaffoldDir,
 } from './project-packages.js'
 import { PikkuCLIConfigError } from './pikku-cli-config-error.js'
@@ -513,7 +512,7 @@ const assertBackendsDeclared = (
   assertContentConfig(config, file)
 
   // An addon is a package other projects wire, not a server; it builds no backend.
-  // A package a root project names in base or addons is run for that root,
+  // A main or addon package of a root project is run for that root,
   // which builds the backends from what they generate.
   if (config.addon || process.env.PIKKU_PACKAGE_PASS === '1') {
     return
@@ -589,19 +588,13 @@ const _getPikkuCLIConfig = async (
     const rootDir = config.rootDir
       ? resolve(configDir, config.rootDir)
       : configDir
-    const addonPackages = orderAddonPackages(
-      await resolveAddonPackages(configFile, rootDir, config.addons),
-      configFile
-    )
-    const basePackage = await resolveBasePackage(
-      configFile,
-      rootDir,
-      config.base
-    )
+    const workspace = await resolveWorkspacePackages(configFile, rootDir)
+    const addonPackages = orderAddonPackages(workspace.addons, configFile)
+    const mainPackage = workspace.main
     const result: PikkuCLIConfig = {
       ...(config as unknown as PikkuCLIConfig),
       addonPackages,
-      basePackage,
+      mainPackage,
       environments: normalizeEnvironments(
         config,
         `${configDir}/pikku.config.json`
@@ -611,7 +604,7 @@ const _getPikkuCLIConfig = async (
       configPath: configFile,
       packageMappings: config.packageMappings || {},
       rootDir,
-      sourceDirs: projectSourceDirs(config),
+      sourceDirs: projectSourceDirs(rootDir),
       registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
       ignoreFiles: config.ignoreFiles ?? [
         '**/*.test.ts',
@@ -867,8 +860,9 @@ const _getPikkuCLIConfig = async (
 
     // Scaffold directory for auto-generated wiring files. A project inspects
     // its own directory, so the scaffold lands in it, under `src/scaffold`; with
-    // a base it lands in the base package, where the base's dependencies resolve.
-    const scaffoldDir = result.scaffold?.pikkuDir ?? defaultScaffoldDir(config)
+    // a main package it lands in that package, where its dependencies resolve.
+    const scaffoldDir =
+      result.scaffold?.pikkuDir ?? defaultScaffoldDir(result.rootDir)
     const resolvedScaffoldDir = isAbsolute(scaffoldDir)
       ? scaffoldDir
       : join(result.rootDir, scaffoldDir)

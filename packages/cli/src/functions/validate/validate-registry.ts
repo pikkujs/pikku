@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import { runVerify } from '@pikku/code-edit/verify'
@@ -91,6 +91,21 @@ export type ValidateOptions = {
 
 /** A hand-written `types/application-types.d.ts` beside package.json. */
 const ADDON_MARKER = join('types', 'application-types.d.ts')
+
+/**
+ * A directory with its own pikku.config.json that is a project: not an addon,
+ * and not the `main` package of a project, which is validated through the
+ * project root that holds it.
+ */
+const isAppProject = (dir: string): boolean => {
+  const config = join(dir, 'pikku.config.json')
+  if (!existsSync(config) || existsSync(join(dir, ADDON_MARKER))) return false
+  try {
+    return JSON.parse(readFileSync(config, 'utf8')).main !== true
+  } catch {
+    return true
+  }
+}
 
 const SKIP_DIRS = new Set([
   'node_modules',
@@ -185,9 +200,7 @@ export const CHECKS: ValidateCheck[] = [
     // An addon also carries a pikku.config.json, and running the app-shaped
     // checks against one reports every app convention it has no reason to
     // follow — starting with a packages/functions/ it will never have.
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+    applies: async ({ dir }) => isAppProject(dir),
     run: async ({ dir }) => (await runSharedProjectChecks(dir)).findings,
   },
   {
@@ -195,18 +208,14 @@ export const CHECKS: ValidateCheck[] = [
     subject: 'project layout',
     // Every app project: one pikku.config.json at the top level, db/ and
     // emails/ beside it, and #pikku/* resolving to <config dir>/.pikku.
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+    applies: async ({ dir }) => isAppProject(dir),
     run: async ({ dir }, options) =>
       runProjectLayoutChecks(dir, { strict: options.strict }),
   },
   {
     id: 'project-checks',
     subject: 'deploy-readiness check',
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+    applies: async ({ dir }) => isAppProject(dir),
     run: async ({ dir }, options) => {
       if (options.skipDeployChecks) return []
       const { findings, migrationsDir } = await runProjectChecks(dir, {
@@ -239,9 +248,7 @@ export const CHECKS: ValidateCheck[] = [
     id: 'scaffold-duplicates',
     subject: 'scaffolded output elsewhere in the project',
     // An addon has no scaffold to duplicate.
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+    applies: async ({ dir }) => isAppProject(dir),
     run: async ({ dir }) => runScaffoldDuplicateChecks(dir),
   },
   {
@@ -249,18 +256,14 @@ export const CHECKS: ValidateCheck[] = [
     subject: 'oxlint setup',
     // App only. oxlint is how a forgotten `await` on an async helper (a webhook
     // signature check, `if (!verify(sig))`) is caught, and tsc does not.
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+    applies: async ({ dir }) => isAppProject(dir),
     run: async ({ dir }) => runOxlintSetupChecks(dir),
   },
   {
     id: 'oxlint-run',
     subject: 'oxlint run',
     phase: 'last',
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)),
+    applies: async ({ dir }) => isAppProject(dir),
     run: async ({ dir }, options) =>
       options.skipTypecheck ? [] : runOxlintRun(dir),
   },
@@ -269,10 +272,7 @@ export const CHECKS: ValidateCheck[] = [
     subject: 'mocks and stub hooks',
     // Only where there is a .mocks/ directory or a stub hook call. A project
     // without either has no mocks to check and sees no change.
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)) &&
-      (await usesMocks(dir)),
+    applies: async ({ dir }) => isAppProject(dir) && (await usesMocks(dir)),
     run: async ({ dir }) => runMocksChecks(dir),
   },
   {
@@ -290,10 +290,7 @@ export const CHECKS: ValidateCheck[] = [
   {
     id: 'placeholder-brand',
     subject: 'template names left in the brand',
-    applies: async ({ dir }) =>
-      existsSync(join(dir, 'pikku.config.json')) &&
-      !existsSync(join(dir, ADDON_MARKER)) &&
-      hasPlaceholderSurface(dir),
+    applies: async ({ dir }) => isAppProject(dir) && hasPlaceholderSurface(dir),
     run: async ({ dir }) => runPlaceholderBrandChecks(dir),
   },
   {

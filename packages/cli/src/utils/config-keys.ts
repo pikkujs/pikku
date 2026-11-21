@@ -62,8 +62,7 @@ const SHAPE: Shape = obj({
   rootDir: 'any',
   runtimeDir: 'any',
   content: obj({ contentPath: 'any', sizeLimit: 'any', buckets: 'any' }),
-  addons: 'any',
-  base: 'any',
+  main: 'any',
   // Read by the published CLI that bootstraps this repo's own build; the
   // loader accepts the key and reads nothing from it.
   srcDirectories: 'any',
@@ -213,6 +212,9 @@ const MOVED_TOP_LEVEL: Record<
   string,
   string | ((value: unknown, file: string) => string)
 > = {
+  base: 'is no longer a key: the package that owns the wirings and services is marked `"main": true` in its own pikku.config.json, and the root finds it in the root package.json `workspaces`. Delete it and add the marker',
+  addons:
+    'is no longer a key: an addon marks itself with an `"addon"` section and a `"namespace"` in its own pikku.config.json, and the root finds it in the root package.json `workspaces`. Delete it and add them to each addon',
   outDir:
     'is no longer a config key: generated files always go to `.pikku/` beside pikku.config.json. Delete it (`--outDir` stays as an internal flag for per-unit codegen)',
   dev: (value) => {
@@ -256,7 +258,7 @@ const MOVED_TOP_LEVEL: Record<
   configDir: 'is derived by the CLI; delete it',
   sourceDirs: 'is derived by the CLI; delete it',
   addonPackages: 'is derived by the CLI; delete it',
-  basePackage: 'is derived by the CLI; delete it',
+  mainPackage: 'is derived by the CLI; delete it',
   clientAuthFile: UNREAD,
 }
 

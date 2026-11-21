@@ -45,7 +45,7 @@ const repo = async (config: string) => {
 
 describe('projectId in pikku.config.json', () => {
   test('reads it, and returns null without one', async () => {
-    const dir = await repo('{\n  "base": "src"\n}\n')
+    const dir = await repo('{\n  "tsconfig": "./tsconfig.json"\n}\n')
     assert.equal(await readConfigProjectId(dir), null)
     await writeConfigProjectId('p1', dir)
     assert.equal((await readConfigProjectId(dir))?.projectId, 'p1')
@@ -53,11 +53,11 @@ describe('projectId in pikku.config.json', () => {
   })
 
   test('writing adds one line and keeps the formatting', async () => {
-    const dir = await repo('{\n    "base": "src"\n}\n')
+    const dir = await repo('{\n    "tsconfig": "./tsconfig.json"\n}\n')
     await writeConfigProjectId('p1', dir)
     assert.equal(
       await readFile(join(dir, 'pikku.config.json'), 'utf8'),
-      '{\n    "cloud": { "projectId": "p1" },\n    "base": "src"\n}\n'
+      '{\n    "cloud": { "projectId": "p1" },\n    "tsconfig": "./tsconfig.json"\n}\n'
     )
     await writeConfigProjectId('p2', dir)
     assert.equal((await readConfigProjectId(dir))?.projectId, 'p2')
@@ -65,7 +65,7 @@ describe('projectId in pikku.config.json', () => {
   })
 
   test('an id-only change does not dirty the tree, any other does', async () => {
-    const dir = await repo('{\n  "base": "src"\n}\n')
+    const dir = await repo('{\n  "tsconfig": "./tsconfig.json"\n}\n')
     await writeConfigProjectId('p1', dir)
     assert.equal(await isTreeCleanBesidesProjectId(dir), true)
     await writeFile(join(dir, 'other.txt'), 'x')
@@ -73,7 +73,7 @@ describe('projectId in pikku.config.json', () => {
     await rm(join(dir, 'other.txt'))
     await writeFile(
       join(dir, 'pikku.config.json'),
-      '{\n  "cloud": { "projectId": "p1" },\n  "base": "lib"\n}\n'
+      '{\n  "cloud": { "projectId": "p1" },\n  "tsconfig": "./tsconfig.lib.json"\n}\n'
     )
     assert.equal(await isTreeCleanBesidesProjectId(dir), false)
     await rm(dir, { recursive: true, force: true })

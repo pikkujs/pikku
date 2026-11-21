@@ -12,11 +12,25 @@ after(() => {
 })
 
 /** A project with a frontend in `apps/app`, optionally with the Better Auth wiring generated. */
-const project = (config: object, options: { betterAuth: boolean }) => {
+const project = (
+  config: object,
+  options: { betterAuth: boolean; main?: string }
+) => {
   const root = mkdtempSync(join(tmpdir(), 'pikku-vite-'))
   roots.push(root)
   writeFileSync(join(root, 'pikku.config.json'), JSON.stringify(config))
   mkdirSync(join(root, 'apps/app'), { recursive: true })
+  if (options.main) {
+    mkdirSync(join(root, options.main), { recursive: true })
+    writeFileSync(
+      join(root, 'package.json'),
+      JSON.stringify({ workspaces: ['packages/*'] })
+    )
+    writeFileSync(
+      join(root, options.main, 'pikku.config.json'),
+      JSON.stringify({ main: true })
+    )
+  }
   if (options.betterAuth) {
     mkdirSync(join(root, 'packages/functions/src/scaffold/auth'), {
       recursive: true,
@@ -62,14 +76,13 @@ describe('pikkuVite', () => {
     assert.equal(readPikkuViteProject(dir)?.betterAuth, true)
   })
 
-  test('finds the Better Auth wiring in the scaffold of the base package', async () => {
+  test('finds the Better Auth wiring in the scaffold of the main package', async () => {
     const dir = project(
       {
         rootDir: '.',
-        base: 'packages/functions',
         clientFiles: config.clientFiles,
       },
-      { betterAuth: true }
+      { betterAuth: true, main: 'packages/functions' }
     )
     assert.equal(readPikkuViteProject(dir)?.betterAuth, true)
   })
