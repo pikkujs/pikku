@@ -188,21 +188,17 @@ describe.skipIf(!haveCli)('ChangesRunner main checkout', () => {
 
   test('the startup self-check refuses to start and lists every problem at once', async () => {
     const repo = await scratchRepo(['One'])
-    git(repo, 'rm', '-q', '.gitattributes')
-    git(repo, 'commit', '-q', '-m', 'no lfs rule')
     await writeFile(join(repo, 'stray.txt'), 'left here\n')
     const real = processCommands(CLI, 'node')
     let cliCalls = 0
     const commands: RunnerCommands = {
       ...real,
       pikku: async (cwd, args, env) => (cliCalls++, real.pikku(cwd, args, env)),
-      // No identity and no git-lfs on this machine, as far as the runner can tell.
+      // No identity on this machine, as far as the runner can tell.
       git: async (cwd, args) =>
         args[0] === 'config' && args[1] === 'user.email'
           ? { code: 1, output: '' }
-          : args[0] === 'lfs'
-            ? { code: 1, output: 'git: lfs is not a git command' }
-            : real.git(cwd, args),
+          : real.git(cwd, args),
     }
     const fake = fakeLauncher()
     const h = startRunner(
@@ -211,7 +207,6 @@ describe.skipIf(!haveCli)('ChangesRunner main checkout', () => {
       {
         selfCheck: true,
         localCli: { bin: join(repo, 'no-such-cli.js'), checkout: repo },
-        browser: join(repo, '.gitignore'),
         extraChecks: async () => ['A model login is missing.'],
       },
       { commands, calls: [] }
@@ -227,10 +222,6 @@ describe.skipIf(!haveCli)('ChangesRunner main checkout', () => {
     )
     expect(reason).toContain('- The project has no git identity')
     expect(reason).toMatch(
-      /- The headless browser .*\.gitignore is not an executable file/
-    )
-    expect(reason).toContain('- git-lfs is not installed')
-    expect(reason).toMatch(
       /- The main checkout has uncommitted files .*stray\.txt/
     )
     expect(reason).toContain('- A model login is missing.')
@@ -239,22 +230,21 @@ describe.skipIf(!haveCli)('ChangesRunner main checkout', () => {
     expect(fake.agents.length).toBe(0)
   }, 60_000)
 
-  test('the startup self-check adds the LFS rule for artifact images and commits it, then the run starts', async () => {
+  test('a host check can report what it fixed, and the run starts', async () => {
     const repo = await scratchRepo(['One'])
-    git(repo, 'rm', '-q', '.gitattributes')
-    git(repo, 'commit', '-q', '-m', 'no lfs rule')
     const fake = fakeLauncher()
-    const h = startRunner(repo, fake, { selfCheck: true, browser: false })
+    const h = startRunner(repo, fake, {
+      selfCheck: true,
+      extraChecks: async () => ({
+        problems: [],
+        done: ['A repository setting was missing: it was added.'],
+      }),
+    })
     await until('#1 to start', () => fake.agents.length === 1, 60_000)
-    expect(readFileSync(join(repo, '.gitattributes'), 'utf8')).toMatch(
-      /artifacts\/\*\*\/\*\.png filter=lfs/
-    )
-    expect(git(repo, 'log', '-1', '--format=%s').trim()).toBe(
-      'Keep artifact images in LFS'
-    )
-    expect(git(repo, 'status', '--porcelain')).toBe('')
     expect(
-      h.texts('self-check').some((t) => /were not tracked in LFS/.test(t))
+      h
+        .texts('self-check')
+        .some((t) => /A repository setting was missing/.test(t))
     ).toBe(true)
     h.runner.stop()
     await h.done

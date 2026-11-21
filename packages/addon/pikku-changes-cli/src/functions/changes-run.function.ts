@@ -37,7 +37,7 @@ export const eventLine = (event: RunnerEvent): string =>
 
 /**
  * The local CLI build worktrees are relinked to: PIKKU_CLI_BIN or this CLI,
- * when it was built in a pikku checkout (LAB_PIKKU_DIR, or the folder above
+ * when it was built in a pikku checkout (PIKKU_CHANGES_RUN_PIKKU_DIR, or the folder above
  * packages/cli). A published CLI has no checkout, and worktrees get a plain
  * `bun install`.
  */
@@ -45,7 +45,7 @@ const localCliOf = (
   env: NodeJS.ProcessEnv
 ): { bin: string; local?: LocalCli } => {
   const bin = env.PIKKU_CLI_BIN || process.argv[1]!
-  const checkout = env.LAB_PIKKU_DIR || pikkuCheckoutOf(bin)
+  const checkout = env.PIKKU_CHANGES_RUN_PIKKU_DIR || pikkuCheckoutOf(bin)
   const list = (value?: string) => value?.split(/[\s,]+/).filter(Boolean)
   return {
     bin,
@@ -53,8 +53,8 @@ const localCliOf = (
       ? {
           bin,
           checkout,
-          relinkExtra: list(env.PIKKU_BUILDER_RELINK_EXTRA),
-          dedupe: list(env.LAB_PIKKU_DEDUPE),
+          relinkExtra: list(env.PIKKU_CHANGES_RUN_RELINK_EXTRA),
+          dedupe: list(env.PIKKU_CHANGES_RUN_DEDUPE),
         }
       : undefined,
   }
@@ -65,8 +65,8 @@ const localCliOf = (
  * in its own changeset worktree, until nothing planned is left or the limit
  * is hit. The agent is a shell command: it gets the prompt on stdin and its
  * change in PIKKU_CHANGE_ID, PIKKU_CHANGESET_GROUP and PIKKU_CHANGESET_WORKTREE.
- * PIKKU_BUILDER_WORKTREE_SETUP and PIKKU_BUILDER_WORKTREE_CHECK replace the
- * setup and check of a checkout ('' is none); PIKKU_BUILDER_SELF_CHECK=0 skips
+ * PIKKU_CHANGES_RUN_SETUP and PIKKU_CHANGES_RUN_CHECK replace the
+ * setup and check of a checkout ('' is none); PIKKU_CHANGES_RUN_SELF_CHECK=0 skips
  * the startup check.
  */
 export const ChangesRun = pikkuSessionlessFunc({
@@ -101,10 +101,9 @@ export const ChangesRun = pikkuSessionlessFunc({
         stallMinutes: input.stallMinutes,
         maxMinutes: input.maxMinutes,
         localCli: local,
-        setupCommand: env.PIKKU_BUILDER_WORKTREE_SETUP,
-        checkCommand: env.PIKKU_BUILDER_WORKTREE_CHECK,
-        selfCheck: env.PIKKU_BUILDER_SELF_CHECK !== '0',
-        browser: env.PLAYWRIGHT_CHROMIUM_PATH || env.PIKKU_CHROMIUM,
+        setupCommand: env.PIKKU_CHANGES_RUN_SETUP,
+        checkCommand: env.PIKKU_CHANGES_RUN_CHECK,
+        selfCheck: env.PIKKU_CHANGES_RUN_SELF_CHECK !== '0',
         shimDir: join(state, 'bin'),
       }
     )

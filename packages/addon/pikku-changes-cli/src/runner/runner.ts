@@ -203,7 +203,6 @@ export class ChangesRunner {
         commands: this.deps.commands,
         cwd: this.options.cwd,
         localCli: this.options.localCli,
-        browser: this.options.browser,
         strayIgnore: this.options.strayIgnore,
         extraChecks: this.options.extraChecks,
       }).catch((error) => ({

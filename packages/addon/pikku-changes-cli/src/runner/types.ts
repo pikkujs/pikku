@@ -163,10 +163,8 @@ export interface RunnerOptions {
   checkCommand?: string
   /** Startup self-check before the first fill (default true). */
   selfCheck?: boolean
-  /** More startup problems the host checks (a model login, say); each string is one problem. */
-  extraChecks?: () => Promise<string[]>
-  /** The headless browser builders compare pages with; `false` when none is needed. */
-  browser?: string | false
+  /** More startup checks of the host (a model login, a browser, repository settings): each string is one problem, or problems and what was fixed. */
+  extraChecks?: () => Promise<string[] | { problems: string[]; done: string[] }>
   /** Uncommitted paths in the main checkout the self-check does not count as stray. */
   strayIgnore?: string[]
   /** Runs before a worktree is cut from the main checkout's HEAD (a host commits what it wrote there). */
