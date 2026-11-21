@@ -1,11 +1,11 @@
 /**
- * A root project with one addon and a base package that owns the wirings and services.
+ * A root project whose workspace holds an addon and a main package, found by their markers.
  *
- *   1. pikku all at the root runs pikku all in the addon, then in the base
- *   2. the root inspects the base's source in place: its http meta carries the base's routes
- *   3. the root's exposed SDK carries the base's exposed function as `ping` and the addon's as `tools:greet`
- *   4. the root bootstrap imports the base's wirings, never the base's own bootstrap
- *   5. the base's route runs, and reaches the addon through `tools:greet`
+ *   1. pikku all at the root runs pikku all in the addon, then in the main package
+ *   2. the root inspects the main package's source in place: its http meta carries its routes
+ *   3. the root's exposed SDK carries the main package's exposed function as `ping` and the addon's as `tools:greet`
+ *   4. the root bootstrap imports the main package's wirings, never its own bootstrap
+ *   5. the main package's route runs, and reaches the addon through `tools:greet`
  */
 import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
@@ -36,7 +36,7 @@ for (const pkg of ['tools', 'app']) {
     fail(`packages/${pkg} was not generated`)
   }
 }
-console.log('✓ the addon and the base were generated')
+console.log('✓ the addon and the main package were generated')
 
 const http = JSON.parse(
   readFileSync(
@@ -47,7 +47,7 @@ const http = JSON.parse(
 for (const route of ['/ping', '/greet', '/stamp']) {
   if (!http.get?.[route]) fail(`the root http meta has no ${route}`)
 }
-console.log('✓ the root http meta carries the base routes')
+console.log('✓ the root http meta carries the main package routes')
 
 const manifest = JSON.parse(
   readFileSync(join(here, '.pikku/sdk/api/manifest.json'), 'utf8')
@@ -58,7 +58,7 @@ if (JSON.stringify(manifest.exposed) !== JSON.stringify(want)) {
     `exposed was ${JSON.stringify(manifest.exposed)}, wanted ${JSON.stringify(want)}`
   )
 }
-console.log('✓ the SDK carries the base function and the addon function')
+console.log('✓ the SDK carries the main package function and the addon function')
 
 const map = readFileSync(
   join(
@@ -70,28 +70,28 @@ const map = readFileSync(
 if (/'hidden'/.test(map)) fail('a function that is not exposed reached the SDK')
 console.log('✓ a function that is not exposed stays out')
 
-// The addon declares `farewell` exposed too, but the base's wireAddon lists only
-// `greet`: the allowlist is the base's, so the map is narrowed to it.
+// The addon declares `farewell` exposed too, but the main package's wireAddon lists only
+// `greet`: the allowlist is the main package's, so the map is narrowed to it.
 if (/'(tools:)?farewell'/.test(map)) {
-  fail("an addon function outside the base's expose list reached the SDK")
+  fail("an addon function outside the main package's expose list reached the SDK")
 }
 if (!/Pick<ToolsRPCMap, Extract<keyof ToolsRPCMap, 'greet'>>/.test(map)) {
-  fail("the SDK map does not narrow the addon to the base's expose list")
+  fail("the SDK map does not narrow the addon to the main package's expose list")
 }
-console.log("✓ the base's expose list narrows the addon's functions in the SDK")
+console.log("✓ the main package's expose list narrows the addon's functions in the SDK")
 
 const bootstrap = readFileSync(
   join(here, '.pikku/pikku-bootstrap.gen.ts'),
   'utf8'
 )
 if (/packages\/app\/\.pikku/.test(bootstrap)) {
-  fail("the root bootstrap imports the base's own bootstrap")
+  fail("the root bootstrap imports the main package's own bootstrap")
 }
 if (!bootstrap.includes('packages/app/src/app.wiring')) {
-  fail("the root bootstrap does not import the base's wirings")
+  fail("the root bootstrap does not import the main package's wirings")
 }
 console.log(
-  "✓ the root bootstrap imports the base's wirings, not its bootstrap"
+  "✓ the root bootstrap imports the main package's wirings, not its bootstrap"
 )
 
 const smoke = spawnSync(TSX, ['smoke.ts'], { cwd: here, encoding: 'utf8' })

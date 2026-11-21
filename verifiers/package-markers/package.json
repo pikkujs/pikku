@@ -1,8 +1,8 @@
 {
-  "name": "@pikku/verifiers-base-addons",
+  "name": "@pikku/verifiers-package-markers",
   "type": "module",
   "private": true,
-  "description": "A root project with one addon and a base package that owns the wirings and services",
+  "description": "A root project whose workspace holds a main package and an addon, found by their role markers",
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"
@@ -16,6 +16,9 @@
     "@pikku/cli": "workspace:*"
   },
   "scripts": {
-    "test": "node run.mjs && node pku368.mjs"
-  }
+    "test": "node run.mjs && node pku368.mjs && node markers.mjs"
+  },
+  "workspaces": [
+    "packages/*"
+  ]
 }

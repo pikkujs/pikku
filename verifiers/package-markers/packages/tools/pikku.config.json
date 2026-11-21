@@ -3,7 +3,7 @@
   "tsconfig": "./tsconfig.json",
   "addon": {
     "displayName": "Base Verifier Addon",
-    "description": "The addon listed in addons",
+    "description": "An addon of the workspace",
     "categories": [
       "Utility"
     ]

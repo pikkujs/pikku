@@ -22,16 +22,16 @@ const get = async (path: string) => {
 const ping = await get('/ping')
 if (ping.pong !== true)
   throw new Error(`/ping returned ${JSON.stringify(ping)}`)
-console.log('✓ a route of the base answers')
+console.log('✓ a route of the main package answers')
 
 const greeting = await get('/greet?name=Ada')
 if (greeting.message !== 'Hello, Ada!') {
   throw new Error(`/greet returned ${JSON.stringify(greeting)}`)
 }
-console.log('✓ the base reaches the addon through tools:greet')
+console.log('✓ the main package reaches the addon through tools:greet')
 
 const stamped = await get('/stamp?text=hi')
 if (stamped.text !== '[stamped] hi') {
   throw new Error(`/stamp returned ${JSON.stringify(stamped)}`)
 }
-console.log('✓ the addon reads a service the base provides')
+console.log('✓ the addon reads a service the main package provides')
