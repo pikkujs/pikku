@@ -11,6 +11,7 @@ export {
 } from './functions/changes-move.function.js'
 export { renderChangesNext } from './functions/changes-next.function.js'
 export { renderChangesRelease } from './functions/changes-release.function.js'
+export { renderChangesRun } from './functions/changes-run.function.js'
 export { renderChangesReply } from './functions/changes-reply.function.js'
 export { renderChangesShot } from './functions/changes-shot.function.js'
 export { renderChangesShow } from './functions/changes-show.function.js'
