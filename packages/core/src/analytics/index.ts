@@ -27,6 +27,10 @@ export {
   createAnalyticsSinks,
   fanOutAnalytics,
 } from './fan-out-analytics.js'
+export {
+  assertAnalyticsSinksDeclared,
+  getDeclaredAnalyticsEvents,
+} from './declared-analytics-events.js'
 export { cookieAnalyticsIdentity } from './cookie-analytics-identity.js'
 export type { CookieAnalyticsIdentityOptions } from './cookie-analytics-identity.js'
 export { mintCookie, randomDigits } from './mint-cookie.js'

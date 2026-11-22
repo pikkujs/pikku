@@ -608,9 +608,7 @@ export class LocalMetaService implements MetaService {
   async getAnalyticsMeta(): Promise<AnalyticsEventsMeta> {
     if (this.analyticsMetaCache) return this.analyticsMetaCache
 
-    const content = await this.readFile(
-      'analytics/pikku-analytics-meta.gen.json'
-    )
+    const content = await this.readMetaJson('analytics', 'pikku-analytics-meta')
     this.analyticsMetaCache = content ? JSON.parse(content) : {}
     return this.analyticsMetaCache!
   }

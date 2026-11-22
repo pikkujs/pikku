@@ -319,6 +319,7 @@
     "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
     "anonymousAnalyticsIdentity",
+    "assertAnalyticsSinksDeclared",
     "composeAnalyticsIdentity",
     "cookieAnalyticsIdentity",
     "createAnalyticsSinks",
@@ -326,6 +327,7 @@
     "defineAnalyticsEvents",
     "fanOutAnalytics",
     "flattenAnalyticsEvent",
+    "getDeclaredAnalyticsEvents",
     "mintCookie",
     "randomDigits"
   ],

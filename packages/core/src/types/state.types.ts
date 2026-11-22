@@ -233,6 +233,14 @@ export interface PikkuPackageState {
     /** At most one entry: the limit every HTTP route and MCP tool falls under. */
     global: RateLimitConfig[]
   }
+  analytics: {
+    /**
+     * The events the app declares with `defineAnalyticsEvents`, keyed by name,
+     * registered by the generated `analytics/pikku-analytics-meta.gen.ts` that
+     * the bootstrap imports. `null` until that module runs.
+     */
+    meta: Record<string, { name: string }> | null
+  }
   misc: {
     errors: Map<PikkuErrorConstructor, ErrorDetails>
     schemas: Map<string, any>
