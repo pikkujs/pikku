@@ -34,6 +34,11 @@ const ERROR_EDITORIAL: Partial<
       'A `pikkuPermission` never reads its data argument, so it answers from the session alone. A `pikkuPermission` is for a check on the input, such as loading the row the caller named. A `pikkuAuth` receives only the services and the session, and can be evaluated before the input exists, which is how an agent is offered only the tools its session may use. A warning, or a critical under `--strict-meta` and `pikku validate --strict --codegen`. A handler passed by reference, a rest or destructured argument, and a check that reads a wire other than `session` are not reported.',
     fix: 'Replace `pikkuPermission(async (services, _data, { session }) => ...)` with `pikkuAuth(async (services, session) => ...)`. If the check does need the input, read it. If a call with no session must go through, use `pikkuAuth({ skipWithoutSession: true, func: async (services, session) => ... })`: the check is skipped and passes, so the function decides what that caller may see.',
   },
+  [ErrorCode.INVALID_VALUE]: {
+    meaning:
+      'A value the build reads is not acceptable; the diagnostic names which. The usual case is a `wireAddon` `credentialOverrides` entry that renames an addon credential to a name the project never declares ("targets a credential that does not exist"), which is what `pikku import n8n` writes for a second account of one service (`slack-marketing`, `slack-support`).',
+    fix: "Declare that credential with `defineCredential` under the name the override points to (`pikku doc defineCredential`), or point the override at a credential the project already declares. `credentialOverrides` is optional: leave it out when the addon's own credential is enough (`pikku doc CredentialOverrides`).",
+  },
   [ErrorCode.UNUSED_FUNCTION]: {
     meaning: 'Nothing wires, exposes or calls this function.',
     fix: 'Use it, or mark it `disabled`. Disabling it can leave what it called unused in turn, so run the build again.',
