@@ -400,6 +400,7 @@ jobs:
             addon-workspace,
             addon-dependencies,
             analytics,
+            analytics-bundle,
             classification,
             column-security-lint,
             gateway,
