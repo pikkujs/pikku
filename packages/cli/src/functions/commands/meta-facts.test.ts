@@ -6,6 +6,9 @@ import { dirname, join } from 'node:path'
 import type { I18nApp } from '@pikku/code-edit/i18n'
 import {
   agentRunnerFacts,
+  agentRows,
+  agentSummaries,
+  layoutFacts,
   formatProjectFacts,
   frontendFacts,
   readSources,
@@ -214,6 +217,52 @@ describe('frontendFacts', () => {
   })
 })
 
+describe('layoutFacts', () => {
+  test('names the folders for an agent, its tools and its wiring', () => {
+    const line = layoutFacts('src')
+    assert.match(line, /src\/agents\/<name>\.agent\.ts/)
+    assert.match(line, /src\/functions\/<name>\.function\.ts/)
+    assert.match(line, /src\/wirings\/<name>\.wiring\.ts/)
+  })
+  test('rides on the agents line when there is none yet, and only then', () => {
+    assert.equal(
+      formatProjectFacts({ ...nothing, layout: 'here' })[0],
+      'agents: none yet; here'
+    )
+    assert.equal(
+      formatProjectFacts({ ...nothing, agents: ['a (x)'], layout: 'here' })[0],
+      'agents:'
+    )
+  })
+})
+
+describe('agent facts', () => {
+  const meta = {
+    supportTriage: {
+      description: 'Triages tickets.',
+      model: 'fast',
+      tools: ['lookupTicket', 'issueRefund'],
+      sourceFile: '/p/src/a.ts',
+    },
+  }
+  test('one summary line names the model and the tools', () => {
+    assert.deepEqual(agentSummaries(meta), [
+      'supportTriage (model fast; tools lookupTicket, issueRefund)',
+    ])
+    assert.deepEqual(agentSummaries(undefined), [])
+  })
+  test('grep rows carry description, model and tools', () => {
+    const [row] = agentRows(meta, (file) => file?.replace('/p/', ''))
+    assert.equal(row!.kind, 'agent')
+    assert.equal(row!.name, 'supportTriage')
+    assert.equal(row!.source, 'src/a.ts')
+    assert.match(
+      row!.detail!,
+      /model fast; tools lookupTicket issueRefund; Triages tickets\./
+    )
+  })
+})
+
 describe('formatProjectFacts', () => {
   test('a project without a frontend or text prints only agents and models', () => {
     assert.deepEqual(formatProjectFacts(nothing), [
@@ -228,8 +277,8 @@ describe('formatProjectFacts', () => {
       agents: ['helper'],
       models: { cheap: 'acme/fast' },
     })
-    assert.equal(lines[0], 'agents: helper')
-    assert.match(lines[1]!, /^model aliases: cheap=acme\/fast; add in /)
+    assert.deepEqual(lines.slice(0, 2), ['agents:', '  helper'])
+    assert.match(lines[2]!, /^model aliases: cheap=acme\/fast; add in /)
   })
 
   test('a frontend with nothing found prints nothing for it', () => {

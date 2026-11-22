@@ -1,6 +1,7 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { PikkuError } from '@pikku/core/errors'
 import { CommandSummary } from '../../utils/command-summary.js'
+import { agentSummaries } from './meta-facts.js'
 
 // A blocking-diagnostics failure is expected (the gate did its job) — throw a
 // PikkuError so the workflow runner logs the message alone, not a stack trace.
@@ -69,11 +70,20 @@ export const pikkuSummary = pikkuSessionlessFunc<void, void>({
         summary.set('workflowGraphs', workflowGraphsCount)
     }
 
+    const agentLines = agentSummaries(state.agents?.agentsMeta)
+    if (agentLines.length > 0) summary.set('agents', agentLines.length)
+
     if (!logger.isSilent()) {
       // Route through the logger so JSON mode emits a single NDJSON
       // record instead of raw chalk-coloured text written directly to
       // stdout (which would break NDJSON consumers).
-      logger.info({ message: summary.format(), type: 'summary' })
+      logger.info({
+        message:
+          summary.format() +
+          agentLines.map((line) => `    - ${line}`).join('\n') +
+          (agentLines.length > 0 ? '\n' : ''),
+        type: 'summary',
+      })
     }
 
     if (logger.hasBlockingDiagnostics()) {
