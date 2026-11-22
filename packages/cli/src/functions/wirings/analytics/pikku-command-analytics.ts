@@ -8,9 +8,15 @@ import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-
 import { removeLegacyScaffoldFile } from '../../../utils/remove-legacy-scaffold-file.js'
 import {
   buildAnalyticsEventsMeta,
+  buildAnalyticsRuntimeMeta,
   serializeAnalytics,
+  serializeAnalyticsMetaTS,
   type AnalyticsDeclaration,
+  type AnalyticsDeclarationMeta,
 } from './serialize-analytics.js'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import type { CLILogger } from '../../../services/cli-logger.service.js'
+import type { Config } from '../../../../types/application-types.js'
 import { analyticsSchemasFile } from '../../../utils/analytics-schemas-file.js'
 import { isDeployCodegen } from '../../../utils/is-deploy-codegen.js'
 import { analyticsOriginLockEnabled } from '../../../utils/resolve-scaffold-feature.js'
@@ -40,22 +46,55 @@ export const analyticsSpecifier = (
   return rel.startsWith('.') ? rel : `./${rel}`
 }
 
+/**
+ * Writes the declared events: the runtime JSON (names only), its verbose
+ * sibling for the console, and, outside an addon, the module the bootstrap
+ * imports to register them in runtime state.
+ */
+export const writeAnalyticsMeta = async (
+  logger: CLILogger,
+  config: Config,
+  declarations: readonly AnalyticsDeclarationMeta[]
+): Promise<void> => {
+  const meta = buildAnalyticsEventsMeta(declarations)
+  await writeFileInDir(
+    logger,
+    config.analyticsMetaJsonFile,
+    JSON.stringify(buildAnalyticsRuntimeMeta(meta), null, 2)
+  )
+  await writeFileInDir(
+    logger,
+    config.analyticsMetaJsonFile.replace(/\.gen\.json$/, '-verbose.gen.json'),
+    JSON.stringify(meta, null, 2)
+  )
+  if (config.addon) return
+
+  const jsonImportPath = getFileImportRelativePath(
+    config.analyticsMetaFile,
+    config.analyticsMetaJsonFile,
+    config.packageMappings
+  )
+  const importStatement = config.schema?.supportsImportAttributes
+    ? `import metaData from '${jsonImportPath}' with { type: 'json' }`
+    : `import metaData from '${jsonImportPath}'`
+  await writeFileInDir(
+    logger,
+    config.analyticsMetaFile,
+    serializeAnalyticsMetaTS(importStatement)
+  )
+}
+
 export const pikkuAnalytics = pikkuSessionlessFunc<void, boolean>({
   func: async ({ logger, config, variables, getInspectorState }) => {
-    if (await isDeployCodegen(variables)) {
-      return false
-    }
-
     const { analytics } = await getInspectorState()
 
-    // Before the scaffold gate: a project that declares events without wiring
-    // the ingest still measures things, and the console still has to list them.
-    if (config.analyticsMetaJsonFile) {
-      await writeFileInDir(
-        logger,
-        config.analyticsMetaJsonFile,
-        JSON.stringify(buildAnalyticsEventsMeta(analytics ?? []), null, 2)
-      )
+    // Before the deploy and scaffold gates: the meta is output, not scaffold
+    // source, and a deploy bundle's bootstrap imports it. A project that
+    // declares events without wiring the ingest still measures things.
+    await writeAnalyticsMeta(logger, config, analytics ?? [])
+
+    if (await isDeployCodegen(variables)) {
+      return false
     }
 
     if (!config.scaffold?.analytics || !config.analyticsFile) {

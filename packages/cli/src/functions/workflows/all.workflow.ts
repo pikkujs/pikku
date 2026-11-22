@@ -521,6 +521,12 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       allImports.push(config.rpcInternalWiringMetaFile)
     }
 
+    // Unconditional, like the model aliases: pikkuAnalytics always writes it,
+    // and a bundle that lost it fails to build rather than dropping events.
+    if (!config.addon) {
+      allImports.push(config.analyticsMetaFile)
+    }
+
     if (agents || !config.addon) {
       await workflow.do('Re-inspect after agents', async () => {
         await getInspectorState(true)

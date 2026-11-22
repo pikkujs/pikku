@@ -35,6 +35,14 @@ const config = (root: string, extra: Record<string, unknown> = {}) =>
       'src/scaffold/analytics/analytics-origin.gen.ts'
     ),
     corsOriginsFile: join(root, 'src/scaffold/cors/cors-origins.gen.ts'),
+    analyticsMetaJsonFile: join(
+      root,
+      '.pikku/analytics/pikku-analytics-meta.gen.json'
+    ),
+    analyticsMetaFile: join(
+      root,
+      '.pikku/analytics/pikku-analytics-meta.gen.ts'
+    ),
     ...extra,
   }) as never
 
@@ -293,5 +301,92 @@ describe('pikkuAnalytics', () => {
     })
     assert.equal(existsSync(cfg.analyticsOriginFile), false)
     assert.match(errors[0]!, /originLock/)
+  })
+})
+
+describe('the analytics meta a bundle imports', () => {
+  const generate = async (
+    flag?: string,
+    extra: Record<string, unknown> = {},
+    events = ['page_viewed', 'checkout_completed']
+  ) => {
+    const root = await project()
+    const cfg = config(root, extra)
+    await run({
+      logger,
+      config: cfg,
+      variables: variables(flag),
+      getInspectorState: getInspectorState(
+        declared(root, 'analyticsEvents', events)
+      ),
+    })
+    return cfg
+  }
+
+  test('registers the declared names in runtime state through the bootstrap module', async () => {
+    const cfg = await generate()
+    const module = await readFile(cfg.analyticsMetaFile, 'utf8')
+    assert.match(
+      module,
+      /import metaData from '\.\/pikku-analytics-meta\.gen\.json'/
+    )
+    assert.match(module, /pikkuState\(null, 'analytics', 'meta', metaData/)
+  })
+
+  test('ships names only, keeping the declaration path in the verbose sibling', async () => {
+    const cfg = await generate()
+    assert.deepEqual(
+      JSON.parse(await readFile(cfg.analyticsMetaJsonFile, 'utf8')),
+      {
+        page_viewed: { name: 'page_viewed' },
+        checkout_completed: { name: 'checkout_completed' },
+      }
+    )
+    const verbose = JSON.parse(
+      await readFile(
+        cfg.analyticsMetaJsonFile.replace('.gen.json', '-verbose.gen.json'),
+        'utf8'
+      )
+    )
+    assert.equal(verbose.page_viewed.variable, 'analyticsEvents')
+    assert.ok(verbose.page_viewed.file.endsWith('/src/analytics.ts'))
+  })
+
+  // A deploy unit's bootstrap is written by a deploy codegen pass, so the meta
+  // has to be written there too or the bundle registers nothing.
+  test('is written during a per-unit deploy codegen run', async () => {
+    const cfg = await generate('1')
+    assert.ok(existsSync(cfg.analyticsMetaFile))
+    assert.equal(existsSync(cfg.analyticsFile), false)
+  })
+
+  test('is written with the scaffold off', async () => {
+    const cfg = await generate(undefined, { scaffold: {} })
+    assert.ok(existsSync(cfg.analyticsMetaFile))
+  })
+
+  test('registers an empty set when nothing is declared, so the import still resolves', async () => {
+    const cfg = await generate(undefined, { scaffold: {} }, [])
+    assert.deepEqual(
+      JSON.parse(await readFile(cfg.analyticsMetaJsonFile, 'utf8')),
+      {}
+    )
+    assert.ok(existsSync(cfg.analyticsMetaFile))
+  })
+
+  test('an addon writes the JSON but no module registering into the host', async () => {
+    const cfg = await generate(undefined, { addon: true })
+    assert.ok(existsSync(cfg.analyticsMetaJsonFile))
+    assert.equal(existsSync(cfg.analyticsMetaFile), false)
+  })
+
+  test('uses an import attribute when the runtime supports one', async () => {
+    const cfg = await generate(undefined, {
+      schema: { supportsImportAttributes: true },
+    })
+    assert.match(
+      await readFile(cfg.analyticsMetaFile, 'utf8'),
+      /with \{ type: 'json' \}/
+    )
   })
 })

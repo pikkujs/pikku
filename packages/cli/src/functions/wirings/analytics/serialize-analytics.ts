@@ -37,6 +37,26 @@ export const buildAnalyticsEventsMeta = (
   return meta
 }
 
+/**
+ * What a runtime needs of the declared events: their names. The module that
+ * locates each declaration stays in the verbose sibling the console reads, so a
+ * bundle carries no build paths.
+ */
+export const buildAnalyticsRuntimeMeta = (
+  meta: AnalyticsEventsMeta
+): Record<string, { name: string }> =>
+  Object.fromEntries(Object.keys(meta).map((name) => [name, { name }]))
+
+/** The module the bootstrap imports to register the declared events in runtime state. */
+export const serializeAnalyticsMetaTS = (importStatement: string): string =>
+  [
+    `import { pikkuState } from '@pikku/core/state'`,
+    importStatement,
+    ``,
+    `pikkuState(null, 'analytics', 'meta', metaData as Record<string, { name: string }>)`,
+    ``,
+  ].join('\n')
+
 export interface AnalyticsDeclaration {
   specifier: string
   variable: string
