@@ -9,6 +9,7 @@
  *   3. a package marked both main and addon is refused
  *   4. an addon with no namespace is refused
  *   5. `base` and `addons` in the root config are refused with a pointer to the markers
+ *   6. a main package config that sets a project-wide key is refused, pointing at the root
  *
  * The workspace that does build, a main package and two addons found by their
  * markers, is `pku368.mjs`, and the one main package and addon is `run.mjs`.
@@ -100,13 +101,28 @@ try {
   )
 
   refused(
+    project('main-owns-setting', {
+      one: {
+        main: true,
+        environments: { local: { backends: { api: 'http://localhost:4000' } } },
+      },
+    }),
+    /packages\/one\/pikku\.config\.json sets "environments"\. A main package's config only carries "main": true/,
+    'a main package config that sets a project-wide key is refused'
+  )
+
+  refused(
     project('base-key', { one: { main: true } }, { base: 'packages/one' }),
     /base in .*is no longer a key.*"main": true/,
     'the base key is refused, pointing at the main marker'
   )
 
   refused(
-    project('addons-key', { tools: addon('tools') }, { addons: ['packages/tools'] }),
+    project(
+      'addons-key',
+      { tools: addon('tools') },
+      { addons: ['packages/tools'] }
+    ),
     /addons in .*is no longer a key.*"addon"/,
     'the addons key is refused, pointing at the addon marker'
   )

@@ -3,7 +3,20 @@
   "tsconfig": "./tsconfig.json",
   "backends": {
     "api": {
-      "filter": {}
+      "filter": {},
+      "dev": {
+        "port": 4000
+      }
+    }
+  },
+  "scenarios": {
+    "emailDomain": "virtualuser.invalid"
+  },
+  "environments": {
+    "local": {
+      "backends": {
+        "api": "http://localhost:4000"
+      }
     }
   }
 }
