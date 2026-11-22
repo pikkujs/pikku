@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { defineQueueIdentityTransportTests } from '@pikku/core/testing'
 import { CloudflareQueueService } from './cloudflare-queue-service.js'
 import { constantTimeEqual } from './dispatch-auth.js'
+import { createAnalyticsSinks } from '@pikku/core/analytics'
+import { pikkuState } from '@pikku/core/state'
 // Type-only, so it is erased before runtime and does not load the module ahead
 // of the `cloudflare:workers` stub registered below.
 import type { createCloudflareHandler as CreateCloudflareHandler } from './handler-factories.js'
@@ -253,4 +255,40 @@ defineQueueIdentityTransportTests('cloudflare dispatched jobs', (services) => {
       }
     },
   }
+})
+
+describe('setupServices and the declared analytics events', () => {
+  const servicesWith = (names: string[] | null) => {
+    pikkuState(
+      null,
+      'analytics',
+      'meta',
+      names
+        ? Object.fromEntries(names.map((name) => [name, { name }]))
+        : (null as never)
+    )
+    const analyticsSinks = createAnalyticsSinks()
+    analyticsSinks.add({ write: async () => {} }, { page_viewed: true })
+    return {
+      createConfig: async () => ({}),
+      createSingletonServices: async () => ({ analyticsSinks }) as any,
+    }
+  }
+
+  test('builds the services when the bootstrap registered the events', async () => {
+    const { setupServices } = await import('./handler-factories.js')
+    const services = await setupServices(
+      {} as any,
+      servicesWith(['page_viewed'])
+    )
+    assert.ok(services.analyticsSinks)
+  })
+
+  test('refuses a worker whose sinks have no declared event to receive', async () => {
+    const { setupServices } = await import('./handler-factories.js')
+    await assert.rejects(
+      setupServices({} as any, servicesWith([])),
+      /declares no analytics events/
+    )
+  })
 })
