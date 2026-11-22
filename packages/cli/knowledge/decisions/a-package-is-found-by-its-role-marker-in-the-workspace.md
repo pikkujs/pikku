@@ -23,6 +23,8 @@ A code package's own `pikku.config.json` carries a role and nothing else:
 - An addon needs a `namespace` (lowercase letter first, then lowercase alphanumerics, hyphens or underscores) that is unique, and every package needs a `package.json` name. A member whose real path leaves the project root is an error.
 - A config that is itself marked is a package, not a project root, and discovers nothing.
 - `pikku all` at the root runs each addon in dependency order, then the main package, then assembles the cross-package outputs from the root. A pass runs with `PIKKU_PACKAGE_PASS=1`, so a package needs no `backends` or `frontends`.
+- The main package's pass is the root project read from the main package. The root sets `PIKKU_ROOT_CONFIG` to its config path for that pass only; the loader then reads the root config (so every root-relative path resolves as it does at the root) and keeps three things of the main package's own: `sourceDirs` is the main package's entry, `outDir` is its `.pikku`, and `tsconfig` is its `tsconfig.json` when it has one, because that is the tsconfig that includes its `.pikku`. `addonPackages` is empty (the root ran them), and the pass checks that it is the root's main. An addon's pass gets no root config and reads its own.
+- A main package's config may hold only `main` and `$schema`; any other key is refused when the root loads, and again in the main pass. Copying `environments` into the main config was the tempting workaround and fails anyway, because an environment names backends the main package does not declare.
 
 **What this rules out:**
 
