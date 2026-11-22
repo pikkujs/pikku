@@ -21,6 +21,7 @@ import {
   isDispatchAuthorized,
 } from './dispatch-auth.js'
 import { traceWire } from '@pikku/core/trace'
+import { assertAnalyticsSinksDeclared } from '@pikku/core/analytics'
 
 export { getCloudflareEnv, type CloudflareEnv }
 
@@ -73,6 +74,9 @@ export async function setupServices(
     secrets,
     ...platformServices,
   })
+  // A worker has no filesystem: the declared events reach it only through the
+  // bootstrap, and a sink with none to receive would drop everything silently.
+  assertAnalyticsSinksDeclared(services.analyticsSinks)
   // Only once it has been built: a factory that threw must be retried, not
   // remembered as the cache's owner.
   cachedServices = services

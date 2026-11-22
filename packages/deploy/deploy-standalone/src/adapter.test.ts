@@ -827,6 +827,20 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     )
   })
 
+  test('refuses to boot with analytics sinks and no declared events, after the app registered its sinks', () => {
+    const source = generate(baseContext)
+    assert.match(
+      source,
+      /import \{ assertAnalyticsSinksDeclared, createAnalyticsSinks \} from '@pikku\/core\/analytics'/
+    )
+    const check = source.indexOf(
+      'assertAnalyticsSinksDeclared(__pikkuAnalyticsSinks)'
+    )
+    assert.ok(check > source.indexOf('Object.assign(singletonServices'))
+    assert.ok(check < source.indexOf('new PikkuBunServer('))
+    assert.ok(source.indexOf(`import '${baseContext.bootstrapPath}'`) < check)
+  })
+
   test('the logger the server and services use is the telemetry logger', () => {
     const source = generate(baseContext)
     assert.match(source, /const logger = __pikkuTelemetry\.logger/)

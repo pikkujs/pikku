@@ -537,7 +537,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`,
       `import { AsyncLocalStorage as __pikkuAsyncLocalStorage } from 'node:async_hooks'`,
       `import { asContextStorage as __pikkuAsContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'`,
-      `import { createAnalyticsSinks } from '@pikku/core/analytics'`,
+      `import { assertAnalyticsSinksDeclared, createAnalyticsSinks } from '@pikku/core/analytics'`,
       ...(ctx.db
         ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
         : []),
@@ -619,6 +619,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  })`,
       `  // The runtime's registries win: the tracer and the analytics fan-out read these instances.`,
       `  Object.assign(singletonServices, { otlpSinks: __pikkuTelemetry.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, ...eventHubServices })`,
+      `  assertAnalyticsSinksDeclared(__pikkuAnalyticsSinks)`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
       ...(ctx.frontend
