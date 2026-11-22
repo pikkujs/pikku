@@ -8,6 +8,7 @@ import {
   PikkuPackagePassError,
   runPikkuPackagePasses,
 } from './package-passes.js'
+import { ROOT_CONFIG_ENV } from './project-packages.js'
 
 const roots: string[] = []
 const argv1 = process.argv[1]
@@ -84,4 +85,29 @@ describe('runPikkuPackagePasses', () => {
     assert.deepEqual(seen, ['packages/lib'])
     assert.equal(await readFile(log, 'utf8'), 'lib all 1\n')
   })
+
+  test("the main package's pass is told the root config; an addon's is not", async () => {
+    const { log, pkg } = await setup()
+    process.argv[1] = await writeRootConfigProbe(log)
+    await runPikkuPackagePasses([
+      await pkg('lib'),
+      { ...(await pkg('app')), rootConfig: '/project/pikku.config.json' },
+    ])
+    assert.equal(
+      await readFile(log, 'utf8'),
+      'lib -\napp /project/pikku.config.json\n'
+    )
+  })
 })
+
+/** A stand-in CLI that records, per pass, the root config it was given. */
+const writeRootConfigProbe = async (log: string): Promise<string> => {
+  const script = join(log, '..', 'probe.mjs')
+  await writeFile(
+    script,
+    `import { appendFileSync } from 'node:fs'
+appendFileSync(${JSON.stringify(log)}, process.cwd().split('/').pop() + ' ' + (process.env.${ROOT_CONFIG_ENV} || '-') + '\\n')
+`
+  )
+  return script
+}

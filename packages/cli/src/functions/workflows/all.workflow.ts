@@ -149,13 +149,16 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     // imports need its own. A run inside one of them, or a deploy pass, has none.
     if (
       (config.addonPackages.length > 0 || config.mainPackage) &&
-      process.env.PIKKU_DEPLOY_CODEGEN !== '1'
+      process.env.PIKKU_DEPLOY_CODEGEN !== '1' &&
+      process.env[PACKAGE_PASS_ENV] !== '1'
     ) {
       await workflow.do('Packages', async () => {
         await runPikkuPackagePasses(
           [
             ...config.addonPackages,
-            ...(config.mainPackage ? [config.mainPackage] : []),
+            ...(config.mainPackage
+              ? [{ ...config.mainPackage, rootConfig: config.configPath }]
+              : []),
           ],
           (pkg) => logger.info(`• pikku all in ${pkg.entry}`)
         )

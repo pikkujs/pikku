@@ -7,6 +7,7 @@ import {
   parse as parsePath,
 } from 'path'
 import { readdir, readFile } from 'fs/promises'
+import { existsSync, realpathSync } from 'fs'
 import type {
   PikkuCLIConfig,
   PikkuCLIInput,
@@ -19,6 +20,8 @@ import {
 import type { CLILogger } from '../services/cli-logger.service.js'
 import { setScaffoldWriteGuard } from './file-writer.js'
 import {
+  ROOT_CONFIG_ENV,
+  assertMainConfigIsMarker,
   orderAddonPackages,
   projectSourceDirs,
   resolveWorkspacePackages,
@@ -566,6 +569,42 @@ const assertBackendsDeclared = (
   }
 }
 
+type MainPass = { mainDir: string; rootConfigFile: string }
+
+/**
+ * A config marked `"main": true`, loaded while the root's pass names its
+ * config in ROOT_CONFIG_ENV, is the main package's pass: it reads the root's
+ * config. The main config itself may hold nothing but the marker.
+ */
+const resolveMainPass = async (
+  configFile: string
+): Promise<MainPass | undefined> => {
+  const rootConfigFile = process.env[ROOT_CONFIG_ENV]
+  if (!rootConfigFile) return undefined
+  const own = JSON.parse(await readFile(configFile, 'utf-8'))
+  if (own?.main !== true) return undefined
+  assertMainConfigIsMarker(own, configFile, rootConfigFile)
+  return {
+    mainDir: dirname(resolve(configFile)),
+    rootConfigFile: resolve(rootConfigFile),
+  }
+}
+
+const assertMainPassIsRootMain = (
+  mainPass: MainPass,
+  mainPackage: { dir: string } | undefined,
+  rootConfigFile: string
+): void => {
+  if (
+    !mainPackage ||
+    realpathSync(mainPackage.dir) !== realpathSync(mainPass.mainDir)
+  ) {
+    throw new PikkuCLIConfigError(
+      `${mainPass.mainDir} ran as the main package of ${rootConfigFile}, but ${mainPackage ? `that root's main package is ${mainPackage.dir}` : 'that root has no main package'}.`
+    )
+  }
+}
+
 const _getPikkuCLIConfig = async (
   logger: CLILogger,
   configFile: string | undefined = undefined,
@@ -578,6 +617,8 @@ const _getPikkuCLIConfig = async (
   }
 
   try {
+    const mainPass = await resolveMainPass(configFile)
+    if (mainPass) configFile = mainPass.rootConfigFile
     const file = await readFile(configFile, 'utf-8')
     const configDir = dirname(configFile)
     const config: PikkuCLIInput = JSON.parse(file)
@@ -591,20 +632,24 @@ const _getPikkuCLIConfig = async (
     const workspace = await resolveWorkspacePackages(configFile, rootDir)
     const addonPackages = orderAddonPackages(workspace.addons, configFile)
     const mainPackage = workspace.main
+    if (mainPass) assertMainPassIsRootMain(mainPass, mainPackage, configFile)
     const result: PikkuCLIConfig = {
       ...(config as unknown as PikkuCLIConfig),
-      addonPackages,
+      // The main package's pass is the root project read from the main
+      // package: the root's addons are passed already, and only the main
+      // package's own source is inspected, into its own `.pikku`.
+      addonPackages: mainPass ? [] : addonPackages,
       mainPackage,
       environments: normalizeEnvironments(
         config,
         `${configDir}/pikku.config.json`
       ),
-      outDir: join(configDir, '.pikku'),
+      outDir: join(mainPass?.mainDir ?? configDir, '.pikku'),
       configDir,
       configPath: configFile,
       packageMappings: config.packageMappings || {},
       rootDir,
-      sourceDirs: projectSourceDirs(rootDir),
+      sourceDirs: mainPass ? [mainPackage!.entry] : projectSourceDirs(rootDir),
       registry: config.registry ?? DEFAULT_ADDON_REGISTRY,
       ignoreFiles: config.ignoreFiles ?? [
         '**/*.test.ts',
@@ -1758,6 +1803,11 @@ const _getPikkuCLIConfig = async (
       result.authTypesFile = join(result.configDir, result.authTypesFile)
     }
 
+    // The main package's pass type-checks against the tsconfig that includes
+    // its own `.pikku`, which is the main package's tsconfig.json when it has one.
+    if (mainPass && existsSync(join(mainPass.mainDir, 'tsconfig.json'))) {
+      result.tsconfig = join(mainPass.mainDir, 'tsconfig.json')
+    }
     result.tsconfig ??= 'tsconfig.json'
     if (!isAbsolute(result.tsconfig)) {
       result.tsconfig = join(result.rootDir, result.tsconfig)

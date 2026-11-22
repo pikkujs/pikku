@@ -182,6 +182,137 @@ describe('getPikkuCLIConfig', () => {
     }
   })
 
+  describe("the main package's pass", () => {
+    const withMainPass = async <T>(
+      rootConfig: string | undefined,
+      run: () => Promise<T>
+    ): Promise<T> => {
+      const before = {
+        pass: process.env.PIKKU_PACKAGE_PASS,
+        root: process.env.PIKKU_ROOT_CONFIG,
+      }
+      process.env.PIKKU_PACKAGE_PASS = '1'
+      if (rootConfig) process.env.PIKKU_ROOT_CONFIG = rootConfig
+      else delete process.env.PIKKU_ROOT_CONFIG
+      try {
+        return await run()
+      } finally {
+        for (const [key, value] of [
+          ['PIKKU_PACKAGE_PASS', before.pass],
+          ['PIKKU_ROOT_CONFIG', before.root],
+        ] as const) {
+          if (value === undefined) delete process.env[key]
+          else process.env[key] = value
+        }
+      }
+    }
+
+    const rootWithMain = async (extra: Record<string, unknown> = {}) => {
+      const root = await writeConfig({
+        backends: { api: { filter: {}, dev: { port: 4000 } } },
+        environments: { local: { backends: { api: 'http://localhost:4000' } } },
+        scenarios: { emailDomain: 'virtualuser.invalid' },
+        ...extra,
+      })
+      await writeWorkspace(root, ['packages/*'])
+      await writeMain(root, 'packages/main')
+      await writePackage(root, 'packages/tools')
+      return root
+    }
+
+    test("reads the root's settings and keeps its own source, .pikku and tsconfig", async () => {
+      const root = await rootWithMain()
+      await writeFile(join(root, 'packages/main/tsconfig.json'), '{}')
+      const config = await withMainPass(join(root, 'pikku.config.json'), () =>
+        getPikkuCLIConfig(
+          silentLogger,
+          join(root, 'packages/main/pikku.config.json'),
+          []
+        )
+      )
+      assert.deepEqual(Object.keys(config.environments ?? {}), ['local'])
+      assert.deepEqual(Object.keys(config.backends ?? {}), ['api'])
+      assert.equal(config.scenarios?.emailDomain, 'virtualuser.invalid')
+      assert.equal(config.configPath, join(root, 'pikku.config.json'))
+      assert.equal(config.rootDir, root)
+      assert.deepEqual(config.sourceDirs, ['packages/main'])
+      assert.equal(config.outDir, join(root, 'packages/main/.pikku'))
+      assert.equal(
+        config.functionsFile,
+        join(root, 'packages/main/.pikku/function/pikku-functions.gen.ts')
+      )
+      assert.equal(config.tsconfig, join(root, 'packages/main/tsconfig.json'))
+      assert.deepEqual(config.addonPackages, [])
+      assert.equal(config.mainPackage?.entry, 'packages/main')
+      assert.equal(
+        config.resolvedScaffoldDir,
+        join(root, 'packages/main/src/scaffold')
+      )
+    })
+
+    test("falls back to the root's tsconfig when the main package has none", async () => {
+      const root = await rootWithMain()
+      const config = await withMainPass(join(root, 'pikku.config.json'), () =>
+        getPikkuCLIConfig(
+          silentLogger,
+          join(root, 'packages/main/pikku.config.json'),
+          []
+        )
+      )
+      assert.equal(config.tsconfig, join(root, 'tsconfig.json'))
+    })
+
+    test('without the root config, the main config is read on its own', async () => {
+      const root = await rootWithMain()
+      const config = await withMainPass(undefined, () =>
+        getPikkuCLIConfig(
+          silentLogger,
+          join(root, 'packages/main/pikku.config.json'),
+          []
+        )
+      )
+      assert.equal(config.environments, undefined)
+      assert.equal(config.rootDir, join(root, 'packages/main'))
+    })
+
+    test('a main config that sets a project-wide key is refused', async () => {
+      const root = await rootWithMain()
+      await writeFile(
+        join(root, 'packages/main/pikku.config.json'),
+        JSON.stringify({ main: true, environments: {} })
+      )
+      await assert.rejects(
+        withMainPass(join(root, 'pikku.config.json'), () =>
+          getPikkuCLIConfig(
+            silentLogger,
+            join(root, 'packages/main/pikku.config.json'),
+            []
+          )
+        ),
+        /packages\/main\/pikku\.config\.json sets "environments"\. A main package's config only carries "main": true/
+      )
+      await assert.rejects(
+        getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
+        /packages\/main\/pikku\.config\.json sets "environments"\./
+      )
+    })
+
+    test("a pass from a package that is not the root's main is refused", async () => {
+      const root = await rootWithMain()
+      await writeMain(root, 'elsewhere')
+      await assert.rejects(
+        withMainPass(join(root, 'pikku.config.json'), () =>
+          getPikkuCLIConfig(
+            silentLogger,
+            join(root, 'elsewhere/pikku.config.json'),
+            []
+          )
+        ),
+        /elsewhere ran as the main package of .*but that root's main package is .*packages\/main/
+      )
+    })
+  })
+
   test('a project with no marked package is its own main', async () => {
     const root = await writeConfig()
     const config = await getPikkuCLIConfig(

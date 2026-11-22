@@ -29,6 +29,16 @@ export const SKIP_DIRS = new Set([
 
 export const CONFIG_FILE = 'pikku.config.json'
 
+/**
+ * Set on the main package's pass to the root's pikku.config.json. The main
+ * package is the same project as the root, so its pass loads the root's
+ * settings and keeps only its own directory, `.pikku` and tsconfig.
+ */
+export const ROOT_CONFIG_ENV = 'PIKKU_ROOT_CONFIG'
+
+/** The only keys a main package's own pikku.config.json may hold. */
+export const MAIN_CONFIG_KEYS = new Set(['$schema', 'main'])
+
 /** What an addon name may be, the rule `pikku new addon` applies. */
 export const NAMESPACE_PATTERN = /^[a-z][a-z0-9_-]*$/
 
@@ -315,6 +325,23 @@ export const findMainEntry = (rootDir: string): string | undefined => {
   )?.entry
 }
 
+/**
+ * A main package's config only carries `"main": true`: the root config holds
+ * every project-wide setting, and the main package's pass reads them there.
+ */
+export const assertMainConfigIsMarker = (
+  config: Record<string, unknown>,
+  file: string,
+  rootConfigFile: string
+): void => {
+  const extra = Object.keys(config).filter((key) => !MAIN_CONFIG_KEYS.has(key))
+  if (extra.length > 0) {
+    throw new PikkuCLIConfigError(
+      `${file} sets ${extra.map((key) => `"${key}"`).join(', ')}. A main package's config only carries "main": true; the root ${rootConfigFile} holds every project-wide setting, and the main package's pass reads them from there. Move ${extra.length === 1 ? 'it' : 'them'} to the root config.`
+    )
+  }
+}
+
 /** What a project's workspace holds: its addons, and at most one main package. */
 export type WorkspacePackages = {
   addons: AddonPackage[]
@@ -381,6 +408,7 @@ export const resolveWorkspacePackages = async (
       )
     }
     if (isMain) {
+      assertMainConfigIsMarker(config, join(entry, CONFIG_FILE), configFile)
       mains.push({ entry, dir, name: pkg.name })
       continue
     }
