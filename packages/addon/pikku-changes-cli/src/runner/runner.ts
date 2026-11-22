@@ -28,6 +28,7 @@ import type {
   LocalCli,
   NextRoute,
   RunnerCommands,
+  RunnerCounters,
   RunnerEvent,
   RunnerOptions,
   RunnerPrompts,
@@ -71,11 +72,14 @@ interface Book {
   mainHead?: string
   red?: string
   said: Set<string>
+  /** Step mode: the first claims are made, so no more are. */
+  stepBegun: boolean
 }
 
 interface Outcome {
   reason: string
   error: boolean
+  stepped?: boolean
 }
 
 const CONFLICT_HEAD = /^# Merge conflict/m
@@ -103,13 +107,17 @@ export class ChangesRunner {
     abandoned: new Set(),
     conflictTurn: false,
     said: new Set(),
+    stepBegun: false,
   }
   private checkMain = false
   private stopped?: Outcome
   private filling?: Promise<void>
-  private refill = false
+  private refillAsked = false
+  private ended = false
+  private holdRepair = false
   private outcome: Outcome = { reason: 'Nothing to do', error: false }
   private readonly merged: string[] = []
+  private readonly extraRoutes: ReadonlySet<string>
   private result?: Promise<RunResult>
   private finish!: (result: RunResult) => void
   private timers: ReturnType<typeof setTimeout>[] = []
@@ -143,6 +151,8 @@ export class ChangesRunner {
       relink: deps.relink,
     }
     this.prompts = { ...defaultPrompts, ...options.prompts }
+    this.extraRoutes = new Set(options.extraRoutes ?? [])
+    if (options.counters) this.counters = options.counters
   }
 
   private get cap() {
@@ -158,13 +168,88 @@ export class ChangesRunner {
     return this.options.leaseMinutes ?? 120
   }
 
-  /** Runs until nothing is left to build, a limit is hit, or stop() is called. */
+  /**
+   * Runs until nothing is left to build, a limit is hit, the step is done or
+   * stop() is called. Called again after a run ended it starts a new run that
+   * goes on from the counters (see `counters`).
+   */
   run(): Promise<RunResult> {
-    this.result ??= new Promise<RunResult>((done) => {
+    if (this.result && !this.ended) return this.result
+    this.reset()
+    this.result = new Promise<RunResult>((done) => {
       this.finish = done
       void this.begin()
     })
     return this.result
+  }
+
+  private reset() {
+    this.ended = false
+    this.stopped = undefined
+    this.outcome = { reason: 'Nothing to do', error: false }
+    this.merged.length = 0
+    this.timers = []
+    this.refillAsked = false
+    this.checkMain = false
+    this.book.red = undefined
+    this.book.conflictTurn = false
+    this.book.stepBegun = false
+    this.book.said.clear()
+  }
+
+  /** What this runner has counted. Settable while no run is going, so a host can continue a run that hit a limit. A key left out of what is set keeps its value. */
+  get counters(): RunnerCounters {
+    const { book } = this
+    return {
+      tries: Object.fromEntries(book.tries),
+      prepFails: Object.fromEntries(book.prepFails),
+      conflicts: Object.fromEntries(book.conflicts),
+      turns: book.turns,
+      repairs: book.repairs,
+    }
+  }
+
+  set counters(next: Partial<RunnerCounters>) {
+    if (this.result && !this.ended)
+      throw new Error('The counters can only be set while no run is going')
+    const { book } = this
+    if (next.tries) book.tries = new Map(Object.entries(next.tries))
+    if (next.prepFails) book.prepFails = new Map(Object.entries(next.prepFails))
+    if (next.conflicts) book.conflicts = new Map(Object.entries(next.conflicts))
+    if (next.turns !== undefined) book.turns = next.turns
+    if (next.repairs !== undefined) book.repairs = next.repairs
+  }
+
+  /**
+   * Looks for newly ready changes now, instead of when an agent ends. Does
+   * nothing when no run is going or it was stopped; with an empty queue the
+   * look finds nothing and changes nothing.
+   */
+  refill() {
+    if (!this.result || this.ended || this.stopped || !this.finish) return
+    this.requestFill()
+  }
+
+  /**
+   * Merges the changesets that are finished, which a `step` run does not, and
+   * checks the main checkout after a merge. A failing check is returned, not
+   * repaired: no agent starts here. Call it while no fill is running.
+   */
+  async mergeFinished(): Promise<{ merged: string[]; red: string | null }> {
+    const route = await this.q.next()
+    const merged = [...route.merged]
+    for (const line of merged) {
+      this.merged.push(line)
+      this.emit('info', 'merged', `Merged ${line}`)
+    }
+    if (!merged.length) return { merged, red: null }
+    this.holdRepair = true
+    try {
+      const held = await this.checkMainCheckout()
+      return { merged, red: held ? (this.book.red ?? held.reason) : null }
+    } finally {
+      this.holdRepair = false
+    }
   }
 
   /** No new agent starts; every running one is stopped and its lease given back. */
@@ -238,7 +323,7 @@ export class ChangesRunner {
       const limit = setTimeout(
         () =>
           this.stop(
-            `The time limit of ${this.options.maxMinutes} minute(s) is up: the running agents were stopped and their leases given back.`,
+            `The time limit of ${this.options.maxMinutes} minute(s), set by the maxMinutes option, is up: the running agents were stopped and their leases given back.`,
             'limit'
           ),
         this.options.maxMinutes * 60_000
@@ -251,11 +336,14 @@ export class ChangesRunner {
 
   private end() {
     for (const timer of this.timers) clearTimeout(timer)
+    this.ended = true
     const outcome = this.stopped ?? this.outcome
-    if (!outcome.error) this.emit('info', 'idle', outcome.reason)
+    if (!outcome.error)
+      this.emit('info', outcome.stepped ? 'stepped' : 'idle', outcome.reason)
     this.finish({
       ok: !outcome.error,
       reason: outcome.reason,
+      stepped: !!outcome.stepped && !this.stopped,
       merged: [...this.merged],
       turns: this.book.turns,
     })
@@ -264,22 +352,22 @@ export class ChangesRunner {
   /** Ends the run once nothing is filling and no agent runs. */
   private settle() {
     if (this.filling || this.main || this.lanes.size || !this.finish) return
-    if (!this.stopped && this.refill) return this.requestFill()
+    if (!this.stopped && this.refillAsked) return this.requestFill()
     this.end()
   }
 
   /** Fills are one at a time; one asked for meanwhile runs again after it. */
   private requestFill() {
     if (this.filling) {
-      this.refill = true
+      this.refillAsked = true
       return
     }
     this.filling = (async () => {
       do {
-        this.refill = false
+        this.refillAsked = false
         if (this.stopped) break
         this.outcome = await this.fill()
-      } while (this.refill && !this.stopped)
+      } while (this.refillAsked && !this.stopped)
     })()
       .catch((error) => {
         const reason = error instanceof Error ? error.message : String(error)
@@ -392,7 +480,7 @@ export class ChangesRunner {
     }
     await this.dropWorktree(
       change.worktree,
-      `#${change.id}: used its ${this.tries} tries this run${saved}`,
+      `#${change.id}: used its ${this.tries} tries this run (the tries option)${saved}`,
       change.id
     )
   }
@@ -401,7 +489,7 @@ export class ChangesRunner {
   private overBudget(): string | null {
     const max = this.options.maxTurns ?? 40
     if (this.book.turns < max) return null
-    const reason = `The run stopped: it started ${this.book.turns} agent turns (builds, repairs and merge conflicts together; the limit is ${max}). Start it again to go on.`
+    const reason = `The run stopped: it started ${this.book.turns} agent turns (builds, repairs and merge conflicts together; the limit is ${max}, set by the maxTurns option). Start it again to go on.`
     this.once('error', 'limit', reason)
     return reason
   }
@@ -410,7 +498,8 @@ export class ChangesRunner {
     kind: AgentKind,
     cwd: string,
     prompt: string,
-    change: AgentChange | null
+    change: AgentChange | null,
+    route: NextRoute | null
   ): Promise<AgentRun> {
     const env: Record<string, string> = {
       ...this.options.env,
@@ -430,12 +519,30 @@ export class ChangesRunner {
           }
         : {}),
     }
-    return this.deps.launcher.start({ cwd, env, prompt, change, kind })
+    return this.deps.launcher.start({
+      cwd,
+      env,
+      prompt,
+      change,
+      kind,
+      specialist: change?.specialist ?? route?.specialist ?? null,
+      route,
+    })
   }
 
   /** An agent in the main checkout: a repair or a merge conflict. When it ends the runner fills again. */
-  private async startMain(kind: MainTurn['kind'], prompt: string) {
-    const run = await this.startAgent(kind, this.options.cwd, prompt, null)
+  private async startMain(
+    kind: MainTurn['kind'],
+    prompt: string,
+    route: NextRoute | null = null
+  ) {
+    const run = await this.startAgent(
+      kind,
+      this.options.cwd,
+      prompt,
+      null,
+      route
+    )
     const turn: MainTurn = { kind, run, watch: new AgentWatch(run, this.now) }
     this.main = turn
     run.onExit(() => {
@@ -487,6 +594,11 @@ export class ChangesRunner {
         `The main checkout fails the check after a merge, so no new agent starts until it passes. ${red}`
       )
     book.red = red
+    if (this.holdRepair)
+      return {
+        reason: `The main checkout fails the check. ${red}`,
+        error: true,
+      }
     if (this.lanes.size)
       return {
         reason: `The main checkout fails the check: it is repaired after the ${this.lanes.size} running agent(s)`,
@@ -496,7 +608,7 @@ export class ChangesRunner {
       return { reason: 'The main checkout is being repaired', error: false }
     const max = this.options.repairTries ?? 2
     if (book.repairs >= max) {
-      const reason = `The main checkout still fails the check after ${book.repairs} repairs, so the run stopped. Fix it and start the run again.`
+      const reason = `The main checkout still fails the check after ${book.repairs} repairs (the repairTries option), so the run stopped. Fix it and start the run again.`
       this.once('error', 'red', reason)
       return { reason, error: true }
     }
@@ -563,7 +675,7 @@ export class ChangesRunner {
         'green',
         'The main checkout passes the check again, so agents start again'
       )
-      this.refill = true // what was held back from merging while it failed goes in on the next fill
+      this.refillAsked = true // what was held back from merging while it failed goes in on the next fill
     }
     book.red = undefined
     this.checkMain = false
@@ -578,7 +690,7 @@ export class ChangesRunner {
     what: string
   ): Promise<Outcome> {
     const tries = this.options.conflictTries ?? 2
-    const reason = `${what}, and ${tries} merge-conflict turns did not resolve it, so the run stopped. ${branch} is given up this run: its lease is back and its worktree removed (the branch is kept). Merge it by hand (\`git merge ${branch}\` in the main checkout) or drop it, then start the run again.`
+    const reason = `${what}, and ${tries} merge-conflict turns did not resolve it (the conflictTries option), so the run stopped. ${branch} is given up this run: its lease is back and its worktree removed (the branch is kept). Merge it by hand (\`git merge ${branch}\` in the main checkout) or drop it, then start the run again.`
     if (!this.book.abandoned.has(branch)) {
       this.book.abandoned.add(branch)
       const group = groups.find((g) => title !== undefined && g.title === title)
@@ -643,7 +755,7 @@ export class ChangesRunner {
       'conflict',
       `${route.reason}: an agent resolves it in the main checkout (merge-conflict turn ${this.book.conflicts.get(branch)} of ${tries})`
     )
-    await this.startMain('conflict', this.prompts.conflict(route))
+    await this.startMain('conflict', this.prompts.conflict(route), route)
     return { reason: route.reason, error: false }
   }
 
@@ -669,9 +781,9 @@ export class ChangesRunner {
     book.mainHead ??= (
       await this.deps.commands.git(this.options.cwd, ['rev-parse', 'HEAD'])
     ).output
-    // While the main checkout fails its check nothing more is merged into it.
+    // While the main checkout fails its check nothing more is merged into it, and a step run merges only when the host asks.
     const route = await this.q.next(
-      book.red ? { PIKKU_CHANGES_NO_MERGE: '1' } : {}
+      book.red || this.options.step ? { PIKKU_CHANGES_NO_MERGE: '1' } : {}
     )
     for (const line of route.merged) {
       this.merged.push(line)
@@ -687,10 +799,24 @@ export class ChangesRunner {
       const held = await this.checkMainCheckout()
       if (held) return held
     }
-    const ids =
-      route.agent === 'changes'
+    let ids =
+      route.agent === 'changes' ||
+      (route.agent && this.extraRoutes.has(route.agent))
         ? [...(route.context ?? '').matchAll(/^## #(\d+) /gm)].map((m) => m[1]!)
         : []
+    if (this.options.step && book.stepBegun) {
+      // Only what the step already started is built (picked up again); nothing new is claimed.
+      ids = ids.filter((id) => book.tries.has(id))
+      if (!ids.length)
+        return this.lanes.size
+          ? { reason: `${this.lanes.size} agent(s) running`, error: false }
+          : {
+              reason:
+                'Stepped: the changes claimed are built and not merged yet. Merge them with mergeFinished() or start the next step.',
+              error: false,
+              stepped: true,
+            }
+    }
     if (!ids.length) return this.otherRoute(route, groups)
     return this.startLanes(route, ids, listed, groups)
   }
@@ -780,6 +906,7 @@ export class ChangesRunner {
         title: claim.group.title,
         groupId: claim.group.groupId,
         worktree: claim.worktree,
+        specialist: listedChange?.specialist ?? null,
       }
       const lane: Lane = { change }
       this.lanes.set(change.groupId, lane)
@@ -822,7 +949,7 @@ export class ChangesRunner {
           /does not start clean/.test(prepared.failed ?? '')
         ) {
           this.checkMain = true
-          this.refill = true
+          this.refillAsked = true
           break
         }
         continue
@@ -833,6 +960,7 @@ export class ChangesRunner {
         const prompt = this.prompts.build({
           route,
           change,
+          specialist: change.specialist ?? route.specialist ?? null,
           claimant: this.claimant,
           leaseMinutes: this.lease,
           clean: prepared.clean,
@@ -841,7 +969,8 @@ export class ChangesRunner {
           'build',
           claim.worktree,
           prompt,
-          change
+          change,
+          route
         )
         lane.run = run
         lane.watch = new AgentWatch(run, this.now)
@@ -866,7 +995,8 @@ export class ChangesRunner {
     }
     // With places still free another fill asks again: one started here is leased, so it is not offered twice.
     if (started && this.lanes.size < this.cap && !this.stopped)
-      this.refill = true
+      this.refillAsked = true
+    if (this.options.step && (started || book.tries.size)) book.stepBegun = true
     if (started)
       return {
         reason: `${started} agent(s) started — ${route.reason}`,
@@ -874,7 +1004,7 @@ export class ChangesRunner {
       }
     if (this.lanes.size)
       return { reason: `${this.lanes.size} agent(s) running`, error: false }
-    if (!candidates.length && !this.refill && !this.checkMain)
+    if (!candidates.length && !this.refillAsked && !this.checkMain)
       return {
         reason: `Open changes are left that used their tries this run: ${ids.map((id) => `#${id}`).join(', ')}`,
         error: true,
