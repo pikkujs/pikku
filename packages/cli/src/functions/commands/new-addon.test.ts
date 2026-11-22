@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import { getPikkuCLIConfig } from '../../utils/pikku-cli-config.js'
 import {
+  appPackagesDir,
   buildGeneratedAddon,
   workspaceCovers,
   getAddonFiles,
@@ -702,5 +703,27 @@ describe('openapi onboarding', () => {
         Accept: 'a, b',
       }
     )
+  })
+})
+
+describe('appPackagesDir', () => {
+  test('beside the app when it lives in packages/<app>', () => {
+    assert.equal(
+      appPackagesDir('/w/proj/packages/functions'),
+      '/w/proj/packages'
+    )
+  })
+  test('inside the app otherwise', () => {
+    assert.equal(appPackagesDir('/w/proj'), '/w/proj/packages')
+  })
+})
+
+describe('generated addon config', () => {
+  test('pikku.config.json has no outDir key', () => {
+    const src = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), 'new-addon.ts'),
+      'utf8'
+    )
+    assert.doesNotMatch(src, /outDir: '\.\/\.pikku'/)
   })
 })
