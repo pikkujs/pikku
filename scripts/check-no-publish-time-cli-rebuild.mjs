@@ -21,7 +21,9 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT =
+  process.env.PIKKU_GUARD_ROOT ??
+  join(dirname(fileURLToPath(import.meta.url)), '..')
 const PUBLISH_LIFECYCLE = ['prepublishOnly', 'prepare', 'prepack']
 
 function findPackageJsons(dir, out = []) {
@@ -74,7 +76,8 @@ function shellFileRunsCli(file) {
 
 /**
  * Resolve a script to its leaf commands, following intra-package
- * `yarn <name>` / `yarn run <name>` / `npm run <name>` references, and report
+ * `yarn <name>` / `yarn run <name>` / `npm run <name>` / `bun run <name>`
+ * references, and report
  * whether any leaf invokes the workspace CLI (directly or via a `*.sh` file).
  */
 function scriptRunsCli(scriptName, scripts, pkgDir, seen = new Set()) {
@@ -84,7 +87,9 @@ function scriptRunsCli(scriptName, scripts, pkgDir, seen = new Set()) {
   if (!command) return false
   for (const segment of segments(command)) {
     const exe = executable(segment)
-    const refMatch = segment.match(/^(?:yarn(?:\s+run)?|npm\s+run)\s+(\S+)/)
+    const refMatch = segment.match(
+      /^(?:yarn(?:\s+run)?|npm\s+run|bun(?:\s+run)?)\s+(\S+)/
+    )
     if (refMatch && scripts[refMatch[1]]) {
       if (scriptRunsCli(refMatch[1], scripts, pkgDir, seen)) return true
       continue
