@@ -524,9 +524,9 @@ function collectSchemaRefs(
       for (const prop of Object.values(node.properties)) walk(prop, false)
     }
     if (node.items) walk(node.items, false)
-    if (node.allOf) for (const s of node.allOf) walk(s, false)
-    if (node.oneOf) for (const s of node.oneOf) walk(s, false)
-    if (node.anyOf) for (const s of node.anyOf) walk(s, false)
+    if (Array.isArray(node.allOf)) for (const s of node.allOf) walk(s, false)
+    if (Array.isArray(node.oneOf)) for (const s of node.oneOf) walk(s, false)
+    if (Array.isArray(node.anyOf)) for (const s of node.anyOf) walk(s, false)
     if (
       node.additionalProperties &&
       typeof node.additionalProperties === 'object'
