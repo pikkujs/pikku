@@ -19,6 +19,12 @@ import {
   runWebsocketDepsChecks,
 } from './websocket-deps-checks.js'
 import {
+  findViteConfigs,
+  readViteConfig,
+  runDevProxyChecks,
+} from './dev-proxy-checks.js'
+import { analyticsOriginLockEnabled } from '../../utils/resolve-scaffold-feature.js'
+import {
   dbConfigMismatch,
   detectDatabaseDialect,
 } from '../../contributors/contributor-platform.js'
@@ -1045,6 +1051,20 @@ export async function runSharedProjectChecks(
       ),
       resolve: (specifier) => resolveFromProject(root, specifier),
     })
+  )
+
+  const functionsConfig = await readJsonSafe<SharedPikkuConfig>(
+    join(root, 'packages', 'functions', 'pikku.config.json')
+  )
+  findings.push(
+    ...(await runDevProxyChecks({
+      root,
+      originLockOn: analyticsOriginLockEnabled(
+        pikkuConfig?.scaffold ?? functionsConfig?.scaffold
+      ),
+      viteConfigs: await findViteConfigs(root),
+      read: readViteConfig,
+    }))
   )
 
   const outDirName =
