@@ -12,6 +12,7 @@ export interface CommandSummaryStats {
   workflows?: number
   nodes?: number
   workflowGraphs?: number
+  agents?: number
   [key: string]: number | undefined
 }
 
@@ -81,6 +82,7 @@ export class CommandSummary {
       workflows: 'Workflow',
       nodes: 'Node',
       workflowGraphs: 'Workflow graph',
+      agents: 'AI agent',
     }
 
     for (const [key, label] of Object.entries(statLabels)) {

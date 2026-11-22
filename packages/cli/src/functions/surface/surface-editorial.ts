@@ -227,7 +227,7 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     step: 'orchestrate it',
     skill: 'pikku-agent',
     summary:
-      'Defines an AI agent, the tools it may call and the scorers that judge what it did. `model` is `provider/model` or an alias from the `models` table in pikku.config.json. Threads and messages live in the `agentStorage` service, in-flight run state in `agentRunState`, and `agentRunService` reads them back.',
+      'Defines an AI agent, the tools it may call and the scorers that judge what it did. `model` is `provider/model` or an alias from the `models` table in pikku.config.json. Threads and messages live in the `agentStorage` service, in-flight run state in `agentRunState`, and `agentRunService` reads them back. `pikku doc agents` is the whole recipe: tools, agent, how it is reached, approval, permissions, guardrails.',
   },
   scenarios: {
     step: 'test it',
@@ -272,6 +272,142 @@ export type SurfaceGuide = {
 
 export const SURFACE_GUIDES: SurfaceGuide[] = [
   {
+    names: ['graph', 'graphWorkflow', 'importedWorkflow', 'n8n'],
+    title: 'editing a graph workflow (what `pikku import n8n` writes)',
+    points: [
+      "`pikku import n8n` writes `<slug>.graph.ts`, a `pikkuWorkflowGraph`. It is the workflow: edit it in place, do not rewrite it as `pikkuWorkflowFunc`. `nodes` maps a node id to the function it runs: an addon function (`gmail:messageSend`, `graph:sort`; `pikku meta grep <words>` finds them, `pikku meta functions get <id>` shows the fields) or one of the project's own functions. To replace a throwing stub, put the real function name in `nodes` and delete the stub file.",
+      "`config.<node>.input` is an object, or `(ref, template, $item) => ({ ... })`. `ref('trigger', 'body.email')` reads what started the workflow (an HTTP request body is under `body`); `ref('<node>')` is that node's whole output; `ref('<node>', '<field>')` one field of it (the field must exist in the node's output type); `template('Hello $0', [ref(...)])` builds a string from refs.",
+      "`config.<node>.next` is a node id, a list of ids, or an object keyed by the branch outcome (`graph:branch` takes the key of the first case that matches, or its `fallback`). Two nodes that name the same `next` both feed it. `forEach` (a node id, or `(ref) => ref('<node>', 'items')`) runs a node once per element and its result is the array of results; `$item('field')` reads the current element in that node's input; `mode: 'sequential'` runs them in order. `onError` names the node to take when this one fails.",
+      "`pikku meta workflows get '<name>'` prints every node with its input, and lists `missingRequiredInputs` (a required field the import could not map, e.g. a Gmail `to`) and `stubs` (nodes that still throw). Fix those in the graph file; `pikku all --tsc-summary` then checks it.",
+    ],
+    example: `export const ageGateWorkflow = pikkuWorkflowGraph({
+  name: 'Age Gate',
+  nodes: {
+    checkAge: 'graph:branch',
+    notifyAdult: 'gmail:messageSend',
+    notifyMinor: 'gmail:messageSend',
+  },
+  config: {
+    checkAge: {
+      input: (ref) => ({
+        cases: [
+          { key: '0', combinator: 'and' as const, conditions: [{ left: ref('trigger', 'body.age'), right: 18, type: 'number' as const, operation: 'gte' }] },
+        ],
+        fallback: '1',
+      }),
+      next: { '0': ['notifyAdult'], '1': ['notifyMinor'] },
+    },
+    notifyAdult: {
+      input: (ref) => ({
+        to: [{ email: 'team@example.com' }],
+        subject: 'Welcome aboard',
+        body: 'Thanks for joining.',
+      }),
+    },
+    notifyMinor: {
+      input: () => ({ to: [{ email: 'team@example.com' }], subject: 'Access denied', body: 'Not yet.' }),
+    },
+  },
+})`,
+  },
+  {
+    names: ['CredentialOverrides', 'CredentialOverride', 'credentialOverrides'],
+    title: "wireAddon's credentialOverrides",
+    points: [
+      '`credentialOverrides` is optional on `wireAddon`. A build works without it: an addon keeps the credential kind its author declared. Add it only when the request says a credential is shared by the whole deployment, or personal to each user, or lives under another key.',
+      "It is a record keyed by the credential NAME the addon declared (`pikku addons add <name>` prints them as `credential <name> (...)`). Each value is either a string, which renames the key this deployment holds the value under, or an object `{ name?: string; mode?: 'wire' | 'singleton' }`.",
+      "`mode: 'wire'` is per user (each user connects their own account); `mode: 'singleton'` is one value for the whole deployment (a team account). `name` is the key the deployment holds it under.",
+      'These are the only two fields of the object; any other key is a type error.',
+    ],
+    example: `wireAddon({
+  name: 'slack',
+  package: '@pikku/addon-slack',
+  // one workspace-wide Slack credential instead of one per user
+  credentialOverrides: { slack: { mode: 'singleton' } },
+})`,
+  },
+  {
+    names: ['defineTables', 'tables', 'db/tables.ts', 'requiredType'],
+    title: 'declaring tables in db/tables.ts',
+    points: [
+      '`defineTables` is imported from `@pikku/kysely`, not from a `#pikku` door, which is why it is no export here. `pikku meta db` says where the project keeps `db/tables.ts` and which tables it already declares.',
+      "One declaration gives the SQL, the types and the column classification. `statements` are `db.schema` calls (tables and indexes only, camelCase); `ctx.key` and `ctx.text` are the dialect's key and text types.",
+      '`pikku db generate` writes the SQL, and only adds: new tables, columns and indexes. `pikku db migrate` applies it and regenerates the types, so a query on the new table type-checks only after `migrate`.',
+      "A foreign key onto a table outside the file (Better Auth's `user`) is named in `requires`, and `requiredType(types, 'user', 'id')` gives the column its type.",
+      'A column named like personal data or a credential (email, phone, token) warns on `migrate` until it has a `security` annotation (`pii`, `secret`). The `pikku-kysely` skill has the full rules.',
+    ],
+    example: `// db/tables.ts
+import { defineTables } from '@pikku/kysely'
+
+export const tables = defineTables({
+  statements: [
+    (db, _types, ctx) =>
+      db.schema
+        .createTable('invoice')
+        .addColumn('invoiceId', ctx.key, (col) => col.primaryKey())
+        .addColumn('customerEmail', ctx.text, (col) => col.notNull())
+        .addColumn('paidAt', 'timestamp'),
+  ],
+  annotations: {
+    invoice: { customerEmail: { security: 'pii', format: 'email' } },
+  },
+})
+// then: pikku db generate && pikku db migrate`,
+  },
+  {
+    names: ['agents', 'agentRecipe', 'agentWiring', 'scheduledAgent', 'tools'],
+    title: 'building an agent, whole',
+    points: [
+      'Order: the tools, the agent, how it is reached, then `pikku all` and `pikku meta grep <agentName>` (it prints the model and the tools the build resolved; `pikku meta context` lists every agent). An agent is a `*.agent.ts` file anywhere under `srcDirectories`; its export name is what `rpc.agent.run` and `usePikkuAgent` take, and `name` is a kebab-case label.',
+      "A tool is any function listed as `ref('exportName')` or by value. The model picks tools on their `description`, so give every tool one; `readonly: true` for lookups. `approvalRequired: true` on a tool pauses the run until a human approves (the default policy); do not also `expose` that tool.",
+      "`model` is an alias from `models` in pikku.config.json (`pikku doc models`); one that is missing fails codegen. The prompt is `goal` (required), with optional `role` and `personality`. `memory: { storage: 'agentStorage', lastMessages: 20 }` keeps history per `threadId` and `resourceId` the caller sends.",
+      "Reaching it. `expose: true` serves `POST /rpc/agent/<name>`. From your own function: `rpc.agent.run('agentExport', { message, threadId, resourceId })` answers `{ runId, result, usage }`. A cron or other sessionless caller needs `auth: false` on the agent, and the cron's function is `pikkuVoidFunc`, which runs the agent and returns nothing. `permissions` and `scopes` are enforced either way.",
+      '`permissions: { name: guard }` takes a `pikkuPermission` that reads the input, or a `pikkuAuth(async (services, session) => ...)` when it reads only the session (PKU586 otherwise). Hooks for guardrails: `agentMiddleware: [pikkuAgentMiddleware({ beforeToolCall, modifyOutput })]` from `#pikku/middleware`; a hook that throws stops the call. `pikku doc pikkuAgentMiddleware` lists the hooks.',
+      'A file that declares zod schemas must not also call `wireHTTP` or `wireScheduler` (PKU490): keep the functions in one file and the wirings in another.',
+      "Keys the key list above does not show: `tools: [ref('fn')]`; `memory: { storage: 'agentStorage', lastMessages, workingMemory }` where `lastMessages` is the conversation and `workingMemory` (an exported zod schema) is what the agent remembers about a person across conversations; `agents: [importedAgent]` with `agentMode: 'delegate'` for a sub-agent (the imported value, not `ref()`); `output` (an exported schema, honoured only on an agent without tools; callers read `reply.result`); `input`; `workflows`; `toolChoice`.",
+      "A tool that changes things carries `approvalRequired: true` and `approvalDescription: pikkuApprovalDescription(async (services, input) => 'sentence the approver sees')` (from `#pikku/function`); a lookup does not. The run answers `status: 'suspended'` with `pendingApprovals`; `rpc.agent.approve` resumes it. There is no expiry or approver option on an agent tool: who may confirm is a `permissions` rule.",
+      'Guardrails are `agentMiddleware: [pikkuAgentMiddleware({ modifyInput, beforeToolCall, afterToolCall, modifyOutput })]` (`pikku doc pikkuAgentMiddleware`): input guard = `modifyInput` (throw to refuse), veto a call = `beforeToolCall` that throws, redact = `modifyOutput`, audit = `afterToolCall`. Define it with the hook that matches the job and attach it to the agent. `maxSteps` and `temperature` bound a tool loop.',
+    ],
+    example: `// src/functions/tickets.function.ts
+export const lookupTicket = pikkuFunc({ description: 'Finds a ticket by id.', readonly: true, input: LookupTicketInput, output: LookupTicketOutput, func: async ({ kysely }, { ticketId }) => { /* ... */ } })
+
+// src/agents/triage.agent.ts
+import { pikkuAgent } from '#pikku/agent'
+import { ref } from '#pikku/function'
+export const supportTriage = pikkuAgent({
+  name: 'support-triage',
+  description: 'Triages support tickets.',
+  goal: 'Look the ticket up with a tool, then say how urgent it is.',
+  model: 'fast',
+  tools: [ref('lookupTicket')],
+  memory: { storage: 'agentStorage', lastMessages: 20 },
+  expose: true,
+})
+
+// src/wirings/digest.wiring.ts  (the cron runs a void function that calls the agent)
+wireScheduler({ name: 'morningDigest', schedule: '0 7 * * *', func: runDigest })
+
+// facets, each on the agent (memory, sub-agent, guardrail, access, limits) or on a tool (approval)
+export const GuestPrefs = z.object({ diet: z.string().optional() })
+export const concierge = pikkuAgent({
+  // name, description, goal, model as above
+  tools: [ref('chargeCard')],
+  agents: [replyWriter], agentMode: 'delegate', // imported agent value
+  memory: { storage: 'agentStorage', lastMessages: 10, workingMemory: GuestPrefs },
+  agentMiddleware: [supportGuard], // pikkuAgentMiddleware({ modifyInput, beforeToolCall, afterToolCall, modifyOutput }) from #pikku/middleware
+  permissions: { manager: isManager }, maxSteps: 6, temperature: 0.2,
+})
+export const chargeCard = pikkuFunc({
+  description: 'Charges the card for an order.',
+  approvalRequired: true,
+  approvalDescription: pikkuApprovalDescription(async (_s, { orderId, amount }: { orderId: string; amount: number }) => \`Charge \${amount} on order \${orderId}\`),
+  input: ChargeInput, output: ChargeOutput,
+  func: async (_s, { orderId, amount }) => ({ charged: true }),
+})
+// guardrail hooks: modifyInput refuses (throw), beforeToolCall vetoes (throw), modifyOutput rewrites text, afterToolCall audits
+// an agent with an \`output\` schema has no tools; its caller reads reply.result as that shape`,
+  },
+  {
     names: ['imports', 'import', '#pikku', '#pikku/*'],
     title: 'where an import comes from',
     points: [
@@ -311,7 +447,7 @@ import { pikkuAgent } from '#pikku/agent'`,
     names: ['models', 'model', 'PIKKU_MODEL_ALIASES'],
     title: 'what `model` accepts on an agent',
     points: [
-      'A name with a `/` is used as written. A bare name is an alias from the `models` table in pikku.config.json, and one missing from the table fails codegen, so an empty table means every agent spells out `provider/model`.',
+      'A name with a `/` is used as written. A bare name is an alias from the `models` table in pikku.config.json, and one missing from the table fails codegen. An empty table is not a reason to spell `provider/model` in an agent: add an alias to the table, name it for its job, and use that, so one edit repoints every agent.',
       '`PIKKU_MODEL_ALIASES=fast:openai/gpt-5-mini` overrides the table at runtime.',
     ],
     example: `// pikku.config.json

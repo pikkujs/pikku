@@ -1,5 +1,11 @@
 # @pikku/openapi-parser
 
+## 0.12.28
+
+### Patch Changes
+
+- 153bfcd: `pikku addons search` (registry and OpenAPI catalogue), `pikku import n8n --setup`, wired addons and agents in `pikku meta`, a clearer `workflow.do` type-error hint, openapi addon generation fixes, and the skills and guides that go with them.
+
 ## 0.12.27
 
 ### Patch Changes

@@ -24,7 +24,7 @@
     "pikku": "pikku all"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.160"
+    "@pikku/core": "^0.12.161"
   },
   "dependencies": {
     "@nats-io/jetstream": "^3.4.0",

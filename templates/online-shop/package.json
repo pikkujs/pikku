@@ -8,7 +8,7 @@
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "^0.12.66",
     "@pikku/cloudflare": "workspace:*",
-    "@pikku/core": "^0.12.160",
+    "@pikku/core": "^0.12.161",
     "@pikku/fetch": "^0.12.16",
     "@pikku/jose": "^0.12.11",
     "@pikku/kysely": "workspace:^",
@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
-    "@pikku/cli": "^0.12.214",
+    "@pikku/cli": "^0.12.215",
     "@pikku/deploy-standalone": "workspace:*",
     "@pikku/playwright": "workspace:*",
     "@playwright/test": "^1.64.1",

@@ -1,5 +1,22 @@
 # @pikku/inspector-go
 
+## 0.12.18
+
+### Patch Changes
+
+- 6da4140: `srcDirectories` is no longer read (the loader accepts and ignores it) and two keys replace it: `base`, the one package that owns the wirings and services (inspected in place by the root), and `addons`, the addon directories each with a required `namespace`. Root `pikku all` runs the addons in dependency order, then the base, and assembles the backend SDKs; a backend filter can select an addon with `names: ["<namespace>:*"]`. The inspectors take a `baseDir` and PKU368 reports an addon service the project's `SingletonServices` does not provide (a wire service does not count), for every function of the addon. A `wireAddon` is matched to an addon by package: exactly one call may point at each addon, under its `namespace`; a different name or a second call is an error, an addon nothing wires is a warning. The base lives inside `rootDir`, and the scaffold and `pikku new` files are written in it. `pikku new addon` writes a `namespace`. See docs/MIGRATION.md.
+- fa51478: A list function's generated input schema now comes from the real `ListInput<F, S>`. `filter` is the recursive `Filter<F>` through `$ref`, `sort.column` is an enum of the declared sort columns, and the fields of F are no longer merged into the top level. `pikku-inspect` also reports `PKU492` (error) when a generated input or output schema contains an `unknown` that the source did not declare, or any `never`. `LeafFilter` no longer admits `undefined` for optional fields.
+- 21eb299: A function can be declared `mock: true`: input and output, no `func`. `pikkuFunc` and `pikkuSessionlessFunc` refuse a config with both or neither. The inspectors (Go and Rust) record `mock: true` in the function meta and keep the function in every map and client, but leave it out of the version manifest. Calling a mocked function on a backend fails with a 501 naming it. `pikku info functions --mock` lists the mocked functions, `pikku meta functions` shows the flag, and `pikku validate` reports each one as an error (a warning under `--skipDeployChecks`).
+- Updated dependencies [6da4140]
+- Updated dependencies [cbfc133]
+- Updated dependencies [5bee160]
+- Updated dependencies [fa51478]
+- Updated dependencies [21eb299]
+- Updated dependencies [57ddb6d]
+- Updated dependencies [2d788a3]
+  - @pikku/inspector@0.12.123
+  - @pikku/core@0.12.161
+
 ## 0.12.17
 
 ### Patch Changes

@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import {
   basename,
@@ -123,23 +122,37 @@ type ScaffoldCheckConfig = {
 
 const SKIP_SEGMENTS = new Set(['node_modules', 'dist', 'build', 'coverage'])
 
+/**
+ * Every `.ts` source file under `dir`. Skipped and dot directories are never
+ * entered and symlinks are never followed: a workspace's `node_modules` links
+ * packages back into each other, so a walk that filters after reading descends
+ * the same package until the heap is gone.
+ */
 const listTsFiles = async (dir: string): Promise<string[]> => {
-  if (!existsSync(dir)) return []
-  try {
-    return (await readdir(dir, { recursive: true }))
-      .filter(
-        (f): f is string =>
-          typeof f === 'string' &&
-          f.endsWith('.ts') &&
-          !f.endsWith('.d.ts') &&
-          !f
-            .split(/[\\/]/)
-            .some((s) => SKIP_SEGMENTS.has(s) || s.startsWith('.'))
-      )
-      .map((f) => join(dir, f))
-  } catch {
-    return []
+  const files: string[] = []
+  const walk = async (current: string): Promise<void> => {
+    let entries
+    try {
+      entries = await readdir(current, { withFileTypes: true })
+    } catch {
+      return
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (SKIP_SEGMENTS.has(entry.name) || entry.name.startsWith('.'))
+          continue
+        await walk(join(current, entry.name))
+      } else if (
+        entry.isFile() &&
+        entry.name.endsWith('.ts') &&
+        !entry.name.endsWith('.d.ts')
+      ) {
+        files.push(join(current, entry.name))
+      }
+    }
   }
+  await walk(dir)
+  return files
 }
 
 const stringOrUndefined = (v: unknown): string | undefined =>

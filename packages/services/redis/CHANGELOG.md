@@ -1,3 +1,17 @@
+## 0.12.27
+
+### Patch Changes
+
+- 430f04a: Add `RedisRateLimitService`, a `RateLimitService` on Redis. One Lua script counts and compares, so concurrent hits never admit more than the limit, and the window is the key's own TTL.
+- Updated dependencies [6da4140]
+- Updated dependencies [cbfc133]
+- Updated dependencies [5bee160]
+- Updated dependencies [fa51478]
+- Updated dependencies [21eb299]
+- Updated dependencies [57ddb6d]
+- Updated dependencies [2d788a3]
+  - @pikku/core@0.12.161
+
 ## 0.12.26
 
 ### Patch Changes

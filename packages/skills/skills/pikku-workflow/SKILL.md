@@ -19,7 +19,7 @@ What to reach for and why. For how to call it, run this once: `pikku doc workflo
 
 ## Rules
 
-- A retried step re-runs its side effects, and a run recovered after a crash re-runs the step caught in flight. Durability is at-least-once, so a charge or email can fire twice. Pass a stable idempotency key built from the workflow's own data (`order-${orderId}-charge`), never `randomUUID()` or `Date.now()`.
+- A retried step re-runs its side effects, and a run recovered after a crash re-runs the step caught in flight. Durability is at-least-once, so a charge or email can fire twice. Pass a stable idempotency key built from the workflow's own data (`order-${orderId}-charge`), never `randomUUID()` or `Date.now()`, as an `idempotencyKey` field of the step's input: `await workflow.do('Charge the card', 'chargeCard', { orderId: data.orderId, idempotencyKey: `order-${data.orderId}-charge` })`. The function (yours, or an addon function that takes one) uses it as the unique key of the effect.
 - Every step is a pikku function. Input and output are Zod schemas, not generics.
 - `pikkuWorkflowFunc` is the default. `pikkuWorkflowGraph` and `pikkuWorkflowComplexFunc` only with the owner's approval, never to dodge an error.
 - No try/catch around steps. Declare `compensate` on the function itself; the engine runs it. Use a milestone to bound the unwind. An expected failure (a quote provider with no price) is not that: return a structured outcome from the step and let the workflow branch to a fallback. Compensation is for failures that should unwind the run.
@@ -75,6 +75,23 @@ export const sendWeeklyReport = pikkuSessionlessFunc({
   },
 })
 ```
+
+## Step calls, all in one place
+
+**When the CLI cannot tell you, report it; do not dig for it.** `pikku doc`, `pikku meta` and `pikku addons search` are the source of truth for how Pikku is called and what this project has. If one fails, or lacks a fact you need, run `pikku report "<the exact command and what was missing>"` once, then carry on from what you do know. Do not read `node_modules`, `dist` or `.pikku` to work around it: the report is how the gap gets fixed.
+
+Every call is made on `workflow` (third argument of `func`), each step has a unique name, and none needs a read of `node_modules` or `.pikku` to learn its shape:
+
+```ts
+await workflow.do('Load the order', 'loadOrder', data)                               // a function, or 'addon:function'
+await workflow.do('Charge', 'chargeCard', input, { retries: 3, retryDelay: '30s' }) // options: description, retries, retryDelay, compensate: false
+await workflow.do('Latest item', 'addon:listLatest', null)                                // a function that takes no input is given `null` ({} and leaving it out do not type-check)
+await workflow.sleep('Wait two days', '2d')                                          // a duration: '30s', '5min', '2h', '2d' (whole numbers, no spaces) or milliseconds
+const answer = await workflow.approval('A manager approves', { schema, approvers: 'not-initiator', expiry: '48h' })
+await Promise.all(items.map((x) => workflow.do(`Notify ${x.id}`, 'notify', x)))      // parallel fanout; a for...of with await is the sequential one
+```
+
+A branch is a plain `if`/`else` on an earlier step's result. A child workflow is a `workflow.do` whose function is another `pikkuWorkflowFunc`'s name. `pikku meta workflows get <name>` prints the steps the compiler found, which is the check that each call above was read as a step.
 
 ## An approval, whole
 

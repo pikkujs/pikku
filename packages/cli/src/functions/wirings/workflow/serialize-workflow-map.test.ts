@@ -68,4 +68,29 @@ describe('serializeWorkflowMap', () => {
       []
     )
   })
+
+  test('a graph workflow is startable by name; a scenario is not', () => {
+    const out = serializeWorkflowMap(
+      logger,
+      '.pikku',
+      {},
+      typesMap,
+      {} as unknown as FunctionsMeta,
+      {} as WorkflowsMeta,
+      {
+        'Gmail Ops': { source: 'graph', nodes: {} },
+        aScenario: { source: 'scenario', nodes: {} },
+      } as unknown as SerializedWorkflowGraphs,
+      '.pikku/pikku-custom-types.gen.d.ts'
+    )
+    assert.deepEqual(parseErrors(out), [])
+    assert.match(
+      out,
+      /export type GraphWorkflowIO = \{\n  readonly "Gmail Ops": WorkflowHandler<any, any>,\n\};/
+    )
+    assert.match(
+      out,
+      /export type FlattenedWorkflowMap = WorkflowMap & GraphWorkflowIO/
+    )
+  })
 })

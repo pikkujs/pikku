@@ -21,7 +21,7 @@ type Schema = {
 }
 
 const load = (name: string): Schema =>
-  JSON.parse(readFileSync(join(schemasDir, `${name}.json`), 'utf-8'))
+  JSON.parse(readFileSync(join(schemasDir, `${name}.schema.json`), 'utf-8'))
 
 const root = (schema: Schema) =>
   schema.$ref

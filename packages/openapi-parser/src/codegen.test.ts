@@ -1807,3 +1807,33 @@ describe('declared header parameters are forwarded from the request on the wire'
     assert.deepEqual(calls[1][2], { accept: 'application/pdf' })
   })
 })
+
+// ---------------------------------------------------------------------------
+// Malformed specs
+// ---------------------------------------------------------------------------
+describe('malformed composition keywords', () => {
+  test('an allOf that is an object (not an array) does not crash generation', () => {
+    const bad = {
+      type: 'object' as const,
+      allOf: { '3': { properties: { a: {} } } },
+    } as any
+    const spec = makeSpec({
+      operations: [
+        makeOp({
+          method: 'get',
+          path: '/things/{id}',
+          operationId: 'getThing',
+          pathParams: [
+            { name: 'id', required: true, schema: { type: 'string' } },
+          ],
+          responseSchema: bad,
+        }),
+      ],
+    })
+    const files = generateAddonFromOpenAPI(spec, makeVars(), {
+      oauth: false,
+      secret: false,
+    })
+    assert.ok(Object.keys(files).length > 0)
+  })
+})

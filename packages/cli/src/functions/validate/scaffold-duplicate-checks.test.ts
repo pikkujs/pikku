@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { getPikkuCLIConfig } from '../../utils/pikku-cli-config.js'
@@ -47,6 +47,18 @@ describe('scaffold duplicate checks', () => {
   test('a clean app passes', async () => {
     const root = await project()
     await write(root, 'src/todo.function.ts', 'export {}\n')
+    assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
+  })
+
+  test('does not enter node_modules or follow symlinks that loop back', async () => {
+    const root = await project()
+    await write(root, 'node_modules/pkg/index.ts', 'export {}\n')
+    await write(root, 'node_modules/pkg/admin/admin.gen.ts', ADMIN_WIRING)
+    await symlink(
+      join(root, 'node_modules/pkg'),
+      join(root, 'node_modules/pkg/self')
+    )
+    await symlink(root, join(root, 'src/up'))
     assert.deepEqual(await runScaffoldDuplicateChecks(root), [])
   })
 

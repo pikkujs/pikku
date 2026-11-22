@@ -101,6 +101,7 @@ interface GraphNodeHandler<I> {
 ${serializedWorkflows}
 
 ${serializedGraphs}
+${generateGraphWorkflowIO(graphMeta)}
 ${mergedWorkflowMap}
 
 export type WorkflowClient<Name extends keyof FlattenedWorkflowMap> = {
@@ -217,6 +218,22 @@ function generateGraphs(
   return graphsStr
 }
 
+/**
+ * A graph workflow (an n8n import, `pikkuWorkflowGraph`) is started by name like any workflow, but it has no typed
+ * function behind it, so its input and output are open. Without this entry `rpc.startWorkflow('<graph name>', ...)`
+ * does not type-check. Scenarios also live in the graph meta; they are not started by name and are left out.
+ */
+function generateGraphWorkflowIO(graphMeta: SerializedWorkflowGraphs): string {
+  const names = Object.entries(graphMeta)
+    .filter(([, graph]) => (graph as { source?: string }).source === 'graph')
+    .map(([name]) => name)
+  let str = 'export type GraphWorkflowIO = {\n'
+  for (const name of names)
+    str += `  readonly ${key(name)}: WorkflowHandler<any, any>,\n`
+  str += '};'
+  return str
+}
+
 function toPascalCase(str: string): string {
   return str
     .split(/[-_]/)
@@ -251,7 +268,7 @@ function generateMergedWorkflowMap(
 ): string {
   if (!wireAddonDeclarations || wireAddonDeclarations.size === 0) {
     return `
-export type FlattenedWorkflowMap = WorkflowMap
+export type FlattenedWorkflowMap = WorkflowMap & GraphWorkflowIO
 `
   }
 
@@ -261,7 +278,7 @@ type PrefixWorkflowKeys<T, Prefix extends string> = unknown extends T ? {} : {
 }
 
 export type FlattenedWorkflowMap =
-  WorkflowMap${Array.from(wireAddonDeclarations.keys())
+  WorkflowMap & GraphWorkflowIO${Array.from(wireAddonDeclarations.keys())
     .map(
       (namespace) =>
         ` & PrefixWorkflowKeys<${toPascalCase(namespace)}WorkflowMap, '${namespace}'>`

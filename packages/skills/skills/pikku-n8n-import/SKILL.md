@@ -19,6 +19,66 @@ Never re-do what the importer already did, and never hand-edit generated files t
 paper over a stub — fix the source cause (the stub function, the graph node, or a
 missing dependency).
 
+## Import an n8n workflow
+
+Run these in order; each step names what to expect and how to recover. Do not
+read generated files, `.pikku`, `node_modules` or the importer's source. Every
+fact you need comes from the step's own output or `pikku meta`.
+
+1. **Import.** `pikku import n8n <file.json> --out src/<dir>` (run from the
+   functions package; give an absolute path, or write the JSON to a file first).
+   Without `--out` files land in the package root, outside `srcDirectories`, and
+   `pikku all` never sees them. Expect `Imported "<name>" (<shape>) → N file(s)`
+   plus lines for the integration manifest, wired addon instances and stub
+   functions (each listed by path). Recovery: `[reason] message` means the
+   workflow is un-importable; stop and report it.
+2. **Install what it names.** For each package in `<slug>.addons.gen.ts` or
+   `<slug>.integrations.json`: `pikku addons search <service words>` then
+   `pikku addons add <name>`. A `graph:*` step needs `pikku addons add graph`.
+   The importer's package names are guesses. Recovery: if no addon exists, delete
+   that instance from `<slug>.addons.gen.ts` (otherwise `pikku all` fails on the
+   missing package), keep the node as a stub, and report it as a missing
+   integration (step 4 below). After the install delete `<slug>.addons.gen.ts`
+   when `pikku addons add` has wired the same package (a second `wireAddon` for
+   it is redundant).
+3. **Read the result.** `pikku meta workflows get "<workflow name>"` shows every
+   node: its `rpcName` (`<addon>:<fn>`, `graph:<fn>`, or a local stub function)
+   and `input`. For each addon node compare its `input` with
+   `pikku meta functions get <addon>:<fn>` (fields, required ones have no `?`):
+   the import maps by name and can drop a required field that n8n spelled
+   differently (an unmapped `to`, `id`, `sendTo`). Fill the gaps in the graph file.
+4. **Fill every remaining stub.** `grep -rln "implement me" src` lists them.
+   Route each by its JSDoc marker to the reference below (integration stub,
+   Code node, control stub). A Code node arrives already ported (check it, remove
+   the `// @ts-nocheck` line once the types are right); an integration stub is
+   replaced by an addon step (`nodes: { x: "<addon>:<fn>" }` and delete the stub
+   file) or, when no addon exists, reported, not guessed.
+5. **Start it.** The importer writes no trigger. A webhook becomes an HTTP wiring,
+   a cron a schedule, a manual trigger a plain HTTP wiring. Put in the workflow's
+   directory a `pikkuSessionlessFunc` whose body is
+   `rpc.startWorkflow('<workflow name>' as never, data as never)` (graph names
+   are not in the typed workflow map, hence the casts) and wire it with
+   `wireHTTP({ method: 'post', route: '/<slug>', auth: false, func })` (or
+   `wireScheduler`); imports are `pikkuSessionlessFunc` from `#pikku/function`
+   and `wireHTTP` from `#pikku/http`.
+6. **Agent workflows.** The `.agent.ts` carries `// TODO(n8n)` for the model:
+   set `model` to one the project has a provider for; keep the prompt as imported.
+7. **Generate and type-check in one call.** `pikku all --tsc-summary`. Expect
+   `Type check passed — no errors.` Recovery: fix the source cause named by the
+   error and rerun. `PKU642`/`PKU340`: the addon is not installed (step 2).
+   `Kysely<DB>` vs `Kysely<unknown>` right after an install: duplicate kysely
+   copy, a project env problem, not your code; report it.
+8. **Check what's left.** `grep -rln "implement me" src` must be empty (or only
+   the integrations you reported as missing). `pikku meta workflows list` must
+   show the workflow.
+9. **Report** (see Final summary): files, workflow shape, missing integrations,
+   credentials/secrets the `pikku addons add` output asked to fill in, the agent
+   model choice, TODOs.
+
+A credential-free workflow with only built-in nodes takes about 6 calls
+(import, `addons add graph`, start wiring, `pikku all --tsc-summary`, stub
+grep, report); every addon or stub adds one to three.
+
 ## Agent Operating Procedure
 
 1. Discover before editing. Prefer `pikku meta ... --json` when
@@ -92,7 +152,7 @@ Missing integrations — install these or the nodes stay stubs:
 
 ### 5 — Verify it works
 
-1. `pikku all` (regenerate) → `yarn tsc` from the package root; fix the source
+1. `pikku all --tsc-summary` (regenerate + type-check); fix the source
    cause of any error and rerun.
 2. Grep the emitted functions for any surviving `— implement me`
    / `throw new Error('Stub:`. **Any survivor means the import is not done** —

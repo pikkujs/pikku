@@ -1,4 +1,5 @@
 import { rm } from 'node:fs/promises'
+import { workflowInputHint } from '../../utils/tsc-check.js'
 import { resolve } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import type { CLILogger } from '../../services/cli-logger.service.js'
@@ -169,7 +170,8 @@ const describe = (d: CheckDiagnostic): string => {
   const at = d.file
     ? `${d.file}${d.line ? `:${d.line}:${d.column ?? 1}` : ''}  `
     : ''
-  return `  ${at}${dim(d.code)}  ${d.message}`
+  const hint = workflowInputHint(d)
+  return `  ${at}${dim(d.code)}  ${d.message}${hint ? `\n    ${hint}` : ''}`
 }
 
 export const renderCheck = (
