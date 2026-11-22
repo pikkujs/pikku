@@ -26,6 +26,17 @@ An `OtlpSinkBase` has `exportSpans`, `exportLogs`, `exportMetrics`, `flush`, `cl
 
 `AnalyticsEventSink` is an `AnalyticsService` with an optional `setMap`. The map is required and its keys are the event names the sink receives. An event not in the map does not go to that sink. With no sink registered, events go to the logger as before. In local dev the Kysely sink is registered for every declared event.
 
+To register a sink for every event the app declares, read the names with `getDeclaredAnalyticsEvents()` from `@pikku/core/analytics`. The generated bootstrap registers them (`analytics/pikku-analytics-meta.gen.ts`), so this works in a bundle with no filesystem and no `metaService`, such as a Cloudflare Worker or a standalone binary. It throws if the bootstrap was not imported.
+
+```typescript
+existingServices.analyticsSinks.add(
+  warehouse,
+  Object.fromEntries(getDeclaredAnalyticsEvents().map((name) => [name, true]))
+)
+```
+
+A Cloudflare worker and a standalone build call `assertAnalyticsSinksDeclared(analyticsSinks)` once the services are built: with a sink registered and no declared event, they refuse to start rather than drop every event.
+
 ## Stitching spans into runs: `@pikku/core/otlp/runs`
 
 `createRunStitcher()` turns the frames an OTLP sink receives into runs: one run per trace, with hops, an outcome and a stamped event for every change. It is a pure state machine. It has no timers and never reads a clock: every call takes `nowMs`, and the caller sweeps on its own interval. `nowMs` is compared with span times (the health window uses a span's end time), so it must be unix milliseconds on the same clock as the spans: the wall clock live, the replayed span time when replaying.

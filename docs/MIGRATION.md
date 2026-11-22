@@ -90,6 +90,15 @@ Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, befor
 
 **Find the code:** search for `analyticsService`, `AnalyticsSink` and `accepts`.
 
+### Declared analytics events ship in the bundle; the meta JSON holds names only
+
+The bootstrap now imports `analytics/pikku-analytics-meta.gen.ts`, which registers the declared event names in runtime state. Read them with `getDeclaredAnalyticsEvents()` from `@pikku/core/analytics`, not from `metaService.getAnalyticsMeta()`: a deployed bundle (a Cloudflare Worker, a standalone binary) has no meta files on disk, so that returned `{}` there and every event was dropped.
+
+**Changed:** `analytics/pikku-analytics-meta.gen.json` holds `{ name }` per event. The declaration's `file`, `variable` and `props` moved to `analytics/pikku-analytics-meta-verbose.gen.json`; `LocalMetaService.getAnalyticsMeta()` reads that file first, so its result is unchanged.
+**Behaviour change:** a Cloudflare worker or standalone build with an analytics sink registered and no declared event refuses to start (`assertAnalyticsSinksDeclared`). A platform contributor that always registers a sink must skip it when `getDeclaredAnalyticsEvents()` is empty.
+
+**Find the code:** search for `getAnalyticsMeta` and `pikku-analytics-meta.gen.json`.
+
 ### `pikku db generate` writes drops and renames
 
 A column or a table that left `db/tables.ts` used to be refused. It is now written as `DROP COLUMN` / `DROP TABLE` behind a `-- pikku:destructive` line, once a person approves: `generate` asks on a terminal, and elsewhere refuses until `pikku db generate --allowDestructive` is given. `pikku db migrate` stops on the marked file until it is given `--allowDestructive` too. Only a table a previous `generate` recorded is dropped. A drop the engine will not do (a column a `UNIQUE` key holds on sqlite, a table another table references) is still refused, with the engine's reason; there is no `CASCADE`.

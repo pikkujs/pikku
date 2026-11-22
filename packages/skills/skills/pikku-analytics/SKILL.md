@@ -30,6 +30,7 @@ An event exists once it is declared in the exported `defineAnalyticsEvents` cons
 - `usePikkuAnalytics needs an analytics client`: `createPikku` makes no client. Add `analytics: createAnalytics<AnalyticsEvent>({ endpoint })` to the instance given to `PikkuProvider`.
 - `/analytics` answers 404: set `analytics` under `scaffold` in `pikku.config.json`.
 - 403 from `/analytics`: the screen's origin is not allowed. Add it to `CORS_ORIGINS`.
+- A deployed app refuses to start with `analytics sinks are registered, but the app declares no analytics events`, or `the bootstrap did not import analytics/pikku-analytics-meta.gen.ts`: the bundle was built without the declared events. Run `pikku all` (or the deploy) again so the bootstrap imports them; do not register a sink by hand to get past it.
 
 ## Seeing it
 
