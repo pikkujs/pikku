@@ -1,3 +1,18 @@
+## 0.13.47
+
+### Patch Changes
+
+- cbfc133: Database declarations: a column typed `bigint` reads as a number and throws above `Number.MAX_SAFE_INTEGER`; an undeclared `int8` or `numeric` reads as a string and `bytea` as `Uint8Array`; a `declareOnly` column's `type` is optional and derived from the database, and a `type`, `tsType` or `kind` that disagrees with the real column is an error. `default` and `onUpdate` take `{ now: true }`, `{ uuid: true }` (default only), a literal or `{ sql: { postgres?, mysql?, sqlite? } }`, spelled for the configured engine, with `onUpdate` generated as a Postgres trigger, a SQLite trigger or a MySQL column attribute. `input: false` marks a server-set column and removes it from the generated zod input schemas and the Kysely insert and update types. `default: { sql }` and an index `where` now take the per-engine object (breaking, see docs/MIGRATION.md).
+- 4ea43c5: Add `KyselyRateLimitService`, a `RateLimitService` on a new `pikku_rate_limit` table (the `rate-limit` schema, brought in by `rateLimitService`). Each hit is one guarded `UPDATE`, so concurrent hits never admit more than the limit, and counts survive restarts. `PgKyselyRateLimitService` and `MySQLKyselyRateLimitService` judge every window on the database's clock. Expired windows are pruned by a hit at most once a minute.
+- Updated dependencies [6da4140]
+- Updated dependencies [cbfc133]
+- Updated dependencies [5bee160]
+- Updated dependencies [fa51478]
+- Updated dependencies [21eb299]
+- Updated dependencies [57ddb6d]
+- Updated dependencies [2d788a3]
+  - @pikku/core@0.12.161
+
 ## 0.13.46
 
 ### Patch Changes

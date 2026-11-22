@@ -1,5 +1,0 @@
----
-'@pikku/cli': patch
----
-
-Mock mode is a client: the generated `mocks.gen.ts` exports `createMockPikku(options?)`, a Pikku instance for `PikkuProvider` that answers `rpc.invoke` from `.mocks/`, so screens keep `usePikkuQuery` / `usePikkuMutation` / `usePikkuInfiniteQuery` unchanged. `setMockScenario(name, scenario | null)`, `setMockScenarios` and `clearMockScenarios` pick a scenario per function; a scenario's `delayMs` is waited and an error scenario (`state: 'error'` or `status` >= 400) rejects with that status. With `fallback` (a real client) only the functions declared `mock: true` (exported as `mockFlagged`) are mocked and the rest go to the fallback; without one every call is mocked and `/auth/get-session` answers signed out. `queryClient` resets the affected queries when a scenario changes. `mocks.gen.ts` is now also emitted when a function is `mock: true` and there is no `.mocks/`, and its `import.meta.glob` paths are re-pointed when the backend SDK is moved into `.pikku/sdk/<backend>/exposed/` (they pointed one directory too high).
