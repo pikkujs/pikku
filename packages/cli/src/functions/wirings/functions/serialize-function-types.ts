@@ -401,6 +401,8 @@ export function pikkuFunc(func: any) {
  * time because it names no topic. It is wired as an \`sse: true\` route or a
  * channel action, never callable as an RPC, and a public topic is wired
  * with \`auth: false\` like any public route.
+ *
+ * @example snippet: orderStatusChannel
  */
 export function pikkuSubscribeFunc<In, TopicShape extends string>(
   config: PikkuFunctionConfig<In, TopicShape, 'session' | 'rpc', PikkuFunction<In, TopicShape, 'session' | 'rpc'>>
