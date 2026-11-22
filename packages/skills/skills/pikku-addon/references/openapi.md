@@ -1,5 +1,29 @@
 # An addon from an OpenAPI spec
 
+## Build with an OpenAPI addon (the whole sequence)
+
+Run every command in the folder that holds `pikku.config.json` (the app's functions package, usually `packages/functions`). Measured on three hand builds: 8 to 10 tool calls, first file written at call 5 or 6. Do not read the generated addon, `node_modules`, `dist` or `.pikku`: steps 3 and 4 tell you everything the workflow needs.
+
+1. **Find the API** (skip when you were handed a spec path, URL or catalogue name):
+   `pikku addons search <one or two words> --openapi` (add `--authless` to keep only APIs that need no key and are free)
+   Look for `OpenAPI catalogue:` and lines `<name>  <title>  [<auth>, <price>]  -> pikku addons add <name>`. A line ending `--auth none` is keyless; any other needs the user's credential, so ask for it. Nothing listed: try one other word; still nothing and no name given: `pikku report "<what was searched>"` and ask for a spec URL. An API you were told to use by name can be added without searching.
+2. **Generate and wire it, one command:**
+   `pikku addons add <catalogue-name | spec-url | spec-path> --auth none [--name <short>]`
+   Expect `N operations, auth: none`, then `Created addon at .../packages/addon-<name>`, `updated src/addons/<name>.addon.ts`, `pikku all`, `tsc && pikku dist`, and `Fill these in: variable <NAME>_BASE_URL` (it has the spec's server as its default: nothing to fill). About 10 s. The namespace is `<name>` (the `--name`, else the catalogue name without the domain suffix, else the spec title). A spec URL or path needs `--auth` and `--name`; a catalogue name needs neither. `--auth none` only for an API that really takes no key; anything else, stop and ask. Not ok: a `TypeError` while generating means the spec is malformed, so `pikku report` it with the name; `Directory already exists` means that name is taken, pass another `--name`.
+3. **List its operations:** `pikku meta grep <name> <word>` prints `<name>:<fn>` rows ranked by the words, or `pikku meta functions` lists the wired addons. Operations with no `operationId` in the spec are named `get`, `get2`, `listLatest`: the input fields in step 4 say which is which.
+4. **Read each function you will call:** `pikku meta functions get <name>:<fn>` (one id per call). It prints the input fields (`?` is optional; `any` or a bare `array` means an enum or a list of enum values from the spec, so type your own input field as a `z.enum([...])` of the values you will use or the compiler will say so) and the output fields (`rates: object`; an empty list means the spec gave no response shape, so the output is `unknown`: take it as input of your own step and narrow it there). Input shown as `fields: []` with `name: null` means no input: pass `null` as the step data, not `{}`.
+5. **Write everything in one go** (one function file, one wiring file per kind; schemas are exported constants, never inline, or `pikku check` raises PKU489):
+   - `src/functions/<area>/<x>.function.ts`: a `pikkuSessionlessFunc` that only does `rpc.startWorkflow('<workflowName>', data)`, plus any step that is your own logic.
+   - `src/wirings/<x>.http.ts`: `wireHTTP({ method: 'post', route: '/<x>', auth: false, func: <starter> })`.
+   - `src/wirings/<x>.workflow.ts`: `pikkuWorkflowFunc` exported under the contract name, calling the addon as a step: `await workflow.do('<step name>', '<name>:<fn>', { ...input }, { retries: 3, retryDelay: '10s' })`. Never wrap the addon in your own function that calls `rpc.invoke`; the gate wants the step itself. A branch is a plain `if` on the step result.
+   The full shape (starter, wiring, workflow, retries, branch) is in the pikku-workflow skill's `references/addon-workflow-example.md`; the addon call differs only in the `<name>:<fn>` and its input.
+6. **Build and type-check:** `pikku all`, then `pikku check` (it runs codegen and `tsc`; `✓ ok` is the target).
+7. **Confirm the workflow reads as steps:** `pikku meta workflows get <workflowName>` must list `"rpcName":"<name>:<fn>"` for every addon call. A step typed as a plain function name instead means the call was written wrong.
+
+If a TS2769 "No overload matches ... `keyof WorkflowMap`" names your `<name>:<fn>` step, the argument is wrong, not the step name: re-read step 4 (an enum, `null` input, or a required field you left out).
+
+Files the build leaves: `packages/addon-<name>/` (generated), a line in `packages/functions/package.json` and the lockfile, `src/addons/<name>.addon.ts`, and your three files. Nothing else is needed, and `.env` is local.
+
 ## Contents
 
 - Recognising one
@@ -54,13 +78,13 @@ to an authenticated caller — fetch it again with the key, don't build on it.
 
 Keep a copy in `specs/` as the record of what the addon was generated from.
 
-## 2 — Generate, from the app's root
+## 2 — Generate, from the folder with `pikku.config.json`
 
 ```bash
-bunx --bun pikku new addon <name> --openapi <path-url-or-catalogue-name>
+pikku addons add <path-url-or-catalogue-name> --auth none --name <name>
 ```
 
-One command. Inside an app it writes `packages/addon-<name>` as
+(`pikku new addon <name> --openapi <spec>` is the same generator.) One command. Inside an app it writes `packages/addon-<name>` as
 `@pikku/addon-<name>`, then installs it into the app:
 
 - the dependency in the root and the functions `package.json`
