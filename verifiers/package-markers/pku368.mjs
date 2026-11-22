@@ -1,11 +1,11 @@
 /**
- * The negative half of the base-and-addons proof: the base does not provide a
+ * The negative half of the package-markers proof: the main package does not provide a
  * service an addon takes from its project, so `pikku all` at the root fails
  * with PKU368 naming the addon function and the service.
  *
- *   1. one addon needs `stamper`, a second (`mail`) needs `mailer`; the base
+ *   1. one addon needs `stamper`, a second (`mail`) needs `mailer`; the main package
  *      provides both and the root passes
- *   2. the base stops providing `stamper`: PKU368 names tools:stamped
+ *   2. the main package stops providing `stamper`: PKU368 names tools:stamped
  *   3. a function of `tools` whose services are unknown must be blamed only
  *      for what `tools` takes from its project: with `mailer` missing, PKU368
  *      names mail:stamped and never tools:greet
@@ -50,7 +50,7 @@ const without = (file, service) =>
 try {
   rmSync(copy, { recursive: true, force: true })
   const skip = (src) => !/\/(\.pikku|node_modules)(\/|$)/.test(src)
-  for (const file of ['pikku.config.json', 'tsconfig.json']) {
+  for (const file of ['pikku.config.json', 'tsconfig.json', 'package.json']) {
     cpSync(join(here, file), join(copy, file))
   }
   cpSync(join(here, 'packages'), join(copy, 'packages'), {
@@ -58,7 +58,8 @@ try {
     filter: skip,
   })
 
-  // A second addon, `mail`: the first one with `stamper` renamed `mailer`.
+  // A second addon, `mail`: the first one with `stamper` renamed `mailer`. The
+  // workspace finds it by its marker; nothing lists it.
   const mail = join(copy, 'packages/mail')
   cpSync(join(copy, 'packages/tools'), mail, { recursive: true })
   for (const file of [
@@ -75,11 +76,8 @@ try {
         .replaceAll('stamper', 'mailer')
     )
   }
-  edit(join(copy, 'pikku.config.json'), (text) =>
-    text.replace('"packages/tools"', '"packages/tools",\n    "packages/mail"')
-  )
 
-  // The base wires and calls both, and provides both services.
+  // The main package wires and calls both, and provides both services.
   const app = join(copy, 'packages/app')
   edit(join(app, 'src/app.wiring.ts'), (text) =>
     text
@@ -130,11 +128,11 @@ export const mailVia = pikkuSessionlessFunc<{ text: string }, { text: string }>(
   const run1 = pikku(copy)
   if (run1.status !== 0) {
     console.error(run1.stdout + run1.stderr)
-    fail('pikku all failed although the base provides every service')
+    fail('pikku all failed although the main package provides every service')
   }
-  console.log('✓ two addons whose services the base provides pass')
+  console.log('✓ two addons whose services the main package provides pass')
 
-  // The base stops providing `stamper`.
+  // The main package stops providing `stamper`.
   const services = join(app, 'src/services.ts')
   const types = join(app, 'types/application-types.d.ts')
   const keep = [readFileSync(services, 'utf8'), readFileSync(types, 'utf8')]
@@ -143,7 +141,7 @@ export const mailVia = pikkuSessionlessFunc<{ text: string }, { text: string }>(
   const run2 = pikku(copy)
   const output2 = run2.stdout + run2.stderr
   if (run2.status === 0)
-    fail('pikku all passed although the base lacks `stamper`')
+    fail('pikku all passed although the main package lacks `stamper`')
   if (!/PKU368/.test(output2)) {
     console.error(output2)
     fail('pikku all failed, but not with PKU368')
@@ -152,7 +150,7 @@ export const mailVia = pikkuSessionlessFunc<{ text: string }, { text: string }>(
     console.error(output2)
     fail('PKU368 does not name tools:stamped and stamper')
   }
-  console.log('✓ a service the base does not provide is refused (PKU368)')
+  console.log('✓ a service the main package does not provide is refused (PKU368)')
 
   // `tools:greet` has unknown services, and `mailer`, which only `mail`
   // takes, is missing. The addon passes are skipped (PIKKU_DEPLOY_CODEGEN) so

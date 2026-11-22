@@ -503,22 +503,15 @@ export type PikkuCLIInput = {
     buckets: string[]
   }
   /**
-   * Directories of the addons this project uses, relative to `rootDir`. Each is
-   * an addon with its own pikku.config.json, a package.json name and a
-   * `namespace`. `pikku all` here runs in each of them in dependency order,
-   * then in the base, then assembles the backends. The base wires them with
-   * `wireAddon` in its own source.
+   * Role marker for a package inside a project's workspace: the one package
+   * that owns the wirings and services. The root finds it in the root
+   * package.json `workspaces`; at most one package is marked, and a project
+   * with none is its own main.
    */
-  addons?: string[]
+  main?: boolean
   /**
-   * The one package that owns the project's wirings and services, relative to
-   * `rootDir`, with its own pikku.config.json. Leave it out and the project is
-   * its own base.
-   */
-  base?: string
-  /**
-   * In an addon the root lists in `addons`: the namespace the base wires it
-   * under. Required there, and unique among the listed addons.
+   * In an addon package of a workspace: the namespace the main package wires
+   * it under. Required there, and unique among the workspace's addons.
    */
   namespace?: string
   ignoreFiles?: string[]
@@ -1315,13 +1308,13 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
     configPath: string
     /**
      * The directories whose source is inspected, relative to `rootDir`: the
-     * project's own directory and its base, minus dependencies, build output, its generated
+     * project's own directory and its main package, minus dependencies, build output, its generated
      * tree and any directory holding its own pikku.config.json.
      */
     sourceDirs: string[]
     /**
-     * The addons `addons` lists, ordered so each comes after the listed addons
-     * it depends on. Empty when the project lists none.
+     * The addon packages the workspace holds, ordered so each comes after the
+     * workspace addons it depends on. Empty when it holds none.
      */
     addonPackages: Array<{
       entry: string
@@ -1329,8 +1322,8 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
       name: string
       namespace: string
     }>
-    /** The package `base` names. Undefined when the project is its own base. */
-    basePackage?: { entry: string; dir: string; name: string }
+    /** The package marked `main`. Undefined when the project is its own main. */
+    mainPackage?: { entry: string; dir: string; name: string }
     addonName?: string
     stateOutput?: string
     stateInput?: string

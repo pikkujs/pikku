@@ -19,6 +19,7 @@ import type {
   SealingKeyName as CoreSealingKeyName,
 } from '@pikku/core/keypair'
 
+/** Every key pair the project declares with \`defineKeyPair\`, by name, with its use. */
 export type KeyPairsMap = ${map}
 
 /** Names of the signing key pairs: what \`keys.sign\` accepts. */

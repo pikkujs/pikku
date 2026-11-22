@@ -226,6 +226,7 @@ import type { RPCMap } from '${rpcMapImport}'
 export type StudioMessageKey =
 ${keys}
 
+/** Declares the screens and nav this addon brings to Pikku Studio, checked against its functions and message keys. */
 export const definePlugin = untypedDefinePlugin as DefinePlugin<
   RPCMap,
   StudioMessageKey

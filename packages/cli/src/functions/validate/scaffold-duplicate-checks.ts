@@ -227,7 +227,7 @@ export const runScaffoldDuplicateChecks = async (
 
   const scaffold = (config.scaffold ?? {}) as Record<string, unknown>
   const scaffoldDir = abs(
-    stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir(config)
+    stringOrUndefined(scaffold.pikkuDir) ?? defaultScaffoldDir(configRoot)
   )
 
   // Where `pikku all` writes one output: an explicit path wins, else the
@@ -253,7 +253,7 @@ export const runScaffoldDuplicateChecks = async (
   }
 
   const files = new Set<string>()
-  for (const dir of projectSourceDirs(config)) {
+  for (const dir of projectSourceDirs(configRoot)) {
     for (const f of await listTsFiles(abs(dir))) files.add(resolve(f))
   }
 
@@ -348,7 +348,7 @@ export const runScaffoldDuplicateChecks = async (
   }
 
   // The scaffold dir is not where tooling looks
-  const canonical = resolve(abs(defaultScaffoldDir(config)))
+  const canonical = resolve(abs(defaultScaffoldDir(configRoot)))
   if (resolve(scaffoldDir) !== canonical) {
     findings.push({
       id: 'scaffold-dir-noncanonical',

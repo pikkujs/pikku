@@ -120,7 +120,7 @@ export const runAuthPluginChecks = async (
 ): Promise<ValidateFinding[]> => {
   const findings: ValidateFinding[] = []
 
-  const searchDirs = projectSourceDirs(config ?? {})
+  const searchDirs = projectSourceDirs(root)
   const sourceFiles = await listProjectFiles(root, searchDirs, ['.ts', '.tsx'])
 
   let bansAnywhere = false

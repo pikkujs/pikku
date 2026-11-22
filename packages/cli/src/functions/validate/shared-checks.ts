@@ -594,7 +594,6 @@ export async function runSharedProjectChecks(
         'Create `pikku.config.json` at the repo root.',
         'Minimum useful shape:',
         '{',
-        '  "base": "packages/functions",',
         '  "backends": { "api": { "filter": {} } }',
         '}'
       )
@@ -637,7 +636,7 @@ export async function runSharedProjectChecks(
   if (pikkuConfig && !pikkuConfig.db) {
     const declared = await detectDatabaseDialect(
       root,
-      projectSourceDirs(pikkuConfig),
+      projectSourceDirs(root),
       { debug: () => {} },
       'validate'
     ).catch(() => undefined)
@@ -1063,9 +1062,7 @@ export async function runSharedProjectChecks(
   findings.push(...(await runVirtualUserChecks(root, pikkuConfig)))
   findings.push(...(await runAuthPluginChecks(root, pikkuConfig)))
 
-  findings.push(
-    ...(await runScenarioFileChecks(root, projectSourceDirs(pikkuConfig ?? {})))
-  )
+  findings.push(...(await runScenarioFileChecks(root, projectSourceDirs(root))))
 
   const knowledge = await runKnowledgeValidate(
     root,

@@ -1248,7 +1248,7 @@ function findAppProject(
   if (!root || config.addon || !existsSync(join(root, 'pikku.config.json'))) {
     return undefined
   }
-  return { root, srcDir: join(config.basePackage?.dir ?? root, 'src') }
+  return { root, srcDir: join(config.mainPackage?.dir ?? root, 'src') }
 }
 
 /** Where a generated addon goes for an app: beside it when the app lives in packages/<app>, else <app>/packages. */

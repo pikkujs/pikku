@@ -144,18 +144,21 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await removeRetiredScaffoldFiles(config)
     await removeDisabledOriginScaffolds(config)
 
-    // A root project's addons are generated first, in dependency order, then
-    // its base, whose own pass needs the addons' output and whose `#pikku`
+    // A root project's addon packages are generated first, in dependency order, then
+    // its main package, whose own pass needs the addons' output and whose `#pikku`
     // imports need its own. A run inside one of them, or a deploy pass, has none.
     if (
-      (config.addonPackages.length > 0 || config.basePackage) &&
-      process.env.PIKKU_DEPLOY_CODEGEN !== '1'
+      (config.addonPackages.length > 0 || config.mainPackage) &&
+      process.env.PIKKU_DEPLOY_CODEGEN !== '1' &&
+      process.env[PACKAGE_PASS_ENV] !== '1'
     ) {
       await workflow.do('Packages', async () => {
         await runPikkuPackagePasses(
           [
             ...config.addonPackages,
-            ...(config.basePackage ? [config.basePackage] : []),
+            ...(config.mainPackage
+              ? [{ ...config.mainPackage, rootConfig: config.configPath }]
+              : []),
           ],
           (pkg) => logger.info(`• pikku all in ${pkg.entry}`)
         )

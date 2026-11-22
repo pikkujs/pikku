@@ -18,7 +18,7 @@ npx pikku db migrate
 npx pikku deploy
 ```
 
-Configuration lives in `pikku.config.json` — `base`, `addons`, `backends`,
+Configuration lives in `pikku.config.json` — `backends`,
 `frontends` and the `clientFiles` to emit. Generated output always goes to
 `.pikku/` beside it.
 

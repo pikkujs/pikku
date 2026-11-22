@@ -28,24 +28,18 @@ const goodProject = async () => {
     name: 'my-app',
     workspaces: ['packages/*', 'apps/*'],
   })
-  await write(root, 'pikku.config.json', {
-    base: 'packages/server',
-    emailTemplatesDir: 'emails',
-  })
+  await write(root, 'pikku.config.json', { emailTemplatesDir: 'emails' })
+  await write(root, 'packages/server/pikku.config.json', { main: true })
   await mkdir(join(root, 'db', 'sqlite'), { recursive: true })
   await mkdir(join(root, 'emails'), { recursive: true })
-  // The functions package has no tsconfig and no #pikku imports of its own: the
-  // root tsconfig governs it and maps #pikku/* to the generated output.
-  await write(root, 'tsconfig.json', {
-    compilerOptions: {
-      paths: {
-        '#pikku/*.js': ['./.pikku/*.ts'],
-        '#pikku/*': ['./.pikku/*/index.ts'],
-      },
+  // The main package has its own config, so its #pikku imports name its own .pikku.
+  await write(root, 'packages/server/package.json', {
+    name: '@my-app/server',
+    imports: {
+      '#pikku/*.js': './.pikku/*.ts',
+      '#pikku/*': './.pikku/*/index.ts',
     },
-    include: ['packages/server/src'],
   })
-  await write(root, 'packages/server/package.json', { name: '@my-app/server' })
   await write(root, 'packages/server/src/index.ts', 'export {}\n')
   return root
 }
@@ -90,23 +84,9 @@ describe('project layout', () => {
     )
   })
 
-  test('a base with its own config resolves #pikku to its own .pikku', async () => {
+  test('a main package with its own config resolves #pikku to its own .pikku', async () => {
     await withProject(
-      async (root) => {
-        await write(root, 'packages/server/pikku.config.json', {})
-        await write(root, 'packages/server/package.json', {
-          name: '@my-app/server',
-          imports: {
-            '#pikku/*.js': './.pikku/*.ts',
-            '#pikku/*': './.pikku/*/index.ts',
-          },
-        })
-        await write(root, 'pikku.config.json', {
-          base: 'packages/server',
-          emailTemplatesDir: 'emails',
-        })
-        await rm(join(root, 'tsconfig.json'))
-      },
+      async (root) => {},
       async (configDir) => {
         assert.deepEqual(
           await runProjectLayoutChecks(configDir, { strict: true }),
@@ -116,19 +96,13 @@ describe('project layout', () => {
     )
   })
 
-  test('a base with its own config that points #pikku at the root output is flagged', async () => {
+  test('a main package with its own config that points #pikku at the root output is flagged', async () => {
     await withProject(
       async (root) => {
-        await write(root, 'packages/server/pikku.config.json', {})
         await write(root, 'packages/server/package.json', {
           name: '@my-app/server',
           imports: { '#pikku/*': '../../.pikku/*/index.ts' },
         })
-        await write(root, 'pikku.config.json', {
-          base: 'packages/server',
-          emailTemplatesDir: 'emails',
-        })
-        await rm(join(root, 'tsconfig.json'))
       },
       async (configDir) => {
         const finding = await assertFlagged(
@@ -201,6 +175,7 @@ describe('project layout', () => {
     await withProject(
       async (root) => {
         await write(root, 'packages/stray/pikku.config.json', {})
+        await write(root, 'packages/stray/package.json', { name: 'stray' })
       },
       async (configDir) => {
         const finding = await assertFlagged(configDir, LAYOUT_CONFIG_DUPLICATE)
@@ -212,11 +187,9 @@ describe('project layout', () => {
     )
   })
 
-  test('the base package is not a second config', async () => {
+  test('the main package is not a second config', async () => {
     await withProject(
-      async (root) => {
-        await write(root, 'packages/server/pikku.config.json', {})
-      },
+      async () => {},
       async (configDir) => {
         const found = await runProjectLayoutChecks(configDir, { strict: true })
         assert.equal(
@@ -281,7 +254,6 @@ describe('project layout', () => {
     await withProject(
       async (root) => {
         await write(root, 'pikku.config.json', {
-          base: 'packages/server',
           emailTemplatesDir: 'packages/server/emails',
         })
         await mkdir(join(root, 'packages', 'server', 'emails'), {
@@ -290,147 +262,6 @@ describe('project layout', () => {
       },
       async (configDir) => {
         await assertFlagged(configDir, LAYOUT_EMAILS_IN_PACKAGE)
-      }
-    )
-  })
-
-  test('a package tsconfig with ../../.pikku paths passes', async () => {
-    await withProject(
-      async (root) => {
-        await write(root, 'packages/server/tsconfig.json', {
-          compilerOptions: {
-            paths: { '#pikku/*': ['../../.pikku/*/index.ts'] },
-          },
-        })
-      },
-      async (configDir) => {
-        assert.deepEqual(
-          await runProjectLayoutChecks(configDir, { strict: true }),
-          []
-        )
-      }
-    )
-  })
-
-  test('package.json imports through the root package name pass', async () => {
-    await withProject(
-      async (root) => {
-        await write(root, 'packages/server/package.json', {
-          name: '@my-app/server',
-          imports: { '#pikku/*': 'my-app/.pikku/*/index.js' },
-        })
-      },
-      async (configDir) => {
-        assert.deepEqual(
-          await runProjectLayoutChecks(configDir, { strict: true }),
-          []
-        )
-      }
-    )
-  })
-
-  test('paths inherited through extends resolve against the file that sets them', async () => {
-    await withProject(
-      async (root) => {
-        await write(root, 'tsconfig.json', { compilerOptions: {} })
-        await write(root, 'tsconfig.base.json', {
-          compilerOptions: {
-            paths: { '#pikku/*': ['./.pikku/*/index.ts'] },
-          },
-        })
-        await write(root, 'packages/server/tsconfig.json', {
-          extends: '../../tsconfig.base.json',
-        })
-      },
-      async (configDir) => {
-        assert.deepEqual(
-          await runProjectLayoutChecks(configDir, { strict: true }),
-          []
-        )
-      }
-    )
-  })
-
-  test('a root tsconfig mapping #pikku/* into the package is flagged', async () => {
-    await withProject(
-      async (root) => {
-        await write(root, 'tsconfig.json', {
-          compilerOptions: {
-            paths: { '#pikku/*': ['./packages/server/.pikku/*/index.ts'] },
-          },
-        })
-      },
-      async (configDir) => {
-        const finding = await assertFlagged(
-          configDir,
-          LAYOUT_PIKKU_IMPORT_NOT_ROOT
-        )
-        assert.match(finding.message, /tsconfig\.json paths "#pikku\/\*"/)
-      }
-    )
-  })
-
-  test('a package-level .pikku (the symlink workaround) is flagged with the tsconfig paths fix', async () => {
-    await withProject(
-      async (root) => {
-        await write(root, 'packages/server/package.json', {
-          name: '@my-app/server',
-          imports: {
-            '#pikku/*.js': './.pikku/*.ts',
-            '#pikku/*': './.pikku/*/index.ts',
-          },
-        })
-      },
-      async (configDir) => {
-        const finding = await assertFlagged(
-          configDir,
-          LAYOUT_PIKKU_IMPORT_NOT_ROOT
-        )
-        assert.match(finding.message, /package\.json imports "#pikku\/\*"/)
-        assert.match(
-          finding.fixHint,
-          /tsconfig paths in tsconfig\.json: "#pikku\/\*\.js": \["\.\/\.pikku\/\*\.ts"\]/
-        )
-        assert.match(finding.fixHint, /symlink/)
-      }
-    )
-  })
-
-  test('tsconfig paths to a package-level .pikku are flagged', async () => {
-    await withProject(
-      async (root) => {
-        await write(root, 'packages/server/tsconfig.json', {
-          compilerOptions: { paths: { '#pikku/*': ['./.pikku/*/index.ts'] } },
-        })
-      },
-      async (configDir) => {
-        const finding = await assertFlagged(
-          configDir,
-          LAYOUT_PIKKU_IMPORT_NOT_ROOT
-        )
-        assert.match(finding.message, /tsconfig\.json paths "#pikku\/\*"/)
-        assert.match(
-          finding.fixHint,
-          /packages\/server\/tsconfig\.json: .*\["\.\.\/\.\.\/\.pikku\/\*\/index\.ts"\]/
-        )
-      }
-    )
-  })
-
-  test('package.json imports to a package-level .pikku are flagged', async () => {
-    await withProject(
-      async (root) => {
-        await write(root, 'packages/server/package.json', {
-          name: '@my-app/server',
-          imports: { '#pikku/*': './.pikku/*/index.js' },
-        })
-      },
-      async (configDir) => {
-        const finding = await assertFlagged(
-          configDir,
-          LAYOUT_PIKKU_IMPORT_NOT_ROOT
-        )
-        assert.match(finding.message, /package\.json imports "#pikku\/\*"/)
       }
     )
   })

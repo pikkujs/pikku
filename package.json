@@ -26,7 +26,7 @@
       "verifiers/db-schema/addon",
       "verifiers/db-schema/remote-addon",
       "verifiers/addon-workspace/functions",
-      "verifiers/base-addons/packages/*",
+      "verifiers/package-markers/packages/*",
       "verifiers/addon-dependencies/stripe",
       "verifiers/addon-dependencies/billing",
       "verifiers/addon-dependencies/host",
@@ -136,7 +136,7 @@
     "@playwright/test": "1.58.2",
     "playwright-core": "1.58.2",
     "zustand": "5.0.14",
-    "better-auth": "1.7.5"
+    "better-auth": "1.7.7"
   },
   "engines": {
     "node": ">=24"

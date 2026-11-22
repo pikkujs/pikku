@@ -131,7 +131,7 @@ export function kebabCase(str: string): string {
 }
 
 export function scaffoldFilePath(
-  config: { rootDir: string; basePackage?: { dir: string } },
+  config: { rootDir: string; mainPackage?: { dir: string } },
   subdir: string,
   name: string,
   suffix: string,
@@ -142,7 +142,7 @@ export function scaffoldFilePath(
     return join(overrideDir, subdir, `${fileName}${suffix}`)
   }
   return join(
-    config.basePackage?.dir ?? config.rootDir,
+    config.mainPackage?.dir ?? config.rootDir,
     'src',
     subdir,
     `${fileName}${suffix}`

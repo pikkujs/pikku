@@ -1,7 +1,7 @@
 ---
 type: decision
 title: Validate checks the project layout, a warning by default and an error under --strict
-description: runProjectLayoutChecks reports a config inside a package, a second pikku.config.json, db/ or emails/ inside the base package, and #pikku/* resolving to a .pikku other than the one beside the config
+description: runProjectLayoutChecks reports a config inside a package, a second pikku.config.json, db/ or emails/ inside the main package, and #pikku/* resolving to a .pikku other than the one beside the config
 tags: cli, validate, layout, strict
 ---
 
@@ -9,7 +9,7 @@ tags: cli, validate, layout, strict
 
 `runProjectLayoutChecks` in `packages/cli/src/functions/validate/project-layout-checks.ts` runs as the `project-layout` check on every app project (a `pikku.config.json` without `types/application-types.d.ts`). Every finding is `warn`, and `error` when `ValidateOptions.strict` is set, which `pikku validate --strict` passes. It does not read `validate.rules`: the layout is not a per-project choice.
 
-The functions package is found from the project's source directories (the config directory, plus its `base`; resolved against `rootDir`): the nearest directory with a `package.json` at or above each, never above the config. Its name does not matter.
+The functions package is found from the project's source directories (the config directory, plus its `main` package; resolved against `rootDir`): the nearest directory with a `package.json` at or above each, never above the config. Its name does not matter.
 
 - `layout-config-not-at-root`: the top level is the nearest workspace root above the config, not the git root. Inside this monorepo every project is a workspace member of a git root that holds dozens of them, so the git root would flag them all. A workspace root that has its own `pikku.config.json` is left to `layout-config-duplicate`, and one holding more than one app config is a collection of projects with no single top level, so neither is reported.
 - `layout-config-duplicate`: only a file named exactly `pikku.config.json` counts. Generated `pikku.*.json` files, addon configs, `node_modules`, `dist`, `build` and dot-directories (`.pikku`, `.git`, `.deploy`) are skipped.
