@@ -171,6 +171,9 @@ const createEmptyPackageState = (): PikkuPackageState => ({
   rateLimit: {
     global: [],
   },
+  analytics: {
+    meta: null,
+  },
   misc: {
     errors: new Map(),
     schemas: new Map(),
