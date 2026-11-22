@@ -333,6 +333,9 @@ export interface PikkuCLICoreOutputFiles {
   // The declared events, keyed by name, for an administration surface to read.
   // Written whenever a project declares any, whatever the scaffold says.
   analyticsMetaJsonFile: string
+  // The module the bootstrap imports to register the declared event names in
+  // runtime state, so a bundle reads them without a filesystem.
+  analyticsMetaFile: string
 
   // Scopes (ScopeId union + declared scope set)
   scopesFile: string

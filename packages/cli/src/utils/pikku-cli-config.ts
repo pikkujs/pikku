@@ -1581,14 +1581,23 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    // The declared events, for the console's catalog. Written on the same terms
-    // as the definer leaf and for the same reason: what a project measures is
-    // readable whether or not an ingest wire was scaffolded for it.
+    // The declared events: the JSON for the console's catalog, and the module
+    // the bootstrap imports to register their names in runtime state. Written
+    // on the same terms as the definer leaf and for the same reason: what a
+    // project measures is readable whether or not an ingest wire was scaffolded
+    // for it.
     if (!result.analyticsMetaJsonFile) {
       result.analyticsMetaJsonFile = join(
         result.outDir,
         'analytics',
         'pikku-analytics-meta.gen.json'
+      )
+    }
+    if (!result.analyticsMetaFile) {
+      result.analyticsMetaFile = join(
+        result.outDir,
+        'analytics',
+        'pikku-analytics-meta.gen.ts'
       )
     }
 

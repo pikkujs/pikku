@@ -13,17 +13,32 @@ const readGenerated = async (relative: string) =>
   ingestText(content, fileURLToPath(new URL(relative, import.meta.url)))
 
 /**
- * The console's event catalog is built from this file and nothing else: it is
+ * The console's event catalog is built from the verbose file and nothing else: it is
  * the declared surface a client may emit, read at build time rather than
  * counted at runtime. A generator that stops emitting `props` still produces a
  * valid ingest and an empty catalog, which is why the shape is pinned here
  * rather than left to the ingest tests above.
  */
 const meta: Record<string, AnalyticsEventMeta> = JSON.parse(
+  await readGenerated(
+    '../.pikku/analytics/pikku-analytics-meta-verbose.gen.json'
+  )
+)
+
+/** What a bundle imports: the names, and no path to the declaration. */
+const runtimeMeta: Record<string, { name: string }> = JSON.parse(
   await readGenerated('../.pikku/analytics/pikku-analytics-meta.gen.json')
 )
 
 describe('the generated analytics meta', () => {
+  test('ships only the event names to the runtime', () => {
+    assert.deepEqual(runtimeMeta, {
+      checkout_completed: { name: 'checkout_completed' },
+      page_viewed: { name: 'page_viewed' },
+      profile_renamed: { name: 'profile_renamed' },
+    })
+  })
+
   test('records every declared event, keyed by its name', () => {
     assert.deepEqual(Object.keys(meta).sort(), [
       'checkout_completed',
