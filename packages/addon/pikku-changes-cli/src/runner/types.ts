@@ -14,6 +14,8 @@ export interface AgentChange {
   title: string
   groupId: string
   worktree: string
+  /** The specialist the change is filed for, when the queue names one. */
+  specialist?: string | null
 }
 
 export interface AgentStart {
@@ -23,6 +25,10 @@ export interface AgentStart {
   prompt: string
   change: AgentChange | null
   kind: AgentKind
+  /** The specialist of the change (else of the route) when known, so a launcher can pick a model without asking the queue again. */
+  specialist: string | null
+  /** The `pikku changes next` route the agent was started from; null for a repair. */
+  route: NextRoute | null
 }
 
 /**
@@ -101,6 +107,7 @@ export type RunnerEventKind =
   | 'limit'
   | 'stopped'
   | 'idle'
+  | 'stepped'
   | 'failed'
   | 'note'
 
@@ -117,6 +124,8 @@ export interface LocalCli {
 export interface PromptContext {
   route: NextRoute
   change: AgentChange
+  /** The specialist of the change (else of the route) when known. */
+  specialist: string | null
   claimant: string
   leaseMinutes: number
   /** `pikku check` passed in the worktree just now. */
@@ -161,6 +170,12 @@ export interface RunnerOptions {
   setupCommand?: string
   /** Checks a checkout (default `pikku check`; '' is none). */
   checkCommand?: string
+  /** Stops after claiming: the changes claimed by the first fill are built (and picked up again within `tries`), no more are claimed, and finished changesets are merged only when the host calls `mergeFinished()`. The run ends with `stepped: true`, which is not an error. */
+  step?: boolean
+  /** Other `pikku changes next` routes handled as builds of the changes in their context, where they would end the run (default none: knowledge and upgrade routes end it). */
+  extraRoutes?: ExtraRoute[]
+  /** Counters a run starts from, to continue an earlier one (see `ChangesRunner.counters`). */
+  counters?: Partial<RunnerCounters>
   /** Startup self-check before the first fill (default true). */
   selfCheck?: boolean
   /** More startup checks of the host (a model login, a browser, repository settings): each string is one problem, or problems and what was fixed. */
@@ -178,6 +193,23 @@ export interface RunnerOptions {
   node?: string
 }
 
+/** The routes of `pikku changes next` other than `changes` that can be handled as builds. */
+export type ExtraRoute = 'intake' | 'knowledge' | 'upgrade'
+
+/** What a run has counted, readable and settable between runs. */
+export interface RunnerCounters {
+  /** Agent starts per change id (limit: the `tries` option). */
+  tries: Record<string, number>
+  /** Worktree setup failures per change id (limit: the `tries` option). */
+  prepFails: Record<string, number>
+  /** Merge-conflict turns per branch (limit: the `conflictTries` option). */
+  conflicts: Record<string, number>
+  /** Agent starts of all kinds (limit: the `maxTurns` option). */
+  turns: number
+  /** Repair turns (limit: the `repairTries` option). */
+  repairs: number
+}
+
 /** What `pikku changes next` prints with --json. */
 export interface NextRoute {
   agent: 'changes' | 'intake' | 'knowledge' | 'upgrade' | null
@@ -193,6 +225,8 @@ export interface RunResult {
   /** The run ended because nothing was left to build; false when an error, a stop or a limit ended it. */
   ok: boolean
   reason: string
+  /** The run stopped after claiming because the `step` option is on; `ok` is true and the changesets built are not merged yet. */
+  stepped: boolean
   merged: string[]
   turns: number
 }
