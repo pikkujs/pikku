@@ -83,6 +83,81 @@ describe('what the file imports', () => {
   })
 })
 
+describe('the workflow services', () => {
+  const engines = [
+    [
+      'sqlite',
+      '@pikku/kysely-sqlite',
+      'SQLiteKyselyWorkflowService',
+      'SQLiteKyselyWorkflowRunService',
+    ],
+    [
+      'postgres',
+      '@pikku/kysely-postgres',
+      'PgKyselyWorkflowService',
+      'PgKyselyWorkflowRunService',
+    ],
+    [
+      'mysql',
+      '@pikku/kysely-mysql',
+      'MySQLKyselyWorkflowService',
+      'MySQLKyselyWorkflowRunService',
+    ],
+  ] as const
+
+  for (const [engine, pkg, service, runService] of engines) {
+    test(`${engine}: persists runs in the database and exposes both names`, () => {
+      const code = emit({ engine })
+      assert.match(
+        code,
+        new RegExp(`import \\{ ${service}, ${runService} \\} from '${pkg}'`)
+      )
+      assert.match(
+        code,
+        new RegExp(`await initOrWarn\\(\\s*new ${service}\\(kysely,`)
+      )
+      assert.match(code, new RegExp(`new ${runService}\\(kysely\\)`))
+      assert.match(code, /\n    workflowService,\n    workflowRunService,\n/)
+      assert.deepStrictEqual(
+        localServicesPackages({ database: true, engine }),
+        ['@pikku/kysely', pkg]
+      )
+    })
+  }
+
+  test('falls back to memory when the table is not migrated', () => {
+    assert.match(
+      emit({ engine: 'sqlite' }),
+      /\?\? new InMemoryWorkflowService\(\)/
+    )
+  })
+
+  test('no database: in memory, one instance under both names', () => {
+    const code = emit({
+      database: false,
+      localCLI: undefined,
+      engine: 'sqlite',
+    })
+    assert.match(
+      code,
+      /const workflowService = new InMemoryWorkflowService\(\)/
+    )
+    assert.match(code, /workflowRunService: workflowService,/)
+    assert.doesNotMatch(code, /from '@pikku\/kysely/)
+  })
+
+  test('a database of unknown engine keeps runs in memory', () => {
+    const code = emit({ engine: undefined })
+    assert.match(
+      code,
+      /const workflowService = new InMemoryWorkflowService\(\)/
+    )
+    assert.deepStrictEqual(localServicesPackages({ database: true }), [
+      '@pikku/kysely',
+    ])
+  })
+})
+
 /**
  * A generated CLI runs with no inspector, so whatever `pikku serve` reads off
  * one as it starts has to be in the file already.

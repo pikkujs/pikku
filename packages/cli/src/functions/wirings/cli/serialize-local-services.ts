@@ -33,6 +33,26 @@ export interface LocalCLIServicesOptions {
   conventionalSqliteDb?: string
 }
 
+export type DatabaseEngine = 'sqlite' | 'postgres' | 'mysql'
+
+const ENGINE_WORKFLOW = {
+  sqlite: {
+    pkg: '@pikku/kysely-sqlite',
+    service: 'SQLiteKyselyWorkflowService',
+    runService: 'SQLiteKyselyWorkflowRunService',
+  },
+  postgres: {
+    pkg: '@pikku/kysely-postgres',
+    service: 'PgKyselyWorkflowService',
+    runService: 'PgKyselyWorkflowRunService',
+  },
+  mysql: {
+    pkg: '@pikku/kysely-mysql',
+    service: 'MySQLKyselyWorkflowService',
+    runService: 'MySQLKyselyWorkflowRunService',
+  },
+} as const
+
 export interface SerializeLocalServicesOptions {
   localServicesFile: string
   packageMappings: Record<string, string>
@@ -48,6 +68,12 @@ export interface SerializeLocalServicesOptions {
    * `@pikku/core` alone.
    */
   database: boolean
+  /**
+   * The engine the project's database runs on, which picks the workflow
+   * services it persists runs in. Left out when it could not be decided, and
+   * workflow runs then stay in memory.
+   */
+  engine?: DatabaseEngine
   /** Set when the project has a local CLI entrypoint, which imports this file. */
   localCLI?: LocalCLIServicesOptions
 }
@@ -59,9 +85,14 @@ export interface SerializeLocalServicesOptions {
  */
 export const localServicesPackages = ({
   database,
+  engine,
   localCLI,
-}: Pick<SerializeLocalServicesOptions, 'database' | 'localCLI'>): string[] => [
+}: Pick<
+  SerializeLocalServicesOptions,
+  'database' | 'engine' | 'localCLI'
+>): string[] => [
   ...(database ? ['@pikku/kysely'] : []),
+  ...(database && engine ? [ENGINE_WORKFLOW[engine].pkg] : []),
   ...(localCLI ? ['@pikku/schedule'] : []),
 ]
 
@@ -273,7 +304,10 @@ const cliOnlyServices = `    metaService: new LocalMetaService(dirname(fileURLTo
 `
 
 /** The services a project with a database gets, backed by it when one is open. */
-const databaseBody = (localCLI: boolean): string => `/**
+const databaseBody = (
+  localCLI: boolean,
+  engine: DatabaseEngine | undefined
+): string => `/**
  * Brings a database-backed service up, or drops it with the reason.
  *
  * \`init()\` on these services is a check, not a create: a project whose
@@ -386,9 +420,31 @@ export const createLocalServices = async (
       ? await initOrWarn(new KyselyTriggerSourceStore(kysely), 'triggerSourceStore', warnLogger)
       : undefined) ?? new InMemoryTriggerSourceStore()
 
-  // One instance under both names: InMemoryWorkflowService implements the
-  // workflowRunService surface too, which the console reads runs through.
-  const workflowService = new InMemoryWorkflowService()
+  // Runs survive a restart when the database holds them. The console reads runs
+  // through workflowRunService, which the durable service does not implement
+  // itself, so that name is a run service over the same database. The in-memory
+  // service implements both surfaces and serves both names.
+${
+  engine
+    ? `  const workflowService =
+    (kysely && hostServices.workflowService === undefined
+      ? await initOrWarn(
+          new ${ENGINE_WORKFLOW[engine].service}(kysely, {
+            leaseService:
+              (hostServices.leaseService as LeaseService | undefined) ??
+              new InMemoryLeaseService(),
+          }),
+          'workflowService',
+          warnLogger
+        )
+      : undefined) ?? new InMemoryWorkflowService()
+  const workflowRunService =
+    kysely && !(workflowService instanceof InMemoryWorkflowService)
+      ? new ${ENGINE_WORKFLOW[engine].runService}(kysely)
+      : workflowService`
+    : `  const workflowService = new InMemoryWorkflowService()
+  const workflowRunService = workflowService`
+}
 
   return {
     emailService: new LocalEmailService(),
@@ -397,7 +453,7 @@ ${localCLI ? cliOnlyServices : ''}    queueService,
     incomingWebhookService,
     ...(scopeService ? { scopeService } : {}),
     workflowService,
-    workflowRunService: workflowService,
+    workflowRunService,
     triggerService: new InMemoryTriggerService(),
     triggerSourceStore,
     agentStorage,
@@ -434,6 +490,7 @@ export const serializeLocalServices = ({
   systemRoles,
   analyticsEvents,
   database,
+  engine,
   localCLI,
 }: SerializeLocalServicesOptions): string => {
   const required = new Set(requiredServices)
@@ -471,9 +528,12 @@ export const serializeLocalServices = ({
   IncomingWebhookService,
   InMemoryAgentRunStateService,
   InMemoryTriggerSourceStore,
-  LocalEmailService,
+  ${database && engine ? 'InMemoryLeaseService,\n  ' : ''}LocalEmailService,
   QueueWebhookService,
 } from '@pikku/core/services'`,
+    ...(database && engine
+      ? [`import type { LeaseService } from '@pikku/core/services'`]
+      : []),
     `import { createAnalyticsSinks } from '@pikku/core/analytics'`,
     `import type { AnalyticsSinkRegistry } from '@pikku/core/analytics'`,
     `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
@@ -502,6 +562,10 @@ export const serializeLocalServices = ({
   KyselyTriggerSourceStore,
   KyselyWebhookService,
 } from '@pikku/kysely'`)
+    if (engine) {
+      const { pkg, service, runService } = ENGINE_WORKFLOW[engine]
+      imports.push(`import { ${service}, ${runService} } from '${pkg}'`)
+    }
   }
   if (coerces && localCLI?.coercionFile) {
     imports.push(
@@ -567,5 +631,5 @@ export interface LocalServicesOptions {
 type DatabaseTarget = { sqliteDb?: string; postgresUrl?: string; mysqlUrl?: string }
 
 ${opens && localCLI ? databaseOpener(localCLI, coerces) : ''}
-${database ? databaseBody(!!localCLI) : inMemoryBody(!!localCLI)}`
+${database ? databaseBody(!!localCLI, engine) : inMemoryBody(!!localCLI)}`
 }
