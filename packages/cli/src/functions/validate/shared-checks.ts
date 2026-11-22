@@ -25,6 +25,7 @@ import {
   runDevProxyChecks,
 } from './dev-proxy-checks.js'
 import { analyticsOriginLockEnabled } from '../../utils/resolve-scaffold-feature.js'
+import type { PikkuScaffoldFeature } from '../../../types/config.js'
 import {
   dbConfigMismatch,
   detectDatabaseDialect,
