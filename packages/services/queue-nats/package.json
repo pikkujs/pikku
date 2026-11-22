@@ -19,7 +19,6 @@
     "ncu": "npx npm-check-updates",
     "build": "bun run clean && pikku all && tsc -b",
     "release": "npm run build && npm test",
-    "prepublishOnly": "bun run build",
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "pikku": "pikku all"
   },
