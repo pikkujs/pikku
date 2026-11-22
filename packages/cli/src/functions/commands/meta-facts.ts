@@ -327,6 +327,8 @@ export type ProjectFacts = {
   agents: string[]
   models: Record<string, string>
   configFile: string
+  /** Where new files go, so nobody lists directories to find out. */
+  layout?: string
   runner: AgentRunnerFacts | null
   texts: TextFacts[]
   frontends: FrontendFacts[]
@@ -398,12 +400,45 @@ const frontendLines = (
   ]
 }
 
+/** Where an agent, its tool functions and the wiring that reaches it go, from the project's first source directory. */
+export const layoutFacts = (srcDir: string): string =>
+  `an agent is ${srcDir}/agents/<name>.agent.ts, its tools are functions in ${srcDir}/functions/<name>.function.ts, a route or cron that reaches it is ${srcDir}/wirings/<name>.wiring.ts (or expose: true on the agent); pikku doc agents is the recipe`
+
+/** One line per agent: what it runs on and which tools it lists. */
+export const agentSummaries = (
+  agentsMeta: Record<string, any> | undefined
+): string[] =>
+  Object.entries(agentsMeta ?? {}).map(([id, agent]) => {
+    const tools: string[] = agent?.tools ?? []
+    return `${id} (model ${agent?.model ?? '?'}; tools ${tools.length ? tools.join(', ') : 'none'})`
+  })
+
+/** Agents as `pikku meta grep` rows: searchable by name, description, model and tool. */
+export const agentRows = (
+  agentsMeta: Record<string, any> | undefined,
+  inProject: (file: string | null | undefined) => string | undefined
+): Array<{ kind: string; name: string; detail?: string; source?: string }> =>
+  Object.entries(agentsMeta ?? {}).map(([id, agent]) => ({
+    kind: 'agent',
+    name: id,
+    detail: [
+      `model ${agent?.model ?? '?'}`,
+      `tools ${(agent?.tools ?? []).join(' ') || 'none'}`,
+      agent?.description,
+    ]
+      .filter(Boolean)
+      .join('; '),
+    source: inProject(agent?.sourceFile),
+  }))
+
 export const formatProjectFacts = (facts: ProjectFacts): string[] => {
   const aliases = Object.entries(facts.models).map(
     ([alias, model]) => `${alias}=${model}`
   )
   return [
-    `agents: ${listOr(facts.agents, 'none yet')}`,
+    ...(facts.agents.length === 0
+      ? [`agents: none yet${facts.layout ? `; ${facts.layout}` : ''}`]
+      : ['agents:', ...facts.agents.map((agent) => `  ${agent}`)]),
     `model aliases: ${listOr(aliases, 'none yet')}; add in ${facts.configFile} "models" as "alias": "provider/model"`,
     ...(facts.runner ? [runnerLine(facts.runner)] : []),
     ...facts.texts.flatMap((text) => textLines(text, facts.texts.length > 1)),

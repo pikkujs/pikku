@@ -2,14 +2,17 @@ import { pikkuSessionlessFunc } from '#pikku/function'
 import { getSchema } from '@pikku/core/schema'
 import { I18nService } from '@pikku/code-edit/i18n'
 import type { CodeEditOperation } from '@pikku/code-edit'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { dirname, join, relative, resolve } from 'node:path'
 import { loadAnnotations } from '../db/annotation-parser.js'
 import { databaseContext } from '../db/db-context.js'
 import { workspaceRoot } from '../../utils/workspace-root.js'
 import {
+  agentRows,
   agentRunnerFacts,
+  agentSummaries,
+  layoutFacts,
   formatProjectFacts,
   frontendFacts,
   readSources,
@@ -99,11 +102,12 @@ const readProjectFacts = async (config: any, state: any): Promise<string[]> => {
   const reactQueryFile = sdkFile('pikku-react-query.gen.ts') ?? rpcFile
   const servicesFile = [...(state.singletonServicesFactories?.keys() ?? [])][0]
   return formatProjectFacts({
-    agents: Object.keys(state.agents?.agentsMeta ?? {}),
+    agents: agentSummaries(state.agents?.agentsMeta),
     models: config.models ?? {},
     configFile: config.configFile
       ? relative(rootDir, config.configFile)
       : 'pikku.config.json',
+    layout: layoutFacts((config.srcDirectories ?? ['src'])[0] ?? 'src'),
     runner: servicesFile ? agentRunnerFacts(servicesFile, rootDir) : null,
     texts: apps.map((app) => {
       const dir = resolve(root, app.app)
@@ -179,8 +183,18 @@ const readServiceRows = (state: any, config: any): MetaRow[] => {
   ]
 }
 
+import {
+  addonFunctionDetail,
+  addonInputFieldTypes,
+  addonRequiredInputs,
+  graphChecks,
+  addonFunctionRows,
+  addonSummary,
+  similarAddonFunctions,
+} from './meta-addons.js'
+
 export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
-  func: async ({ getInspectorState }) => {
+  func: async ({ getInspectorState, config }) => {
     const state = await getInspectorState()
     const meta = state.functions.meta ?? {}
     const functions = Object.entries(meta).map(([id, m]) => ({
@@ -190,7 +204,10 @@ export const pikkuMetaFunctionsList = pikkuSessionlessFunc<{}, void>({
       tags: m.tags ?? [],
       ...(m.mock === true ? { mock: true } : {}),
     }))
-    out({ functions })
+    // The wired addons' functions are not in this list (there are hundreds): `pikku meta grep <addon> <words>`
+    // finds them and `pikku meta functions get <addon>:<function>` gives the input and output shapes.
+    const addons = addonSummary(config, state)
+    out(addons.length ? { functions, addons } : { functions })
   },
 })
 
@@ -198,10 +215,22 @@ export const pikkuMetaFunctionsGet = pikkuSessionlessFunc<
   { functionId: string },
   void
 >({
-  func: async ({ getInspectorState }, data) => {
+  func: async ({ getInspectorState, config }, data) => {
     const state = await getInspectorState()
     const m = state.functions.meta?.[data.functionId]
-    if (!m) throw new Error(`Function not found: ${data.functionId}`)
+    if (!m) {
+      const addon = addonFunctionDetail(config, state, data.functionId)
+      if (addon) return void out(addon)
+      const similar = similarAddonFunctions(config, state, data.functionId)
+      throw new Error(
+        `Function not found: ${data.functionId}` +
+          (similar.length
+            ? `. Wired addon functions like it: ${similar.join(', ')}`
+            : data.functionId.includes(':')
+              ? '. Is that addon wired? `pikku addons search <name>` says'
+              : '')
+      )
+    }
     out({
       functionId: data.functionId,
       name: m.name ?? data.functionId,
@@ -252,6 +281,19 @@ export const pikkuMetaWorkflowsList = pikkuSessionlessFunc<{}, void>({
       name: wf.name ?? id,
       description: wf.description ?? null,
     }))
+    // Graph workflows (pikkuWorkflowGraph, e.g. from `pikku import n8n`) live in
+    // graphMeta, not meta; list the ones that are not also a function workflow.
+    for (const [id, g] of Object.entries(
+      (state.workflows as any)?.graphMeta ?? {}
+    ) as [string, any][]) {
+      if (id in meta) continue
+      workflows.push({
+        id,
+        name: g?.name ?? id,
+        description: g?.description ?? null,
+        source: 'graph',
+      } as any)
+    }
     out({ workflows })
   },
 })
@@ -260,9 +302,40 @@ export const pikkuMetaWorkflowsGet = pikkuSessionlessFunc<
   { workflowId: string },
   void
 >({
-  func: async ({ getInspectorState }, data) => {
+  func: async ({ getInspectorState, config }, data) => {
     const state = await getInspectorState()
     const wf = (state.workflows?.meta ?? {})[data.workflowId] as any
+    const graph = ((state.workflows as any)?.graphMeta ?? {})[
+      data.workflowId
+    ] as any
+    if (!wf && graph) {
+      const fmeta: Record<string, any> = state.functions?.meta ?? {}
+      const stubText = (rpcName: string): boolean => {
+        const file = fmeta[rpcName]?.sourceFile
+        try {
+          return !!file && /implement me|Stub:/.test(readFileSync(file, 'utf8'))
+        } catch {
+          return false
+        }
+      }
+      const { missingRequiredInputs, stubs } = graphChecks(
+        graph,
+        (rpcName) => addonRequiredInputs(config, state, rpcName),
+        stubText,
+        (rpcName) => addonInputFieldTypes(config, state, rpcName)
+      )
+      return void out({
+        workflowId: data.workflowId,
+        name: graph.name ?? data.workflowId,
+        source: 'graph',
+        entryNodeIds: graph.entryNodeIds ?? [],
+        nodes: graph.nodes ?? {},
+        ...(Object.keys(missingRequiredInputs).length
+          ? { missingRequiredInputs }
+          : {}),
+        ...(stubs.length ? { stubs } : {}),
+      })
+    }
     if (!wf) throw new Error(`Workflow not found: ${data.workflowId}`)
     out({
       workflowId: data.workflowId,
@@ -711,6 +784,7 @@ const readProjectRows = async (
 ): Promise<MetaRow[]> => {
   const state = await getInspectorState()
   const functions = (state.functions.meta ?? {}) as Record<string, any>
+  const addonFunctions = addonFunctionRows(config, state)
   const inProject = (file: string | null | undefined): string | undefined =>
     file ? relative(config.rootDir, resolve(config.rootDir, file)) : undefined
   const definitions = (kind: string, entries: Record<string, any>): MetaRow[] =>
@@ -740,6 +814,8 @@ const readProjectRows = async (
 
   return [
     ...definitions('function', functions),
+    ...addonFunctions,
+    ...agentRows(state.agents?.agentsMeta, inProject),
     ...Object.entries(state.workflows?.meta ?? {}).map(
       ([id, workflow]: [string, any]) => ({
         kind: 'workflow',
