@@ -2077,6 +2077,21 @@
         "tsx": "^4.23.15",
       },
     },
+    "verifiers/analytics-bundle": {
+      "name": "@pikku/verifiers-analytics-bundle",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/fetch": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+        "zod": "^4",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+      },
+    },
     "verifiers/app-native": {
       "name": "@pikku/verifiers-app-native",
       "devDependencies": {
@@ -3906,6 +3921,8 @@
     "@pikku/verifiers-addon-workspace": ["@pikku/verifiers-addon-workspace@workspace:verifiers/addon-workspace"],
 
     "@pikku/verifiers-analytics": ["@pikku/verifiers-analytics@workspace:verifiers/analytics"],
+
+    "@pikku/verifiers-analytics-bundle": ["@pikku/verifiers-analytics-bundle@workspace:verifiers/analytics-bundle"],
 
     "@pikku/verifiers-app-native": ["@pikku/verifiers-app-native@workspace:verifiers/app-native"],
 
