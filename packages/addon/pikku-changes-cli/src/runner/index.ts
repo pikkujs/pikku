@@ -22,6 +22,7 @@ export {
   checkCommandOf,
   type CheckoutSetup,
   type MainRefresh,
+  type SetupReason,
   type Prepared,
 } from './prepare.js'
 export { DEPENDENCY_FILES } from '../lib/migration-files.js'
