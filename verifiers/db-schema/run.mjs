@@ -1789,18 +1789,17 @@ ${
   }
 
   const dashboardNames = await objectNames('dashboard')
-  const ibfk = (n) => /_ibfk_\d+$/.test(n)
   const expected = deskNames
-    .filter((n) => !isCheck(n) && !ibfk(n))
+    .filter((n) => !isCheck(n))
     .map((n) => n.replaceAll('desk', 'dashboard'))
     .sort()
-  const actual = dashboardNames.filter((n) => !isCheck(n) && !ibfk(n)).sort()
+  const actual = dashboardNames.filter((n) => !isCheck(n)).sort()
   check(
     JSON.stringify(expected) === JSON.stringify(actual),
     `${dialect}: indexes, keys and triggers are named as a fresh dashboard would have them (${actual.join(', ')})`
   )
   check(
-    !dashboardNames.some((n) => !ibfk(n) && /desk/.test(n)),
+    !dashboardNames.some((n) => /desk/.test(n)),
     `${dialect}: nothing left on dashboard is named for desk`
   )
   if (dialect !== 'sqlite') {

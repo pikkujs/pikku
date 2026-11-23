@@ -114,11 +114,12 @@ MySQL renames indexes and unique keys (`RENAME INDEX`), and SQLite, which cannot
 an index or a trigger, drops the old one before the table moves and lets the additions
 file create it under the new name. Generated `CHECK`s hash the table and column, so
 `planConstraints` already replaces them (stale generated name dropped, new one added)
-exactly as it does after a hand rename. Not covered: MySQL names an unnamed foreign key
-`<table>_ibfk_<n>` and has no rename for it, and `db check` does not compare foreign key
-names, so a foreign key declared on the renamed table keeps the old table's name there.
-Declared tables have no sequences or autoincrement state (keys are `key`/`text` or plain
-integers), so there is none to rename.
+exactly as it does after a hand rename. MySQL has no rename for a foreign key, so a
+declared one (`<table>_<column>_fk`, which the SQL carries whole) is dropped, its implicit
+index renamed, and the constraint added back under the new name. Declared tables have no
+sequences or autoincrement state (keys are `key`/`text` or plain integers), so there is
+none to rename. `db check` does not compare constraint or index names, which is why
+`verifiers/db-schema` compares them with what a fresh create names.
 
 One file per kind of change, in this order: renames, additions, drops. A renamed
 column's generated checks are dropped in the rename file before the `RENAME COLUMN`

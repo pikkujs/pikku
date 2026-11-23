@@ -2292,24 +2292,41 @@ async function materializeDeclaration(
   })
 }
 
-/** The names of every foreign key constraint the migrations create on postgres. */
+/** The names of every foreign key constraint the migrations create, on the engines that name them. */
 async function coveredForeignKeyNames(
   resolved: ResolvedDb
 ): Promise<Set<string>> {
-  if (resolved.dialect !== 'postgres') return new Set()
-  return withScratchPostgresDatabase(resolved, async (client) => {
-    await migrate(
-      new PostgresMigrationExecutor(client),
-      resolved.migrationsDir,
-      REPLAY
-    )
-    const { rows } = await client.query(
-      `select conname as name from pg_constraint where contype = 'f'`
-    )
-    return new Set(
-      (rows as { name: string }[]).map((row) => row.name.toLowerCase())
-    )
-  })
+  const lower = (rows: { name: string }[]) =>
+    new Set(rows.map((row) => row.name.toLowerCase()))
+  switch (resolved.dialect) {
+    case 'sqlite':
+      return new Set()
+    case 'postgres':
+      return withScratchPostgresDatabase(resolved, async (client) => {
+        await migrate(
+          new PostgresMigrationExecutor(client),
+          resolved.migrationsDir,
+          REPLAY
+        )
+        const { rows } = await client.query(
+          `select conname as name from pg_constraint where contype = 'f'`
+        )
+        return lower(rows as { name: string }[])
+      })
+    case 'mysql':
+      return withScratchMysqlDatabase(resolved, async (client) => {
+        await migrate(
+          new MysqlMigrationExecutor(client),
+          resolved.migrationsDir,
+          REPLAY
+        )
+        const { rows } = await client.query(
+          `select constraint_name as name from information_schema.table_constraints
+           where table_schema = database() and constraint_type = 'FOREIGN KEY'`
+        )
+        return lower(rows as { name: string }[])
+      })
+  }
 }
 
 /** The statements for every table rename still to be written, with what they keep. */
