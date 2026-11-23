@@ -34,6 +34,7 @@ import { harnessBuildPrompt } from './prompts.js'
 import {
   isProviderAuth,
   isProviderLimit,
+  providerRefusalOf,
   retryAfterMsOf,
 } from './provider-limit.js'
 import { InMemorySteps } from './steps.js'
@@ -719,6 +720,77 @@ describe('provider auth', () => {
     assert.match(result.infra?.message ?? '', /`\/login`/)
     assert.equal(result.feedbackHistory.length, 0)
     assert.equal(doneCalls, 0)
+  })
+})
+
+const OUT_OF_EXTRA_USAGE =
+  '400 {"type":"error","error":{"type":"invalid_request_error","message":"You\'re out of extra usage. Add more at claude.ai/settings/usage and keep going."},"request_id":"req_011CabcdEFGH"}'
+
+describe('provider quota', () => {
+  test('out of paid usage is quota; with a stated retry time it is a limit; it beats an auth word', () => {
+    for (const text of [
+      OUT_OF_EXTRA_USAGE,
+      'Your credit balance is too low to access the Anthropic API',
+      '{"error":{"code":"insufficient_quota"}}',
+      'You exceeded your current quota, please check your plan and billing details',
+      'HTTP 402 Payment Required',
+      'Unauthorized: payment required',
+    ])
+      assert.equal(providerRefusalOf(text), 'provider-quota', text)
+    assert.equal(
+      providerRefusalOf(
+        'You exceeded your current quota. Try again in 20 minutes.'
+      ),
+      'provider-limit'
+    )
+    assert.equal(
+      providerRefusalOf('Rate limit reached for gpt-6.1-sol'),
+      'provider-limit'
+    )
+    assert.equal(providerRefusalOf('invalid_grant'), 'provider-auth')
+    assert.equal(providerRefusalOf('Type error in src/a.ts'), undefined)
+  })
+
+  test('the Anthropic out-of-extra-usage turn throws provider-quota naming the model, with no wait', async () => {
+    const t = await setup([{ mode: 'error', error: OUT_OF_EXTRA_USAGE }], {
+      resolveModel: () => ({
+        provider: 'anthropic',
+        model: 'claude-sonnet-5-5',
+      }),
+    })
+    const error = await t.agent({ attempt: 1 }).then(
+      () => assert.fail('expected provider-quota'),
+      (e) => e
+    )
+    assert.ok(error instanceof HarnessInfraError)
+    assert.equal(error.kind, 'provider-quota')
+    assert.equal(error.retryAfterMs, undefined)
+    assert.match(
+      error.message,
+      /anthropic\/claude-sonnet-5-5 is out of usage: add usage to the account or switch the model alias/
+    )
+    assert.match(error.message, /out of extra usage/)
+    const exit = t.events.find((e) => e.type === 'exit')
+    assert.equal(exit?.type === 'exit' && exit.outcome, 'provider-quota')
+  })
+
+  test('the run ends infra with provider-quota from the agent', async () => {
+    const t = await setup([{ mode: 'error', error: OUT_OF_EXTRA_USAGE }])
+    const result = await runHarness({
+      worktree: t.repo,
+      base: 'main',
+      shortId: 'k3x9',
+      changeId: 'chg_0123456789',
+      changeset: 'cs_abc',
+      harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
+      agent: t.agent,
+      steps: workflowSteps(jsonWorkflow()),
+      markDone: async () => undefined,
+    })
+    assert.equal(result.status, 'infra')
+    assert.equal(result.infra?.gate, 'agent')
+    assert.equal(result.infra?.kind, 'provider-quota')
+    assert.equal(result.infra?.retryAfterMs, undefined)
   })
 })
 

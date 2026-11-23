@@ -28,6 +28,8 @@ export type InfraKind =
   | 'provider-limit'
   /** The model provider's login is unusable (expired, revoked, missing); a person must log in again. */
   | 'provider-auth'
+  /** The provider account is out of paid usage or credit; a person must add some (no clock helps). */
+  | 'provider-quota'
 
 export class HarnessInfraError extends Error {
   readonly kind: InfraKind
