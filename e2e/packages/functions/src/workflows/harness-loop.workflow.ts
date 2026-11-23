@@ -10,7 +10,13 @@ import type { FakeGateRun, Severity } from '../functions/harness.functions.js'
  * fixed name the inspector can read.
  */
 export const harnessLoopWorkflow = pikkuWorkflowFunc<
-  { changeId: string; failOn: Severity; gateRuns: FakeGateRun[] },
+  {
+    changeId: string
+    failOn: Severity
+    gateRuns: FakeGateRun[]
+    /** Per attempt, how long the fake agent's first try waits. */
+    agentDelayMs?: number[]
+  },
   {
     status: 'done' | 'gave-up' | 'repeated' | 'infra'
     attempts: number
@@ -32,6 +38,7 @@ export const harnessLoopWorkflow = pikkuWorkflowFunc<
         changeId: data.changeId,
         attempt: 1,
         feedback: '',
+        delayMs: data.agentDelayMs?.[0],
       }
     )
     let gate = await workflow.do('Gate checks (attempt 1)', 'harnessRunGate', {
@@ -77,6 +84,7 @@ export const harnessLoopWorkflow = pikkuWorkflowFunc<
         changeId: data.changeId,
         attempt: 2,
         feedback: verdict.feedback,
+        delayMs: data.agentDelayMs?.[1],
       }
     )
     gate = await workflow.do('Gate checks (attempt 2)', 'harnessRunGate', {
@@ -133,6 +141,7 @@ export const harnessLoopWorkflow = pikkuWorkflowFunc<
         changeId: data.changeId,
         attempt: 3,
         feedback: verdict.feedback,
+        delayMs: data.agentDelayMs?.[2],
       }
     )
     gate = await workflow.do('Gate checks (attempt 3)', 'harnessRunGate', {
