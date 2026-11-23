@@ -2,7 +2,6 @@ import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runKnowledgeValidate } from '@pikku/knowledge'
-import type { PikkuScaffoldFeature } from '../../../types/config.js'
 import { runBootstrapChecks } from './bootstrap-checks.js'
 import {
   runVirtualUserChecks,
