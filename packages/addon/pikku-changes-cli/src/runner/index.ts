@@ -20,11 +20,11 @@ export {
   hasOwnWork,
   worktreeOf,
   checkCommandOf,
-  DEPENDENCY_FILES,
   type CheckoutSetup,
   type MainRefresh,
   type Prepared,
 } from './prepare.js'
+export { DEPENDENCY_FILES } from '../lib/migration-files.js'
 export { selfCheck, strayFiles, type SelfCheckInput } from './self-check.js'
 export { relinkPikku, otherCli, pikkuCheckoutOf } from './relink.js'
 export { writeShims } from './shims.js'

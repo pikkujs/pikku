@@ -1,27 +1,24 @@
+import { migrationFiles } from '../../lib/migration-files.js'
 import type { Finding } from '../finding.js'
 import type { HarnessGate } from '../gate.js'
 import { gitIn } from '../git.js'
 import type { HarnessItem } from '../prompts.js'
 import { declaredChangeset } from './declared.js'
 
-/** A migration: a file in `db/<dir>/` at the root or at a package's root (the starter keeps them in packages/functions/db/sqlite/). */
-const MIGRATION = /^(?:(?:packages|apps)\/[^/]+\/)?db\/[^/]+\/[^/]+$/
-
-/** The migrations the changeset's commits add against the base branch. */
-const addedMigrations = async (worktree: string, base: string) =>
-  (
-    await gitIn(worktree)([
-      'diff',
-      '--name-only',
-      '--diff-filter=A',
-      `${base}...HEAD`,
-    ])
-  )
-    .split('\n')
-    .filter((file) => MIGRATION.test(file))
+/** The migrations the changeset's commits add against the base branch, in a project root of the base or HEAD. */
+const addedMigrations = async (worktree: string, base: string) => {
+  const git = gitIn(worktree)
+  const added = await git([
+    'diff',
+    '--name-only',
+    '--diff-filter=A',
+    `${base}...HEAD`,
+  ])
+  return migrationFiles(git, [base, 'HEAD'], added.split('\n'))
+}
 
 /**
- * A changeset that adds a migration (a file in `db/<dir>/` at the root or at a package's root) has declared the tables it creates or
+ * A changeset that adds a migration (a file in `db/<dir>/` of a Pikku project root, the directory holding a `pikku.config.json`) has declared the tables it creates or
  * alters on its claim, so it is ordered with the other schema changes, as `pikku changes done`
  * requires. The declaration is read from the local changes queue (`storePath`, else the CLI's).
  */

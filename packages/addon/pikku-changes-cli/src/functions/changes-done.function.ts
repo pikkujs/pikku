@@ -9,6 +9,7 @@ import {
 } from '@pikku/cli/addon-support'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { planRefusal } from '../lib/plan-gate.js'
+import { migrationFiles } from '../lib/migration-files.js'
 import { refuseUntilPagesCompared } from '../lib/page-gate.js'
 import {
   buildsPages,
@@ -257,7 +258,11 @@ async function checkCommit(
     '-r',
     sha,
   ])
-  const migrations = files.split('\n').filter((f) => /^db\/[^/]+\//.test(f))
+  const migrations = await migrationFiles(
+    (args) => git(args),
+    [sha, 'HEAD'],
+    files.split('\n')
+  )
   const { groups, changes } = change.groupId
     ? await rpc.invoke('listChanges', {
         projectId,
