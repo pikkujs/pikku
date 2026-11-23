@@ -6,8 +6,8 @@ import type { InspectorState } from '@pikku/inspector'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import {
   declaredPackageDependencies,
-  ensurePackageDependency,
-} from '../../../utils/ensure-package-dependency.js'
+  requirePackageDependencies,
+} from '../../../utils/require-package-dependencies.js'
 import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
 import { detectDatabaseDialect } from '../../../contributors/contributor-platform.js'
@@ -70,8 +70,8 @@ export const projectDatabaseEngine = async (
 }
 
 /**
- * Writes `pikku-local-services.gen.ts` and declares what it imports in the
- * project's package.json.
+ * Writes `pikku-local-services.gen.ts` and fails when the project's
+ * package.json does not list what it imports.
  *
  * Written for every project, not only one with a CLI, because `pikku serve`
  * and `pikku dev` load it too.
@@ -121,7 +121,8 @@ export const writeLocalServices = async (
     localCLI,
   })
   await writeFileInDir(logger, file, code)
-  for (const name of localServicesPackages({ database, engine, localCLI })) {
-    await ensurePackageDependency(logger, file, name)
-  }
+  await requirePackageDependencies(
+    file,
+    localServicesPackages({ database, engine, localCLI })
+  )
 }

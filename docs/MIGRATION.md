@@ -99,6 +99,14 @@ The bootstrap now imports `analytics/pikku-analytics-meta.gen.ts`, which registe
 
 **Find the code:** search for `getAnalyticsMeta` and `pikku-analytics-meta.gen.json`.
 
+### `pikku all` no longer edits `package.json`
+
+**What changed:** `pikku all` used to add `@pikku/kysely-sqlite`, `@pikku/better-auth`, `@pikku/websocket` and the other packages a generated file imports to your `package.json`, and print "run your package manager's install". It now fails instead, naming each missing package and the range this CLI was built against.
+
+**What to write instead:** add the listed packages to the `dependencies` of the package that owns the generated file, run your package manager's install, then run `pikku all` again.
+
+**How to find it:** run `pikku all` and read the error; it names the `package.json`.
+
 ### `pikku db generate` writes drops and renames
 
 A column or a table that left `db/tables.ts` used to be refused. It is now written as `DROP COLUMN` / `DROP TABLE` behind a `-- pikku:destructive` line, once a person approves: `generate` asks on a terminal, and elsewhere refuses until `pikku db generate --allowDestructive` is given. `pikku db migrate` stops on the marked file until it is given `--allowDestructive` too. Only a table a previous `generate` recorded is dropped. A drop the engine will not do (a column a `UNIQUE` key holds on sqlite, a table another table references) is still refused, with the engine's reason; there is no `CASCADE`.
