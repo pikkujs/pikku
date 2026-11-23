@@ -259,6 +259,18 @@ export const runHarness = async (
     new Stop({ gate, kind: error.kind, message: redact(error.message) })
 
   /**
+   * The tree a stage's write guard compares against, recorded as a step: a gate that a restart runs
+   * again is guarded against the tree as it was before its first run, so what that run wrote is
+   * still seen (and committed) as its change.
+   */
+  const snapshot = async (name: string): Promise<TreeSnapshot> =>
+    new Map(
+      await steps.step(name, async () => [
+        ...(await snapshotTree(worktree, gitBinary)).entries(),
+      ])
+    )
+
+  /**
    * Runs a gate with its retries. Every run is guarded against `before`, the tree as it was before
    * the first run, with `writes` as the allowlist. Thrown errors are retried; after the last try a
    * HarnessInfraError stops the run and any other error is rethrown.
@@ -328,13 +340,17 @@ export const runHarness = async (
     const failing: GateFindings[] = []
 
     for (const gate of gatesIn('check')) {
-      const before = await snapshotTree(worktree, gitBinary)
+      const before = await snapshot(
+        `attempt-${attempt}:snapshot:check:${gate.name}`
+      )
       const { findings } = await runGate(gate, attempt, before, writesOf(gate))
       judge(gate, attempt, findings, failing)
     }
 
     for (const gate of gatesIn('fixer')) {
-      const before = await snapshotTree(worktree, gitBinary)
+      const before = await snapshot(
+        `attempt-${attempt}:snapshot:fixer:${gate.name}`
+      )
       const { findings, changed } = await runGate(
         gate,
         attempt,
@@ -370,7 +386,7 @@ export const runHarness = async (
     // stage's shared allowlist, which only ever covers `.pikku`.
     const parallel = gatesIn('gate')
     const shared = [...new Set(parallel.flatMap(writesOf))]
-    const before = await snapshotTree(worktree, gitBinary)
+    const before = await snapshot(`attempt-${attempt}:snapshot:gate`)
     const settled = await Promise.allSettled(
       parallel.map((gate) => runGate(gate, attempt, before, shared))
     )
@@ -409,22 +425,22 @@ export const runHarness = async (
     // Gates judge commits: work the agent left uncommitted goes back to it instead.
     let failing: GateFindings[]
     try {
-      const uncommitted = await record(
-        `attempt-${attempt}:${CLEAN_TREE}`,
-        { attempt },
-        async () => {
-          try {
-            return [...(await snapshotTree(worktree, gitBinary)).keys()]
+      let uncommitted: string[]
+      try {
+        uncommitted = await record(
+          `attempt-${attempt}:${CLEAN_TREE}`,
+          { attempt },
+          async () =>
+            [...(await snapshotTree(worktree, gitBinary)).keys()]
               .filter((path) => !path.startsWith('.pikku/'))
-              .sort()
-          } catch (error) {
-            if (error instanceof HarnessInfraError)
-              throw infraStop(CLEAN_TREE, error)
-            throw error
-          }
-        },
-        (paths) => (paths.length ? 'fail' : 'ok')
-      )
+              .sort(),
+          (paths) => (paths.length ? 'fail' : 'ok')
+        )
+      } catch (error) {
+        if (error instanceof HarnessInfraError)
+          throw infraStop(CLEAN_TREE, error)
+        throw error
+      }
       failing = uncommitted.length
         ? [{ gate: CLEAN_TREE, findings: uncommitted.map(uncommittedFinding) }]
         : await runGates(attempt)

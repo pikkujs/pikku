@@ -1,6 +1,8 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type { HarnessGate } from './gate.js'
+import { parseOxfmtWrite } from './gates/oxfmt-parser.js'
 import { gitIn } from './git.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -39,3 +41,21 @@ export const throwawayRepo = async (
 export const removeThrowaways = async () => {
   while (made.length) await rm(made.pop()!, { recursive: true, force: true })
 }
+
+/** Formats `file` by squeezing runs of spaces, through the fake CLI so it is a real child process. */
+export const fakeFormatter = (file: string): HarnessGate => ({
+  name: 'fakefmt',
+  description: 'squeezes spaces',
+  stage: 'fixer',
+  failOn: 'medium',
+  writes: ['**/*.{ts,tsx}'],
+  run: async (wire) => {
+    const source = await readFile(join(wire.worktree, file), 'utf8')
+    const formatted = source.replace(/ {2,}/g, ' ')
+    if (formatted === source) return []
+    return wire.runCli(['write', file, formatted], {
+      binary: FAKE_CLI,
+      parse: parseOxfmtWrite,
+    })
+  },
+})

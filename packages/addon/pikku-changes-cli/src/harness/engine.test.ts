@@ -21,6 +21,7 @@ import { InMemorySteps } from './steps.js'
 import {
   FAKE_CLI,
   REPO_ROOT,
+  fakeFormatter,
   removeThrowaways,
   throwawayRepo,
 } from './test-support.js'
@@ -93,24 +94,6 @@ const run = async (
   })
   return { result, steps, events, doneCalls: () => doneCalls }
 }
-
-/** Formats src/*.ts by squeezing runs of spaces, through the fake CLI so it is a real child process. */
-const fakeFormatter = (file: string): HarnessGate => ({
-  name: 'fakefmt',
-  description: 'squeezes spaces',
-  stage: 'fixer',
-  failOn: 'medium',
-  writes: ['**/*.{ts,tsx}'],
-  run: async (wire) => {
-    const source = await readFile(join(wire.worktree, file), 'utf8')
-    const formatted = source.replace(/ {2,}/g, ' ')
-    if (formatted === source) return []
-    return wire.runCli(['write', file, formatted], {
-      binary: FAKE_CLI,
-      parse: parseOxfmtWrite,
-    })
-  },
-})
 
 const finding = (message: string, extra: Partial<Finding> = {}): Finding => ({
   file: 'src/a.ts',
@@ -554,9 +537,20 @@ describe('runHarness', () => {
       ]),
       expected
     )
+    // Each stage's write-guard snapshot is a step of its own, with no event.
+    const snapshots: Record<string, string> = {
+      'attempt-1:check:typecheck': 'attempt-1:snapshot:check:typecheck',
+      'attempt-1:fixer:fakefmt': 'attempt-1:snapshot:fixer:fakefmt',
+      'attempt-1:gate:lint': 'attempt-1:snapshot:gate',
+      'attempt-2:check:typecheck': 'attempt-2:snapshot:check:typecheck',
+      'attempt-2:fixer:fakefmt': 'attempt-2:snapshot:fixer:fakefmt',
+      'attempt-2:gate:lint': 'attempt-2:snapshot:gate',
+    }
     assert.deepEqual(
       steps.records.map(({ name }) => name),
-      expected.map(([name]) => name)
+      expected.flatMap(([name]) =>
+        snapshots[name as string] ? [snapshots[name as string], name] : [name]
+      )
     )
     for (const event of events)
       assert.ok(Number.isInteger(event.durationMs) && event.durationMs >= 0)

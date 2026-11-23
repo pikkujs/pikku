@@ -6,7 +6,9 @@ export type StepOptions = {
 
 /**
  * Runs each agent call, gate run and commit as one named step. Names are unique within a run, so a
- * durable recorder can return a finished step's stored result instead of running it again.
+ * durable recorder can return a finished step's stored result instead of running it again. A step
+ * returns plain JSON and throws a HarnessInfraError or a plain Error, so a recorder can store either
+ * and give it back on replay.
  */
 export type HarnessSteps = {
   step: <T>(
