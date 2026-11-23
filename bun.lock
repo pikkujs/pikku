@@ -1635,6 +1635,7 @@
         "@pikku/deploy-standalone": "workspace:*",
         "@pikku/fetch": "^0.12.16",
         "@pikku/kysely-node-sqlite": "workspace:*",
+        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/lambda": "workspace:*",
         "@pikku/modelcontextprotocol": "workspace:*",
         "@pikku/node-http-server": "workspace:*",
@@ -2262,6 +2263,7 @@
       "dependencies": {
         "@pikku/core": "workspace:*",
         "@pikku/kysely": "workspace:*",
+        "@pikku/kysely-postgres": "workspace:*",
         "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "kysely": "^0.29.6",

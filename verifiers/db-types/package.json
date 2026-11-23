@@ -11,6 +11,7 @@
     "@pikku/core": "workspace:*",
     "@pikku/kysely": "workspace:*",
     "@pikku/kysely-sqlite": "workspace:*",
+    "@pikku/kysely-postgres": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "kysely": "^0.29.6"
   },
