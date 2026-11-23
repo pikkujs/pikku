@@ -8,7 +8,9 @@ import { guardWrites, snapshotTree } from './write-guard.js'
 /**
  * The db step before a changeset's check, with the pinned local pikku CLI: `pikku db generate` writes the migrations
  * `db/tables.ts` asks for (never with `--allowDestructive`), the engine commits the ones it wrote, then `pikku db
- * migrate` applies them to the worktree's dev database and regenerates the database types, and `pikku all` the rest.
+ * migrate` applies them to the worktree's dev database and regenerates the database types (`pikku db reset
+ * --no-seed` rebuilds that database when it applied a migration the builder since deleted or edited), and `pikku
+ * all` the rest.
  * Without it the check type-checks against a database migrated when the worktree was prepared.
  */
 export type HarnessMigrate = {
@@ -83,6 +85,18 @@ export const parseDbGenerate = ({
 }
 
 const ran = () => []
+
+const DRIFT = /\[PKU-DB-DRIFT\]/
+
+/**
+ * `db migrate` refuses a dev database that applied a migration which is now gone or changed on disk: the builder
+ * deleted or edited one it had migrated. That database is the worktree's own scratch (git-ignored), so it is
+ * rebuilt from the committed migrations instead of judged; any other failure is infra.
+ */
+const parseDbMigrate = ({ stdout, stderr, code }: RawOutput): Finding[] =>
+  code !== 0 && DRIFT.test(`${stdout}\n${stderr}`)
+    ? [{ severity: 'low', rule: 'harness/db-drift', message: 'drift' }]
+    : []
 
 export type DbStepResult = {
   /** Findings for the builder (a refused `db generate`); migrate and codegen did not run. */
@@ -160,7 +174,8 @@ export const runDbStep = async ({
   }
   if (findings.length) return { findings, ...(commit ? { commit } : {}) }
   const settled = await snapshotTree(worktree, gitBinary)
-  await pikku(['db', 'migrate'])
+  const drift = await pikku(['db', 'migrate'], parseDbMigrate)
+  if (drift.length) await pikku(['db', 'reset', '--no-seed'])
   await pikku(['all'])
   await guardWrites({
     worktree,
