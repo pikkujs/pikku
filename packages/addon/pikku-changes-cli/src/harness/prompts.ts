@@ -58,7 +58,8 @@ export const harnessBuildPrompt = ({
         `- #${bare(item.shortId)}: subject contains \`#${bare(item.shortId)}\`, trailer \`Change-Id: ${item.changeId}\``
     ),
     '',
-    'Leave nothing uncommitted. Do not claim, file or mark changes done, and do not run `pikku check`, `pikku changes done`, `pikku changes next` or `pikku changes merge`.',
+    'Leave nothing uncommitted. Do not file or mark changes done, claim nothing but the declaration below, and do not run `pikku check`, `pikku changes done`, `pikku changes next` or `pikku changes merge`.',
+    `If you add a migration (a file in a \`db/<dir>/\` folder), declare the tables it creates or alters on this changeset before you stop: \`pikku changes claim --group-id ${changeset.id} --change-ids ${items.map((item) => bare(item.shortId)).join(',')} --creates <tables> --alters <tables>\`.`,
     'When every item is built and committed, stop. The checks (codegen, the type-check, lint and the others) run after you stop; if they find anything, their findings come back to you as the next message here. Fix them, commit, and stop again.',
     '',
     ...items.map((item) => sectionOf(route, bare(item.shortId))),
