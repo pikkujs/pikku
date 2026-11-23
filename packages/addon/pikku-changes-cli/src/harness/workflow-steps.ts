@@ -20,6 +20,7 @@ export type RecordedError = {
   kind?: InfraKind
   output?: string
   exitCode?: number
+  retryAfterMs?: number
 }
 
 /** A step's stored outcome: its value, or the error it threw. */
@@ -70,6 +71,9 @@ const recordError = (error: unknown): RecordedError => {
       kind: error.kind,
       ...(error.output === undefined ? {} : { output: error.output }),
       ...(error.exitCode === undefined ? {} : { exitCode: error.exitCode }),
+      ...(error.retryAfterMs === undefined
+        ? {}
+        : { retryAfterMs: error.retryAfterMs }),
     }
   if (error instanceof Error)
     return { name: error.name, message: error.message }
@@ -81,6 +85,7 @@ const restoreError = (recorded: RecordedError): Error => {
     return new HarnessInfraError(recorded.kind, recorded.message, {
       output: recorded.output,
       exitCode: recorded.exitCode,
+      retryAfterMs: recorded.retryAfterMs,
     })
   const error = new Error(recorded.message)
   error.name = recorded.name
