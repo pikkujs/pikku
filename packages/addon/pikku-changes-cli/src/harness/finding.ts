@@ -24,6 +24,8 @@ export type InfraKind =
   | 'write-outside-allowlist'
   | 'empty-commit'
   | 'git'
+  /** The project is not set up for the gate (such as a reference that is not a capture); a person must act. */
+  | 'precondition'
   /** The model provider refused for a usage or rate limit; wait (`retryAfterMs` when it said) and retry. */
   | 'provider-limit'
   /** The model provider's login is unusable (expired, revoked, missing); a person must log in again. */

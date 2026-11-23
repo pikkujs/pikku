@@ -1,0 +1,91 @@
+{
+  "app": "apps/app",
+  "baseUrl": "http://localhost:55101",
+  "server": null,
+  "reference": "artifacts/references/wildwomanreborn",
+  "dir": ".pikku/compare/app",
+  "report": ".pikku/compare/app/report.json",
+  "widths": [1440, 1920, 390],
+  "threshold": null,
+  "gitSha": "2147f20be1a591f3505707094d3aad7f2cb9c896",
+  "dirty": false,
+  "generatedAt": "2026-11-23T18:15:27.834Z",
+  "sectionsNote": null,
+  "stylesNote": null,
+  "rows": [
+    {
+      "id": "women-s-circle",
+      "width": 390,
+      "path": "/women-s-circle",
+      "changedPercent": 20.21,
+      "referenceHeight": 4108,
+      "ourHeight": 4222,
+      "heightDiff": 114,
+      "httpStatus": 200,
+      "diff": ".pikku/compare/app/women-s-circle-390.diff.png",
+      "ours": ".pikku/compare/app/women-s-circle-390.png",
+      "sections": {
+        "match": 0.84,
+        "notes": [
+          "multi-column sections: original 1, yours 2",
+          "section 1 of 10 (0%-2% down the page): original has 1 column, 1 picture (19% wide, inline); yours (section 1) has 1 column",
+          "section 3 of 10 (44%-59% down the page): original has 1 column; yours (section 3) has 1 column, 2 pictures (87% wide, inline; 87% wide, inline)",
+          "section 2 of 10 (3%-43% down the page): original has 1 column, 1 picture (88% wide, inline); yours (section 2) has 2 columns, 1 picture (16% wide, left)",
+          "section 2: the picture is 88% of the page width in the original, 16% in yours",
+          "page height: original 3371 px, yours 4222 px (1.25x): too much space or a layout that is too narrow/too stacked"
+        ]
+      },
+      "status": "compared",
+      "styles": []
+    },
+    {
+      "id": "women-s-circle",
+      "width": 1440,
+      "path": "/women-s-circle",
+      "changedPercent": 10.64,
+      "referenceHeight": 3196,
+      "ourHeight": 3245,
+      "heightDiff": 49,
+      "httpStatus": 200,
+      "diff": ".pikku/compare/app/women-s-circle-1440.diff.png",
+      "ours": ".pikku/compare/app/women-s-circle-1440.png",
+      "sections": {
+        "match": 0.86,
+        "notes": [
+          "section 8 of the original (3 columns) has no counterpart in your page",
+          "multi-column sections: original 2, yours 1",
+          "your page has 1 section(s) the original does not have",
+          "section 2: the picture is 55% of the page width in the original, 100% in yours",
+          "section 7 of 8 (88%-90% down the page): original has 2 columns, 1 picture (4% wide, right); yours (section 8) has 3 columns, 1 picture (4% wide, left)"
+        ]
+      },
+      "status": "compared",
+      "styles": []
+    },
+    {
+      "id": "women-s-circle",
+      "width": 1920,
+      "path": "/women-s-circle",
+      "changedPercent": 9.16,
+      "referenceHeight": 3196,
+      "ourHeight": 3245,
+      "heightDiff": 49,
+      "httpStatus": 200,
+      "diff": ".pikku/compare/app/women-s-circle-1920.diff.png",
+      "ours": ".pikku/compare/app/women-s-circle-1920.png",
+      "sections": {
+        "match": 0.86,
+        "notes": [
+          "section 8 of the original (3 columns) has no counterpart in your page",
+          "multi-column sections: original 2, yours 1",
+          "your page has 1 section(s) the original does not have",
+          "section 2: the picture is 41% of the page width in the original, 100% in yours",
+          "section 7 of 8 (88%-90% down the page): original has 2 columns, 1 picture (3% wide, right); yours (section 8) has 3 columns, 1 picture (3% wide, left)"
+        ]
+      },
+      "status": "compared",
+      "styles": []
+    }
+  ],
+  "failed": []
+}
