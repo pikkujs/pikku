@@ -179,25 +179,34 @@ export const mainCli = (setup: CheckoutSetup, cwd: string): string | null => {
 
 export type MainRefresh = {
   head: string
-  /** The HEAD the checkout is now installed at: `head`, or the earlier one when the install failed. */
-  installedAt: string
-  /** package.json or the lockfile changed since `installedAt`, so it was installed again. */
+  /** The HEAD the checkout is now set up at: `head`, or the earlier one (none before a first setup) when the setup failed. */
+  installedAt?: string
+  /** It was set up (first in this process, or package.json or the lockfile changed since `installedAt`). */
   installed: boolean
-  /** What failed: the install or the rebuild (`red`, which an agent can repair), or the CLI it runs (`cli`, which it cannot). */
-  failed?: { kind: 'red' | 'cli'; message: string }
+  /** How long the setup took, when it ran. */
+  setupMs?: number
+  /**
+   * What failed: the setup (`setup`, which no agent can repair), the rebuild (`red`, which an agent can
+   * repair), or the CLI it runs (`cli`, which it cannot).
+   */
+  failed?: { kind: 'setup' | 'red' | 'cli'; message: string }
 }
 
+/** Why the main checkout is set up before its check: it never was in this process, or its dependencies changed. */
+export type SetupReason = 'first' | 'dependencies'
+
 /**
- * The main checkout after a merge, before its check: installed again when
- * package.json or the lockfile changed since `installedAt` (the setup command
- * when one is given; `onInstall` is told first), its generated code and dev
- * database rebuilt, and its @pikku/* pointed at the local build again.
+ * The main checkout after a merge, before its check: set up (the setup
+ * command when one is given; `onInstall` is told first and why) when it was
+ * not set up yet (`installedAt` undefined) or package.json or the lockfile
+ * changed since `installedAt`, its generated code and dev database rebuilt,
+ * and its @pikku/* pointed at the local build again.
  */
 export const refreshMain = async (
   setup: CheckoutSetup,
   cwd: string,
   installedAt: string | undefined,
-  onInstall?: () => void
+  onInstall?: (reason: SetupReason) => void
 ): Promise<MainRefresh> => {
   const git = (args: string[]) => setup.commands.git(cwd, args)
   const head = (await git(['rev-parse', 'HEAD'])).output
@@ -207,18 +216,28 @@ export const refreshMain = async (
           '\n'
         )
       : []
-  const installed = changed.some(isDependencyFile)
-  if (installed) {
-    onInstall?.()
+  const reason: SetupReason | undefined = !installedAt
+    ? 'first'
+    : changed.some(isDependencyFile)
+      ? 'dependencies'
+      : undefined
+  let setupMs: number | undefined
+  if (reason) {
+    onInstall?.(reason)
+    const started = performance.now()
     const failed = await setupCheckout(setup, cwd, 'the main checkout')
+    setupMs = Math.round(performance.now() - started)
     if (failed)
       return {
         head,
-        installedAt: installedAt ?? head,
-        installed,
-        failed: { kind: 'red', message: failed },
+        ...(installedAt ? { installedAt } : {}),
+        installed: true,
+        setupMs,
+        failed: { kind: 'setup', message: failed },
       }
   }
+  const installed = !!reason
+  const timed = setupMs === undefined ? {} : { setupMs }
   // A merged changeset may add tables or functions: the generated code and the dev database are rebuilt here as in a fresh worktree.
   const refreshed = await refreshCheckout(setup, cwd)
   if (refreshed)
@@ -226,6 +245,7 @@ export const refreshMain = async (
       head,
       installedAt: head,
       installed,
+      ...timed,
       failed: { kind: 'red', message: refreshed },
     }
   const wrongCli = mainCli(setup, cwd)
@@ -233,6 +253,7 @@ export const refreshMain = async (
     head,
     installedAt: head,
     installed,
+    ...timed,
     ...(wrongCli
       ? { failed: { kind: 'cli' as const, message: wrongCli } }
       : {}),

@@ -628,11 +628,13 @@ export class ChangesRunner {
   private async checkMainCheckout(): Promise<Outcome | null> {
     const { cwd } = this.options
     const book = this.book
-    const main = await refreshMain(this.setup, cwd, book.mainHead, () =>
+    const main = await refreshMain(this.setup, cwd, book.mainHead, (why) =>
       this.emit(
         'info',
         'note',
-        'package.json or bun.lock changed in the main checkout: it is installed again before its check'
+        why === 'first'
+          ? 'The main checkout is set up before its first check'
+          : 'package.json or bun.lock changed in the main checkout: it is installed again before its check'
       )
     )
     book.mainHead = main.installedAt

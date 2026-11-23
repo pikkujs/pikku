@@ -8,6 +8,7 @@ import {
   formatFeedback,
   type GateFindings,
 } from './feedback.js'
+import { environmentError, environmentOnly } from './environment.js'
 import { HarnessInfraError, type Finding, type InfraKind } from './finding.js'
 import {
   createGateWire,
@@ -442,6 +443,14 @@ export const runHarness = async (
       const { findings } = await runGate(gate, attempt, before, writesOf(gate))
       judge(gate, attempt, findings, failing)
     }
+    // A check that finds only unresolved modules and type definitions met a worktree whose install is missing or
+    // broken (prepare installed it): no builder turn fixes that, so it never reaches the builder.
+    const checked = failing.flatMap(({ findings }) => findings)
+    if (environmentOnly(checked))
+      throw infraStop(
+        failing[0]!.gate,
+        environmentError(checked, 'the worktree')
+      )
 
     for (const gate of gatesIn('fixer')) {
       const before = await snapshot(
