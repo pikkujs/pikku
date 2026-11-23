@@ -101,6 +101,8 @@ export type RunHarnessOptions = {
   /** Where gates keep their own files; defaults to `pikku-harness/` in the worktree's git dir. */
   scratch?: string
   gitBinary?: string
+  /** Stops the run: a gate running then is stopped (its tools too) and the run ends as `infra` (`aborted`). */
+  signal?: AbortSignal
 }
 
 const STAGES: GateStage[] = ['check', 'fixer', 'gate']
@@ -154,13 +156,34 @@ const delay = (ms: number, keep: (timer: NodeJS.Timeout) => void) =>
 /**
  * One run of a gate. Once its `workflowTimeout` has passed the wire's signal is aborted, which stops
  * any tool it started through `runCli`, and the run fails as `timeout` after the gate has stopped
- * (or after a grace period), so the write guard and a retry never race a tool still running.
+ * (or after a grace period), so the write guard and a retry never race a tool still running. The
+ * run's own `stop` signal aborts the wire's signal too; the tool then throws `aborted`.
  */
 const runOnce = async (
   gate: HarnessGate,
-  fields: Omit<GateWire, 'runCli' | 'signal'>
+  fields: Omit<GateWire, 'runCli' | 'signal'>,
+  stop?: AbortSignal
 ): Promise<Finding[]> => {
   const controller = new AbortController()
+  if (stop?.aborted)
+    throw new HarnessInfraError(
+      'aborted',
+      `Gate ${gate.name} was not run: the run was stopped`
+    )
+  const onStop = () => controller.abort()
+  stop?.addEventListener('abort', onStop, { once: true })
+  try {
+    return await runUntil(gate, fields, controller)
+  } finally {
+    stop?.removeEventListener('abort', onStop)
+  }
+}
+
+const runUntil = async (
+  gate: HarnessGate,
+  fields: Omit<GateWire, 'runCli' | 'signal'>,
+  controller: AbortController
+): Promise<Finding[]> => {
   const running = gate.run(
     createGateWire({ ...fields, signal: controller.signal })
   )
@@ -223,6 +246,7 @@ export const runHarness = async (
     onEvent,
     markDone,
     gitBinary,
+    signal,
   } = options
   validate(harness)
   const tries = harness.policy?.tries ?? 3
@@ -310,7 +334,7 @@ export const runHarness = async (
           name,
           { attempt, gate: gate.name },
           async () => {
-            const findings = await runOnce(gate, wire)
+            const findings = await runOnce(gate, wire, signal)
             const changed = await guardWrites({
               worktree,
               before,

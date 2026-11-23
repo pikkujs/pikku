@@ -96,7 +96,7 @@ const setup = async (
     nodePath: NODE,
     piCli: FAKE_PI,
     changesetId: 'cs_abc',
-    runId: 'run-1',
+    epoch: 'run-1',
     changePrompt: CHANGE_PROMPT,
     needsAnswer: async () => false,
     allowEnv: FAKE_ENV,
@@ -236,13 +236,24 @@ describe('piAgent sessions', () => {
     )
   })
 
-  test('the session id carries the changeset and the run, in Pi’s alphabet', () => {
+  test('the session id carries the changeset and the worktree epoch, in Pi’s alphabet', () => {
     assert.equal(piSessionId('cs/abc', 'run 7'), 'cs-abc-run-7')
     assert.equal(piSessionId('_cs', 'r_'), 'cs-r')
   })
 })
 
 describe('piAgent launch', () => {
+  test('every line Pi prints reaches onLine', async () => {
+    const lines: string[] = []
+    const t = await setup([{ mode: 'ok' }], {
+      onLine: (line) => lines.push(line),
+    })
+    await t.agent({ attempt: 1 })
+    const types = lines.map((line) => JSON.parse(line).type)
+    assert.deepEqual(types.slice(0, 2), ['session', 'agent_start'])
+    assert.equal(types.at(-1), 'agent_end')
+  })
+
   test('the default alias runs Sol', async () => {
     const t = await setup([{ mode: 'ok' }])
     await t.agent({ attempt: 1 })
