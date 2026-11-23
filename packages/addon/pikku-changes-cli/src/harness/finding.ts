@@ -24,6 +24,8 @@ export type InfraKind =
   | 'write-outside-allowlist'
   | 'empty-commit'
   | 'git'
+  /** The checkout's dependencies are missing or broken: its check found only modules or type definitions it cannot resolve. */
+  | 'environment'
   /** The model provider refused for a usage or rate limit; wait (`retryAfterMs` when it said) and retry. */
   | 'provider-limit'
   /** The model provider's login is unusable (expired, revoked, missing); a person must log in again. */

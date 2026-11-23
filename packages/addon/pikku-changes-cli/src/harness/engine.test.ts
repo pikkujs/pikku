@@ -247,6 +247,73 @@ describe('runHarness', () => {
     assert.match(result.feedbackHistory[1]!, /problem 2/)
   })
 
+  test('a check that finds only unresolved modules and type definitions is infra and the agent never hears of it', async () => {
+    const repo = await throwawayRepo()
+    const { agent, calls } = scriptedAgent(repo, [])
+    const check = scriptedGate(
+      'check',
+      () => [
+        finding(
+          "Cannot find module '@pikku/vite' or its corresponding type declarations.",
+          { rule: 'pikku/TS2307' }
+        ),
+        finding("Cannot find type definition file for 'node'.", {
+          rule: 'pikku/TS2688',
+        }),
+        finding('Pikku inspection failed due to critical diagnostics', {
+          rule: 'pikku/CODEGEN',
+        }),
+      ],
+      { stage: 'check' }
+    )
+    const lint = scriptedGate('lint', () => [])
+    const { result, doneCalls } = await run(
+      repo,
+      { name: 'env', gates: [check.gate, lint.gate] },
+      agent
+    )
+    assert.equal(result.status, 'infra')
+    assert.equal(result.infra?.gate, 'check')
+    assert.equal(result.infra?.kind, 'environment')
+    assert.match(
+      result.infra!.message,
+      /^Dependencies are missing or broken in the worktree:/
+    )
+    assert.equal(calls.length, 1)
+    assert.deepEqual(result.feedbackHistory, [])
+    assert.equal(lint.calls(), 0)
+    assert.equal(doneCalls(), 0)
+  })
+
+  test('a check with a code finding next to environment findings goes back to the agent', async () => {
+    const repo = await throwawayRepo()
+    const { agent, calls } = scriptedAgent(repo, [])
+    const check = scriptedGate(
+      'check',
+      (call) =>
+        call === 1
+          ? [
+              finding(
+                "Cannot find module '@pikku/vite' or its corresponding type declarations.",
+                { rule: 'pikku/TS2307' }
+              ),
+              finding("Module '@pikku/core' has no exported member 'nope'.", {
+                rule: 'pikku/TS2305',
+              }),
+            ]
+          : [],
+      { stage: 'check' }
+    )
+    const { result } = await run(
+      repo,
+      { name: 'mixed', gates: [check.gate] },
+      agent
+    )
+    assert.equal(result.status, 'done')
+    assert.equal(calls.length, 2)
+    assert.match(result.feedbackHistory[0]!, /TS2305/)
+  })
+
   test('findings below failOn are notes and the attempt passes', async () => {
     const repo = await throwawayRepo()
     const { agent, calls } = scriptedAgent(repo, [])
