@@ -879,3 +879,56 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     assert.match(generate(baseContext), /baseLogger\.error\('Fatal: '/)
   })
 })
+
+describe(`StandaloneProviderAdapter workflow service`, () => {
+  const entry = (context: never) =>
+    new StandaloneProviderAdapter({}).generateEntrySource(context)
+
+  test('a postgres app persists runs, with the run service for the console', () => {
+    const source = entry(withPostgres)
+
+    assert.match(
+      source,
+      /import \{ PgKyselyWorkflowService, PgKyselyWorkflowRunService \} from '@pikku\/kysely-postgres'/
+    )
+    assert.match(source, /new PgKyselyWorkflowService\(kysely, \{ leaseService/)
+    assert.match(source, /new PgKyselyWorkflowRunService\(kysely\)/)
+    assert.match(source, /\n\s+workflowRunService,\n/)
+  })
+
+  test('a sqlite app persists runs', () => {
+    const source = entry(withDb)
+
+    assert.match(source, /new KyselyWorkflowService\(kysely, \{ leaseService/)
+    assert.match(source, /new KyselyWorkflowRunService\(kysely\)/)
+  })
+
+  test('falls back to memory when the tables are not migrated', () => {
+    const source = entry(withSqliteNoCoercion)
+
+    assert.match(source, /Workflow service falling back to memory/)
+    assert.match(source, /workflowRunService = inMemory/)
+  })
+
+  test('an app without a database keeps the in-memory service for both names', () => {
+    const source = entry(baseContext)
+
+    assert.match(
+      source,
+      /const workflowService = new InMemoryWorkflowService\(\)/
+    )
+    assert.match(source, /const workflowRunService = workflowService/)
+    assert.doesNotMatch(source, /KyselyWorkflow/)
+  })
+
+  test('recovery starts after the server is listening', () => {
+    for (const context of [withDb, withPostgres, baseContext as never]) {
+      const source = entry(context)
+      assert.ok(
+        source.indexOf('await server.start()') <
+          source.indexOf('workflowService?.startRecovery?.('),
+        'startRecovery must follow server.start()'
+      )
+    }
+  })
+})

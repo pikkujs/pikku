@@ -10,8 +10,10 @@ import {
 } from '../../../utils/ensure-package-dependency.js'
 import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
+import { detectDatabaseDialect } from '../../../contributors/contributor-platform.js'
 import { projectScopeDefinitions } from '../scopes/pikku-command-scopes.js'
 import {
+  type DatabaseEngine,
   localServicesPackages,
   serializeLocalServices,
 } from './serialize-local-services.js'
@@ -46,6 +48,28 @@ export const projectHasDatabase = (
   declared.has('kysely')
 
 /**
+ * The engine workflow runs are persisted on: the pikku config's `db.engine`,
+ * else what the project's migrations directory or `createConfig` names. Left
+ * undecided when the project is ambiguous or unreadable, in which case runs
+ * stay in memory rather than risk the wrong dialect.
+ */
+export const projectDatabaseEngine = async (
+  logger: CLILogger,
+  config: Pick<Config, 'db' | 'rootDir' | 'sourceDirs'>
+): Promise<DatabaseEngine | undefined> => {
+  if (config.db?.engine) return config.db.engine
+  try {
+    return await detectDatabaseDialect(
+      config.rootDir,
+      config.sourceDirs,
+      logger
+    )
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Writes `pikku-local-services.gen.ts` and declares what it imports in the
  * project's package.json.
  *
@@ -60,6 +84,9 @@ export const writeLocalServices = async (
   const file = config.localServicesFile
   const declared = await declaredPackageDependencies(file)
   const database = projectHasDatabase(config, declared)
+  const engine = database
+    ? await projectDatabaseEngine(logger, config)
+    : undefined
   const coercionFile = join(config.outDir, 'db', 'coercion.gen.ts')
   const localCLI = hasLocalCLIEntrypoint(config)
     ? {
@@ -90,10 +117,11 @@ export const writeLocalServices = async (
       (declaration) => declaration.events
     ),
     database,
+    engine,
     localCLI,
   })
   await writeFileInDir(logger, file, code)
-  for (const name of localServicesPackages({ database, localCLI })) {
+  for (const name of localServicesPackages({ database, engine, localCLI })) {
     await ensurePackageDependency(logger, file, name)
   }
 }

@@ -115,7 +115,7 @@ describe.skipIf(!haveCli)('ChangesRunner main checkout', () => {
     await h.done
     expect(h.result()!.ok).toBe(false)
     expect(h.result()!.reason).toMatch(
-      /2 merge-conflict turns did not resolve it, so the run stopped/
+      /2 merge-conflict turns did not resolve it \(the conflictTries option\), so the run stopped/
     )
     expect(fake.agents.map((a) => a.kind)).toEqual(['conflict', 'conflict'])
     expect(h.texts('conflict').join('\n')).toMatch(

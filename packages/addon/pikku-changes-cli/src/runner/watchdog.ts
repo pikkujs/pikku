@@ -39,11 +39,11 @@ export const stallOf = (
   if (watch.tools.size) {
     const oldest = Math.min(...watch.tools.values())
     return toolMaxMs > 0 && now - oldest >= toolMaxMs
-      ? `had one tool running for ${Math.round((now - oldest) / 60_000)} minutes (the limit is ${toolMaxMs / 60_000}), so it was stopped with what it started`
+      ? `had one tool running for ${Math.round((now - oldest) / 60_000)} minutes (the limit is ${toolMaxMs / 60_000}, set by the toolMaxMinutes option), so it was stopped with what it started`
       : null
   }
   return quietMs > 0 && now - watch.lastActivity >= quietMs
-    ? `went quiet for ${Math.round(quietMs / 60_000)} minutes with nothing running, so it was stopped`
+    ? `went quiet for ${Math.round(quietMs / 60_000)} minutes with nothing running (the limit is ${quietMs / 60_000}, set by the stallMinutes option), so it was stopped`
     : null
 }
 

@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs'
 import { readFile, readdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runKnowledgeValidate } from '@pikku/knowledge'
+import type { PikkuScaffoldFeature } from '../../../types/config.js'
 import { runBootstrapChecks } from './bootstrap-checks.js'
 import {
   runVirtualUserChecks,
@@ -24,6 +25,7 @@ import {
   runDevProxyChecks,
 } from './dev-proxy-checks.js'
 import { analyticsOriginLockEnabled } from '../../utils/resolve-scaffold-feature.js'
+import type { PikkuScaffoldFeature } from '../../../types/config.js'
 import {
   dbConfigMismatch,
   detectDatabaseDialect,
@@ -46,6 +48,7 @@ export type SharedPikkuConfig = {
     workflow?: unknown
     events?: unknown
     meshRpc?: unknown
+    analytics?: PikkuScaffoldFeature
   }
   db?: {
     engine?: 'sqlite' | 'postgres' | 'mysql'
@@ -1053,15 +1056,10 @@ export async function runSharedProjectChecks(
     })
   )
 
-  const functionsConfig = await readJsonSafe<SharedPikkuConfig>(
-    join(root, 'packages', 'functions', 'pikku.config.json')
-  )
   findings.push(
     ...(await runDevProxyChecks({
       root,
-      originLockOn: analyticsOriginLockEnabled(
-        pikkuConfig?.scaffold ?? functionsConfig?.scaffold
-      ),
+      originLockOn: analyticsOriginLockEnabled(pikkuConfig?.scaffold),
       viteConfigs: await findViteConfigs(root),
       read: readViteConfig,
     }))

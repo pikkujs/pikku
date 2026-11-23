@@ -131,4 +131,54 @@ describe('writeLocalServices', () => {
     assert.match(baked, /"app:staff"/)
     assert.match(baked, /"billing"/)
   })
+
+  for (const [engine, pkg] of [
+    ['sqlite', '@pikku/kysely-sqlite'],
+    ['postgres', '@pikku/kysely-postgres'],
+    ['mysql', '@pikku/kysely-mysql'],
+  ] as const) {
+    test(`a project that only declares @pikku/kysely gets ${pkg} for what the file imports`, async () => {
+      const rootDir = mkdtempSync(join(tmpdir(), 'pikku-local-services-'))
+      after(() => rmSync(rootDir, { recursive: true, force: true }))
+      const packageJson = join(rootDir, 'package.json')
+      writeFileSync(
+        packageJson,
+        JSON.stringify({ name: 'app', dependencies: { '@pikku/kysely': '*' } })
+      )
+      const localServicesFile = join(rootDir, '.pikku', 'local-services.gen.ts')
+      const logger = { info: () => {}, debug: () => {}, warn: () => {} } as any
+
+      await writeLocalServices(
+        logger,
+        {
+          rootDir,
+          outDir: join(rootDir, '.pikku'),
+          localServicesFile,
+          db: { engine },
+        } as any,
+        {
+          serviceAggregation: { requiredServices: new Set() },
+          scopes: { definitions: [] },
+          systemRoles: { definitions: [] },
+          virtualUsers: { definitions: [] },
+        } as any
+      )
+
+      const declared = Object.keys(
+        JSON.parse(readFileSync(packageJson, 'utf-8')).dependencies
+      )
+      const imported = [
+        ...readFileSync(localServicesFile, 'utf-8').matchAll(
+          /^import [^;]*?from '(@pikku\/kysely[^']*)'/gms
+        ),
+      ].map((match) => match[1]!)
+      assert.ok(imported.includes(pkg))
+      for (const name of imported) {
+        assert.ok(
+          declared.includes(name),
+          `${name} is imported but not declared`
+        )
+      }
+    })
+  }
 })

@@ -210,6 +210,52 @@ const triggerSourceStoreLines = (hasDb: boolean): string[] =>
       ]
     : [`  const triggerSourceStore = new InMemoryTriggerSourceStore()`]
 
+/** Where each engine's workflow service lives. SQLite adds nothing to the base. */
+const workflowServiceImport = (
+  engine: 'sqlite' | 'postgres'
+): { line: string; service: string; runService: string } =>
+  engine === 'sqlite'
+    ? {
+        line: `import { KyselyWorkflowService, KyselyWorkflowRunService } from '@pikku/kysely'`,
+        service: 'KyselyWorkflowService',
+        runService: 'KyselyWorkflowRunService',
+      }
+    : {
+        line: `import { PgKyselyWorkflowService, PgKyselyWorkflowRunService } from '@pikku/kysely-postgres'`,
+        service: 'PgKyselyWorkflowService',
+        runService: 'PgKyselyWorkflowRunService',
+      }
+
+/**
+ * The workflow service the entry runs on. Database-backed when the app has one,
+ * so runs survive a restart, and dropped back to memory when its tables are not
+ * migrated yet. The console reads runs through `workflowRunService`, which a
+ * database-backed service does not implement itself; the in-memory one does.
+ */
+const workflowServiceLines = (db: EntryGenerationContext['db']): string[] => {
+  if (!db) {
+    return [
+      `  const workflowService = new InMemoryWorkflowService()`,
+      `  const workflowRunService = workflowService`,
+      `  workflowService.wireQueueWorkers()`,
+    ]
+  }
+  const { service, runService } = workflowServiceImport(db.engine)
+  return [
+    `  let workflowService: InMemoryWorkflowService | ${service} = new ${service}(kysely, { leaseService: new InMemoryLeaseService() })`,
+    `  let workflowRunService: InMemoryWorkflowService | ${runService} = new ${runService}(kysely)`,
+    `  try {`,
+    `    await workflowService.init()`,
+    `  } catch (error) {`,
+    `    logger.warn(\`Workflow service falling back to memory: \${error instanceof Error ? error.message : String(error)}\`)`,
+    `    const inMemory = new InMemoryWorkflowService()`,
+    `    workflowService = inMemory`,
+    `    workflowRunService = inMemory`,
+    `  }`,
+    `  workflowService.wireQueueWorkers()`,
+  ]
+}
+
 /**
  * Opens the database before services are built, so `createSingletonServices`
  * receives `kysely` exactly as a hosted runtime would hand it over.
@@ -539,7 +585,11 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { asContextStorage as __pikkuAsContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'`,
       `import { assertAnalyticsSinksDeclared, createAnalyticsSinks } from '@pikku/core/analytics'`,
       ...(ctx.db
-        ? [`import { KyselyTriggerSourceStore } from '@pikku/kysely'`]
+        ? [
+            `import { KyselyTriggerSourceStore } from '@pikku/kysely'`,
+            workflowServiceImport(ctx.db.engine).line,
+            `import { InMemoryLeaseService } from '@pikku/core/services'`,
+          ]
         : []),
       runtimeImport(ctx),
       `import { pikkuState } from '@pikku/core/state'`,
@@ -589,14 +639,13 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...telemetryLines(ctx),
       `  const schedulerService = new InMemorySchedulerService()`,
       `  const queueService = new InMemoryQueueService()`,
-      `  const workflowService = new InMemoryWorkflowService()`,
       `  const triggerService = new InMemoryTriggerService()`,
       `  // Created before the app's services so a relay can be added from them; transports reach the distributor, services get its publisher and registry.`,
       `  const { services: eventHubServices } = installEventHubDistributor()`,
       `  const { eventHub, eventHubRegistry } = eventHubServices`,
-      `  workflowService.wireQueueWorkers()`,
       `  wireAgentScorerQueueWorkers()`,
       ...(ctx.db ? dbSetupLines(ctx.db) : []),
+      ...workflowServiceLines(ctx.db),
       ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines(ctx),
       ...this.platformServicesCallLines(ctx),
@@ -607,7 +656,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    schedulerService,`,
       `    queueService,`,
       `    workflowService,`,
-      `    workflowRunService: workflowService,`,
+      `    workflowRunService,`,
       `    triggerService,`,
       `    triggerSourceStore,`,
       `    eventHub,`,
@@ -643,6 +692,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `  server.enableExitOnSignals(${shutdownHooksArg(ctx)})`,
       `  await server.start()`,
       ...(lifecycle ? lifecycleAfterStartLines(lifecycle) : []),
+      `  singletonServices.workflowService?.startRecovery?.(config.workflow?.recovery)`,
       ...sidecarHandshakeLines(),
       `}`,
       ``,

@@ -60,7 +60,7 @@ describe.skipIf(!haveCli)('ChangesRunner lanes', () => {
       h
         .texts('abandoned')
         .some((t) =>
-          /^#2: used its 2 tries this run: its worktree .* was removed, its branch kept$/.test(
+          /^#2: used its 2 tries this run \(the tries option\): its worktree .* was removed, its branch kept$/.test(
             t
           )
         )
@@ -108,7 +108,9 @@ describe.skipIf(!haveCli)('ChangesRunner lanes', () => {
         h
           .texts('stalled')
           .some((t) =>
-            /^#1: the agent went quiet.*goes back in the queue$/.test(t)
+            /^#1: the agent went quiet.*stallMinutes option.*goes back in the queue$/.test(
+              t
+            )
           ),
       30_000
     )
@@ -278,7 +280,11 @@ describe.skipIf(!haveCli)('ChangesRunner lanes', () => {
       () =>
         h
           .errors()
-          .some((e) => /it started 3 agent turns .*the limit is 3/.test(e)),
+          .some((e) =>
+            /it started 3 agent turns .*the limit is 3, set by the maxTurns option/.test(
+              e
+            )
+          ),
       30_000
     )
     await new Promise((r) => setTimeout(r, 300))
