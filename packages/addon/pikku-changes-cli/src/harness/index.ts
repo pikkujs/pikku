@@ -65,3 +65,12 @@ export {
   type HarnessMigrate,
 } from './migrate.js'
 export { handTypedTablesGate } from './gates/hand-typed-tables.js'
+export { COMPARE_OUT, pagesGate } from './gates/pages.js'
+export {
+  pageFindings,
+  readCompareReport,
+  readWaivers,
+  type CompareReport,
+  type PageNeed,
+  type PageWaiver,
+} from './gates/pages-parser.js'

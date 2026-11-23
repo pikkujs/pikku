@@ -4,8 +4,15 @@ export type DeclaredChangeset = {
   creates: string[]
   alters: string[]
   needsPlan: boolean
-  /** Every change of the changeset, with its status. */
-  changes: { changeId: string; shortId: string; status: string }[]
+  /** Every change of the changeset, with its status and the text it was filed with. */
+  changes: {
+    changeId: string
+    shortId: string
+    status: string
+    title: string
+    body: string | null
+    specialist: string | null
+  }[]
 }
 
 /**
@@ -33,6 +40,9 @@ export const declaredChangeset = async (
       changeId: c.changeId,
       shortId: String(c.shortId),
       status: c.status,
+      title: c.title,
+      body: c.body ?? null,
+      specialist: (c as { specialist?: string | null }).specialist ?? null,
     })),
   }
 }

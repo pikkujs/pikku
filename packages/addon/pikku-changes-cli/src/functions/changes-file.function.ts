@@ -15,7 +15,7 @@ import {
   parsePlanText,
   validatePlan,
 } from '../lib/change-plan.js'
-import { isCloneProject } from '../lib/page-gate.js'
+import { isCloneProject } from '../lib/page-reference.js'
 import { git } from '@pikku/cli/addon-support'
 
 export const ChangesFileInput = z.object({

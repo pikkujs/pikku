@@ -1,0 +1,117 @@
+{
+  "app": "apps/app",
+  "baseUrl": "http://localhost:7104",
+  "server": {
+    "started": true,
+    "command": "bun run dev",
+    "apiNote": null
+  },
+  "reference": "artifacts/references/www.wildwomanreborn.com",
+  "dir": ".pikku/compare/app",
+  "report": ".pikku/compare/app/report.json",
+  "widths": [1440],
+  "threshold": null,
+  "gitSha": "43d4bddb20623d8674f391b6e80bcfd22da6e470",
+  "dirty": false,
+  "generatedAt": "2026-11-17T00:38:41.373Z",
+  "sectionsNote": null,
+  "stylesNote": null,
+  "rows": [
+    {
+      "id": "events",
+      "width": 1440,
+      "path": "/events",
+      "changedPercent": 71.81,
+      "referenceHeight": 21293,
+      "ourHeight": 8236,
+      "heightDiff": -13057,
+      "httpStatus": 200,
+      "diff": ".pikku/compare/app/events-1440.diff.png",
+      "ours": ".pikku/compare/app/events-1440.png",
+      "sections": {
+        "match": 0.5,
+        "notes": [
+          "section 1 of the original (1 column, 2 pictures (4% wide, inline; 100% wide, inline), full-width picture) has no counterpart in your page",
+          "section 6 of 6 (80%-98% down the page): original has 1 column, 2 pictures (67% wide, inline; 4% wide, inline); yours (section 5) has 2 columns",
+          "multi-column sections: original 0, yours 1",
+          "page height: original 21293 px, yours 8236 px (0.39x): content missing or too compact",
+          "section 3 of 6 (26%-44% down the page): original has 1 column, 3 pictures (42% wide, inline; 42% wide, inline; 59% wide, inline); yours (section 2) has 1 column",
+          "section 5 of 6 (55%-78% down the page): original has 1 column, 2 pictures (42% wide, inline; 42% wide, inline); yours (section 4) has 1 column"
+        ]
+      },
+      "status": "compared",
+      "styles": [
+        {
+          "what": "button",
+          "text": "primary button/link: original 17px 400 #ffffff; yours 14px 500 #ffffff",
+          "weight": 0.53
+        },
+        {
+          "what": "h1",
+          "text": "h1: original 56px 700 #ae1a2c left; yours 48px 700 #ae1a2c left",
+          "weight": 0.33
+        },
+        {
+          "what": "h2",
+          "text": "h2: original 40px 700 #ae1a2c left on #f8f8f8; yours 36px 700 #ae1a2c left on #ffffff",
+          "weight": 0.29
+        }
+      ]
+    },
+    {
+      "id": "reviews",
+      "width": 1440,
+      "path": "/reviews",
+      "changedPercent": 11.48,
+      "referenceHeight": 2441,
+      "ourHeight": 2393,
+      "heightDiff": -48,
+      "httpStatus": 200,
+      "diff": ".pikku/compare/app/reviews-1440.diff.png",
+      "ours": ".pikku/compare/app/reviews-1440.png",
+      "sections": {
+        "match": 0.7,
+        "notes": [
+          "section 1 of the original (1 column, 1 picture (4% wide, inline)) has no counterpart in your page",
+          "section 2 of the original (1 column) has no counterpart in your page",
+          "section 3 of the original (1 column) has no counterpart in your page",
+          "section 4 of the original (1 column) has no counterpart in your page",
+          "section 5 of the original (1 column) has no counterpart in your page",
+          "section 6 of the original (1 column) has no counterpart in your page"
+        ]
+      },
+      "status": "compared",
+      "styles": []
+    },
+    {
+      "id": "about-5",
+      "width": 1440,
+      "path": "/about-5",
+      "status": "missing",
+      "changedPercent": null,
+      "referenceHeight": null,
+      "ourHeight": null,
+      "heightDiff": null,
+      "httpStatus": null,
+      "diff": null,
+      "ours": null,
+      "sections": null
+    },
+    {
+      "id": "about",
+      "width": 1440,
+      "path": "/about",
+      "changedPercent": null,
+      "referenceHeight": null,
+      "ourHeight": null,
+      "heightDiff": null,
+      "httpStatus": 200,
+      "diff": null,
+      "ours": null,
+      "sections": null,
+      "status": "error",
+      "error": "undefined is not an object (evaluating 'A.length')"
+    }
+  ],
+  "failed": []
+}

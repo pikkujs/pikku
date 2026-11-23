@@ -70,7 +70,7 @@ export const harnessBuildPrompt = ({
     '',
     '## After you stop',
     '',
-    'When every item is built and committed, stop. Then, without you: `pikku db generate` runs again and any migration it writes is committed for you, `pikku db migrate` and `pikku all` bring the generated database types up to your tables, and the checks run (codegen and the type-check, lint and formatting, the commit trailers, the table declaration, the plan built as written, no hand-typed tables). If they find anything, their findings come back to you as the next message here. Fix them, commit, and stop again. The changes are marked done for you once every check passes.',
+    'When every item is built and committed, stop. Then, without you: `pikku db generate` runs again and any migration it writes is committed for you, `pikku db migrate` and `pikku all` bring the generated database types up to your tables, and the checks run (codegen and the type-check, lint and formatting, the commit trailers, the table declaration, the plan built as written, no hand-typed tables, and in a site rebuilt from an original the page compare: each page your changes name is photographed and compared with the screenshots of the original). If they find anything, their findings come back to you as the next message here, a page that differs too much with its numbers, its style and section differences and its diff image. Fix them, commit, and stop again. The changes are marked done for you once every check passes.',
     '',
     ...items.map((item) => sectionOf(route, bare(item.shortId))),
   ].join('\n')
