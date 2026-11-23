@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { existsSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { commitFixes, fixCommitMessage } from './commit.js'
@@ -116,6 +116,21 @@ describe('commitFixes', () => {
     assert.equal(
       (await git(['interpret-trailers', '--parse'], messages[0])).trim(),
       'Change-Id: chg_0123456789\nChangeset: cs_abc'
+    )
+  })
+
+  test('run again after it committed, it returns HEAD and makes no second commit', async () => {
+    const repo = await throwawayRepo({ 'src/a.ts': 'export const a  =  1\n' })
+    await writeFile(join(repo, 'src/a.ts'), 'export const a = 1\n')
+    const commit = { worktree: repo, gate: 'fakefmt', message: 'm', ...ids }
+    const first = await commitFixes({ ...commit, paths: ['src/a.ts'] })
+    const again = await commitFixes({ ...commit, paths: ['src/a.ts'] })
+    assert.equal(again, first)
+    assert.equal((await log(repo)).length, 2)
+    await assert.rejects(
+      commitFixes({ ...commit, message: 'other', paths: ['src/a.ts'] }),
+      (error) =>
+        error instanceof HarnessInfraError && error.kind === 'empty-commit'
     )
   })
 
