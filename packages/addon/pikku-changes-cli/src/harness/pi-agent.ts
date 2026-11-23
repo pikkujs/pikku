@@ -23,10 +23,12 @@ import {
 import { CONTINUE_PROMPT, freshRestartPrompt, resumePrompt } from './prompts.js'
 import {
   PROVIDER_AUTH_PATTERNS,
-  isProviderAuth,
-  isProviderLimit,
+  PROVIDER_QUOTA_PATTERNS,
   providerAuthMessage,
+  providerQuotaMessage,
+  providerRefusalOf,
   retryAfterMsOf,
+  type ProviderRefusal,
 } from './provider-limit.js'
 import { redact } from './redact.js'
 import { cleanOutput, trimOutput } from './run-cli.js'
@@ -92,7 +94,7 @@ export type PiAgentEvent =
       attempt: number
       code: number | null
       signal: NodeJS.Signals | null
-      outcome: AgentOutcome | 'provider-limit' | 'provider-auth'
+      outcome: AgentOutcome | ProviderRefusal
       durationMs: number
       usage: PiUsage
       /** Redacted end of what Pi reported as its error, when the attempt failed. */
@@ -289,8 +291,8 @@ type Launch = {
  * cannot be resumed is replaced by a new one told the change, the branch's commits and the findings.
  * A stall, the total timeout or the abort signal stops Pi's whole process group and the attempt is
  * `failed`. A provider usage or rate limit throws a `provider-limit` HarnessInfraError instead, and
- * an unusable provider login (a dead OAuth token, a wrong key) a `provider-auth` one, so the run ends
- * as infra and the builder never hears of it.
+ * an unusable provider login (a dead OAuth token, a wrong key) a `provider-auth` one, and an account
+ * out of paid usage a `provider-quota` one, so the run ends as infra and the builder never hears of it.
  */
 export const piAgent = (options: PiAgentOptions): HarnessAgent => {
   const {
@@ -610,9 +612,7 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
       run.spawnError !== undefined ||
       run.code !== 0 ||
       run.lastError !== undefined
-    const finish = (
-      outcome: AgentOutcome | 'provider-limit' | 'provider-auth'
-    ) =>
+    const finish = (outcome: AgentOutcome | ProviderRefusal) =>
       onEvent?.({
         type: 'exit',
         attempt,
@@ -629,7 +629,9 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
         'missing-binary',
         `Pi could not start: ${redact(run.spawnError.message)}`
       )
-    if (failed && !run.stopped && isProviderLimit(errorText)) {
+    const refusal =
+      failed && !run.stopped ? providerRefusalOf(errorText) : undefined
+    if (refusal === 'provider-limit') {
       finish('provider-limit')
       const retryAfterMs = retryAfterMsOf(errorText)
       throw new HarnessInfraError(
@@ -642,14 +644,22 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
         }
       )
     }
-    if (failed && !run.stopped && isProviderAuth(errorText)) {
-      finish('provider-auth')
+    if (refusal) {
+      finish(refusal)
+      const patterns =
+        refusal === 'provider-auth'
+          ? PROVIDER_AUTH_PATTERNS
+          : PROVIDER_QUOTA_PATTERNS
       const said = cleanOutput(errorText)
         .split('\n')
-        .find((line) => PROVIDER_AUTH_PATTERNS.some((p) => p.test(line)))
+        .find((line) => patterns.some((p) => p.test(line)))
+      const why =
+        refusal === 'provider-auth'
+          ? providerAuthMessage(provider, model)
+          : providerQuotaMessage(provider, model)
       throw new HarnessInfraError(
-        'provider-auth',
-        `${providerAuthMessage(provider, model)} Pi said: ${redact((said ?? '').trim()).slice(0, 300)}`,
+        refusal,
+        `${why} Pi said: ${redact((said ?? '').trim()).slice(0, 300)}`,
         {
           output: shown,
           ...(run.code === null ? {} : { exitCode: run.code }),

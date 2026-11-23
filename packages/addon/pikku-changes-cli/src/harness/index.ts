@@ -28,10 +28,15 @@ export * from './prompts.js'
 export {
   PROVIDER_AUTH_PATTERNS,
   PROVIDER_LIMIT_PATTERNS,
+  PROVIDER_QUOTA_PATTERNS,
   isProviderAuth,
   isProviderLimit,
+  isProviderQuota,
   providerAuthMessage,
+  providerQuotaMessage,
+  providerRefusalOf,
   retryAfterMsOf,
+  type ProviderRefusal,
 } from './provider-limit.js'
 export {
   clearOrphan,

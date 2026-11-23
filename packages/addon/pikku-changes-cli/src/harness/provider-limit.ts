@@ -14,9 +14,23 @@ export const isProviderLimit = (text: string): boolean =>
   PROVIDER_LIMIT_PATTERNS.some((pattern) => pattern.test(text))
 
 /**
+ * How a model provider says the account has run out of paid usage or credit: a person has to add
+ * some, waiting does not help. Error text only, like the limit patterns.
+ */
+export const PROVIDER_QUOTA_PATTERNS: readonly RegExp[] = [
+  /out of extra usage/i,
+  /\badd more at\b/i,
+  /credit balance is too low/i,
+  /\binsufficient_quota\b/i,
+  /exceeded your current quota/i,
+  /\bbilling\b/i,
+  /\bpayment required\b/i,
+  /\b(?:HTTP|status(?: code)?|code)[\s:=]*402\b|\(402\)/i,
+]
+
+/**
  * How a model provider (or Pi on its behalf) says the login it was given cannot be used: a dead OAuth
- * refresh token, a missing or wrong API key, a 401. Matched against error text only, like the limit
- * patterns; a limit message that also carries one of these words is a limit.
+ * refresh token, a missing or wrong API key, a 401. Error text only, like the limit patterns.
  */
 export const PROVIDER_AUTH_PATTERNS: readonly RegExp[] = [
   /OAuth refresh failed/i,
@@ -31,13 +45,40 @@ export const PROVIDER_AUTH_PATTERNS: readonly RegExp[] = [
   /\bauthentication failed\b/i,
 ]
 
+export type ProviderRefusal =
+  'provider-limit' | 'provider-quota' | 'provider-auth'
+
+/**
+ * Which provider refusal an error text is, if any. Out of paid usage is `provider-quota`, unless the
+ * text states when to try again (then it is a limit to wait out); a limit is `provider-limit`; a
+ * login that cannot be used is `provider-auth` only when the text is neither of the others.
+ */
+export const providerRefusalOf = (
+  text: string
+): ProviderRefusal | undefined => {
+  if (PROVIDER_QUOTA_PATTERNS.some((pattern) => pattern.test(text)))
+    return retryAfterMsOf(text) === undefined
+      ? 'provider-quota'
+      : 'provider-limit'
+  if (isProviderLimit(text)) return 'provider-limit'
+  if (PROVIDER_AUTH_PATTERNS.some((pattern) => pattern.test(text)))
+    return 'provider-auth'
+  return undefined
+}
+
 export const isProviderAuth = (text: string): boolean =>
-  !isProviderLimit(text) &&
-  PROVIDER_AUTH_PATTERNS.some((pattern) => pattern.test(text))
+  providerRefusalOf(text) === 'provider-auth'
+
+export const isProviderQuota = (text: string): boolean =>
+  providerRefusalOf(text) === 'provider-quota'
 
 /** What to tell a person whose provider login is unusable: whose, and how to fix it. */
 export const providerAuthMessage = (provider: string, model: string): string =>
   `Pi's ${provider} login cannot be used for ${provider}/${model}. Log in again with Pi: run \`pi\`, then \`/login\`.`
+
+/** What to tell a person whose provider account is out of paid usage. */
+export const providerQuotaMessage = (provider: string, model: string): string =>
+  `The ${provider} account behind ${provider}/${model} is out of usage: add usage to the account or switch the model alias.`
 
 const UNIT_MS: [RegExp, number][] = [
   [/^(?:ms|msecs?|milliseconds?)$/i, 1],
