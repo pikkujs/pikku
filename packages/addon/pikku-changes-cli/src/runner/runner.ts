@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
+  mergeConflictOf,
   queue,
   type Queue,
   type QueueChange,
@@ -9,11 +10,10 @@ import {
 import {
   checkCommandOf,
   gitDirOf,
-  mainCli,
   prepareWorktree,
-  refreshCheckout,
+  refreshMain,
   runStep,
-  setupCheckout,
+  worktreeOf,
   type CheckoutSetup,
 } from './prepare.js'
 import { defaultPrompts } from './prompts.js'
@@ -81,8 +81,6 @@ interface Outcome {
   error: boolean
   stepped?: boolean
 }
-
-const CONFLICT_HEAD = /^# Merge conflict/m
 
 /**
  * Keeps up to `parallel` agents building the changes queue, each in its own
@@ -629,34 +627,19 @@ export class ChangesRunner {
   /** After a merge (or a conflict turn): install again when dependencies changed, rebuild, relink, and check. Null when it passes. */
   private async checkMainCheckout(): Promise<Outcome | null> {
     const { cwd } = this.options
-    const git = (args: string[]) => this.deps.commands.git(cwd, args)
     const book = this.book
-    const now = (await git(['rev-parse', 'HEAD'])).output
-    const changed =
-      book.mainHead && book.mainHead !== now
-        ? (await git(['diff', '--name-only', book.mainHead, now])).output.split(
-            '\n'
-          )
-        : []
-    if (
-      changed.some((file) => /(^|\/)package\.json$|^bun\.lockb?$/.test(file))
-    ) {
+    const main = await refreshMain(this.setup, cwd, book.mainHead, () =>
       this.emit(
         'info',
         'note',
         'package.json or bun.lock changed in the main checkout: it is installed again before its check'
       )
-      const failed = await setupCheckout(this.setup, cwd, 'the main checkout')
-      if (failed) return this.repairMain(failed)
-    }
-    book.mainHead = now
-    // A merged changeset may add tables or functions: the generated code and the dev database are rebuilt here as in a fresh worktree.
-    const refreshed = await refreshCheckout(this.setup, cwd)
-    if (refreshed) return this.repairMain(refreshed)
-    const wrongCli = mainCli(this.setup, cwd)
-    if (wrongCli) {
-      this.once('error', 'failed', wrongCli)
-      return { reason: wrongCli, error: true }
+    )
+    book.mainHead = main.installedAt
+    if (main.failed?.kind === 'red') return this.repairMain(main.failed.message)
+    if (main.failed) {
+      this.once('error', 'failed', main.failed.message)
+      return { reason: main.failed.message, error: true }
     }
     const check = checkCommandOf(this.setup)
     const red = check
@@ -695,17 +678,12 @@ export class ChangesRunner {
       this.book.abandoned.add(branch)
       const group = groups.find((g) => title !== undefined && g.title === title)
       if (group) await this.release(group.groupId, `${branch}, given up`)
-      const entry = (
-        await this.deps.commands.git(this.options.cwd, [
-          'worktree',
-          'list',
-          '--porcelain',
-        ])
-      ).output
-        .split('\n\n')
-        .find((e) => e.includes(`\nbranch refs/heads/${branch}`))
-      const worktree = entry?.match(/^worktree (.+)$/m)?.[1]
-      if (worktree && worktree !== this.options.cwd)
+      const worktree = await worktreeOf(
+        this.deps.commands,
+        this.options.cwd,
+        branch
+      )
+      if (worktree)
         await this.dropWorktree(
           worktree,
           `${branch}: still in conflict after ${tries} merge-conflict turns`
@@ -726,7 +704,7 @@ export class ChangesRunner {
         reason: running ? `${running} agent(s) running` : route.reason,
         error: false,
       }
-    const conflict = CONFLICT_HEAD.test(route.context ?? '')
+    const conflict = mergeConflictOf(route)
     if (!conflict) {
       const reason = `The run ends here: nothing planned is left to build, and it does not start “${route.reason}” (${route.agent} work) on its own.`
       if (!running && !this.main) this.once('info', 'note', reason)
@@ -738,13 +716,10 @@ export class ChangesRunner {
         error: false,
       }
     if (this.stopped) return this.stopped
-    const named = (route.context ?? '').match(
-      /^“(.*)” \(([^()\s]+)\) conflicts with /m
-    )
-    const branch = named?.[2] ?? route.reason
+    const { branch, title } = conflict
     const tries = this.options.conflictTries ?? 2
     if ((this.book.conflicts.get(branch) ?? 0) >= tries)
-      return this.giveUpConflict(branch, named?.[1], groups, route.reason)
+      return this.giveUpConflict(branch, title, groups, route.reason)
     const over = this.overBudget()
     if (over) return { reason: over, error: true }
     this.book.turns += 1

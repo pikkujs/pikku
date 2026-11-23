@@ -5,6 +5,7 @@ export * from './steps.js'
 export * from './workflow-steps.js'
 export { commitFixes, fixCommitMessage } from './commit.js'
 export { harnessEpoch } from './epoch.js'
+export { checkoutBranch, DETACHED_HEAD, harnessBase } from './base.js'
 export { changeCommit, recordChangeDone, trailerGate } from './mark-done.js'
 export {
   cleanOutput,
@@ -29,4 +30,20 @@ export {
   isProviderLimit,
   retryAfterMsOf,
 } from './provider-limit.js'
-export { clearOrphan, stopGroup, type PiLock } from './pi-process.js'
+export {
+  clearOrphan,
+  isAlive,
+  processGroupOf,
+  processStartTime,
+  stopGroup,
+  type PiLock,
+} from './pi-process.js'
+export {
+  atOrAbove,
+  formatFeedback,
+  formatFinding,
+  type GateFindings,
+} from './feedback.js'
+export { checkMain, mainFailure, type MainCheckOptions } from './main-check.js'
+export { migrationGate } from './gates/migration.js'
+export { planGate } from './gates/plan.js'

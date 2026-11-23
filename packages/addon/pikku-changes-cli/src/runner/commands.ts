@@ -68,6 +68,22 @@ export async function cliJson<T>(
   return JSON.parse(line) as T
 }
 
+/**
+ * A `changes next` route that is a merge conflict (its context starts `# Merge conflict`): the
+ * changeset's title and branch as the route names them. Null for any other route.
+ */
+export const mergeConflictOf = (route: {
+  reason: string
+  context: string | null
+}): { branch: string; title?: string } | null => {
+  const context = route.context ?? ''
+  if (!/^# Merge conflict/m.test(context)) return null
+  const named = context.match(/^“(.*)” \(([^()\s]+)\) conflicts with /m)
+  return named
+    ? { branch: named[2]!, title: named[1]! }
+    : { branch: route.reason }
+}
+
 export interface QueueGroup {
   groupId: string
   title?: string

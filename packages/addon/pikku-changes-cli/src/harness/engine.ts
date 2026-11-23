@@ -159,7 +159,7 @@ const delay = (ms: number, keep: (timer: NodeJS.Timeout) => void) =>
  * (or after a grace period), so the write guard and a retry never race a tool still running. The
  * run's own `stop` signal aborts the wire's signal too; the tool then throws `aborted`.
  */
-const runOnce = async (
+export const runGateOnce = async (
   gate: HarnessGate,
   fields: Omit<GateWire, 'runCli' | 'signal'>,
   stop?: AbortSignal
@@ -334,7 +334,7 @@ export const runHarness = async (
           name,
           { attempt, gate: gate.name },
           async () => {
-            const findings = await runOnce(gate, wire, signal)
+            const findings = await runGateOnce(gate, wire, signal)
             const changed = await guardWrites({
               worktree,
               before,

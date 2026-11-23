@@ -86,6 +86,11 @@ export const next = pikkuSessionlessFunc({
   },
 })
 
+/** One merge a call: PIKKU_CHANGES_MERGE_ONE=1 (a merge lane that checks the main branch after each merge). */
+export const mergesOneAtATime = (
+  env: NodeJS.ProcessEnv = process.env
+): boolean => env.PIKKU_CHANGES_MERGE_ONE === '1'
+
 /** Merges are held: `--no-merge`, or PIKKU_CHANGES_NO_MERGE=1 (a loop whose main branch is red). */
 export const mergesHeld = (
   merge: boolean | undefined,
@@ -131,6 +136,7 @@ export async function route(
     merged.push(
       `${outcome.group.title} → ${outcome.into} @ ${outcome.commit.slice(0, 7)}${reclaimedLine(outcome)}`
     )
+    if (mergesOneAtATime()) break
   }
   if (merged.length && push) await git(['push'])
   return { ...(await pick(root, rpc, projectId!, parallel)), merged }
