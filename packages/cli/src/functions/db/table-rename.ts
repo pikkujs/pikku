@@ -17,7 +17,7 @@ export interface ExistingObjects {
   /** Every index, which on postgres and MySQL includes those behind a key. */
   indexes: Set<string>
   triggers: Set<string>
-  /** Postgres foreign key constraints; the other engines name them by rule or not at all. */
+  /** Foreign key constraints by name, on the engines that name them: Postgres and MySQL. */
   foreignKeys: Set<string>
 }
 
@@ -26,6 +26,8 @@ interface Named {
   kind: 'index' | 'constraint' | 'trigger' | 'foreignKey'
   from: string
   to: string
+  /** What a foreign key is written as, for the engine that has to add it back under its new name. */
+  definition?: string
 }
 
 /**
@@ -38,7 +40,7 @@ function derivedNames(
   table: string,
   declaration: TablesDeclaration[string],
   desiredSql: string
-): { kind: Named['kind']; name: string }[] {
+): { kind: Named['kind']; name: string; definition?: string }[] {
   const explicit = new Set<string>()
   for (const key of [declaration.primaryKey, ...(declaration.unique ?? [])]) {
     if (key && !Array.isArray(key) && 'name' in key) explicit.add(key.name)
@@ -47,7 +49,11 @@ function derivedNames(
     if (index.name) explicit.add(index.name)
   }
 
-  const names: { kind: Named['kind']; name: string }[] = []
+  const names: {
+    kind: Named['kind']
+    name: string
+    definition?: string
+  }[] = []
   for (const statement of splitStatements(desiredSql)) {
     const shape = statementShape(statement)
     if (shape.kind === 'index' && shape.table === table) {
@@ -63,7 +69,19 @@ function derivedNames(
       /^constraint\s+["`]([^"`]+)["`]\s+(primary key|unique)\b/i.exec(
         constraint
       )
-    if (!named) continue
+    if (!named) {
+      const key = /^constraint\s+["`]([^"`]+)["`]\s+foreign key\b/i.exec(
+        constraint
+      )
+      if (key && dialect === 'mysql') {
+        names.push({
+          kind: 'foreignKey',
+          name: key[1]!,
+          definition: constraint,
+        })
+      }
+      continue
+    }
     const [, name, what] = named
     if (what!.toLowerCase() === 'primary key' && dialect === 'mysql') continue
     names.push({
@@ -128,10 +146,11 @@ export function tableRenameStatements(options: {
     ).has(name.toLowerCase())
   const moved: Named[] = derivedNames(dialect, to, declaration, desiredSql)
     .filter(({ name }) => name.startsWith(prefix))
-    .map(({ kind, name }) => ({
+    .map(({ kind, name, definition }) => ({
       kind,
       to: name,
       from: `${from}_${name.slice(prefix.length)}`,
+      definition,
     }))
     .filter(
       (object) =>
@@ -161,7 +180,17 @@ export function tableRenameStatements(options: {
   statements.push(renameTable)
   for (const object of moved) {
     kept.add(object.to.toLowerCase())
-    if (dialect === 'mysql') {
+    if (dialect === 'mysql' && object.kind === 'foreignKey') {
+      statements.push(
+        `ALTER TABLE ${newTable} DROP FOREIGN KEY ${quote(object.from)};`
+      )
+      if (existing.indexes.has(object.from.toLowerCase())) {
+        statements.push(
+          `ALTER TABLE ${newTable} RENAME INDEX ${quote(object.from)} TO ${quote(object.to)};`
+        )
+      }
+      statements.push(`ALTER TABLE ${newTable} ADD ${object.definition};`)
+    } else if (dialect === 'mysql') {
       statements.push(
         `ALTER TABLE ${newTable} RENAME INDEX ${quote(object.from)} TO ${quote(object.to)};`
       )

@@ -381,23 +381,22 @@ dashboard: {
 },
 ```
 
-| Engine   | Written                                                                                                                                  |
-| -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Postgres | `ALTER TABLE "desk" RENAME TO "dashboard"`, then `ALTER INDEX` / `ALTER TABLE ... RENAME CONSTRAINT` / `ALTER TRIGGER` for each name that began with `desk_` |
-| MySQL    | ``ALTER TABLE `desk` RENAME TO `dashboard` ``, then `ALTER TABLE ... RENAME INDEX` for each index or unique key that began with `desk_`       |
-| SQLite   | `DROP INDEX` / `DROP TRIGGER` for each name that began with `desk_`, then `ALTER TABLE "desk" RENAME TO "dashboard"`; the next file creates them under the new name |
+| Engine   | Written                                                                                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres | `ALTER TABLE "desk" RENAME TO "dashboard"`, then `ALTER INDEX` / `ALTER TABLE ... RENAME CONSTRAINT` / `ALTER TRIGGER` for each name that began with `desk_`                                            |
+| MySQL    | ``ALTER TABLE `desk` RENAME TO `dashboard` ``, then `ALTER TABLE ... RENAME INDEX` for each index or unique key that began with `desk_`, and `DROP FOREIGN KEY` / `ADD CONSTRAINT` for each foreign key |
+| SQLite   | `DROP INDEX` / `DROP TRIGGER` for each name that began with `desk_`, then `ALTER TABLE "desk" RENAME TO "dashboard"`; the next file creates them under the new name                                     |
 
 What the engine names after the table moves with it, so the schema is the one a
 fresh `CREATE TABLE dashboard` writes: the default index names
 `<table>_<columns>_idx`, `<table>_pk`, `<table>_<columns>_key`, the primary key,
-unique and foreign key constraints Postgres names by default, and the `onUpdate`
-triggers. A constraint or index you named yourself keeps its name. Generated
+unique and foreign key constraints (Postgres by its defaults, MySQL's
+`<table>_<column>_fk` dropped and added back under the new name), and the
+`onUpdate` triggers. A constraint or index you named yourself keeps its name. Generated
 `CHECK`s carry a hash of the table and column, so they are dropped and re-added
 under the new name in the next file, as a renamed column's are. A foreign key in
 another table that points at the renamed table follows the new name on every
-engine; declare it with `references: 'dashboard.id'`. MySQL names an unnamed
-foreign key `<table>_ibfk_<n>` and cannot rename one, so a foreign key declared
-on the renamed table keeps the old table's name there. No `DROP TABLE` is
+engine; declare it with `references: 'dashboard.id'`. No `DROP TABLE` is
 written, and nothing asks for approval.
 
 Delete `renamedFrom` once the migration is applied; until then `generate` says
