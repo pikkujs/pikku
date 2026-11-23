@@ -51,9 +51,22 @@ switch (args) {
     process.exit(0)
   }
   case 'db migrate':
+  case 'db reset --no-seed': {
+    const applied = existsSync('.pikku/applied')
+      ? readFileSync('.pikku/applied', 'utf8').split('\n').filter(Boolean)
+      : []
+    const missing = applied.find((file) => !existsSync(`db/sqlite/${file}`))
+    if (args === 'db migrate' && missing) {
+      process.stderr.write(
+        `MigrationDriftError: [PKU-DB-DRIFT] db/sqlite/${missing}\n\nMigration content has changed since it was applied.\n  on disk:   file missing on disk\n`
+      )
+      process.exit(1)
+    }
+    writeFileSync('.pikku/applied', `${migrations().join('\n')}\n`)
     mkdirSync('.pikku/db', { recursive: true })
     writeFileSync('.pikku/db/schema.gen.ts', `// ${migrations().join(', ')}\n`)
     process.exit(0)
+  }
   case 'all':
     if (tables.includes('tracked')) writeFileSync('README.md', 'rewritten\n')
     writeFileSync('.pikku/all.gen.ts', '// all\n')

@@ -84,7 +84,7 @@ export const harnessTablesSteps = (
   changeset: string,
   items: HarnessItem[]
 ): string[] => [
-  "If the change needs a table or a column, declare it with `defineTables` in the project's `db/tables.ts` (the pikku-kysely skill), then run `pikku db generate` (it writes the migration under `db/<engine>/`) and `pikku db migrate` (it applies it and regenerates the database types); both are quick, normal steps. Use the generated types in your functions. Never type a table by hand (`withTables<...>()`) and never write migration SQL yourself. Commit the generated migration with your item.",
+  "If the change needs a table or a column, declare it with `defineTables` in the project's `db/tables.ts` (the pikku-kysely skill), then run `pikku db generate` (it writes the migration under `db/<engine>/`) and `pikku db migrate` (it applies it and regenerates the database types); both are quick, normal steps. Use the generated types in your functions. Never type a table by hand (`withTables<...>()`) and never write migration SQL yourself. Commit every migration `pikku db generate` writes with your item, including one for Pikku's own runtime tables, and never delete or edit one.",
   'Never pass `--allowDestructive`. If the change would drop a table or a column, stop and say so in your reply: a person decides.',
   `Declare the tables your migration creates or alters on this changeset before you build anything else: \`pikku changes claim --group-id ${changeset} --change-ids ${items.map((item) => bare(item.shortId)).join(',')} --creates <tables> --alters <tables>\` (leave out a flag that has no tables).`,
 ]

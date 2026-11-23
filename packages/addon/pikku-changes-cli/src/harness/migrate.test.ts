@@ -212,6 +212,35 @@ describe('the db step', () => {
     assert.equal(await needsMigrate(repo, 'main'), true)
   })
 
+  test('a dev database that applied a migration the builder then deleted is rebuilt from the committed migrations', async () => {
+    const repo = await project()
+    const git = gitIn(repo)
+    await git(['checkout', '-q', '-b', 'changeset/1'])
+    await mkdir(join(repo, 'db'), { recursive: true })
+    await writeFile(join(repo, 'db/tables.ts'), 'table:a\n')
+    await git(['add', '-A'])
+    await git(['commit', '-q', '-m', 'feat: #k3x9 a'])
+    const migrate = { binary: FAKE_PIKKU }
+    await runDbStep({ worktree: repo, migrate, ...ids })
+    // the builder drops the migrated table and its migration, and declares another
+    await writeFile(join(repo, 'db/tables.ts'), 'table:b\n')
+    await git(['rm', '-q', 'db/sqlite/0001-a.sql'])
+    await git(['add', '-A'])
+    await git(['commit', '-q', '-m', 'feat: #k3x9 b instead'])
+    const result = await runDbStep({ worktree: repo, migrate, ...ids })
+    assert.deepEqual(result.findings, [])
+    assert.deepEqual((await calls(repo)).slice(3), [
+      'db generate',
+      'db migrate',
+      'db reset --no-seed',
+      'all',
+    ])
+    assert.equal(
+      (await readFile(join(repo, '.pikku/applied'), 'utf8')).trim(),
+      '0001-b.sql'
+    )
+  })
+
   test('parseDbGenerate: a refusal is a finding, a clean exit or another failure is not', () => {
     assert.deepEqual(
       parseDbGenerate({ stdout: 'db generate: wrote x', stderr: '', code: 0 }),
