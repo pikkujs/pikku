@@ -55,3 +55,12 @@ export {
 export { checkMain, mainFailure, type MainCheckOptions } from './main-check.js'
 export { migrationGate } from './gates/migration.js'
 export { planGate } from './gates/plan.js'
+export {
+  DB_STEP,
+  needsMigrate,
+  parseDbGenerate,
+  runDbStep,
+  type DbStepResult,
+  type HarnessMigrate,
+} from './migrate.js'
+export { handTypedTablesGate } from './gates/hand-typed-tables.js'
