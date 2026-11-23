@@ -1864,6 +1864,7 @@
         "@pikku/fetch": "^0.12.16",
         "@pikku/jose": "^0.12.11",
         "@pikku/kysely": "workspace:^",
+        "@pikku/kysely-sqlite": "workspace:^",
         "@pikku/react": "workspace:*",
         "@pikku/schema-cfworker": "^0.12.9",
         "@pikku/websocket": "^0.12.7",
