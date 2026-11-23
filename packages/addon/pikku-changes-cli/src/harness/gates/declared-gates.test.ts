@@ -68,7 +68,10 @@ describe('migrationGate', () => {
       items: h.items,
       storePath: h.store,
     })
-    await h.commit({ 'src/a.ts': 'export {}\n' }, 'feat: #1 code only')
+    await h.commit(
+      { 'pikku.config.json': '{}\n', 'src/a.ts': 'export {}\n' },
+      'feat: #1 code only'
+    )
     assert.deepEqual(await gate.run(h.wire), [])
     await h.commit(
       { 'db/migrations/0001_entry.sql': 'create table entry ();\n' },
@@ -100,7 +103,7 @@ describe('migrationGate', () => {
     assert.deepEqual(await gate.run(h.wire), [])
   })
 
-  test('a migration in a package (the starter keeps them in packages/functions/db/sqlite/) is found too', async () => {
+  test('a migration in the project root of a package (the starter keeps them in packages/functions/db/sqlite/) is found too, one in its src/ is not', async () => {
     const h = await setup(['One'])
     const gate = migrationGate({
       changeset: h.group.groupId,
@@ -109,8 +112,10 @@ describe('migrationGate', () => {
     })
     await h.commit(
       {
+        'packages/functions/pikku.config.json': '{ "rootDir": "." }\n',
         'packages/functions/db/tables.ts': 'export {}\n',
         'packages/functions/src/db/helpers/a.ts': 'export {}\n',
+        'packages/functions/src/db/sqlite/x.sql': 'select 1;\n',
       },
       'feat: #1 table declaration'
     )
