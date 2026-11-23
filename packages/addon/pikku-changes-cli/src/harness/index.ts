@@ -4,6 +4,16 @@ export * from './gate.js'
 export * from './steps.js'
 export * from './workflow-steps.js'
 export { commitFixes, fixCommitMessage } from './commit.js'
+export { harnessEpoch } from './epoch.js'
+export { changeCommit, recordChangeDone, trailerGate } from './mark-done.js'
+export {
+  cleanOutput,
+  runCli,
+  trimOutput,
+  type RawOutput,
+  type Parse,
+  type RunCliOptions,
+} from './run-cli.js'
 export { gitIn, type Git } from './git.js'
 export { oxlintGate } from './gates/oxlint.js'
 export { oxfmtGate } from './gates/oxfmt.js'

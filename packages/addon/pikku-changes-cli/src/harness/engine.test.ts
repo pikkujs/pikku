@@ -375,6 +375,42 @@ describe('runHarness', () => {
     await assert.rejects(access(late))
   })
 
+  test('a stop while a gate runs stops its tool and ends the run as aborted infra, without markDone', async () => {
+    const repo = await throwawayRepo()
+    const { agent } = scriptedAgent(repo, [])
+    const late = join(repo, '.pikku/late.txt')
+    const stop = new AbortController()
+    const slow: HarnessGate = {
+      name: 'slow-tool',
+      description: 'writes a file if it is left running',
+      failOn: 'high',
+      run: async (wire) => {
+        await mkdir(join(wire.worktree, '.pikku'), { recursive: true })
+        setTimeout(() => stop.abort(), 100)
+        return wire.runCli(['write-later', late, '1500'], {
+          binary: FAKE_CLI,
+          parse: parseOxlint,
+        })
+      },
+    }
+    const started = Date.now()
+    const { result, doneCalls } = await run(
+      repo,
+      { name: 'slow', gates: [slow] },
+      agent,
+      { signal: stop.signal }
+    )
+    assert.equal(result.status, 'infra')
+    assert.equal(result.infra?.kind, 'aborted')
+    assert.equal(result.infra?.gate, 'slow-tool')
+    assert.equal(doneCalls(), 0)
+    assert.ok(Date.now() - started < 1_400, `${Date.now() - started} ms`)
+    await new Promise((done) =>
+      setTimeout(done, 2_000 - (Date.now() - started))
+    )
+    await assert.rejects(access(late))
+  })
+
   test('uncommitted work goes back to the agent without running the gates', async () => {
     const repo = await throwawayRepo({ 'src/a.ts': 'export const a = 1\n' })
     const gate = scriptedGate('lint', () => [])
