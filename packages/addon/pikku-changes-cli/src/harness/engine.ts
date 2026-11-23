@@ -72,8 +72,17 @@ export type HarnessResult = {
   notes: HarnessNote[]
   /** The failing findings of the last attempt, when it failed. */
   failing?: GateFindings[]
-  /** The gate (or commit) that could not give an answer, when the run ended as `infra`. */
-  infra?: { gate: string; kind: InfraKind; message: string }
+  /**
+   * What could not give an answer, when the run ended as `infra`: a gate, a commit, or `agent` (the
+   * agent could not run, such as a provider usage limit). `retryAfterMs` is set when the failing
+   * service said how long to wait, so a caller can schedule the retry.
+   */
+  infra?: {
+    gate: string
+    kind: InfraKind
+    message: string
+    retryAfterMs?: number
+  }
 }
 
 export type RunHarnessOptions = {
@@ -106,8 +115,8 @@ const validate = (harness: Harness) => {
       throw new Error(
         `Harness ${harness.name} has two gates named ${gate.name}`
       )
-    if (gate.name === CLEAN_TREE)
-      throw new Error(`Gate name ${CLEAN_TREE} is kept for the engine`)
+    if (gate.name === CLEAN_TREE || gate.name === AGENT)
+      throw new Error(`Gate name ${gate.name} is kept for the engine`)
     names.add(gate.name)
     if (!STAGES.includes(stageOf(gate)))
       throw new Error(`Gate ${gate.name} has an unknown stage ${gate.stage}`)
@@ -184,6 +193,8 @@ const runOnce = async (
 
 /** Not a gate: the check that the agent committed its work, named like one in feedback. */
 const CLEAN_TREE = 'clean-tree'
+/** Not a gate: the name an agent infra error is reported under. */
+const AGENT = 'agent'
 
 const uncommittedFinding = (file: string): Finding => ({
   file,
@@ -256,7 +267,14 @@ export const runHarness = async (
   }
 
   const infraStop = (gate: string, error: HarnessInfraError) =>
-    new Stop({ gate, kind: error.kind, message: redact(error.message) })
+    new Stop({
+      gate,
+      kind: error.kind,
+      message: redact(error.message),
+      ...(error.retryAfterMs === undefined
+        ? {}
+        : { retryAfterMs: error.retryAfterMs }),
+    })
 
   /**
    * The tree a stage's write guard compares against, recorded as a step: a gate that a restart runs
@@ -408,17 +426,32 @@ export const runHarness = async (
   let previousKey: string | undefined
   let feedback: string | undefined
   for (let attempt = 1; ; attempt++) {
-    const { outcome } = await record(
-      `attempt-${attempt}:agent`,
-      { attempt },
-      () => agent({ attempt, ...(feedback === undefined ? {} : { feedback }) }),
-      ({ outcome }) =>
-        outcome === 'done'
-          ? 'ok'
-          : outcome === 'needs-answer'
-            ? 'needs-answer'
-            : 'fail'
-    )
+    let outcome: AgentOutcome
+    try {
+      ;({ outcome } = await record(
+        `attempt-${attempt}:agent`,
+        { attempt },
+        () =>
+          agent({ attempt, ...(feedback === undefined ? {} : { feedback }) }),
+        ({ outcome }) =>
+          outcome === 'done'
+            ? 'ok'
+            : outcome === 'needs-answer'
+              ? 'needs-answer'
+              : 'fail'
+      ))
+    } catch (error) {
+      // The agent could not run (a provider limit, no binary): not the builder's doing, so no feedback.
+      if (error instanceof HarnessInfraError)
+        return {
+          status: 'infra',
+          attempts: attempt,
+          feedbackHistory,
+          notes,
+          infra: infraStop(AGENT, error).infra,
+        }
+      throw error
+    }
     if (outcome !== 'done')
       return { status: outcome, attempts: attempt, feedbackHistory, notes }
 

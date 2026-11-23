@@ -12,3 +12,11 @@ export {
   parseOxfmtListDifferent,
 } from './gates/oxfmt-parser.js'
 export { parseOxlint } from './gates/oxlint-parser.js'
+export * from './pi-agent.js'
+export * from './prompts.js'
+export {
+  PROVIDER_LIMIT_PATTERNS,
+  isProviderLimit,
+  retryAfterMsOf,
+} from './provider-limit.js'
+export { clearOrphan, stopGroup, type PiLock } from './pi-process.js'
