@@ -17,6 +17,19 @@ export const processStartTime = async (
   }
 }
 
+/** A process's group (field 5 of `/proc/<pid>/stat`); undefined where it cannot be read. */
+export const processGroupOf = async (
+  pid: number
+): Promise<number | undefined> => {
+  try {
+    const stat = await readFile(`/proc/${pid}/stat`, 'utf8')
+    const group = Number(stat.slice(stat.lastIndexOf(')') + 2).split(' ')[2])
+    return Number.isInteger(group) && group > 0 ? group : undefined
+  } catch {
+    return undefined
+  }
+}
+
 const zombie = async (pid: number) => {
   try {
     const stat = await readFile(`/proc/${pid}/stat`, 'utf8')

@@ -26,6 +26,21 @@ export const gitDirOf = async (cwd: string): Promise<string> => {
   return found ? resolve(cwd, found[1]!.trim()) : join(cwd, '.git')
 }
 
+/** The worktree that has `branch` checked out (never `main` itself), or undefined. */
+export const worktreeOf = async (
+  commands: RunnerCommands,
+  main: string,
+  branch: string
+): Promise<string | undefined> => {
+  const entry = (
+    await commands.git(main, ['worktree', 'list', '--porcelain'])
+  ).output
+    .split('\n\n')
+    .find((e) => e.includes(`\nbranch refs/heads/${branch}`))
+  const worktree = entry?.match(/^worktree (.+)$/m)?.[1]
+  return worktree && worktree !== main ? worktree : undefined
+}
+
 /** Work of its own in a worktree: commits the main checkout does not have, or changes not committed. */
 export const hasOwnWork = async (
   commands: RunnerCommands,
@@ -159,6 +174,71 @@ export const mainCli = (setup: CheckoutSetup, cwd: string): string | null => {
   }
   const wrong = otherCli(cwd, setup.localCli)
   return wrong ? `The main checkout, so the run stopped: ${wrong}` : null
+}
+
+/** package.json files and the bun lockfile: a merge that changes one needs an install before the check. */
+export const DEPENDENCY_FILES = /(^|\/)package\.json$|^bun\.lockb?$/
+
+export type MainRefresh = {
+  head: string
+  /** The HEAD the checkout is now installed at: `head`, or the earlier one when the install failed. */
+  installedAt: string
+  /** package.json or the lockfile changed since `installedAt`, so it was installed again. */
+  installed: boolean
+  /** What failed: the install or the rebuild (`red`, which an agent can repair), or the CLI it runs (`cli`, which it cannot). */
+  failed?: { kind: 'red' | 'cli'; message: string }
+}
+
+/**
+ * The main checkout after a merge, before its check: installed again when
+ * package.json or the lockfile changed since `installedAt` (the setup command
+ * when one is given; `onInstall` is told first), its generated code and dev
+ * database rebuilt, and its @pikku/* pointed at the local build again.
+ */
+export const refreshMain = async (
+  setup: CheckoutSetup,
+  cwd: string,
+  installedAt: string | undefined,
+  onInstall?: () => void
+): Promise<MainRefresh> => {
+  const git = (args: string[]) => setup.commands.git(cwd, args)
+  const head = (await git(['rev-parse', 'HEAD'])).output
+  const changed =
+    installedAt && installedAt !== head
+      ? (await git(['diff', '--name-only', installedAt, head])).output.split(
+          '\n'
+        )
+      : []
+  const installed = changed.some((file) => DEPENDENCY_FILES.test(file))
+  if (installed) {
+    onInstall?.()
+    const failed = await setupCheckout(setup, cwd, 'the main checkout')
+    if (failed)
+      return {
+        head,
+        installedAt: installedAt ?? head,
+        installed,
+        failed: { kind: 'red', message: failed },
+      }
+  }
+  // A merged changeset may add tables or functions: the generated code and the dev database are rebuilt here as in a fresh worktree.
+  const refreshed = await refreshCheckout(setup, cwd)
+  if (refreshed)
+    return {
+      head,
+      installedAt: head,
+      installed,
+      failed: { kind: 'red', message: refreshed },
+    }
+  const wrongCli = mainCli(setup, cwd)
+  return {
+    head,
+    installedAt: head,
+    installed,
+    ...(wrongCli
+      ? { failed: { kind: 'cli' as const, message: wrongCli } }
+      : {}),
+  }
 }
 
 export interface Prepared {
