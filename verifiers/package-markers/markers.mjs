@@ -7,9 +7,8 @@
  *   1. two packages marked `"main": true` are refused, naming both
  *   2. a workspace package config with neither marker is refused
  *   3. a package marked both main and addon is refused
- *   4. an addon with no namespace is refused
- *   5. `base` and `addons` in the root config are refused with a pointer to the markers
- *   6. a main package config that sets a project-wide key is refused, pointing at the root
+ *   4. `base` and `addons` in the root config are refused with a pointer to the markers
+ *   5. a main package config that sets a project-wide key is refused, pointing at the root
  *
  * The workspace that does build, a main package and two addons found by their
  * markers, is `pku368.mjs`, and the one main package and addon is `run.mjs`.
@@ -50,10 +49,7 @@ const project = (name, packages, rootConfig = {}) => {
   return root
 }
 
-const addon = (namespace) => ({
-  addon: { displayName: namespace },
-  ...(namespace ? { namespace } : {}),
-})
+const addon = (name) => ({ addon: { displayName: name } })
 
 const refused = (root, pattern, what) => {
   const run = spawnSync('node', [PIKKU, 'all'], {
@@ -92,12 +88,6 @@ try {
     project('both', { one: { main: true, ...addon('one') } }),
     /both "main" and "addon"/,
     'a package marked both main and addon is refused'
-  )
-
-  refused(
-    project('no-namespace', { one: { main: true }, tools: addon() }),
-    /packages\/tools\/pikku\.config\.json is an addon with no namespace/,
-    'an addon with no namespace is refused'
   )
 
   refused(

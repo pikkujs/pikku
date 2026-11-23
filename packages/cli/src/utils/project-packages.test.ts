@@ -32,7 +32,7 @@ const project = async (
     await mkdir(join(root, dir), { recursive: true })
     await writeFile(
       join(root, dir, 'pikku.config.json'),
-      JSON.stringify({ namespace: basename(dir), addon: true })
+      JSON.stringify({ addon: true })
     )
     if (pkg)
       await writeFile(join(root, dir, 'package.json'), JSON.stringify(pkg))
@@ -48,7 +48,6 @@ const pkg = (
   entry,
   dir: `/x/${entry}`,
   name,
-  namespace: name,
   dependsOn,
 })
 
@@ -172,12 +171,7 @@ describe('findWorkspaceConfigs and resolveWorkspacePackages', () => {
     }
     return root
   }
-  const addon = (namespace?: string) => ({
-    config: {
-      addon: { displayName: 'x' },
-      ...(namespace ? { namespace } : {}),
-    },
-  })
+  const addon = () => ({ config: { addon: { displayName: 'x' } } })
   const main = { config: { main: true } }
   const load = (root: string) =>
     resolveWorkspacePackages(join(root, file), root)
@@ -186,18 +180,18 @@ describe('findWorkspaceConfigs and resolveWorkspacePackages', () => {
     const root = await workspace({
       'packages/functions': main,
       'packages/a': {
-        ...addon('a'),
+        ...addon(),
         pkg: { name: 'a', dependencies: { b: '1' } },
       },
-      'packages/b': addon('b'),
+      'packages/b': addon(),
     })
     const found = await load(root)
     assert.equal(found.main?.entry, 'packages/functions')
     assert.deepEqual(
-      found.addons.map((p) => [p.entry, p.name, p.namespace, p.dependsOn]),
+      found.addons.map((p) => [p.entry, p.name, p.dependsOn]),
       [
-        ['packages/a', 'a', 'a', ['b']],
-        ['packages/b', 'b', 'b', []],
+        ['packages/a', 'a', ['b']],
+        ['packages/b', 'b', []],
       ]
     )
   })
@@ -232,33 +226,13 @@ describe('findWorkspaceConfigs and resolveWorkspacePackages', () => {
 
   test('a package marked both main and addon is an error', async () => {
     const root = await workspace({
-      'packages/x': { config: { main: true, addon: true, namespace: 'x' } },
+      'packages/x': { config: { main: true, addon: true } },
     })
     await assert.rejects(load(root), /both "main" and "addon"/)
   })
 
-  test('an addon needs a valid, unique namespace', async () => {
-    await assert.rejects(
-      load(await workspace({ 'packages/a': addon() })),
-      /is an addon with no namespace/
-    )
-    await assert.rejects(
-      load(await workspace({ 'packages/a': addon('Bad Name') })),
-      /namespace "Bad Name".* is not valid/
-    )
-    await assert.rejects(
-      load(
-        await workspace({
-          'packages/a': addon('same'),
-          'packages/b': addon('same'),
-        })
-      ),
-      /packages\/a and packages\/b both declare the namespace "same"/
-    )
-  })
-
   test('a package.json without a name is an error', async () => {
-    const root = await workspace({ 'packages/a': { ...addon('a'), pkg: {} } })
+    const root = await workspace({ 'packages/a': { ...addon(), pkg: {} } })
     await assert.rejects(load(root), /package\.json has no name/)
   })
 
@@ -293,7 +267,7 @@ describe('findWorkspaceConfigs and resolveWorkspacePackages', () => {
   })
 
   test('a marked config is a package, not a project root, and finds nothing', async () => {
-    const root = await workspace({ 'packages/a': addon('a') }, ['packages/*'], {
+    const root = await workspace({ 'packages/a': addon() }, ['packages/*'], {
       main: true,
     })
     assert.deepEqual(await load(root), { addons: [] })
@@ -324,45 +298,33 @@ describe('checkAddonsWired', () => {
   const tools = {
     entry: 'packages/tools',
     name: '@x/tools',
-    namespace: 'tools',
   }
   const file = '/p/pikku.config.json'
   const call = (name: string, pkg: string, path = '/p/packages/app/src/a.ts') =>
     new Map([[name, { package: pkg, file: path }]])
 
-  test('accepts an addon the main package wires under its namespace', () => {
-    assert.deepEqual(
-      checkAddonsWired(
-        file,
-        [tools],
-        call('tools', '@x/tools'),
-        '/p/packages/app'
-      ),
-      []
-    )
-  })
-
-  test('a call naming the addon package under another name is an error showing both names', () => {
-    assert.throws(
-      () =>
+  test('accepts an addon the main package wires under any name', () => {
+    for (const name of ['tools', 'tols']) {
+      assert.deepEqual(
         checkAddonsWired(
           file,
           [tools],
-          call('tols', '@x/tools'),
+          call(name, '@x/tools'),
           '/p/packages/app'
         ),
-      /"@x\/tools" "tols".*"tools" \(an addon in the workspace of \/p\/pikku.config.json\)/
-    )
+        []
+      )
+    }
   })
 
-  test('a second call for the same package is an error naming both calls', () => {
+  test('an addon wired more than once, under different names, is accepted', () => {
     const twice = new Map([
       ['tools', { package: '@x/tools', file: '/p/packages/app/src/a.ts' }],
       ['tools_test', { package: '@x/tools', file: '/p/packages/app/src/b.ts' }],
     ])
-    assert.throws(
-      () => checkAddonsWired(file, [tools], twice, '/p/packages/app'),
-      /"@x\/tools" is wired twice: wireAddon "tools" in \/p\/packages\/app\/src\/a.ts and "tools_test" in \/p\/packages\/app\/src\/b.ts/
+    assert.deepEqual(
+      checkAddonsWired(file, [tools], twice, '/p/packages/app'),
+      []
     )
   })
 
@@ -378,34 +340,15 @@ describe('checkAddonsWired', () => {
     )
   })
 
-  test('a call that takes the namespace for another package is an error', () => {
-    assert.throws(
-      () =>
-        checkAddonsWired(
-          file,
-          [tools],
-          call('tools', '@x/other'),
-          '/p/packages/app'
-        ),
-      /wireAddon "tools" in .* points at "@x\/other", but "tools" is the namespace packages\/tools\/pikku.config.json declares for "@x\/tools"/
-    )
-  })
-
-  test('a declaration with no file counts, and an entry with a trailing slash names a clean config path', () => {
+  test('a declaration with no file counts', () => {
     const noFile = new Map([['tols', { package: '@x/tools' }]])
-    assert.throws(
-      () =>
-        checkAddonsWired(
-          file,
-          [{ ...tools, entry: './packages/tools/' }],
-          noFile,
-          '/p/packages/app'
-        ),
-      /names the package "@x\/tools" "tols", but packages\/tools\/pikku.config.json declares/
+    assert.deepEqual(
+      checkAddonsWired(file, [tools], noFile, '/p/packages/app'),
+      []
     )
   })
 
-  test('an addon no call points at is a warning naming it and the expected namespace', () => {
+  test('an addon no call points at is a warning naming it', () => {
     const warnings = checkAddonsWired(
       file,
       [tools],
@@ -417,7 +360,7 @@ describe('checkAddonsWired', () => {
       warnings[0]!,
       /workspace of \/p\/pikku.config.json has the addon "packages\/tools"/
     )
-    assert.match(warnings[0]!, /name: 'tools', package: '@x\/tools'/)
+    assert.match(warnings[0]!, /package: '@x\/tools'/)
   })
 
   test('only a call in the main package source counts', () => {
@@ -427,16 +370,6 @@ describe('checkAddonsWired', () => {
       1
     )
     assert.deepEqual(checkAddonsWired(file, [tools], elsewhere, '/p'), [])
-    // A misnamed call outside the main package is not read either.
-    assert.equal(
-      checkAddonsWired(
-        file,
-        [tools],
-        call('tols', '@x/tools', '/p/src/other.ts'),
-        '/p/packages/app'
-      ).length,
-      1
-    )
   })
 })
 

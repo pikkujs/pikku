@@ -4,9 +4,6 @@
   "addon": {
     "displayName": "Base Verifier Addon",
     "description": "An addon of the workspace",
-    "categories": [
-      "Utility"
-    ]
-  },
-  "namespace": "tools"
+    "categories": ["Utility"]
+  }
 }
