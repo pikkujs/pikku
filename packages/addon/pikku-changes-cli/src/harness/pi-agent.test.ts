@@ -836,6 +836,13 @@ describe('harness prompts', () => {
     ])
       assert.equal(prompt.split(`\`${command}\``).length, 2, command)
     assert.match(prompt, /do not run `pikku check`, `pikku changes done`/)
+    // a migration's declaration is the one claim it runs, as the migration gate asks it to
+    assert.match(prompt, /claim nothing but the declaration below/)
+    assert.match(
+      prompt,
+      /If you add a migration \(a file in a `db\/<dir>\/` folder\), declare the tables it creates or alters on this changeset before you stop: `pikku changes claim --group-id cs_abc --change-ids k3x9 --creates <tables> --alters <tables>`\./
+    )
+    assert.ok(!/Do not claim/i.test(prompt))
   })
 })
 
