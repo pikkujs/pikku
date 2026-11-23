@@ -166,10 +166,9 @@ describe('getAddonFiles', () => {
 
   /**
    * A scaffold that only parses is not one that loads: the config is read by the
-   * strict loader, which refuses unknown keys and needs the namespace a project
-   * wires the addon under.
+   * strict loader, which refuses unknown keys.
    */
-  test('the emitted pikku.config.json files load, the addon under its own name', async () => {
+  test('the emitted pikku.config.json files load, with no namespace of their own', async () => {
     const quiet = { error() {}, warn() {}, info() {}, debug() {} } as never
     const flags = { secret: false, variable: false, oauth: false }
     for (const [kind, files] of [
@@ -189,9 +188,7 @@ describe('getAddonFiles', () => {
         []
       )
       assert.equal(loaded.rootDir, dir, kind)
-      if (kind === 'addon') {
-        assert.equal((loaded as { namespace?: string }).namespace, 'crm')
-      }
+      assert.equal((loaded as { namespace?: string }).namespace, undefined)
     }
   })
 

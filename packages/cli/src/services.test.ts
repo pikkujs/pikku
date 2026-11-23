@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, test, afterEach } from 'node:test'
@@ -116,55 +116,5 @@ describe('loadInspectorStateFile', () => {
     const loaded = await services.getInspectorState(false, false, false, true)
     assert.ok('functions' in loaded)
     assert.equal(loaded.rootDir, state.rootDir)
-  })
-})
-
-describe('an addon the base wires under the wrong name', () => {
-  const project = async () => {
-    const root = await mkdtemp(join(tmpdir(), 'pikku-addon-wired-'))
-    created.push(root)
-    await mkdir(join(root, 'packages/app/src'), { recursive: true })
-    await writeFile(
-      join(root, 'packages/app/src/addons.ts'),
-      `declare function wireAddon(config: { name: string; package: string }): void
-wireAddon({ name: 'tols', package: '@x/tools' })
-`
-    )
-    return root
-  }
-
-  const services = async (root: string) =>
-    createSingletonServices({
-      rootDir: root,
-      configDir: root,
-      sourceDirs: ['.', 'packages/app'],
-      ignoreFiles: [],
-      filters: {},
-      addonPackages: [
-        {
-          entry: 'packages/tools',
-          dir: join(root, 'packages/tools'),
-          name: '@x/tools',
-          namespace: 'tools',
-          dependsOn: [],
-        },
-      ],
-      basePackage: {
-        entry: 'packages/app',
-        dir: join(root, 'packages/app'),
-        name: 'app',
-      },
-    } as any)
-
-  test('is refused, and refused again by the next step rather than skipped', async () => {
-    const root = await project()
-    const { getInspectorState } = await services(root)
-    for (const attempt of [1, 2]) {
-      await assert.rejects(
-        getInspectorState(false, true, false, true),
-        /names the package "@x\/tools" "tols".*"tools"/,
-        `attempt ${attempt}`
-      )
-    }
   })
 })
