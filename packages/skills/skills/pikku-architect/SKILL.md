@@ -188,7 +188,7 @@ A table that already exists is altered by changing its declaration in `db/tables
 `pikku db generate` writes the next migration. Plan a new column as nullable or with a default. A
 type change is refused, and a drop needs a person's approval (`--allowDestructive`, each drop marked
 so `db migrate` asks again), so plan those as a person's decision rather than as a step of the build.
-A rename that keeps its rows is `renamedFrom: 'old_name'` on the new column.
+A rename that keeps its rows is `renamedFrom: 'old_name'` on the new column, or on the new table.
 
 ### `functions` — with their wire and their rule on them
 

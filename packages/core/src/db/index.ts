@@ -238,6 +238,16 @@ interface TableFields {
 export interface ManagedTableDeclaration extends TableFields {
   columns: Record<string, ColumnDeclaration>
   declareOnly?: false
+  /**
+   * The name this table had in the migrations, so `pikku db generate` writes
+   * `ALTER TABLE ... RENAME TO ...` and the rows stay, instead of creating the
+   * new table and dropping the old one. The indexes, constraints and triggers
+   * the engine names after the table are renamed with it, and a foreign key in
+   * another table that points at it follows the new name. Delete it once the
+   * migration is applied. Refused when the old table does not exist, when both
+   * exist, and when another table is renamed from the same name.
+   */
+  renamedFrom?: string
 }
 
 /**
