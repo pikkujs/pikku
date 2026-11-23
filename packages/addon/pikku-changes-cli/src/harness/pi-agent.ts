@@ -21,7 +21,13 @@ import {
   writeLock,
 } from './pi-process.js'
 import { CONTINUE_PROMPT, freshRestartPrompt, resumePrompt } from './prompts.js'
-import { isProviderLimit, retryAfterMsOf } from './provider-limit.js'
+import {
+  PROVIDER_AUTH_PATTERNS,
+  isProviderAuth,
+  isProviderLimit,
+  providerAuthMessage,
+  retryAfterMsOf,
+} from './provider-limit.js'
 import { redact } from './redact.js'
 import { cleanOutput, trimOutput } from './run-cli.js'
 
@@ -86,7 +92,7 @@ export type PiAgentEvent =
       attempt: number
       code: number | null
       signal: NodeJS.Signals | null
-      outcome: AgentOutcome | 'provider-limit'
+      outcome: AgentOutcome | 'provider-limit' | 'provider-auth'
       durationMs: number
       usage: PiUsage
       /** Redacted end of what Pi reported as its error, when the attempt failed. */
@@ -282,8 +288,9 @@ type Launch = {
  * the session with the change prompt; later attempts resume it with the findings. A session that
  * cannot be resumed is replaced by a new one told the change, the branch's commits and the findings.
  * A stall, the total timeout or the abort signal stops Pi's whole process group and the attempt is
- * `failed`. A provider usage or rate limit throws a `provider-limit` HarnessInfraError instead, so
- * the run ends as infra and the builder never hears of it.
+ * `failed`. A provider usage or rate limit throws a `provider-limit` HarnessInfraError instead, and
+ * an unusable provider login (a dead OAuth token, a wrong key) a `provider-auth` one, so the run ends
+ * as infra and the builder never hears of it.
  */
 export const piAgent = (options: PiAgentOptions): HarnessAgent => {
   const {
@@ -603,7 +610,9 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
       run.spawnError !== undefined ||
       run.code !== 0 ||
       run.lastError !== undefined
-    const finish = (outcome: AgentOutcome | 'provider-limit') =>
+    const finish = (
+      outcome: AgentOutcome | 'provider-limit' | 'provider-auth'
+    ) =>
       onEvent?.({
         type: 'exit',
         attempt,
@@ -630,6 +639,20 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
           output: shown,
           ...(run.code === null ? {} : { exitCode: run.code }),
           ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
+        }
+      )
+    }
+    if (failed && !run.stopped && isProviderAuth(errorText)) {
+      finish('provider-auth')
+      const said = cleanOutput(errorText)
+        .split('\n')
+        .find((line) => PROVIDER_AUTH_PATTERNS.some((p) => p.test(line)))
+      throw new HarnessInfraError(
+        'provider-auth',
+        `${providerAuthMessage(provider, model)} Pi said: ${redact((said ?? '').trim()).slice(0, 300)}`,
+        {
+          output: shown,
+          ...(run.code === null ? {} : { exitCode: run.code }),
         }
       )
     }

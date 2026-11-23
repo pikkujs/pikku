@@ -31,7 +31,11 @@ import {
   writeLock,
 } from './pi-process.js'
 import { harnessBuildPrompt } from './prompts.js'
-import { isProviderLimit, retryAfterMsOf } from './provider-limit.js'
+import {
+  isProviderAuth,
+  isProviderLimit,
+  retryAfterMsOf,
+} from './provider-limit.js'
 import { InMemorySteps } from './steps.js'
 import { REPO_ROOT, removeThrowaways, throwawayRepo } from './test-support.js'
 import { workflowSteps } from './workflow-steps.js'
@@ -597,6 +601,124 @@ describe('provider limits', () => {
     assert.equal((await git(['rev-parse', 'HEAD'])).trim(), head)
     assert.equal(await git(['status', '--porcelain', '-uall']), '')
     assert.deepEqual(await readdir(t.sessionDir), sessionsBefore)
+  })
+})
+
+const AUTH_ERRORS = [
+  'OAuth refresh failed for openai: OpenAI OAuth token request failed (400): {"error": "invalid_grant"}',
+  'invalid_grant',
+  'Login state is invalid_state',
+  'No API key found for provider openai',
+  'Incorrect API key provided: sk-proj-abcdefghijklmnopqrstuvwxyz0123456789ABCD',
+  '{"error":{"code":"invalid_api_key"}}',
+  'Request failed with status code 401',
+  '401 Unauthorized',
+  'Unauthorized',
+  'Authentication failed for openai',
+]
+
+describe('provider auth', () => {
+  test('the login failures are auth, a limit that names one is a limit, and plain errors are neither', () => {
+    for (const text of AUTH_ERRORS) assert.ok(isProviderAuth(text), text)
+    for (const text of [
+      'Type error in src/a.ts',
+      'src/auth.ts:401:3 error',
+      "You've hit your usage limit (OAuth refresh failed). Try again in 5m.",
+    ])
+      assert.ok(!isProviderAuth(text), text)
+  })
+
+  test('each auth error at the end of a Pi turn throws provider-auth, redacted, saying how to log in', async () => {
+    for (const text of AUTH_ERRORS) {
+      const t = await setup([{ mode: 'error', error: text }])
+      const error = await t.agent({ attempt: 1 }).then(
+        () => assert.fail(`expected provider-auth for ${text}`),
+        (e) => e
+      )
+      assert.ok(error instanceof HarnessInfraError, text)
+      assert.equal(error.kind, 'provider-auth', text)
+      assert.equal(error.retryAfterMs, undefined)
+      assert.match(
+        error.message,
+        /Pi's openai login cannot be used for openai\/gpt-6\.1-sol/
+      )
+      assert.match(error.message, /run `pi`, then `\/login`/)
+      assert.ok(!error.message.includes('sk-proj-abcdef'), error.message)
+      const exit = t.events.find((e) => e.type === 'exit')
+      assert.equal(exit?.type === 'exit' && exit.outcome, 'provider-auth')
+    }
+  })
+
+  test('a 401 on stderr with a non-zero exit is provider-auth too', async () => {
+    const t = await setup([
+      { mode: 'exit', code: 1, stderr: 'Error: 401 Unauthorized' },
+    ])
+    await assert.rejects(
+      t.agent({ attempt: 1 }),
+      (e: HarnessInfraError) => e.kind === 'provider-auth'
+    )
+  })
+
+  test('a limit message that also names an auth word is a provider limit', async () => {
+    const t = await setup([
+      {
+        mode: 'error',
+        error:
+          'Rate limit reached for gpt-6.1-sol (401 unauthorized retries). Try again in 2m.',
+      },
+    ])
+    await assert.rejects(
+      t.agent({ attempt: 1 }),
+      (e: HarnessInfraError) =>
+        e.kind === 'provider-limit' && e.retryAfterMs === 120_000
+    )
+  })
+
+  test('a stall after an auth word on stderr is failed, never provider-auth', async () => {
+    const t = await setup(
+      [
+        {
+          mode: 'hang',
+          stderr: 'OAuth refresh failed for openai: invalid_grant',
+        },
+      ],
+      { quietMs: 300 }
+    )
+    assert.equal((await t.agent({ attempt: 1 })).outcome, 'failed')
+    const stop = t.events.find((e) => e.type === 'stop')
+    assert.equal(stop?.type === 'stop' && stop.reason, 'stall')
+  })
+
+  test('the run ends infra with provider-auth from the agent and no wait', async () => {
+    const t = await setup([
+      {
+        mode: 'error',
+        error:
+          'OAuth refresh failed for openai: OpenAI OAuth token request failed (400): {"error": "invalid_grant"}',
+      },
+    ])
+    let doneCalls = 0
+    const result = await runHarness({
+      worktree: t.repo,
+      base: 'main',
+      shortId: 'k3x9',
+      changeId: 'chg_0123456789',
+      changeset: 'cs_abc',
+      harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
+      agent: t.agent,
+      steps: workflowSteps(jsonWorkflow()),
+      markDone: async () => {
+        doneCalls++
+      },
+    })
+    assert.equal(result.status, 'infra')
+    assert.equal(result.attempts, 1)
+    assert.equal(result.infra?.gate, 'agent')
+    assert.equal(result.infra?.kind, 'provider-auth')
+    assert.equal(result.infra?.retryAfterMs, undefined)
+    assert.match(result.infra?.message ?? '', /`\/login`/)
+    assert.equal(result.feedbackHistory.length, 0)
+    assert.equal(doneCalls, 0)
   })
 })
 
