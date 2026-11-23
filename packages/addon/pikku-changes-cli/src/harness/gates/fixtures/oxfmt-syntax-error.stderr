@@ -1,0 +1,7 @@
+
+  x Unexpected token
+   ,-[broken.ts:1:14]
+ 1 | export const = {
+   :              ^
+   `----
+Error occurred when checking code style in the above files.
