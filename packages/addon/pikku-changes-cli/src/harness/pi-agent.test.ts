@@ -264,7 +264,7 @@ describe('piAgent launch', () => {
     await t.agent({ attempt: 1 })
     const [call] = await t.calls()
     assert.equal(call!.provider, 'openai')
-    assert.equal(call!.model, 'gpt-6.1-sol')
+    assert.equal(call!.model, 'gpt-6.2-sol')
     for (const flag of [
       '-p',
       '--approve',
@@ -497,7 +497,7 @@ describe('provider limits', () => {
   test('the common phrasings are limits and say how long to wait', () => {
     for (const text of [
       "You've hit your usage limit. Try again in 2h 20m.",
-      'Rate limit reached for gpt-6.1-sol',
+      'Rate limit reached for gpt-6.2-sol',
       'You exceeded your current quota',
       'HTTP 429 Too Many Requests',
     ])
@@ -641,7 +641,7 @@ describe('provider auth', () => {
       assert.equal(error.retryAfterMs, undefined)
       assert.match(
         error.message,
-        /Pi's openai login cannot be used for openai\/gpt-6\.1-sol/
+        /Pi's openai login cannot be used for openai\/gpt-6\.2-sol/
       )
       assert.match(error.message, /run `pi`, then `\/login`/)
       assert.ok(!error.message.includes('sk-proj-abcdef'), error.message)
@@ -665,7 +665,7 @@ describe('provider auth', () => {
       {
         mode: 'error',
         error:
-          'Rate limit reached for gpt-6.1-sol (401 unauthorized retries). Try again in 2m.',
+          'Rate limit reached for gpt-6.2-sol (401 unauthorized retries). Try again in 2m.',
       },
     ])
     await assert.rejects(
@@ -744,7 +744,7 @@ describe('provider quota', () => {
       'provider-limit'
     )
     assert.equal(
-      providerRefusalOf('Rate limit reached for gpt-6.1-sol'),
+      providerRefusalOf('Rate limit reached for gpt-6.2-sol'),
       'provider-limit'
     )
     assert.equal(providerRefusalOf('invalid_grant'), 'provider-auth')

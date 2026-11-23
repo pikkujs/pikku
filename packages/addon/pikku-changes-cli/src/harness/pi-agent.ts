@@ -37,7 +37,7 @@ export type PiModel = { provider: string; model: string }
 
 /** Model aliases when the caller has no map of its own. */
 export const DEFAULT_PI_MODELS: Readonly<Record<string, PiModel>> = {
-  default: { provider: 'openai', model: 'gpt-6.1-sol' },
+  default: { provider: 'openai', model: 'gpt-6.2-sol' },
 }
 
 export const defaultResolveModel = (alias: string): PiModel => {
