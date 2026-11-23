@@ -24,23 +24,28 @@ export type InfraKind =
   | 'write-outside-allowlist'
   | 'empty-commit'
   | 'git'
+  /** The model provider refused for a usage or rate limit; wait (`retryAfterMs` when it said) and retry. */
+  | 'provider-limit'
 
 export class HarnessInfraError extends Error {
   readonly kind: InfraKind
   /** Cleaned, trimmed and redacted output of the failed call, when there was one. */
   readonly output?: string
   readonly exitCode?: number
+  /** How long to wait before trying again, when the failing service said. */
+  readonly retryAfterMs?: number
 
   constructor(
     kind: InfraKind,
     message: string,
-    extra: { output?: string; exitCode?: number } = {}
+    extra: { output?: string; exitCode?: number; retryAfterMs?: number } = {}
   ) {
     super(message)
     this.name = 'HarnessInfraError'
     this.kind = kind
     this.output = extra.output
     this.exitCode = extra.exitCode
+    this.retryAfterMs = extra.retryAfterMs
   }
 }
 
