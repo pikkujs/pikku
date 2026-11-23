@@ -26,6 +26,8 @@ export type InfraKind =
   | 'git'
   /** The model provider refused for a usage or rate limit; wait (`retryAfterMs` when it said) and retry. */
   | 'provider-limit'
+  /** The model provider's login is unusable (expired, revoked, missing); a person must log in again. */
+  | 'provider-auth'
 
 export class HarnessInfraError extends Error {
   readonly kind: InfraKind

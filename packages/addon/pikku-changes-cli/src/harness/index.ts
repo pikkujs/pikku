@@ -26,8 +26,11 @@ export { parseOxlint } from './gates/oxlint-parser.js'
 export * from './pi-agent.js'
 export * from './prompts.js'
 export {
+  PROVIDER_AUTH_PATTERNS,
   PROVIDER_LIMIT_PATTERNS,
+  isProviderAuth,
   isProviderLimit,
+  providerAuthMessage,
   retryAfterMsOf,
 } from './provider-limit.js'
 export {

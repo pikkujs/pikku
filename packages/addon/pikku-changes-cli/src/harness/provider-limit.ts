@@ -13,6 +13,32 @@ export const PROVIDER_LIMIT_PATTERNS: readonly RegExp[] = [
 export const isProviderLimit = (text: string): boolean =>
   PROVIDER_LIMIT_PATTERNS.some((pattern) => pattern.test(text))
 
+/**
+ * How a model provider (or Pi on its behalf) says the login it was given cannot be used: a dead OAuth
+ * refresh token, a missing or wrong API key, a 401. Matched against error text only, like the limit
+ * patterns; a limit message that also carries one of these words is a limit.
+ */
+export const PROVIDER_AUTH_PATTERNS: readonly RegExp[] = [
+  /OAuth refresh failed/i,
+  /\binvalid_grant\b/i,
+  /\binvalid_state\b/i,
+  /\bNo API key\b/i,
+  /\bIncorrect API key\b/i,
+  /\binvalid_api_key\b/i,
+  /\b(?:HTTP|status(?: code)?|code)[\s:=]*401\b/i,
+  /\(401\)|\b401\s+unauthori[sz]ed\b/i,
+  /\bunauthori[sz]ed\b/i,
+  /\bauthentication failed\b/i,
+]
+
+export const isProviderAuth = (text: string): boolean =>
+  !isProviderLimit(text) &&
+  PROVIDER_AUTH_PATTERNS.some((pattern) => pattern.test(text))
+
+/** What to tell a person whose provider login is unusable: whose, and how to fix it. */
+export const providerAuthMessage = (provider: string, model: string): string =>
+  `Pi's ${provider} login cannot be used for ${provider}/${model}. Log in again with Pi: run \`pi\`, then \`/login\`.`
+
 const UNIT_MS: [RegExp, number][] = [
   [/^(?:ms|msecs?|milliseconds?)$/i, 1],
   [/^(?:s|secs?|seconds?)$/i, 1_000],

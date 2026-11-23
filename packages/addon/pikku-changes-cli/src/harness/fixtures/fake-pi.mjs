@@ -14,9 +14,13 @@
 //   exit      prints `stderr` and exits `code` (default 1)
 //   error     prints a turn whose last assistant message ends with stopReason error, `error` as its
 //             message, and exits 0, as pi does in json mode
-//   hang      silent forever; with `child`, starts a child in its process group first
+//   hang      prints `stderr` if given, then silent forever; with `child`, starts a child in its process group first
 //   tool-hang starts a tool and never ends it
 //   chatter   prints a line every 50 ms forever
+//
+// `auth check --provider <p> --model <m> --json [--no-refresh]` prints the JSON in the file FAKE_PI_AUTH
+// (`{ "status": "ready" }` when unset; a `code` field there is its exit code) and appends what it
+// was asked to FAKE_PI_AUTH_LOG.
 import { spawn } from 'node:child_process'
 import {
   appendFileSync,
@@ -29,6 +33,29 @@ import {
 import { dirname, join, resolve } from 'node:path'
 
 const argv = process.argv.slice(2)
+
+if (argv[0] === 'auth' && argv[1] === 'check') {
+  const value = (name) => {
+    const at = argv.indexOf(name)
+    return at < 0 ? null : argv[at + 1]
+  }
+  const answer = process.env.FAKE_PI_AUTH
+    ? JSON.parse(readFileSync(process.env.FAKE_PI_AUTH, 'utf8'))
+    : { status: 'ready' }
+  if (process.env.FAKE_PI_AUTH_LOG)
+    appendFileSync(
+      process.env.FAKE_PI_AUTH_LOG,
+      `${JSON.stringify({
+        provider: value('--provider'),
+        model: value('--model'),
+        json: argv.includes('--json'),
+        noRefresh: argv.includes('--no-refresh'),
+      })}\n`
+    )
+  const { code = 0, ...printed } = answer
+  process.stdout.write(`${JSON.stringify(printed)}\n`)
+  process.exit(code)
+}
 const flags = {}
 const positional = []
 const VALUED = new Set([
@@ -238,6 +265,7 @@ switch (mode) {
     print({ type: 'agent_end' })
     process.exit(0)
   case 'hang':
+    if (step.stderr) process.stderr.write(`${step.stderr}\n`)
     if (step.child) {
       const child = spawn(
         process.execPath,
