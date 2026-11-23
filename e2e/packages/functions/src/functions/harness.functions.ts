@@ -6,6 +6,7 @@
  * can be tested with no model, no network and no worktree.
  */
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { recordEffect } from './chaos-ledger.js'
 
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical'
 
@@ -17,10 +18,55 @@ export type Finding = {
   message: string
 }
 
-/** What the fake gate does on one attempt: report these findings, or throw. */
+/**
+ * What the fake gate does on one attempt: report these findings, or throw.
+ * `delayMs` holds the first try of the step that long, so a test can kill the
+ * server while the gate is running; a retried step does not wait again.
+ */
 export type FakeGateRun = {
   findings?: Finding[]
   throws?: string
+  delayMs?: number
+}
+
+/** The workflow step a fake ran inside, for the effect ledger. */
+type StepRef = { runId: string; invocationId?: string; stepAttempt: number }
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Appends one line per invocation to the ledger under HARNESS_LEDGER_DIR, keyed
+ * `<function>:<harness attempt>` with the step's own attempt count, so a test
+ * can tell a settled step from one a restart ran again. Nothing is written when
+ * the variable is unset.
+ */
+const recordInvocation = async (
+  variables: {
+    get: (name: string) => Promise<string | undefined> | string | undefined
+  },
+  func: string,
+  attempt: number,
+  step: StepRef | undefined
+): Promise<void> => {
+  const dir = await variables.get('HARNESS_LEDGER_DIR')
+  if (!dir) return
+  await recordEffect(dir, {
+    key: `${func}:${attempt}`,
+    runId: step?.runId ?? 'no-run',
+    invocationId: step?.invocationId,
+    attempt: step?.stepAttempt ?? 0,
+    at: Date.now(),
+  })
+}
+
+/** Waits `delayMs` on the first try of a step only. */
+const delayFirstTry = async (
+  delayMs: number | undefined,
+  step: StepRef | undefined
+): Promise<void> => {
+  if (delayMs && (step?.stepAttempt ?? 1) <= 1) {
+    await wait(delayMs)
+  }
 }
 
 const SEVERITY_ORDER: Severity[] = ['info', 'low', 'medium', 'high', 'critical']
@@ -43,26 +89,46 @@ const describeFinding = (finding: Finding): string => {
 }
 
 export const harnessFakeAgent = pikkuSessionlessFunc<
-  { changeId: string; attempt: number; feedback: string },
+  { changeId: string; attempt: number; feedback: string; delayMs?: number },
   { changeId: string; attempt: number; heard: string }
 >({
   description:
     'Stand in for the builder agent: records the feedback it was given and builds nothing',
-  func: async (_services, data) => ({
-    changeId: data.changeId,
-    attempt: data.attempt,
-    heard: data.feedback,
-  }),
+  func: async ({ variables }, data, { workflowStep }) => {
+    const step = workflowStep && {
+      runId: workflowStep.runId,
+      invocationId: workflowStep.invocationId,
+      stepAttempt: workflowStep.attemptCount,
+    }
+    await recordInvocation(variables, 'harnessFakeAgent', data.attempt, step)
+    await delayFirstTry(data.delayMs, step)
+    return {
+      changeId: data.changeId,
+      attempt: data.attempt,
+      heard: data.feedback,
+    }
+  },
 })
 
+/**
+ * The gate is called from inside the `harnessRunGate` step, so that step hands
+ * over its own run and attempt in `step`.
+ */
 export const harnessFakeGate = pikkuSessionlessFunc<
-  { attempt: number; runs: FakeGateRun[] },
+  { attempt: number; runs: FakeGateRun[]; step?: StepRef },
   { findings: Finding[] }
 >({
   description:
     'Stand in for a gate: reports the findings scripted for this attempt, or throws as a broken tool would',
-  func: async (_services, data) => {
+  func: async ({ variables }, data) => {
     const run = data.runs[data.attempt - 1] ?? {}
+    await recordInvocation(
+      variables,
+      'harnessFakeGate',
+      data.attempt,
+      data.step
+    )
+    await delayFirstTry(run.delayMs, data.step)
     if (run.throws) {
       throw new Error(run.throws)
     }
@@ -81,11 +147,16 @@ export const harnessRunGate = pikkuSessionlessFunc<
 >({
   description:
     'Run one gate; a gate that throws is reported as infra instead of failing the run',
-  func: async (_services, data, { rpc }) => {
+  func: async (_services, data, { rpc, workflowStep }) => {
     try {
       const result = await rpc.invoke('harnessFakeGate', {
         attempt: data.attempt,
         runs: data.runs,
+        step: workflowStep && {
+          runId: workflowStep.runId,
+          invocationId: workflowStep.invocationId,
+          stepAttempt: workflowStep.attemptCount,
+        },
       })
       return { infra: false, error: '', findings: result.findings }
     } catch (error) {
