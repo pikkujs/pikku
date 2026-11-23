@@ -828,6 +828,15 @@ describe('harness prompts', () => {
     assert.ok(!prompt.includes('Not this'))
     assert.match(prompt, /When every item is built and committed, stop\./)
     assert.match(prompt, /findings come back to you as the next message/)
+    // the page compare runs after it stops, and a failing page comes back with its diff image
+    assert.match(
+      prompt,
+      /the page compare: each page your changes name is photographed and compared with the screenshots of the original/
+    )
+    assert.match(
+      prompt,
+      /a page that differs too much with its numbers, its style and section differences and its diff image/
+    )
     // the only mention of the checks and of done/merge is the one forbidding them
     for (const command of [
       'pikku check',
