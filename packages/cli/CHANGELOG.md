@@ -1,3 +1,25 @@
+## 0.12.216
+
+### Patch Changes
+
+- 68e65e4: An addon in the workspace no longer declares a `namespace`: the main package's `wireAddon({ name, package })` calls choose it, and one addon can be wired more than once. `pikku new addon` stops writing the key.
+- 140d08a: Declared analytics events now ship inside the bundle. The bootstrap imports `analytics/pikku-analytics-meta.gen.ts`, which registers the declared names in runtime state; read them with `getDeclaredAnalyticsEvents()` from `@pikku/core/analytics` instead of `metaService.getAnalyticsMeta()`, which returned `{}` on a Cloudflare Worker or standalone binary and so dropped every event. `analytics/pikku-analytics-meta.gen.json` now holds names only; the declaration details moved to `pikku-analytics-meta-verbose.gen.json`. A Cloudflare worker or standalone build with an analytics sink and no declared event refuses to start (`assertAnalyticsSinksDeclared`).
+- b5df2b3: The changes runner takes host options. An agent start and its prompt context carry the change's `specialist` and the `route` it was started from. `ChangesRunner.refill()` looks for newly ready changes now. `step: true` claims and builds the first changes, claims no more and merges nothing until the host calls `mergeFinished()`; the run ends with `stepped: true` and is not an error. `extraRoutes` lists `pikku changes next` routes (`intake`, `knowledge`, `upgrade`) that are built instead of ending the run. The counters (`counters`: tries, conflict tries, turns, repairs) are readable and settable between runs, and `run()` after an ended run continues from them. Stall and limit messages name the option that set the limit.
+- 00b8645: The missing-dependency check no longer reads a deploy unit's generated `package.json`; it checks the project that owns the unit.
+- 50b2442: A host with a database keeps workflow runs across a restart. `pikku serve`, a generated local CLI and the standalone entry build the SQLite, Postgres or MySQL workflow service and run service on the project's database, and recover stalled runs on start. A project without a database, or one whose workflow tables are not migrated, keeps the in-memory service.
+- a6a1b07: `srcDirectories` is no longer read (the loader accepts and ignores it). A project's packages are found by role markers instead of keys in the root config: the root `pikku.config.json` holds every setting, and a workspace package's own `pikku.config.json` is only a marker. `"main": true` marks the one package that owns the wirings and services (inspected in place by the root); an `"addon"` section with a `"namespace"` marks each addon. The root finds them in its package.json `workspaces`, never in `node_modules`, `.pikku`, `dist` or a nested fixture. Zero or one `main` is allowed (a project with none is its own main); two is an error naming both, and so is a workspace package config with neither marker or with both. `base` and `addons` in the root config are refused with a message pointing at the markers. Root `pikku all` runs each addon in dependency order, then the main package, then assembles the backend SDKs. The main package's config holds only `"main": true` (any other key is refused, pointing at the root), and its pass reads the root's config, so its environments, scenarios, scaffold and db come from the root while it inspects only its own directory into its own `.pikku`; an addon's pass reads its own config; a backend filter can select an addon with `names: ["<namespace>:*"]`. The inspectors take a `baseDir` and PKU368 reports an addon service the project's `SingletonServices` does not provide (a wire service does not count), for every function of the addon. A `wireAddon` is matched to an addon by package: exactly one call may point at each addon, under its `namespace`; a different name or a second call is an error, an addon nothing wires is a warning. The scaffold and `pikku new` files are written in the main package. `pikku validate` checks the root, not the main package, as the project. See docs/MIGRATION.md.
+- 81f2d5c: `pikku all` no longer edits a project's `package.json`. When a generated file imports a package the project does not list, the command fails and names the package, the range this CLI was built against and the `package.json` to add it to.
+- e2614ca: `pikku validate` reports a Vite `/api` dev proxy that does not set `xfwd: true` while the analytics origin lock is on. Without it the proxy sends no `x-forwarded-proto`, the lock assumes `https`, and every analytics beacon from the dev server gets a 403.
+- ccd016e: `pikku validate` reads the analytics scaffold setting from the root `pikku.config.json` only, and types it, which fixes the `@pikku/cli` build.
+- Updated dependencies [140d08a]
+- Updated dependencies [50b2442]
+- Updated dependencies [a6a1b07]
+  - @pikku/core@0.12.162
+  - @pikku/deploy-standalone@0.12.34
+  - @pikku/inspector@0.12.124
+  - @pikku/inspector-go@0.12.19
+  - @pikku/knowledge@0.12.23
+
 ## 0.12.215
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @pikku/deploy-standalone
 
+## 0.12.34
+
+### Patch Changes
+
+- 140d08a: Declared analytics events now ship inside the bundle. The bootstrap imports `analytics/pikku-analytics-meta.gen.ts`, which registers the declared names in runtime state; read them with `getDeclaredAnalyticsEvents()` from `@pikku/core/analytics` instead of `metaService.getAnalyticsMeta()`, which returned `{}` on a Cloudflare Worker or standalone binary and so dropped every event. `analytics/pikku-analytics-meta.gen.json` now holds names only; the declaration details moved to `pikku-analytics-meta-verbose.gen.json`. A Cloudflare worker or standalone build with an analytics sink and no declared event refuses to start (`assertAnalyticsSinksDeclared`).
+- 50b2442: A host with a database keeps workflow runs across a restart. `pikku serve`, a generated local CLI and the standalone entry build the SQLite, Postgres or MySQL workflow service and run service on the project's database, and recover stalled runs on start. A project without a database, or one whose workflow tables are not migrated, keeps the in-memory service.
+- Updated dependencies [140d08a]
+- Updated dependencies [a6a1b07]
+  - @pikku/core@0.12.162
+
 ## 0.12.33
 
 ### Patch Changes
