@@ -1,8 +1,7 @@
 import { existsSync } from 'node:fs'
-import { readFile, rename, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { CLILogger } from '../services/cli-logger.service.js'
 
 type PackageJson = {
   name?: string
@@ -41,35 +40,35 @@ const ownRange = async (name: string): Promise<string | undefined> => {
 }
 
 /**
- * Declares `name` in the package that owns `generatedFile`, when a generated
- * file imports a package that package does not list.
+ * Fails when a generated file imports a package that the package owning it
+ * does not list. The CLI never edits a project's dependencies: the error names
+ * each missing package, the range this CLI was built against, and the
+ * package.json to add it to.
  */
-export const ensurePackageDependency = async (
-  logger: CLILogger,
+export const requirePackageDependencies = async (
   generatedFile: string,
-  name: string
+  names: readonly string[]
 ): Promise<void> => {
   const found = await findPackageJson(dirname(generatedFile))
   if (!found) return
   const { path, pkg } = found
-  if (
-    pkg.dependencies?.[name] ||
-    pkg.devDependencies?.[name] ||
-    pkg.peerDependencies?.[name]
-  ) {
-    return
-  }
-  const range = await ownRange(name)
-  if (!range) return
-  const dependencies = { ...pkg.dependencies, [name]: range }
-  pkg.dependencies = Object.fromEntries(
-    Object.entries(dependencies).sort(([a], [b]) => a.localeCompare(b))
+  const missing = names.filter(
+    (name) =>
+      !pkg.dependencies?.[name] &&
+      !pkg.devDependencies?.[name] &&
+      !pkg.peerDependencies?.[name]
   )
-  const tmp = `${path}.${process.pid}.tmp`
-  await writeFile(tmp, `${JSON.stringify(pkg, null, 2)}\n`)
-  await rename(tmp, path)
-  logger.info(
-    `Added ${name}@${range} to ${relative(process.cwd(), path) || path} — run your package manager's install`
+  if (missing.length === 0) return
+  const lines = await Promise.all(
+    missing.map(async (name) => {
+      const range = await ownRange(name)
+      return `  "${name}": "${range ?? '*'}"`
+    })
+  )
+  throw new Error(
+    `${relative(process.cwd(), generatedFile) || generatedFile} imports ${
+      missing.length === 1 ? 'a package' : 'packages'
+    } that ${relative(process.cwd(), path) || path} does not list. Add to its "dependencies" and run your package manager's install:\n${lines.join('\n')}`
   )
 }
 
