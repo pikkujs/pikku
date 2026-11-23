@@ -2262,6 +2262,7 @@
       "dependencies": {
         "@pikku/core": "workspace:*",
         "@pikku/kysely": "workspace:*",
+        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "kysely": "^0.29.6",
       },
@@ -2277,6 +2278,7 @@
       "dependencies": {
         "@pikku/core": "workspace:*",
         "@pikku/kysely": "workspace:*",
+        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "kysely": "^0.29.6",
       },
@@ -2378,6 +2380,7 @@
       "name": "@pikku/verifiers-dev-platform-contributors",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/kysely-postgres": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
       },
       "devDependencies": {

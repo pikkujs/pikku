@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 type PackageJson = {
@@ -17,7 +17,10 @@ const findPackageJson = async (
   let dir = fromDir
   while (true) {
     const path = join(dir, 'package.json')
-    if (existsSync(path)) {
+    // A deploy unit's package.json is written by the bundler from what the
+    // bundle imports, so the project that owns the unit is the one to check.
+    const generated = dir.split(sep).includes('.deploy')
+    if (!generated && existsSync(path)) {
       let pkg: PackageJson | undefined
       try {
         pkg = JSON.parse(await readFile(path, 'utf-8')) as PackageJson
