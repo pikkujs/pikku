@@ -16,6 +16,12 @@ import {
   type HarnessGate,
 } from './gate.js'
 import { gitIn } from './git.js'
+import {
+  DB_STEP,
+  needsMigrate,
+  runDbStep,
+  type HarnessMigrate,
+} from './migrate.js'
 import { redact } from './redact.js'
 import type { HarnessSteps, StepOptions } from './steps.js'
 import {
@@ -103,6 +109,12 @@ export type RunHarnessOptions = {
   gitBinary?: string
   /** Stops the run: a gate running then is stopped (its tools too) and the run ends as `infra` (`aborted`). */
   signal?: AbortSignal
+  /**
+   * The db step: before the check stage of an attempt whose changeset touches a project's `db/tables.ts`, a
+   * migration, a package.json or the lockfile, `pikku db generate` (its migrations committed by the engine),
+   * `pikku db migrate` and `pikku all` run with this CLI. Without it there is no db step.
+   */
+  migrate?: HarnessMigrate
 }
 
 const STAGES: GateStage[] = ['check', 'fixer', 'gate']
@@ -117,7 +129,11 @@ const validate = (harness: Harness) => {
       throw new Error(
         `Harness ${harness.name} has two gates named ${gate.name}`
       )
-    if (gate.name === CLEAN_TREE || gate.name === AGENT)
+    if (
+      gate.name === CLEAN_TREE ||
+      gate.name === AGENT ||
+      gate.name === DB_STEP
+    )
       throw new Error(`Gate name ${gate.name} is kept for the engine`)
     names.add(gate.name)
     if (!STAGES.includes(stageOf(gate)))
@@ -247,6 +263,7 @@ export const runHarness = async (
     markDone,
     gitBinary,
     signal,
+    migrate,
   } = options
   validate(harness)
   const tries = harness.policy?.tries ?? 3
@@ -377,9 +394,46 @@ export const runHarness = async (
   const gatesIn = (stage: GateStage) =>
     harness.gates.filter((gate) => stageOf(gate) === stage)
 
-  /** The check, fixer and read-only stages of one attempt; returns the failing findings. */
+  /**
+   * The db step of an attempt, when its changeset touches the schema or the dependencies; its findings (a refused
+   * `db generate`) go to the builder in place of the gates'.
+   */
+  const runDb = async (attempt: number): Promise<Finding[]> => {
+    if (!migrate) return []
+    try {
+      const needed = await record(
+        `attempt-${attempt}:db:needed`,
+        { attempt },
+        () => needsMigrate(worktree, base, gitBinary)
+      )
+      if (!needed) return []
+      const { findings } = await record(
+        `attempt-${attempt}:db`,
+        { attempt, gate: DB_STEP },
+        () =>
+          runDbStep({
+            worktree,
+            migrate,
+            shortId,
+            changeId,
+            changeset,
+            ...(gitBinary ? { gitBinary } : {}),
+            ...(signal ? { signal } : {}),
+          }),
+        ({ findings }) => (findings.length ? 'fail' : 'ok')
+      )
+      return findings
+    } catch (error) {
+      if (error instanceof HarnessInfraError) throw infraStop(DB_STEP, error)
+      throw error
+    }
+  }
+
+  /** The db step, then the check, fixer and read-only stages of one attempt; returns the failing findings. */
   const runGates = async (attempt: number): Promise<GateFindings[]> => {
     const failing: GateFindings[] = []
+    const db = await runDb(attempt)
+    if (db.length) return [{ gate: DB_STEP, findings: db }]
 
     for (const gate of gatesIn('check')) {
       const before = await snapshot(

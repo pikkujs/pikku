@@ -840,9 +840,45 @@ describe('harness prompts', () => {
     assert.match(prompt, /claim nothing but the declaration below/)
     assert.match(
       prompt,
-      /If you add a migration \(a file in a `db\/<dir>\/` folder\), declare the tables it creates or alters on this changeset before you stop: `pikku changes claim --group-id cs_abc --change-ids k3x9 --creates <tables> --alters <tables>`\./
+      /`pikku changes claim --group-id cs_abc --change-ids k3x9 --creates <tables> --alters <tables>`/
     )
     assert.ok(!/Do not claim/i.test(prompt))
+    // tables: declared with defineTables, migrations generated and applied by the CLI, never by hand, never a DROP
+    assert.match(
+      prompt,
+      /declare it with `defineTables` in the project's `db\/tables\.ts`/
+    )
+    assert.match(prompt, /run `pikku db generate` .* and `pikku db migrate`/)
+    assert.match(
+      prompt,
+      /Never type a table by hand \(`withTables<\.\.\.>\(\)`\) and never write migration SQL yourself/
+    )
+    assert.match(
+      prompt,
+      /Never pass `--allowDestructive`\. If the change would drop a table or a column, stop and say so/
+    )
+    // a plan: what the claim says, the exact commands with the changeset's id, nothing marked done by the agent
+    assert.match(
+      prompt,
+      /Read what the claim prints\. If it says the changeset needs a plan, plan it before you build/
+    )
+    assert.match(prompt, /pikku-architect skill/)
+    assert.match(prompt, /`pikku knowledge plan set cs_abc <file>`/)
+    assert.match(prompt, /commit the `knowledge\/plans\/cs_abc\.plan\.json`/)
+    assert.match(
+      prompt,
+      /build every item the plan lists, and only those, and run `pikku all`/
+    )
+    assert.match(prompt, /Mark nothing done yourself/)
+    // honest about what happens after it stops
+    assert.match(
+      prompt,
+      /`pikku db migrate` and `pikku all` bring the generated database types up to your tables/
+    )
+    assert.match(
+      prompt,
+      /The changes are marked done for you once every check passes/
+    )
   })
 })
 
