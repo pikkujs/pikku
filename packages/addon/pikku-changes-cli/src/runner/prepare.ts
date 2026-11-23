@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { isDependencyFile } from '../lib/migration-files.js'
 import { otherCli, relinkPikku } from './relink.js'
 import type { LocalCli, RunnerCommands } from './types.js'
 
@@ -176,9 +177,6 @@ export const mainCli = (setup: CheckoutSetup, cwd: string): string | null => {
   return wrong ? `The main checkout, so the run stopped: ${wrong}` : null
 }
 
-/** package.json files and the bun lockfile: a merge that changes one needs an install before the check. */
-export const DEPENDENCY_FILES = /(^|\/)package\.json$|^bun\.lockb?$/
-
 export type MainRefresh = {
   head: string
   /** The HEAD the checkout is now installed at: `head`, or the earlier one when the install failed. */
@@ -209,7 +207,7 @@ export const refreshMain = async (
           '\n'
         )
       : []
-  const installed = changed.some((file) => DEPENDENCY_FILES.test(file))
+  const installed = changed.some(isDependencyFile)
   if (installed) {
     onInstall?.()
     const failed = await setupCheckout(setup, cwd, 'the main checkout')
