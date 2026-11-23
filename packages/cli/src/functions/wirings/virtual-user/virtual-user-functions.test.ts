@@ -343,13 +343,11 @@ describe('pikkuVirtualUserFunctions', () => {
   })
 
   // The generated file imports `@pikku/better-auth`, so the package that owns
-  // it has to list it, or the app fails to build with a missing module.
-  test('declares @pikku/better-auth in the package that owns the generated file', async () => {
+  // it has to list it. The CLI says so and leaves package.json alone.
+  test('fails when the package that owns the generated file does not list @pikku/better-auth', async () => {
     const root = await mkdtemp(join(tmpdir(), 'pikku-virtual-user-dep-'))
-    await writeFile(
-      join(root, 'package.json'),
-      JSON.stringify({ name: 'app', dependencies: {} }, null, 2)
-    )
+    const manifest = JSON.stringify({ name: 'app', dependencies: {} }, null, 2)
+    await writeFile(join(root, 'package.json'), manifest)
     const withFiles = services({ susan: {} })
     withFiles.config.virtualUserFunctionsFile = join(
       root,
@@ -364,22 +362,11 @@ describe('pikkuVirtualUserFunctions', () => {
       'virtual-user.schemas.gen.ts'
     )
 
-    await (pikkuVirtualUserFunctions as any).func(withFiles, undefined, {})
-
-    const declared = JSON.parse(
-      await readFile(join(root, 'package.json'), 'utf-8')
-    ).dependencies['@pikku/better-auth']
-    const shipped = JSON.parse(
-      readFileSync(
-        new URL('../../../../package.json', import.meta.url),
-        'utf-8'
-      )
+    await assert.rejects(
+      (pikkuVirtualUserFunctions as any).func(withFiles, undefined, {}),
+      (e: Error) => e.message.includes('"@pikku/better-auth"')
     )
-    assert.equal(
-      declared,
-      (shipped.dependencies ?? {})['@pikku/better-auth'] ??
-        shipped.devDependencies['@pikku/better-auth']
-    )
+    assert.equal(await readFile(join(root, 'package.json'), 'utf-8'), manifest)
   })
 
   test('the failure says how to fix it', async () => {
