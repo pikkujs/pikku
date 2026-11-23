@@ -32,9 +32,14 @@ export const readStepStarts = async (
   const keys = await content.listFilesByPrefix(BUCKET, `${runId}/`)
   const starts: StepStart[] = []
   for (const key of keys) {
+    // The content service streams a write, so the key can be listed before its
+    // content lands. An empty marker is a write in flight: leave it out and let
+    // the caller's next poll see it whole.
+    const pid = Number(await getText(content, BUCKET, key))
+    if (!(pid > 0)) continue
     starts.push({
       attempt: Number(key.slice(runId.length + 1)),
-      pid: Number(await getText(content, BUCKET, key)),
+      pid,
     })
   }
   return starts.sort((a, b) => a.attempt - b.attempt)
