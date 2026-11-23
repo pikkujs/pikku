@@ -18,6 +18,7 @@ export type Finding = {
 export type InfraKind =
   | 'missing-binary'
   | 'timeout'
+  | 'aborted'
   | 'unparseable'
   | 'exit-code'
   | 'write-outside-allowlist'

@@ -17,6 +17,7 @@ export const oxfmtGate = ({
 }): HarnessGate => ({
   name: 'oxfmt',
   description: 'Formats TypeScript sources with oxfmt',
+  stage: 'fixer',
   failOn: 'medium',
   writes: ['**/*.{ts,tsx}'],
   run: (wire) =>

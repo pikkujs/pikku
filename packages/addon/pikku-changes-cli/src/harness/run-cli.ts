@@ -19,6 +19,8 @@ export type RunCliOptions = {
   /** Exit codes that mean the tool ran. Any other code is accepted only when the parse found something. */
   okCodes?: number[]
   timeoutMs?: number
+  /** Stops the tool (SIGTERM, then SIGKILL after a grace period) and throws an `aborted` infra error. */
+  signal?: AbortSignal
   /** Extra variables on top of the minimal environment the tool gets. */
   env?: Record<string, string>
   /** Characters of cleaned output kept on an infra error. */
@@ -101,6 +103,7 @@ const baseEnv = (): Record<string, string> => {
 
 type Exit = RawOutput & {
   timedOut: boolean
+  aborted: boolean
   spawnError?: NodeJS.ErrnoException
 }
 
@@ -109,7 +112,8 @@ const execute = (
   args: string[],
   cwd: string,
   env: Record<string, string>,
-  timeoutMs: number
+  timeoutMs: number,
+  signal?: AbortSignal
 ): Promise<Exit> =>
   new Promise((done) => {
     const child = spawn(binary, args, {
@@ -126,21 +130,33 @@ const execute = (
     child.stdout.on('data', collect('stdout'))
     child.stderr.on('data', collect('stderr'))
     let timedOut = false
+    let aborted = false
     let killer: NodeJS.Timeout | undefined
-    const timer = setTimeout(() => {
-      timedOut = true
+    const stop = () => {
+      if (killer) return
       child.kill('SIGTERM')
       killer = setTimeout(() => child.kill('SIGKILL'), KILL_GRACE_MS)
+    }
+    const timer = setTimeout(() => {
+      timedOut = true
+      stop()
     }, timeoutMs)
+    const onAbort = () => {
+      aborted = true
+      stop()
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
     let spawnError: NodeJS.ErrnoException | undefined
     child.once('error', (error) => (spawnError = error))
     child.once('close', (code) => {
       clearTimeout(timer)
       clearTimeout(killer)
+      signal?.removeEventListener('abort', onAbort)
       done({
         ...streams,
         code: code ?? -1,
         timedOut,
+        aborted,
         spawnError,
       })
     })
@@ -163,26 +179,35 @@ export const runCli = async (
     okCodes = [0],
     timeoutMs = DEFAULT_TIMEOUT_MS,
     outputLimit,
+    signal,
   } = options
   const name = redact(binary)
+  const abortedError = (output?: string) =>
+    new HarnessInfraError('aborted', `${name} was stopped before it finished`, {
+      output,
+    })
   if (!(await usable(binary)))
     throw new HarnessInfraError(
       'missing-binary',
       `${name} is not an absolute path to an executable file`
     )
+  if (signal?.aborted) throw abortedError()
   const started = performance.now()
   const exit = await execute(
     binary,
     args,
     cwd,
     { ...baseEnv(), ...options.env },
-    timeoutMs
+    timeoutMs,
+    signal
   )
   options.onRun?.({
     durationMs: Math.round(performance.now() - started),
-    exitCode: exit.timedOut || exit.spawnError ? null : exit.code,
+    exitCode:
+      exit.timedOut || exit.aborted || exit.spawnError ? null : exit.code,
   })
   const output = shown(exit, outputLimit)
+  if (exit.aborted) throw abortedError(output)
   if (exit.spawnError)
     throw new HarnessInfraError(
       exit.spawnError.code === 'ENOENT' || exit.spawnError.code === 'EACCES'

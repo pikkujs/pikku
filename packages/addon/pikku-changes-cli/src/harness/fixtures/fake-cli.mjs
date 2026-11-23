@@ -46,6 +46,14 @@ switch (mode) {
   case 'sleep':
     setTimeout(() => process.exit(0), 30_000)
     break
+  case 'write-later':
+    // write-later <file> <ms>: writes the file only if it is still running after <ms>
+    setTimeout(() => {
+      writeFileSync(rest[0], 'late\n')
+      process.stdout.write(JSON.stringify({ diagnostics: [] }))
+      process.exit(0)
+    }, Number(rest[1]))
+    break
   case 'write':
     // write <file> <content>
     writeFileSync(rest[0], rest[1] ?? '')
