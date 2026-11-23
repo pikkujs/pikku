@@ -1,0 +1,1 @@
+{ "diagnostics": [{"message": "`debugger` statement is not allowed","code": "eslint(no-debugger)","severity": "error","url": "https://oxc.rs/docs/guide/usage/linter/rules/eslint/no-debugger.html","help": "Remove the debugger statement","filename": "bad.ts","labels": [{"span": {"offset": 0,"length": 
