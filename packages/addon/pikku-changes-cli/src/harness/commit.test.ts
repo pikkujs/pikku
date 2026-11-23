@@ -170,4 +170,33 @@ describe('commitFixes', () => {
       )
     }
   )
+
+  test(
+    'oxfmt with changedOnly formats the sources the changeset changed and leaves the base branch’s alone',
+    {
+      skip: existsSync(OXFMT) ? false : `no oxfmt at ${OXFMT} (set OXFMT_BIN)`,
+    },
+    async () => {
+      const repo = await throwawayRepo({
+        'src/old.ts': 'export const  old={a:1}\n',
+      })
+      const git = gitIn(repo)
+      await git(['checkout', '-q', '-b', 'changeset/one'])
+      await writeFile(join(repo, 'src/new.ts'), 'export const  b={a:1}\n')
+      await git(['add', '-A'])
+      await git(['commit', '-qm', 'new'])
+      const gate = oxfmtGate({ binary: OXFMT, changedOnly: true })
+      const { findings, check } = await runFixer(gate, repo)
+      assert.deepEqual(findings, [])
+      assert.deepEqual(check, [])
+      assert.equal(
+        (await git(['show', '--name-only', '--format=', 'HEAD'])).trim(),
+        'src/new.ts'
+      )
+      assert.equal(
+        await readFile(join(repo, 'src/old.ts'), 'utf8'),
+        'export const  old={a:1}\n'
+      )
+    }
+  )
 })

@@ -101,8 +101,11 @@ export type PiAgentOptions = {
   /** Absolute path of Pi's cli.js. */
   piCli: string
   changesetId: string
-  /** The workflow run id: a later run starts a new session instead of resuming a stale one. */
-  runId: string
+  /**
+   * The worktree's epoch (`harnessEpoch`): with the changeset id it names the session, so every run in
+   * the same worktree resumes it and a new worktree starts a new one.
+   */
+  epoch: string
   /** The first message of the session (see `harnessBuildPrompt`). */
   changePrompt: string
   /** A model alias, resolved by `resolveModel`. Defaults to `default`. */
@@ -134,6 +137,8 @@ export type PiAgentOptions = {
   /** Stops Pi; the attempt ends `failed`. */
   signal?: AbortSignal
   onEvent?: (event: PiAgentEvent) => void
+  /** Every line Pi prints on stdout (its JSON events), as printed, for a host that shows them live. */
+  onLine?: (line: string) => void
   /** The branch the changeset was cut from: a fresh restart shows the commits since. */
   base?: string
   gitBinary?: string
@@ -158,11 +163,11 @@ const IMAGE =
   /(?:^|[\s(`'"])((?:[\w.-]+\/|\/)*[\w.-]+\.(?:png|jpe?g|gif|webp))(?=$|[\s)`'",:;])/gim
 
 /** Pi's session ids: alphanumeric, `.`, `_`, `-`, starting and ending alphanumeric. */
-export const piSessionId = (changesetId: string, runId: string): string => {
-  const id = `${changesetId}-${runId}`
+export const piSessionId = (changesetId: string, epoch: string): string => {
+  const id = `${changesetId}-${epoch}`
     .replace(/[^A-Za-z0-9._-]/g, '-')
     .replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '')
-  if (!id) throw new Error('A Pi session id needs a changeset id or a run id')
+  if (!id) throw new Error('A Pi session id needs a changeset id or an epoch')
   return id
 }
 
@@ -290,7 +295,7 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
     onEvent,
     signal,
   } = options
-  const sessionId = piSessionId(options.changesetId, options.runId)
+  const sessionId = piSessionId(options.changesetId, options.epoch)
   const alias = options.model ?? 'default'
   const quietMs = options.quietMs ?? QUIET_MS
   const toolMaxMs = options.toolMaxMs ?? TOOL_MAX_MS
@@ -427,6 +432,11 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
 
       createInterface({ input: child.stdout! }).on('line', (line) => {
         lastActivity = Date.now()
+        try {
+          options.onLine?.(line)
+        } catch {
+          // the host's display; the run goes on without it
+        }
         let event: Record<string, any>
         try {
           event = JSON.parse(line)
