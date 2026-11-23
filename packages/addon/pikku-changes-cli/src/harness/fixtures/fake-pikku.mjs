@@ -69,6 +69,12 @@ switch (args) {
   }
   case 'all':
     if (tables.includes('tracked')) writeFileSync('README.md', 'rewritten\n')
+    if (tables.includes('codegen-error')) {
+      process.stderr.write(
+        "[PKU682] Scenario 'x' is listed by no pikkuFeature\n"
+      )
+      process.exit(1)
+    }
     writeFileSync('.pikku/all.gen.ts', '// all\n')
     process.exit(0)
   default:

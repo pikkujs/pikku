@@ -174,6 +174,18 @@ describe('the db step', () => {
     assert.equal(feedback.length, 1)
   })
 
+  test("codegen errors from pikku all in the builder's code are left to the check stage, not infra", async () => {
+    const repo = await project()
+    await gitIn(repo)(['checkout', '-q', '-b', 'changeset/1'])
+    const { agent } = scriptedAgent(repo, [
+      { 'db/tables.ts': 'table:x\ncodegen-error\n' },
+    ])
+    const { result, done } = await harness(repo, agent)
+    assert.equal(result.status, 'done')
+    assert.equal(done, 1)
+    assert.deepEqual(await calls(repo), ['db generate', 'db migrate', 'all'])
+  })
+
   test('a tracked file written by pikku all is infra, not committed', async () => {
     const repo = await project()
     await gitIn(repo)(['checkout', '-q', '-b', 'changeset/1'])
