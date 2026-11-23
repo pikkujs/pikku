@@ -4,9 +4,10 @@ import { gitIn } from '../git.js'
 import type { HarnessItem } from '../prompts.js'
 import { declaredChangeset } from './declared.js'
 
-const MIGRATION = /^db\/[^/]+\//
+/** A migration: a file in `db/<dir>/` at the root or at a package's root (the starter keeps them in packages/functions/db/sqlite/). */
+const MIGRATION = /^(?:(?:packages|apps)\/[^/]+\/)?db\/[^/]+\/[^/]+$/
 
-/** The files under `db/<dir>/` the changeset's commits add against the base branch. */
+/** The migrations the changeset's commits add against the base branch. */
 const addedMigrations = async (worktree: string, base: string) =>
   (
     await gitIn(worktree)([
@@ -14,15 +15,13 @@ const addedMigrations = async (worktree: string, base: string) =>
       '--name-only',
       '--diff-filter=A',
       `${base}...HEAD`,
-      '--',
-      'db',
     ])
   )
     .split('\n')
     .filter((file) => MIGRATION.test(file))
 
 /**
- * A changeset that adds a migration (a file under `db/<dir>/`) has declared the tables it creates or
+ * A changeset that adds a migration (a file in `db/<dir>/` at the root or at a package's root) has declared the tables it creates or
  * alters on its claim, so it is ordered with the other schema changes, as `pikku changes done`
  * requires. The declaration is read from the local changes queue (`storePath`, else the CLI's).
  */

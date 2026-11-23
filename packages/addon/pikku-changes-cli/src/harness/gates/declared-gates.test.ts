@@ -99,6 +99,35 @@ describe('migrationGate', () => {
     } as never)
     assert.deepEqual(await gate.run(h.wire), [])
   })
+
+  test('a migration in a package (the starter keeps them in packages/functions/db/sqlite/) is found too', async () => {
+    const h = await setup(['One'])
+    const gate = migrationGate({
+      changeset: h.group.groupId,
+      items: h.items,
+      storePath: h.store,
+    })
+    await h.commit(
+      {
+        'packages/functions/db/tables.ts': 'export {}\n',
+        'packages/functions/src/db/helpers/a.ts': 'export {}\n',
+      },
+      'feat: #1 table declaration'
+    )
+    assert.deepEqual(await gate.run(h.wire), [])
+    await h.commit(
+      {
+        'packages/functions/db/sqlite/0004-app-tables.sql':
+          'create table guestbook_entry ();\n',
+      },
+      'feat: #1 guestbook table'
+    )
+    const findings = await gate.run(h.wire)
+    assert.deepEqual(
+      findings.map((f) => f.file),
+      ['packages/functions/db/sqlite/0004-app-tables.sql']
+    )
+  })
 })
 
 const plan = (changeset: string) => ({
