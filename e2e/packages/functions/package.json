@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "^4.0.29",
+    "@pikku/addon-changes-cli": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/voice-agents": "workspace:*",
     "ai": "^7.0.143",
