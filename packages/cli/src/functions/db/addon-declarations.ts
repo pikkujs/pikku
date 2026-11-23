@@ -251,6 +251,7 @@ export function mergeDeclarations(
   const tables: TablesDeclaration = { ...app?.schema.tables }
   const annotations: TableAnnotations = { ...app?.annotations }
   const renames = [...(app?.renames ?? [])]
+  const renamedTables = [...(app?.renamedTables ?? [])]
   const owners = new Map<string, string>()
   const attributed: Record<string, string> = {}
   for (const name of Object.keys({
@@ -277,6 +278,7 @@ export function mergeDeclarations(
     Object.assign(tables, declaration.schema.tables)
     Object.assign(annotations, declaration.annotations)
     renames.push(...declaration.renames)
+    renamedTables.push(...declaration.renamedTables)
   }
   const declareOnly = app?.declareOnly ?? {}
   try {
@@ -289,6 +291,7 @@ export function mergeDeclarations(
     declareOnly,
     annotations,
     renames,
+    renamedTables,
     owners: attributed,
   }
 }

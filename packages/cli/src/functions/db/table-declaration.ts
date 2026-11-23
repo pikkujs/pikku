@@ -40,6 +40,8 @@ export interface LoadedDeclaration {
   annotations: TableAnnotations
   /** The columns declared with `renamedFrom`, in physical names. */
   renames: ColumnRename[]
+  /** The tables declared with `renamedFrom`, in physical names. */
+  renamedTables: TableRename[]
   /** Who declared each table (physical name), when it was not `db/tables.ts`: what messages name. */
   owners?: Record<string, string>
 }
@@ -47,6 +49,12 @@ export interface LoadedDeclaration {
 /** A column that is the old one under a new name. */
 export interface ColumnRename {
   table: string
+  from: string
+  to: string
+}
+
+/** A table that is the old one under a new name. */
+export interface TableRename {
   from: string
   to: string
 }
@@ -97,6 +105,7 @@ const TABLE_FIELDS = new Set([
   'unique',
   'indexes',
   'declareOnly',
+  'renamedFrom',
 ])
 
 /**
@@ -199,6 +208,49 @@ export function tableRenames(
   return { renames, problems }
 }
 
+/**
+ * Read the `renamedFrom` of each table (keyed by declared name) into physical
+ * renames, adding what is wrong with them to `problems`. A table is refused when
+ * its old name is not a name, is its own, is still declared, or is the old name
+ * of another table too.
+ */
+function tableRenameProblems(
+  asked: Record<string, unknown>,
+  declared: string[],
+  problems: string[]
+): TableRename[] {
+  const renames: TableRename[] = []
+  const names = new Set(declared.map(snakeCase))
+  const claimedBy = new Map<string, string>()
+  for (const [table, value] of Object.entries(asked)) {
+    if (typeof value !== 'string' || !value) {
+      problems.push(`${table}.renamedFrom must be the table's old name`)
+      continue
+    }
+    const from = snakeCase(value)
+    const to = snakeCase(table)
+    const other = claimedBy.get(from)
+    const badName = identifierProblem(`${table}.renamedFrom`, value)
+    if (badName) {
+      problems.push(badName)
+    } else if (from === to) {
+      problems.push(`${table}.renamedFrom is the table's own name`)
+    } else if (names.has(from)) {
+      problems.push(
+        `${table}.renamedFrom is '${value}', but the declaration still has a table of that name`
+      )
+    } else if (other) {
+      problems.push(
+        `${other} and ${table} are both renamed from '${value}'; a table can only be renamed once`
+      )
+    } else {
+      claimedBy.set(from, table)
+      renames.push({ from, to })
+    }
+  }
+  return renames
+}
+
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -289,6 +341,7 @@ export function parseDeclaration(
   const managed: TablesDeclaration = {}
   const renames: ColumnRename[] = []
   const declareOnly: TablesDeclaration = {}
+  const renamedFrom: Record<string, unknown> = {}
   for (const [table, declaration] of Object.entries(exported)) {
     const badTable = identifierProblem('table', table)
     if (badTable) {
@@ -349,7 +402,21 @@ export function parseDeclaration(
       renames.push(...asked.renames)
     }
     target[table] = declaration as unknown as TablesDeclaration[string]
+    if (declaration.renamedFrom !== undefined) {
+      if (declaration.declareOnly === true) {
+        problems.push(
+          `${table} is declareOnly, so nothing generated renames it: renamedFrom has no effect there`
+        )
+      } else {
+        renamedFrom[table] = declaration.renamedFrom
+      }
+    }
   }
+  const renamedTables = tableRenameProblems(
+    renamedFrom,
+    Object.keys(exported),
+    problems
+  )
   if (problems.length > 0) {
     throw new Error(`${label}: ${problems.join('; ')}.`)
   }
@@ -366,6 +433,7 @@ export function parseDeclaration(
     declareOnly,
     annotations,
     renames,
+    renamedTables,
   }
 }
 
@@ -375,6 +443,7 @@ export const emptyDeclaration = (): LoadedDeclaration => ({
   declareOnly: {},
   annotations: {},
   renames: [],
+  renamedTables: [],
 })
 
 /** Every table a declaration names, managed or not, in physical names. */

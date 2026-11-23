@@ -1,7 +1,7 @@
 ---
 type: decision
 title: An app declares its tables in db/tables.ts and generate adds, renames on request, and drops only with approval
-description: db/tables.ts is a plain TablesDeclaration from @pikku/core/db with annotations on the columns, materialised on a throwaway database and diffed against the migrations; additions are written, renamedFrom renames a column and keeps its rows, drops are written marked pikku:destructive only once approved, a changed type or constraint is refused, declareOnly tables get types and no SQL, and the -- pikku:tables marker tells a removal from a table never declared
+description: db/tables.ts is a plain TablesDeclaration from @pikku/core/db with annotations on the columns, materialised on a throwaway database and diffed against the migrations; additions are written, renamedFrom renames a column or a table and keeps its rows, drops are written marked pikku:destructive only once approved, a changed type or constraint is refused, declareOnly tables get types and no SQL, and the -- pikku:tables marker tells a removal from a table never declared
 tags: cli, db, migrations, safety
 ---
 
@@ -83,7 +83,7 @@ approval is what would be written, then returns it without bodies unless
 approval. Drops are never `CASCADE`, and there is no foreign-key introspection: a
 drop the engine refuses (sqlite on a column a `UNIQUE` key holds; a table another
 table references) fails the rehearsal and is returned as a refusal with the engine's
-words. Table rename is not supported: it is a drop and a create.
+words.
 
 `renamedFrom` on a column (physical old name, `tableRenames` validates it) is applied to
 the covered schema before anything is compared (`applyRenames`), so a rename is not
@@ -91,6 +91,34 @@ seen as a drop plus an add, and it is not destructive: it keeps the rows and nee
 approval. A rename refused on a column in a key, index or reference, because those
 keep the old name in their own. Once applied, the new name is in the migrations and
 the old is not, and `generate` says to delete `renamedFrom`.
+
+`renamedFrom` on a table is the same idea, one level up, and is explicit for the same
+reason: a name that vanished and a name that appeared could be a rename or a drop and a
+create, and only the author knows which, so `generate` never infers one. `applyTableRenames`
+moves the table in the covered schema before anything is compared, and the rename is not
+destructive. It is refused (a plain sentence naming the table) when the migrations hold
+neither table or both, because a rename must never create a table or pick one of two to
+keep; in the declaration when the table is `declareOnly`, when its old name is its own or
+still declared, and when two tables are renamed from one name. A foreign key in another
+table needs nothing: every engine rewrites references to a renamed table, and the
+declaration already says `references: 'new.id'`.
+
+What carries the table's name moves with it so the schema equals a fresh create
+(`table-rename.ts`). The names are read from the SQL the declaration compiles to, not
+re-derived: the index and trigger statements, and the table-level `primary key` and
+`unique` constraints; Postgres adds its default `_pkey`, `_<column>_key` and `_fkey`
+names. A name is only renamed when the migrations hold it under the old table's name and
+not yet under the new one, and a name the author wrote in the declaration is theirs and
+stays. Postgres renames in place (`ALTER INDEX`, `RENAME CONSTRAINT`, `ALTER TRIGGER`),
+MySQL renames indexes and unique keys (`RENAME INDEX`), and SQLite, which cannot rename
+an index or a trigger, drops the old one before the table moves and lets the additions
+file create it under the new name. Generated `CHECK`s hash the table and column, so
+`planConstraints` already replaces them (stale generated name dropped, new one added)
+exactly as it does after a hand rename. Not covered: MySQL names an unnamed foreign key
+`<table>_ibfk_<n>` and has no rename for it, and `db check` does not compare foreign key
+names, so a foreign key declared on the renamed table keeps the old table's name there.
+Declared tables have no sequences or autoincrement state (keys are `key`/`text` or plain
+integers), so there is none to rename.
 
 One file per kind of change, in this order: renames, additions, drops. A renamed
 column's generated checks are dropped in the rename file before the `RENAME COLUMN`

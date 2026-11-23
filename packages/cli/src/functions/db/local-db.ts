@@ -51,6 +51,7 @@ import {
   tablesInSourceOrder,
 } from '@pikku/migrator-sql'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
+import { tableRenameStatements } from './table-rename.js'
 import {
   loadMergedDeclaration,
   type AddonDeclaration,
@@ -68,6 +69,7 @@ import {
   TABLES_FILE,
   type LoadedDeclaration,
   type ColumnRename,
+  type TableRename,
   type UpdateRules,
 } from './table-declaration.js'
 import { SqliteMigrationExecutor } from '@pikku/migrator-sql/sqlite'
@@ -2086,6 +2088,73 @@ const coveredTable = (
     : (covered.get(table) ?? schemaQualifiedMatch(covered, table))
 
 /**
+ * Read a table's `renamedFrom` against what the migrations hold, and move the
+ * table in `covered` to its new name the way the migration will, so what is
+ * compared with it afterwards sees one table that moved rather than a table that
+ * is gone and a new one. Run before the columns' renames, which name the table
+ * as it will be.
+ *
+ * Returns the renames still to be written. A table renamed already (the new name
+ * is there, the old one is not) is said, because the declaration still carries
+ * it. A name that matches nothing, with no table of the new name either, is
+ * refused: a table is never created by a rename that found nothing to rename.
+ */
+function applyTableRenames(
+  renames: TableRename[],
+  covered: SchemaMap,
+  columnIndexes: Map<string, string[]>,
+  schemaName: string | undefined
+): { pending: TableRename[]; notes: string[]; refusals: string[] } {
+  const out = {
+    pending: [] as TableRename[],
+    notes: [] as string[],
+    refusals: [] as string[],
+  }
+  const keyOf = (table: string): string | undefined => {
+    const direct = schemaName ? qualifiedTableKey(schemaName, table) : table
+    if (covered.has(direct)) return direct
+    if (schemaName) return undefined
+    const matches = [...covered.keys()].filter((key) => {
+      const parts = key.split('.')
+      return parts.length === 2 && parts[1] === table
+    })
+    return matches.length === 1 ? matches[0] : undefined
+  }
+  for (const { from, to } of renames) {
+    const oldKey = keyOf(from)
+    const newKey = keyOf(to)
+    if (oldKey && newKey) {
+      out.refusals.push(
+        `${to} is declared renamedFrom '${from}', but the migrations have both tables. ` +
+          `generate cannot tell which one to keep: a person moves the rows and drops one.`
+      )
+    } else if (oldKey) {
+      covered.set(
+        `${oldKey.slice(0, oldKey.length - from.length)}${to}`,
+        covered.get(oldKey)!
+      )
+      covered.delete(oldKey)
+      for (const [key, names] of [...columnIndexes]) {
+        if (key.startsWith(`${from}.`)) {
+          columnIndexes.delete(key)
+          columnIndexes.set(`${to}.${key.slice(from.length + 1)}`, names)
+        }
+      }
+      out.pending.push({ from, to })
+    } else if (newKey) {
+      out.notes.push(
+        `${to} is already renamed from '${from}' by an applied migration: delete renamedFrom from ${TABLES_FILE}.`
+      )
+    } else {
+      out.refusals.push(
+        `${to} is declared renamedFrom '${from}', but the migrations have no table of that name, and none called ${to}.`
+      )
+    }
+  }
+  return out
+}
+
+/**
  * Read `renamedFrom` against what the migrations hold, and rename the columns in
  * `covered` the way the migration will, so everything compared with it afterwards
  * sees a column that moved rather than one that is gone and one that is new.
@@ -2223,6 +2292,69 @@ async function materializeDeclaration(
   })
 }
 
+/** The names of every foreign key constraint the migrations create on postgres. */
+async function coveredForeignKeyNames(
+  resolved: ResolvedDb
+): Promise<Set<string>> {
+  if (resolved.dialect !== 'postgres') return new Set()
+  return withScratchPostgresDatabase(resolved, async (client) => {
+    await migrate(
+      new PostgresMigrationExecutor(client),
+      resolved.migrationsDir,
+      REPLAY
+    )
+    const { rows } = await client.query(
+      `select conname as name from pg_constraint where contype = 'f'`
+    )
+    return new Set(
+      (rows as { name: string }[]).map((row) => row.name.toLowerCase())
+    )
+  })
+}
+
+/** The statements for every table rename still to be written, with what they keep. */
+async function tableRenameStatementsFor(
+  resolved: ResolvedDb,
+  renames: TableRename[],
+  declaration: LoadedDeclaration,
+  desiredSql: string,
+  quote: (name: string) => string,
+  qualify: (table: string) => string,
+  schemaName: string | undefined
+): Promise<{ statements: string[]; kept: Set<string> }> {
+  const out = { statements: [] as string[], kept: new Set<string>() }
+  if (renames.length === 0) return out
+  const existing = {
+    indexes: await coveredIndexes(resolved),
+    triggers: new Set(
+      (await coveredUpdateRules(resolved)).triggers.map((t) => t.name)
+    ),
+    foreignKeys: await coveredForeignKeyNames(resolved),
+  }
+  const declared = Object.fromEntries(
+    Object.entries(declaration.schema.tables).map(([name, table]) => [
+      snakeCase(name),
+      table,
+    ])
+  )
+  for (const rename of renames) {
+    const result = tableRenameStatements({
+      dialect: resolved.dialect,
+      rename,
+      declaration: declared[rename.to]!,
+      desiredSql,
+      existing,
+      quote,
+      qualify,
+      qualifyObject: (name) =>
+        schemaName ? `${quote(schemaName)}.${quote(name)}` : quote(name),
+    })
+    out.statements.push(...result.statements)
+    for (const name of result.kept) out.kept.add(name)
+  }
+  return out
+}
+
 /** What `db generate` would write for a declaration, or why it won't. */
 export interface DeclaredTablesPlan {
   /** Tables the declaration names. */
@@ -2297,13 +2429,19 @@ export async function planDeclaredTables(
     resolved.dialect === 'postgres' ? resolved.schema : undefined
   const columnIndexes = new Map<string, string[]>()
   const covered = await coveredSchema(resolved, columnIndexes)
+  const tablesRenamed = applyTableRenames(
+    declaration.renamedTables,
+    covered,
+    columnIndexes,
+    schemaName
+  )
   const renamed = applyRenames(
     declaration.renames,
     covered,
     columnIndexes,
     schemaName
   )
-  const notes: string[] = renamed.notes
+  const notes: string[] = [...tablesRenamed.notes, ...renamed.notes]
   const materialized = await materializeDeclaration(
     resolved,
     declaration,
@@ -2312,7 +2450,7 @@ export async function planDeclaredTables(
   )
   const { desired, refusals } = materialized
   notes.push(...materialized.notes)
-  refusals.push(...renamed.refusals)
+  refusals.push(...tablesRenamed.refusals, ...renamed.refusals)
   if (!desired) return { tables: [], bodies: [], refusals, destructive: [] }
 
   const tables = [...desired.tables.keys()]
@@ -2412,6 +2550,16 @@ export async function planDeclaredTables(
     resolved.dialect === 'mysql' ? quoteMysqlIdentifier : quoteIdentifier
   const qualify = (table: string) =>
     schemaName ? `${quote(schemaName)}.${quote(table)}` : quote(table)
+
+  const tableRenameSql = await tableRenameStatementsFor(
+    resolved,
+    tablesRenamed.pending,
+    declaration,
+    desired.sql,
+    quote,
+    qualify,
+    schemaName
+  )
 
   for (const { table, columns } of missingColumns) {
     const { columns: definitions, constraints } = tableDefinitions(
@@ -2544,7 +2692,11 @@ export async function planDeclaredTables(
   if (newIndexes.length > 0) {
     const existing = await coveredIndexes(resolved)
     for (const { statement, shape } of newIndexes) {
-      if (shape.kind === 'index' && !existing.has(shape.name)) {
+      if (
+        shape.kind === 'index' &&
+        !existing.has(shape.name) &&
+        !tableRenameSql.kept.has(shape.name)
+      ) {
         statements.push(statement)
       }
     }
@@ -2558,7 +2710,11 @@ export async function planDeclaredTables(
     const { triggers } = await coveredUpdateRules(resolved)
     const existing = new Set(triggers.map((trigger) => trigger.name))
     for (const { statement, shape } of newTriggers) {
-      if (shape.kind === 'trigger' && !existing.has(shape.name)) {
+      if (
+        shape.kind === 'trigger' &&
+        !existing.has(shape.name) &&
+        !tableRenameSql.kept.has(shape.name)
+      ) {
         statements.push(statement)
       }
     }
@@ -2574,11 +2730,14 @@ export async function planDeclaredTables(
   if (refusals.length > 0) return { tables, bodies: [], refusals, destructive }
 
   // One file per kind of change, in the order they can apply: a rename first
-  // (nothing else names the old column by then), additions, drops last.
-  const renames = renamed.pending.flatMap(({ table, from, to }) => [
-    ...(beforeRename.get(`${table}.${to}`) ?? []),
-    `ALTER TABLE ${qualify(table)} RENAME COLUMN ${quote(from)} TO ${quote(to)};`,
-  ])
+  // (nothing else names the old table or column by then), additions, drops last.
+  const renames = [
+    ...tableRenameSql.statements,
+    ...renamed.pending.flatMap(({ table, from, to }) => [
+      ...(beforeRename.get(`${table}.${to}`) ?? []),
+      `ALTER TABLE ${qualify(table)} RENAME COLUMN ${quote(from)} TO ${quote(to)};`,
+    ]),
+  ]
   const bodies = [renames, statements, drops]
     .filter((group) => group.length > 0)
     .map((group) => group.join('\n\n'))

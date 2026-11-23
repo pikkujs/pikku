@@ -304,7 +304,14 @@ pikku db migrate    # applies it and regenerates the types
 - **Rename a column with `renamedFrom`.** `caption: { type: 'text', renamedFrom:
   'label' }` writes `RENAME COLUMN` and keeps the rows. Delete `renamedFrom` once
   the migration is applied. It is refused on a column in a key, an index or a
-  reference. A table rename is a drop and a create.
+  reference.
+- **Rename a table with `renamedFrom`.** `dashboard: { renamedFrom: 'desk',
+  columns: {...} }` writes `ALTER TABLE ... RENAME TO ...` and keeps the rows,
+  renames the indexes, keys and triggers the engine named after the table, and a
+  foreign key in another table follows (declare it `references: 'dashboard.id'`).
+  No drop, no approval. Delete `renamedFrom` once the migration is applied. It is
+  refused when the migrations hold neither table or both, on a `declareOnly`
+  table, and when two tables are renamed from one name.
 - **A foreign key onto a table outside this file** (Better Auth's `user`, a
   hand-written table) is a `references: 'user.id'` with no `type`: it takes the type the
   migrations gave the target. `onDelete` defaults to `restrict`.
