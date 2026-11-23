@@ -53,13 +53,6 @@ export {
   type GateFindings,
 } from './feedback.js'
 export { checkMain, mainFailure, type MainCheckOptions } from './main-check.js'
-export {
-  ENVIRONMENT_CODES,
-  environmentError,
-  environmentOnly,
-  listFindings,
-  splitEnvironment,
-} from './environment.js'
 export { redact } from './redact.js'
 export { migrationGate } from './gates/migration.js'
 export { planGate } from './gates/plan.js'
