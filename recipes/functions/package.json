@@ -30,6 +30,7 @@
     "@pikku/deploy-standalone": "workspace:*",
     "@pikku/fetch": "^0.12.16",
     "@pikku/kysely-node-sqlite": "workspace:*",
+    "@pikku/kysely-sqlite": "workspace:*",
     "@pikku/lambda": "workspace:*",
     "@pikku/modelcontextprotocol": "workspace:*",
     "@pikku/node-http-server": "workspace:*",

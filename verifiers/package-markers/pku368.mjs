@@ -72,7 +72,6 @@ try {
     edit(join(mail, file), (text) =>
       text
         .replaceAll('verifier-ba-tools', 'verifier-ba-mail')
-        .replaceAll('"namespace": "tools"', '"namespace": "mail"')
         .replaceAll('stamper', 'mailer')
     )
   }
@@ -150,7 +149,9 @@ export const mailVia = pikkuSessionlessFunc<{ text: string }, { text: string }>(
     console.error(output2)
     fail('PKU368 does not name tools:stamped and stamper')
   }
-  console.log('✓ a service the main package does not provide is refused (PKU368)')
+  console.log(
+    '✓ a service the main package does not provide is refused (PKU368)'
+  )
 
   // `tools:greet` has unknown services, and `mailer`, which only `mail`
   // takes, is missing. The addon passes are skipped (PIKKU_DEPLOY_CODEGEN) so

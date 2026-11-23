@@ -71,4 +71,20 @@ describe('requirePackageDependencies', () => {
     )
     await requirePackageDependencies(sdk.file, ['@pikku/websocket'])
   })
+
+  test("checks the project that owns a deploy unit, not the unit's generated package.json", async () => {
+    const sdk = await sdkPackage({
+      name: 'sdk',
+      dependencies: { '@pikku/websocket': shippedRange },
+    })
+    const unit = join(sdk.root, '.deploy', 'cloudflare', 'units', 'a')
+    await mkdir(join(unit, '.pikku'), { recursive: true })
+    await writeFile(
+      join(unit, 'package.json'),
+      JSON.stringify({ name: 'a', dependencies: {} })
+    )
+    await requirePackageDependencies(join(unit, '.pikku', 'x.gen.ts'), [
+      '@pikku/websocket',
+    ])
+  })
 })
