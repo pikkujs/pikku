@@ -107,3 +107,32 @@ export const freshRestartPrompt = ({
           'Look at `git status`, build what is still missing, commit, and stop.',
         ]),
   ].join('\n')
+
+/**
+ * The message of a repair turn in the project checkout: finished changesets were merged into the
+ * branch it is on and together they fail its check. The agent fixes and commits; the check runs after it stops.
+ */
+export const harnessRepairPrompt = (failure: string): string =>
+  [
+    'You are repairing this checkout of the project, on the branch the changesets merge into. Changesets other agents built were merged into it one at a time, and the check after the last merge fails with what is below, so no new changeset is started until it passes.',
+    '',
+    'Fix it here, in this checkout, with the smallest change that keeps what each merged changeset was for, and commit the fix on this branch. Leave nothing uncommitted.',
+    'Do not claim, file or mark changes done, and do not run `pikku check`, `pikku changes next` or `pikku changes merge`. The check runs again after you stop; if it still fails, its findings come back to you.',
+    '',
+    '# What the check found',
+    '',
+    failure.trim(),
+  ].join('\n')
+
+/**
+ * The message of a merge-conflict turn: the route `pikku changes next` printed for the conflict,
+ * which names the branch, the files and where to work. The merge itself runs after the agent stops.
+ */
+export const harnessConflictPrompt = (route: HarnessRoute): string =>
+  [
+    harnessRouteIntro(route),
+    '',
+    (route.context ?? '').trim(),
+    '',
+    'Do not claim, file or mark changes done, and do not run `pikku check`, `pikku changes next` or `pikku changes merge`. When the conflict is resolved and committed on that branch, stop: the merge into the branch the changesets merge into is tried again after you stop, and its check runs after it.',
+  ].join('\n')

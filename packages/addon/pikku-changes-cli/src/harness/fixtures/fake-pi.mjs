@@ -8,9 +8,9 @@
 // number is the count of lines already in FAKE_PI_LOG), or from a `[[fake:<mode>]]` marker in the
 // message. Each call appends one JSON line to FAKE_PI_LOG with what it received.
 //
-// A step: { mode, writes?: { path: content }, commit?: subject, usage?: [{ input, output, cost }],
+// A step: { mode, run?: shell command, writes?: { path: content }, commit?: subject, usage?: [{ input, output, cost }],
 //           code?, error?, stderr?, child? }
-//   ok        writes and commits, prints a turn as JSONL, exits 0 (or `code`)
+//   ok        runs `run` (sh -c, in its cwd), writes and commits, prints a turn as JSONL, exits 0 (or `code`)
 //   exit      prints `stderr` and exits `code` (default 1)
 //   error     prints a turn whose last assistant message ends with stopReason error, `error` as its
 //             message, and exits 0, as pi does in json mode
@@ -199,6 +199,13 @@ print({ type: 'agent_start' })
 switch (mode) {
   case 'ok': {
     print({ type: 'tool_execution_start', toolCallId: 't1', toolName: 'write' })
+    if (step.run)
+      await new Promise((done) =>
+        spawn('sh', ['-c', step.run], { cwd, stdio: 'ignore' }).once(
+          'close',
+          done
+        )
+      )
     for (const [path, content] of Object.entries(step.writes ?? {})) {
       mkdirSync(dirname(join(cwd, path)), { recursive: true })
       writeFileSync(join(cwd, path), content)
