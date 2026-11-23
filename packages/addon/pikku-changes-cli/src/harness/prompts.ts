@@ -59,12 +59,40 @@ export const harnessBuildPrompt = ({
     ),
     '',
     'Leave nothing uncommitted. Do not file or mark changes done, claim nothing but the declaration below, and do not run `pikku check`, `pikku changes done`, `pikku changes next` or `pikku changes merge`.',
-    `If you add a migration (a file in a \`db/<dir>/\` folder), declare the tables it creates or alters on this changeset before you stop: \`pikku changes claim --group-id ${changeset.id} --change-ids ${items.map((item) => bare(item.shortId)).join(',')} --creates <tables> --alters <tables>\`.`,
-    'When every item is built and committed, stop. The checks (codegen, the type-check, lint and the others) run after you stop; if they find anything, their findings come back to you as the next message here. Fix them, commit, and stop again.',
+    '',
+    '## Tables',
+    '',
+    ...harnessTablesSteps(changeset.id, items),
+    '',
+    '## A plan',
+    '',
+    ...harnessPlanSteps(changeset.id),
+    '',
+    '## After you stop',
+    '',
+    'When every item is built and committed, stop. Then, without you: `pikku db generate` runs again and any migration it writes is committed for you, `pikku db migrate` and `pikku all` bring the generated database types up to your tables, and the checks run (codegen and the type-check, lint and formatting, the commit trailers, the table declaration, the plan built as written, no hand-typed tables). If they find anything, their findings come back to you as the next message here. Fix them, commit, and stop again. The changes are marked done for you once every check passes.',
     '',
     ...items.map((item) => sectionOf(route, bare(item.shortId))),
   ].join('\n')
 }
+
+/**
+ * How a changeset adds or changes a table: declared with defineTables, migrations generated and applied by the
+ * CLI, the declaration claimed on the changeset. Never a hand-typed table or hand-written SQL, never a DROP.
+ */
+export const harnessTablesSteps = (
+  changeset: string,
+  items: HarnessItem[]
+): string[] => [
+  "If the change needs a table or a column, declare it with `defineTables` in the project's `db/tables.ts` (the pikku-kysely skill), then run `pikku db generate` (it writes the migration under `db/<engine>/`) and `pikku db migrate` (it applies it and regenerates the database types); both are quick, normal steps. Use the generated types in your functions. Never type a table by hand (`withTables<...>()`) and never write migration SQL yourself. Commit the generated migration with your item.",
+  'Never pass `--allowDestructive`. If the change would drop a table or a column, stop and say so in your reply: a person decides.',
+  `Declare the tables your migration creates or alters on this changeset before you build anything else: \`pikku changes claim --group-id ${changeset} --change-ids ${items.map((item) => bare(item.shortId)).join(',')} --creates <tables> --alters <tables>\` (leave out a flag that has no tables).`,
+]
+
+/** What a changeset that needs a plan does about it, in the build prompt and in the plan gate's findings. */
+export const harnessPlanSteps = (changeset: string): string[] => [
+  `Read what the claim prints. If it says the changeset needs a plan, plan it before you build: write the plan with the pikku-architect skill into a file under \`.pikku/\` in this worktree (git ignores it), save it with \`pikku knowledge plan set ${changeset} <file>\`, and commit the \`knowledge/plans/${changeset}.plan.json\` it writes. Then build every item the plan lists, and only those, and run \`pikku all\`; \`pikku knowledge plan progress ${changeset}\` lists what is still missing. Mark nothing done yourself.`,
+]
 
 /** A session picked up again after its process ended early, with no findings to give it. */
 export const CONTINUE_PROMPT =

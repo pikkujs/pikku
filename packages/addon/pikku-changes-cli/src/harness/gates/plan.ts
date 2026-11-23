@@ -8,11 +8,11 @@ import {
 import type { Finding } from '../finding.js'
 import type { HarnessGate } from '../gate.js'
 import { gitIn } from '../git.js'
-import type { HarnessItem } from '../prompts.js'
+import { harnessPlanSteps, type HarnessItem } from '../prompts.js'
 import { declaredChangeset } from './declared.js'
 
 const SET = (groupId: string) =>
-  `Write it with the pikku-architect skill and \`pikku knowledge plan set ${groupId} <file>\`, commit it on this branch, then stop; the checks run after you stop.`
+  `${harnessPlanSteps(groupId).join(' ')} Commit, then stop; the checks run after you stop.`
 
 const finding = (message: string, file?: string): Finding => ({
   ...(file ? { file } : {}),
@@ -90,7 +90,7 @@ export const planGate = ({
           'This is the last change of a planned changeset and the plan is not built yet:',
           ...missing.map((item) => `  missing  ${item}`),
           ...problems.map((item) => `  problem  ${item}`),
-          `Build what is missing (the code is generated again by the checks), or move an item to a later pass with \`pikku knowledge plan defer ${changeset} <item> -r "<why>"\`. \`pikku knowledge plan progress ${changeset}\` says the same. Commit, then stop; the checks run after you stop.`,
+          `Build every item the plan lists that is missing (and nothing it does not list), run \`pikku all\`, and check with \`pikku knowledge plan progress ${changeset}\`. Mark nothing done yourself. Commit, then stop; the checks run after you stop.`,
         ].join('\n'),
         path
       ),
