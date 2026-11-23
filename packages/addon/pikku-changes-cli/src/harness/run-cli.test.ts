@@ -99,6 +99,37 @@ describe('runCli', () => {
     assert.ok(Date.now() - started < 5_000)
   })
 
+  test('an aborted signal stops the tool', async () => {
+    const controller = new AbortController()
+    const runs: { exitCode: number | null }[] = []
+    const started = Date.now()
+    setTimeout(() => controller.abort(), 300)
+    await infra(
+      run('sleep', {
+        signal: controller.signal,
+        onRun: (record) => runs.push(record),
+      }),
+      'aborted'
+    )
+    assert.ok(Date.now() - started < 5_000)
+    assert.deepEqual(
+      runs.map(({ exitCode }) => exitCode),
+      [null]
+    )
+  })
+
+  test('a signal aborted beforehand never starts the tool', async () => {
+    const runs: unknown[] = []
+    await infra(
+      run('clean', {
+        signal: AbortSignal.abort(),
+        onRun: (record) => runs.push(record),
+      }),
+      'aborted'
+    )
+    assert.equal(runs.length, 0)
+  })
+
   test('the tool runs in cwd and does not see the caller environment', async () => {
     process.env.HARNESS_TEST_TOKEN = 'from-parent'
     try {
