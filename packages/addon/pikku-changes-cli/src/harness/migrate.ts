@@ -128,12 +128,16 @@ export const runDbStep = async ({
   signal?: AbortSignal
 }): Promise<DbStepResult> => {
   const timeoutMs = migrate.timeoutMs ?? 600_000
-  const pikku = (args: string[], parse: (raw: RawOutput) => Finding[] = ran) =>
+  const pikku = (
+    args: string[],
+    parse: (raw: RawOutput) => Finding[] = ran,
+    okCodes = [0]
+  ) =>
     runCli(args, {
       cwd: worktree,
       binary: migrate.binary,
       parse,
-      okCodes: [0],
+      okCodes,
       timeoutMs,
       ...(signal ? { signal } : {}),
     })
@@ -176,7 +180,9 @@ export const runDbStep = async ({
   const settled = await snapshotTree(worktree, gitBinary)
   const drift = await pikku(['db', 'migrate'], parseDbMigrate)
   if (drift.length) await pikku(['db', 'reset', '--no-seed'])
-  await pikku(['all'])
+  // Codegen errors in the builder's code (exit 1) are the check stage's to report as findings, from its own run of
+  // the same codegen; only a run that could not finish (a signal, a timeout) is infra here.
+  await pikku(['all'], ran, [0, 1])
   await guardWrites({
     worktree,
     before: settled,
