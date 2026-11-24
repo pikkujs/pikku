@@ -1,5 +1,8 @@
 import type { FunctionsMeta } from '@pikku/core/services'
-import { partitionScenarioFunctionsMeta } from './scenario-partition.js'
+import {
+  isHarnessFunction,
+  partitionScenarioFunctionsMeta,
+} from './scenario-partition.js'
 
 /**
  * The schema names a set of functions validates against.
@@ -65,8 +68,24 @@ export const partitionRequiredSchemas = ({
         !requestedByHand.has(name)
     )
   )
+  // A harness gate's schemas leave the app register like a scenario's, and
+  // are registered nowhere: only a harness engine runs the gate.
+  const harnessOnly = new Set(
+    [
+      ...schemaNamesFor(
+        Object.fromEntries(
+          Object.entries(functionsMeta).filter(([, meta]) =>
+            isHarnessFunction(meta)
+          )
+        ),
+        getUniqueName
+      ),
+    ].filter((name) => !appSchemaNames.has(name) && !requestedByHand.has(name))
+  )
   const appRequired = new Set(
-    [...requiredSchemas].filter((name) => !scenarioOnly.has(name))
+    [...requiredSchemas].filter(
+      (name) => !scenarioOnly.has(name) && !harnessOnly.has(name)
+    )
   )
 
   return { appRequired, scenarioOnly }

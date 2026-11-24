@@ -125,6 +125,7 @@ const (
 	AgentToolNotFound                 Code = "PKU153"
 	AgentToolMissingDescription       Code = "PKU154"
 	AgentScorerNotFound               Code = "PKU155"
+	HarnessGateNotFound               Code = "PKU157"
 	AgentProviderOptionsUnreadable    Code = "PKU156"
 	SchemaAndWiringColocated          Code = "PKU490"
 	SchemaTransformNotSupported       Code = "PKU491"

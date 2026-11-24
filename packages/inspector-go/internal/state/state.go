@@ -55,6 +55,7 @@ type State struct {
 	MCPEndpoints          MCPEndpoints                   `json:"mcpEndpoints"`
 	Agents                Agents                         `json:"agents"`
 	Scorers               Scorers                        `json:"scorers"`
+	Harness               *Harness                       `json:"harness,omitempty"`
 	CLI                   CLI                            `json:"cli"`
 	Nodes                 MetaFiles                      `json:"nodes"`
 	Auth                  Auth                           `json:"auth"`
@@ -212,6 +213,46 @@ type Agents struct {
 type Scorers struct {
 	ScorersMeta Record[*ScorerMeta] `json:"scorersMeta"`
 	Files       Map[FileExport]     `json:"files"`
+}
+
+// Harness holds the bodiless harness declarations, and is absent until one is
+// found. Gates have a body and are functions: their meta carries `harness`,
+// `failOn` and `writes`.
+type Harness struct {
+	HarnessesMeta  Record[*HarnessMeta]          `json:"harnessesMeta"`
+	GateAgentsMeta Record[*HarnessGateAgentMeta] `json:"gateAgentsMeta"`
+}
+
+type HarnessMeta struct {
+	Name         string             `json:"name"`
+	Description  string             `json:"description"`
+	Harness      bool               `json:"harness"`
+	Agent        HarnessAgentMeta   `json:"agent"`
+	Gates        []HarnessGateEntry `json:"gates"`
+	SourceFile   string             `json:"sourceFile"`
+	ExportedName string             `json:"exportedName,omitempty"`
+}
+
+type HarnessAgentMeta struct {
+	Model string `json:"model"`
+}
+
+// HarnessGateEntry is one entry of a harness's gate list; FailOn is set only
+// when the entry overrides the gate's own with `.with({ failOn })`.
+type HarnessGateEntry struct {
+	Name   string `json:"name"`
+	FailOn string `json:"failOn,omitempty"`
+}
+
+type HarnessGateAgentMeta struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Harness      bool   `json:"harness"`
+	Model        string `json:"model"`
+	Goal         string `json:"goal"`
+	FailOn       string `json:"failOn"`
+	SourceFile   string `json:"sourceFile"`
+	ExportedName string `json:"exportedName,omitempty"`
 }
 
 type CLIMeta struct {

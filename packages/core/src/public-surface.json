@@ -325,6 +325,7 @@
     "pikkuAttentionFunc",
     "refreshAttention"
   ],
+  "./harness": ["pikkuHarness", "pikkuHarnessGate", "pikkuHarnessGateAgent"],
   "./analytics": [
     "LoggerAnalyticsService",
     "analyticsSinks",

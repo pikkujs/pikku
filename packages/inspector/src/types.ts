@@ -18,6 +18,7 @@ import type {
 } from '@pikku/core/mcp'
 import type { AgentsMeta } from '@pikku/core/agent'
 import type { ScorerMeta } from '@pikku/core/agent-scorer'
+import type { HarnessesMeta, HarnessGateAgentsMeta } from '@pikku/core/harness'
 import type { CLIMeta } from '@pikku/core/cli'
 import type { CLICommandMeta } from '@pikku/core/cli'
 import type { NodesMeta } from '@pikku/core/node'
@@ -1098,6 +1099,14 @@ export interface InspectorState {
   scorers: {
     scorersMeta: ScorerMeta
     files: Map<string, { path: string; exportedName: string }>
+  }
+  /**
+   * The bodiless harness declarations, absent until one is found. Gates have a
+   * body and are functions: their meta carries `harness`, `failOn` and `writes`.
+   */
+  harness?: {
+    harnessesMeta: HarnessesMeta
+    gateAgentsMeta: HarnessGateAgentsMeta
   }
   cli: {
     meta: CLIMeta

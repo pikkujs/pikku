@@ -147,7 +147,7 @@ func (s *Context) extractFunctionName(callExpr *ast.Node) extractedName {
 	var r extractedName
 	parent := callExpr.Parent
 
-	if ast.IsCallExpression(callExpr) && ast.IsIdentifier(callExpr.Expression()) && scenarioStepWrappers[callExpr.Expression().Text()] {
+	if ast.IsCallExpression(callExpr) && ast.IsIdentifier(callExpr.Expression()) && (scenarioStepWrappers[callExpr.Expression().Text()] || callExpr.Expression().Text() == harnessGateWrapper) {
 		args := callExpr.Arguments()
 		if len(args) > 0 && ast.IsObjectLiteralExpression(args[0]) {
 			for _, p := range args[0].Properties() {
