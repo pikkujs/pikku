@@ -12,7 +12,7 @@ import { collectSnippets } from './collect-snippets.js'
  * `build.sh` generates the two projects it reads — one application, one addon —
  * and points this at them.
  */
-const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> [--frontend <dir>] [--core <dir>] --snippets <dir> [--snippets-extra <dir>] --out <file> [--snippets-out <file>] [--snippets-meta-out <file>]`
+const usage = `Usage: generate-surface-doc --app <dir> --addon <dir> [--frontend <dir>] [--core <dir>] --snippets <dir> [--snippets-extra <dir>[,<dir>...]] --out <file> [--snippets-out <file>] [--snippets-meta-out <file>]`
 
 const parseArgs = (argv: string[]): Record<string, string> => {
   const parsed: Record<string, string> = {}
@@ -67,7 +67,9 @@ const main = async (argv: string[]): Promise<void> => {
     origins
   )
   const extraDir = args['snippets-extra']
-  if (extraDir) await collectSnippets(resolve(extraDir), snippets, origins)
+  for (const dir of extraDir?.split(',') ?? []) {
+    await collectSnippets(resolve(dir), snippets, origins)
+  }
   await addConfigSnippets(resolve(snippetsDir), snippets, origins)
 
   const doc = await buildSurfaceDoc({

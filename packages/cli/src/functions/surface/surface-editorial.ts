@@ -229,6 +229,12 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'Defines an AI agent, the tools it may call and the scorers that judge what it did. `model` is `provider/model` or an alias from the `models` table in pikku.config.json. Threads and messages live in the `agentStorage` service, in-flight run state in `agentRunState`, and `agentRunService` reads them back. `pikku doc agents` is the whole recipe: tools, agent, how it is reached, approval, permissions, guardrails.',
   },
+  attention: {
+    step: 'enhance it',
+    skill: 'pikku-addon-screens',
+    summary:
+      "Says whether one widget of an addon's arranged screens needs a look. `pikkuAttentionFunc({ widget, every, func })` in a `*.attention.ts` file returns nothing when all is fine, or `{ score, verdict?, reason?, impact?, since? }`. Pikku runs it as a workflow on its `every` schedule and on demand, and stores each run per project and widget with `updatedAt`.",
+  },
   scenarios: {
     step: 'test it',
     skill: 'pikku-scenario',

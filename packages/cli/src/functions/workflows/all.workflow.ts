@@ -270,6 +270,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         }),
         workflow.do('Bootstrap MCP types', 'pikkuMCPTypes', null),
         workflow.do('Bootstrap AI agent types', 'pikkuAgentTypes', null),
+        workflow.do('Bootstrap attention types', 'pikkuAttentionTypes', null),
         ...(config.addon
           ? []
           : [
@@ -438,6 +439,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     const typeGenerators: Promise<any>[] = [
       workflow.do('Trigger types', 'pikkuTriggerTypes', {}),
       workflow.do('AI agent types', 'pikkuAgentTypes', null),
+      workflow.do('Attention types', 'pikkuAttentionTypes', null),
       workflow.do('HTTP types', 'pikkuHTTPTypes', null),
       workflow.do('Channel types', 'pikkuChannelTypes', null),
       workflow.do('MCP types', 'pikkuMCPTypes', null),
@@ -491,6 +493,18 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     if (scorers) {
       allImports.push(config.scorerWiringMetaFile, config.scorerWiringsFile)
+    }
+
+    const attentionFuncs = await workflow.do(
+      'Attention funcs',
+      'pikkuAttentionFuncs',
+      null
+    )
+    if (attentionFuncs) {
+      allImports.push(
+        config.attentionFuncMetaFile,
+        config.attentionFuncWiringsFile
+      )
     }
 
     // Scaffold and definition generators are all independent

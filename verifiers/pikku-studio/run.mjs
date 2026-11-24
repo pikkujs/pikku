@@ -44,6 +44,13 @@
  *      missing from en.json  → PKU358
  *  17. a go: action without a
  *      leading slash         → PKU345
+ *  18. *.attention.ts        → pikkuAttentionFunc is discovered: the meta
+ *                              carries widget, every and the schedule
+ *  19. an attention widget on
+ *      a screen or slot the
+ *      plugin does not arrange → an error naming the plugin, and the build
+ *                              fails
+ *  20. an every of seconds   → an error, and the build fails
  */
 import { spawnSync } from 'node:child_process'
 import {
@@ -479,6 +486,73 @@ if ('files' in JSON.parse(readFileSync(packagePath, 'utf8'))) {
 }
 withSkill(() => expectPasses('a package with no "files" failed'))
 console.log('✓ no PKU366 when "files" covers agents/ and skills/, or is absent')
+
+const attentionMetaPath = join(
+  here,
+  '.pikku',
+  'addon',
+  'attention',
+  'pikku-attention-func-wirings-meta.gen.json'
+)
+const attentionFile = join(here, 'src', 'health.attention.ts')
+if (!existsSync(attentionMetaPath))
+  fail(`pikku all wrote no attention funcs meta at ${attentionMetaPath}`)
+const attentionMeta = JSON.parse(readFileSync(attentionMetaPath, 'utf8'))
+const attention = attentionMeta.attentionFuncsMeta?.['health.verdict']
+if (
+  !attention ||
+  attention.every !== '1m' ||
+  attention.schedule !== '*/1 * * * *' ||
+  attention.exportedName !== 'healthAttention'
+) {
+  fail(
+    'the attention funcs meta does not carry the declaration',
+    JSON.stringify(attentionMeta, null, 2)
+  )
+}
+console.log(
+  '✓ a *.attention.ts func is discovered with its widget and schedule'
+)
+
+const expectAttentionError = (pattern, message) => {
+  const result = pikkuAll()
+  if (result.status === 0 || !pattern.test(result.output)) {
+    fail(message, result.output)
+  }
+}
+withFile(
+  attentionFile,
+  (source) => source.replace("'health.verdict'", "'wellness.verdict'"),
+  () =>
+    expectAttentionError(
+      /'wellness' is not one of .*arranged screens \(health\)/,
+      'an attention widget on an unknown screen did not fail the build, naming the plugin'
+    )
+)
+withFile(
+  attentionFile,
+  (source) => source.replace("'health.verdict'", "'health.nothing'"),
+  () =>
+    expectAttentionError(
+      /screen 'health' of .* has no slot 'nothing'/,
+      'an attention widget on an unknown slot did not fail the build'
+    )
+)
+console.log(
+  "✓ an attention widget outside the plugin's arranged screens fails the build"
+)
+withFile(
+  attentionFile,
+  (source) => source.replace("every: '1m'", "every: '30s'"),
+  () =>
+    expectAttentionError(
+      /every: '30s'/,
+      'an attention every of seconds did not fail the build'
+    )
+)
+console.log(
+  '✓ an attention every the schedule cannot be built from fails the build'
+)
 
 const scaffoldRoot = mkdtempSync(join(tmpdir(), 'pikku-studio-scaffold-'))
 try {
