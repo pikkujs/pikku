@@ -63,6 +63,7 @@
     "./mcp": "./dist/wirings/mcp/index.js",
     "./agent": "./dist/wirings/agent/index.js",
     "./agent-scorer": "./dist/wirings/agent-scorer/index.js",
+    "./attention-func": "./dist/wirings/attention-func/index.js",
     "./analytics": "./dist/analytics/index.js",
     "./gateway": "./dist/wirings/gateway/index.js",
     "./cli": "./dist/wirings/cli/index.js",

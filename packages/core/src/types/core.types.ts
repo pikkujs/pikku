@@ -49,6 +49,7 @@ import type {
 import type { AgentRunnerService } from '../services/agent-runner-service.js'
 import type { AIEmbeddingService } from '../services/ai-embedding-service.js'
 import type { AgentRunStateService } from '../services/agent-run-state-service.js'
+import type { AttentionResultStore } from '../wirings/attention-func/attention-func.types.js'
 import type { AgentRunService } from '../wirings/agent/agent.types.js'
 import type { MiddlewareMetadata } from '../middleware/middleware.types.js'
 import type { PermissionMetadata } from '../function/function-meta.types.js'
@@ -218,6 +219,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   agentRunner?: AgentRunnerService
   aiEmbedding?: AIEmbeddingService
   agentRunState?: AgentRunStateService
+  /** Where attention funcs keep their latest result per project and widget. Defaults to an in-process store. */
+  attentionResults?: AttentionResultStore
   agentRunService?: AgentRunService
   workflowRunService?: WorkflowRunService
   credentialService?: CredentialService
