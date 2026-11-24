@@ -15,6 +15,7 @@ import type { ChannelMeta } from '@pikku/core/channel'
 import type { HTTPWiringsMeta } from '@pikku/core/http'
 import type { GatewaysMeta } from '@pikku/core/gateway'
 import {
+  isHarnessFunction,
   isScenarioFunction,
   withoutScenarios,
   withoutScenarioWorkflows,
@@ -643,7 +644,8 @@ export function analyzeDeployment(
   // place a scenario or step id can still arrive from raw state. A gateway that
   // lists one would depend on a unit that was never emitted.
   const deployableFuncId = (funcId: string) =>
-    !isScenarioFunction(state.functions.meta[funcId])
+    !isScenarioFunction(state.functions.meta[funcId]) &&
+    !isHarnessFunction(state.functions.meta[funcId])
   // A tool naming a surface is served by that surface's endpoint and by no
   // other, so it is grouped out of the default set here rather than pooled
   // with it. Resources and prompts have no surface of their own yet.

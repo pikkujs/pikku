@@ -22,6 +22,7 @@ const functionsMeta = {
   // ride into the app meta (and so into every deployed bundle) alongside the
   // steps that were correctly held back.
   loginScenario: { pikkuFuncId: 'loginScenario', scenario: true },
+  checkGate: { pikkuFuncId: 'checkGate', harness: true, failOn: 'high' },
 } as any
 
 describe('partitioning scenario steps out of the app surface', () => {
@@ -69,6 +70,19 @@ describe('partitioning scenario steps out of the app surface', () => {
     )
     assert.deepEqual([...app.keys()], ['createTodo'])
     assert.deepEqual([...scenario.keys()], ['loginScenario'])
+  })
+
+  test('a harness gate is registered on neither side', () => {
+    const files = new Map([fn('createTodo'), fn('checkGate')] as any)
+    const { app, scenario } = partitionScenarioFunctions(
+      files as any,
+      functionsMeta
+    )
+    assert.deepEqual([...app.keys()], ['createTodo'])
+    assert.equal(scenario.size, 0)
+    const metaSplit = partitionScenarioFunctionsMeta(functionsMeta)
+    assert.equal('checkGate' in metaSplit.app, false)
+    assert.equal('checkGate' in metaSplit.scenario, false)
   })
 
   test('withoutScenarios leaves only application functions', () => {

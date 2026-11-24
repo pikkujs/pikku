@@ -163,6 +163,12 @@ pub struct FunctionMetaFields {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scenario: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub harness: Option<bool>,
+    #[serde(default, skip_serializing_if = "is_empty_str")]
+    pub fail_on: String,
+    #[serde(default, skip_serializing_if = "is_empty_vec")]
+    pub writes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mcp: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub readonly: Option<bool>,
@@ -897,6 +903,52 @@ pub struct AgentMeta {
 
 /// A scorers.scorersMeta entry. `sample_rate` and `requires_reference` are raw
 /// for the same reason as `AgentMeta::max_steps`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+#[serde(rename_all = "camelCase")]
+pub struct HarnessMeta {
+    pub name: String,
+    pub description: String,
+    pub harness: bool,
+    pub agent: HarnessAgentMeta,
+    pub gates: Vec<HarnessGateEntry>,
+    pub source_file: String,
+    #[serde(default, skip_serializing_if = "is_empty_str")]
+    pub exported_name: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HarnessAgentMeta {
+    pub model: String,
+}
+
+/// One entry of a harness's gate list; `fail_on` is set only when the entry
+/// overrides the gate's own with `.with({ failOn })`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+#[serde(rename_all = "camelCase")]
+pub struct HarnessGateEntry {
+    pub name: String,
+    #[serde(default, skip_serializing_if = "is_empty_str")]
+    pub fail_on: String,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+#[serde(rename_all = "camelCase")]
+pub struct HarnessGateAgentMeta {
+    pub name: String,
+    pub description: String,
+    pub harness: bool,
+    pub model: String,
+    pub goal: String,
+    pub fail_on: String,
+    pub source_file: String,
+    #[serde(default, skip_serializing_if = "is_empty_str")]
+    pub exported_name: String,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 #[serde(rename_all = "camelCase")]

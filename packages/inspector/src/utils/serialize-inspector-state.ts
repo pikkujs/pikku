@@ -316,6 +316,7 @@ export interface SerializableInspectorState {
   diagnostics: InspectorDiagnostic[]
   addonFunctions: InspectorState['addonFunctions']
   remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
+  harness?: InspectorState['harness']
   studio?: InspectorState['studio']
   addonStudio?: InspectorState['addonStudio']
   contributorsManifest?: InspectorState['contributorsManifest']
@@ -561,6 +562,7 @@ export function serializeInspectorState(
     diagnostics: state.diagnostics,
     addonFunctions: state.addonFunctions,
     remoteAddonFunctions: state.remoteAddonFunctions,
+    harness: state.harness,
     studio: state.studio,
     addonStudio: state.addonStudio,
     contributorsManifest: state.contributorsManifest,
@@ -809,6 +811,7 @@ export function deserializeInspectorState(
     ...(data.remoteAddonFunctions
       ? { remoteAddonFunctions: data.remoteAddonFunctions }
       : {}),
+    ...(data.harness ? { harness: data.harness } : {}),
     studio: data.studio,
     addonStudio: data.addonStudio,
     contributorsManifest: data.contributorsManifest,

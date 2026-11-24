@@ -6,6 +6,7 @@ import type {
   ScenarioSurface,
 } from '../wirings/workflow/scenario-step.types.js'
 import type { CommonWireMeta } from '../types/core.types.js'
+import type { HarnessSeverity } from '../wirings/harness/harness.types.js'
 
 /**
  * The services a function's body uses, as read by the inspector. `optimized`
@@ -93,6 +94,15 @@ export type FunctionRuntimeMeta = {
    * so it is held back from the app bootstrap and from every deployed unit.
    */
   scenario?: boolean
+  /**
+   * A `pikkuHarnessGate`. Only a harness engine runs it, so it is held back
+   * from the app bootstrap and from every deployed unit.
+   */
+  harness?: boolean
+  /** Harness gates only: the lowest finding severity that fails the gate. */
+  failOn?: HarnessSeverity
+  /** Harness gates only: the paths the gate may change. */
+  writes?: string[]
   mcp?: boolean
   readonly?: boolean
   /** Declared with `mock: true`: input and output, no body yet. */

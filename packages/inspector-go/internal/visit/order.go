@@ -64,5 +64,6 @@ const (
 	OrderAddFeature           = 210
 	OrderAddAgent             = 220
 	OrderAddAgentScorer       = 230
+	OrderAddHarness           = 235
 	OrderCheckDisabledRefs    = 240
 )

@@ -23,6 +23,16 @@ export const isScenarioFunction = (
   meta: FunctionsMeta[string] | undefined
 ): boolean => isScenarioStep(meta) || meta?.scenario === true
 
+/**
+ * A harness gate, marked `harness` rather than `scenario`: it is run by a
+ * harness engine, not by `pikku scenario run`, so it goes to neither side of
+ * the scenario split. The partitions below leave it out of the app; whatever
+ * runs a harness reads its gates from the generated harness meta.
+ */
+export const isHarnessFunction = (
+  meta: FunctionsMeta[string] | undefined
+): boolean => meta?.harness === true
+
 export const partitionScenarioFunctions = (
   files: WiringFileMap,
   functionsMeta: FunctionsMeta
@@ -32,7 +42,7 @@ export const partitionScenarioFunctions = (
   for (const [name, entry] of files) {
     if (isScenarioFunction(functionsMeta[name])) {
       scenario.set(name, entry)
-    } else {
+    } else if (!isHarnessFunction(functionsMeta[name])) {
       app.set(name, entry)
     }
   }
@@ -47,7 +57,7 @@ export const partitionScenarioFunctionsMeta = (
   for (const [name, meta] of Object.entries(functionsMeta)) {
     if (isScenarioFunction(meta)) {
       scenario[name] = meta
-    } else {
+    } else if (!isHarnessFunction(meta)) {
       app[name] = meta
     }
   }
@@ -93,14 +103,15 @@ export const partitionScenarioWorkflows = (
 }
 
 /**
- * Drop every scenario and step from a function meta map. The deploy analyzer
- * reads inspector state rather than the partitioned codegen output, so it needs
- * the same split applied before it decides what a deployment contains.
+ * Drop every scenario, step and harness gate from a function meta map. The
+ * deploy analyzer reads inspector state rather than the partitioned codegen
+ * output, so it needs the same split applied before it decides what a
+ * deployment contains.
  */
 export const withoutScenarios = (functionsMeta: FunctionsMeta): FunctionsMeta =>
   Object.fromEntries(
     Object.entries(functionsMeta).filter(
-      ([, meta]) => !isScenarioFunction(meta)
+      ([, meta]) => !isScenarioFunction(meta) && !isHarnessFunction(meta)
     )
   )
 

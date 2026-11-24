@@ -233,6 +233,10 @@ export interface PikkuCLICoreOutputFiles {
   scorerWiringMetaJsonFile: string
   scorerNamesDeclarationFile: string
 
+  // Harness
+  harnessMetaJsonFile: string
+  harnessGateNamesFile: string
+
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string

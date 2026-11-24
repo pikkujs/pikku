@@ -123,6 +123,8 @@ export const findUnusedFunctions = (
   for (const [pikkuFuncId, meta] of Object.entries(state.functions.meta)) {
     if (meta.functionType !== 'user') continue
     if (meta.funcWrapper && RUN_BY_SCENARIOS.has(meta.funcWrapper)) continue
+    // A harness gate is run by a harness engine, never wired or called.
+    if (meta.harness) continue
     if (meta.expose || meta.remote || meta.mcp) continue
     // A generated scaffold is rewritten on every run, so `disabled` cannot be
     // added to it; what it leaves unwired it leaves for the project to wire.

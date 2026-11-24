@@ -13,6 +13,7 @@ const meta = (
       outputs?: string[]
       scenario?: boolean
       scenarioStep?: boolean
+      harness?: boolean
     }
   >
 ): FunctionsMeta =>
@@ -24,6 +25,21 @@ const meta = (
   ) as unknown as FunctionsMeta
 
 describe('partitionRequiredSchemas', () => {
+  test('a schema only a harness gate needs is in neither register', () => {
+    const { appRequired, scenarioOnly } = partitionRequiredSchemas({
+      functionsMeta: meta({
+        createTodo: { inputs: ['TodoInput'] },
+        checkGate: { outputs: ['CheckGateOutput'], harness: true },
+        sharedGate: { inputs: ['TodoInput'], harness: true },
+      }),
+      requiredSchemas: new Set(['TodoInput', 'CheckGateOutput']),
+      getUniqueName: identity,
+    })
+
+    assert.deepEqual([...appRequired], ['TodoInput'])
+    assert.deepEqual([...scenarioOnly], [])
+  })
+
   test('a schema only a scenario or a step needs is kept out of the app register', () => {
     const { appRequired, scenarioOnly } = partitionRequiredSchemas({
       functionsMeta: meta({
