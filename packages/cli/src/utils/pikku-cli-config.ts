@@ -1468,6 +1468,21 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Harness — its own directory: nothing in it is part of the app.
+    const harnessDir = join(result.outDir, 'harness')
+    if (!result.harnessMetaJsonFile) {
+      result.harnessMetaJsonFile = join(
+        harnessDir,
+        'pikku-harness-meta.gen.json'
+      )
+    }
+    if (!result.harnessGateNamesFile) {
+      result.harnessGateNamesFile = join(
+        harnessDir,
+        'pikku-harness-gate-names.gen.ts'
+      )
+    }
+
     // CLI
     if (!result.cliWiringsFile) {
       result.cliWiringsFile = join(cliDir, 'pikku-cli-wirings.gen.ts')

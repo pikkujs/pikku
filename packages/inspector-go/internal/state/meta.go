@@ -84,6 +84,9 @@ type FunctionMeta struct {
 	WebhookReceive                  *bool          `json:"webhookReceive,omitempty"`
 	Subscribe                       *SubscribeMeta `json:"subscribe,omitempty"`
 	Scenario                        *bool          `json:"scenario,omitempty"`
+	Harness                         *bool          `json:"harness,omitempty"`
+	FailOn                          string         `json:"failOn,omitempty"`
+	Writes                          []string       `json:"writes,omitempty"`
 	MCP                             *bool          `json:"mcp,omitempty"`
 	Readonly                        *bool          `json:"readonly,omitempty"`
 	Mock                            *bool          `json:"mock,omitempty"`

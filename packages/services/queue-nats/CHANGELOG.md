@@ -1,5 +1,14 @@
 # @pikku/queue-nats
 
+## 0.12.7
+
+### Patch Changes
+
+- 45f53ec: `@pikku/queue-nats` no longer rebuilds through the workspace `pikku` CLI when it is published. The rebuild raced `@pikku/cli`'s own publish build and failed the release.
+- Updated dependencies [140d08a]
+- Updated dependencies [a6a1b07]
+  - @pikku/core@0.12.162
+
 ## 0.12.6
 
 ### Patch Changes

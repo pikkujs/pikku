@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
-import { ensurePackageDependency } from '../../../utils/ensure-package-dependency.js'
+import { requirePackageDependencies } from '../../../utils/require-package-dependencies.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { join } from 'node:path'
@@ -152,11 +152,9 @@ export const pikkuCLIEntry = pikkuSessionlessFunc<void, boolean>({
             )
 
             await writeFileInDir(logger, channelClientFile, clientCode)
-            await ensurePackageDependency(
-              logger,
-              channelClientFile,
-              '@pikku/websocket'
-            )
+            await requirePackageDependencies(channelClientFile, [
+              '@pikku/websocket',
+            ])
             logger.debug(
               `Serialized CLI channel client for ${programName}: ${channelClientFile}`
             )

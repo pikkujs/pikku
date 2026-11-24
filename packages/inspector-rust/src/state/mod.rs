@@ -65,6 +65,9 @@ pub struct State {
     pub mcp_endpoints: McpEndpoints,
     pub agents: Agents,
     pub scorers: Scorers,
+    /// Absent until a pikkuHarness or pikkuHarnessGateAgent is found.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub harness: Option<Harness>,
     pub cli: Cli,
     pub nodes: MetaFiles,
     pub auth: Auth,
@@ -253,6 +256,15 @@ pub struct Agents {
 pub struct Scorers {
     pub scorers_meta: Record<ScorerMeta>,
     pub files: Map<FileExport>,
+}
+
+/// The bodiless harness declarations. Gates have a body and are functions:
+/// their meta carries `harness`, `failOn` and `writes`.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Harness {
+    pub harnesses_meta: Record<HarnessMeta>,
+    pub gate_agents_meta: Record<HarnessGateAgentMeta>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]

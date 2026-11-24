@@ -30,7 +30,7 @@ var pikkuFuncPattern = regexp.MustCompile(`(?i)pikku.*func`)
 
 func isFunctionHelper(name string) bool {
 	_, isScenarioStep := scenarioStepKinds[name]
-	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || name == "pikkuSubscribeFunc" || isScenarioStep
+	return pikkuFuncPattern.MatchString(name) || name == "pikkuScenario" || name == "pikkuWebhookReceive" || name == "pikkuSubscribeFunc" || name == harnessGateWrapper || isScenarioStep
 }
 
 func isWorkflowWrapper(name string) bool {
@@ -80,6 +80,12 @@ func (s *Context) addFunctions(node *ast.Node) {
 
 	fn := s.extractFunctionName(node)
 	pikkuFuncId, name := fn.pikkuFuncId, fn.name
+	var gate *harnessGateConfig
+	if wrapper == harnessGateWrapper {
+		if gate = s.readHarnessGate(args[0], fn.explicitName); gate == nil {
+			return
+		}
+	}
 	if pikkuFuncId == "" {
 		return
 	}
@@ -295,6 +301,10 @@ func (s *Context) addFunctions(node *ast.Node) {
 	handler := handlerNode
 	if resolvedFunc != nil && tsutil.IsFunctionLike(resolvedFunc) {
 		handler = resolvedFunc
+	}
+	if gate != nil && (mock || !tsutil.IsFunctionLike(handler)) {
+		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("Harness gate '%s' has no body. A gate is decided by code, so it needs a `func` that returns its findings.", name))
+		return
 	}
 	if mock {
 		// A mocked function has no body: its types come from `input`/`output`
@@ -532,6 +542,11 @@ func (s *Context) addFunctions(node *ast.Node) {
 		m.Subscribe = &state.SubscribeMeta{TopicPattern: pattern}
 	}
 	m.Scenario = tsutil.OrNil(isScenario)
+	if gate != nil {
+		m.Harness = tsutil.BoolPtr(true)
+		m.FailOn = gate.failOn
+		m.Writes = gate.writes
+	}
 	m.MCP = tsutil.OrNil(mcpEnabled)
 	if scenarioStepKind != "" && scenarioStepKind != "virtualUser" {
 		m.ScenarioStepKind = scenarioStepKind
@@ -607,7 +622,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		wrapper: wrapper, pikkuFuncId: pikkuFuncId, name: name,
 		exportedName: fn.exportedName, explicitName: fn.explicitName,
 		sourceFile: sourceFile, expose: expose, remote: m.Remote != nil && *m.Remote,
-		mcpEnabled: mcpEnabled, notRpc: isScenarioStep || isWebhookReceive || isSubscribe, versioned: version != 0,
+		mcpEnabled: mcpEnabled, notRpc: isScenarioStep || isWebhookReceive || isSubscribe || gate != nil, versioned: version != 0,
 	})
 }
 

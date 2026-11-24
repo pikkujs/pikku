@@ -233,6 +233,10 @@ export interface PikkuCLICoreOutputFiles {
   scorerWiringMetaJsonFile: string
   scorerNamesDeclarationFile: string
 
+  // Harness
+  harnessMetaJsonFile: string
+  harnessGateNamesFile: string
+
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string
@@ -512,11 +516,6 @@ export type PikkuCLIInput = {
    * with none is its own main.
    */
   main?: boolean
-  /**
-   * In an addon package of a workspace: the namespace the main package wires
-   * it under. Required there, and unique among the workspace's addons.
-   */
-  namespace?: string
   ignoreFiles?: string[]
   packageMappings: Record<string, string>
   addon?:
@@ -1323,7 +1322,6 @@ export type PikkuCLIConfig = Omit<PikkuCLIInput, 'environments'> &
       entry: string
       dir: string
       name: string
-      namespace: string
     }>
     /** The package marked `main`. Undefined when the project is its own main. */
     mainPackage?: { entry: string; dir: string; name: string }

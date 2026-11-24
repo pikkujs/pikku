@@ -23,7 +23,7 @@ pub fn register(r: &mut Registry) {
 const AGENT_PLATFORM_SERVICES: [&str; 4] = ["agentStorage", "agentRunState", "agentRunService", "agentRunner"];
 
 /// `(getPropertyValue(obj, k) as string | null) || ''`, as written into a string field.
-fn truthy_string(v: &PropValue) -> String {
+pub(super) fn truthy_string(v: &PropValue) -> String {
     if !v.truthy() {
         return String::new();
     }

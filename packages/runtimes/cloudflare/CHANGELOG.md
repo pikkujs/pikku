@@ -1,3 +1,12 @@
+## 0.12.35
+
+### Patch Changes
+
+- 140d08a: Declared analytics events now ship inside the bundle. The bootstrap imports `analytics/pikku-analytics-meta.gen.ts`, which registers the declared names in runtime state; read them with `getDeclaredAnalyticsEvents()` from `@pikku/core/analytics` instead of `metaService.getAnalyticsMeta()`, which returned `{}` on a Cloudflare Worker or standalone binary and so dropped every event. `analytics/pikku-analytics-meta.gen.json` now holds names only; the declaration details moved to `pikku-analytics-meta-verbose.gen.json`. A Cloudflare worker or standalone build with an analytics sink and no declared event refuses to start (`assertAnalyticsSinksDeclared`).
+- Updated dependencies [140d08a]
+- Updated dependencies [a6a1b07]
+  - @pikku/core@0.12.162
+
 ## 0.12.34
 
 ### Patch Changes

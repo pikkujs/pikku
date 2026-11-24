@@ -99,6 +99,14 @@ The bootstrap now imports `analytics/pikku-analytics-meta.gen.ts`, which registe
 
 **Find the code:** search for `getAnalyticsMeta` and `pikku-analytics-meta.gen.json`.
 
+### `pikku all` no longer edits `package.json`
+
+**What changed:** `pikku all` used to add `@pikku/kysely-sqlite`, `@pikku/better-auth`, `@pikku/websocket` and the other packages a generated file imports to your `package.json`, and print "run your package manager's install". It now fails instead, naming each missing package and the range this CLI was built against.
+
+**What to write instead:** add the listed packages to the `dependencies` of the package that owns the generated file, run your package manager's install, then run `pikku all` again.
+
+**How to find it:** run `pikku all` and read the error; it names the `package.json`.
+
 ### `pikku db generate` writes drops and renames
 
 A column or a table that left `db/tables.ts` used to be refused. It is now written as `DROP COLUMN` / `DROP TABLE` behind a `-- pikku:destructive` line, once a person approves: `generate` asks on a terminal, and elsewhere refuses until `pikku db generate --allowDestructive` is given. `pikku db migrate` stops on the marked file until it is given `--allowDestructive` too. Only a table a previous `generate` recorded is dropped. A drop the engine will not do (a column a `UNIQUE` key holds on sqlite, a table another table references) is still refused, with the engine's reason; there is no `CASCADE`.
@@ -152,7 +160,7 @@ What an app sees:
 **What:** a project inspects its own directory, so `srcDirectories` is no longer read: the loader accepts the key and ignores it. Packages are found by a role marker in each package's own `pikku.config.json`, and the root config has no key that lists them. `base` and `addons` are refused by the loader, with a message that points here.
 
 - The root `pikku.config.json` holds every setting: `db`, `scaffold`, `scenarios`, `environments`, `backends`, `frontends`, `clientFiles`, `packageMappings`, `deploy`, `release`, `emailTemplatesDir` and the rest. `db/`, `emails/` and `surface.pikku.json` stay in the root.
-- A package's config is only a role. `"main": true` marks the one package that owns all wirings and services, with a `package.json` name. An addon has the `"addon"` section it already had, plus a top-level `"namespace"` that the main package wires it under (lowercase letter first, then lowercase alphanumerics, hyphens or underscores; unique among the addons).
+- A package's config is only a role. `"main": true` marks the one package that owns all wirings and services, with a `package.json` name. An addon has the `"addon"` section it already had and nothing else: the name it is called by is whatever each `wireAddon({ name, package })` in the main package chooses, and it may be wired more than once.
 - Discovery reads the `workspaces` of the root `package.json` (the array or the `packages` object, with `!` negations) and takes the members that have a `pikku.config.json`. `node_modules`, `dist`, `build`, `.pikku`, dot-directories and any directory the workspace does not list are never members, so a nested fixture stays out. A member that resolves outside the project root, through a symlink or otherwise, is an error.
 - Zero or one `main` is allowed. A project with no marker is its own main, as before. Two or more is an error naming both. A workspace package config with neither marker is an error, because a package that expected to be built and was silently skipped is worse than a refusal; one with both is an error too. A config that is itself marked (`main` or `addon`) is a package, not a root, and finds nothing.
 - The project skips `node_modules`, `dist`, `build`, `.pikku`, dot-directories and any directory with its own `pikku.config.json`, except its main package. Source that sat outside the project directory, or that the old list excluded by omission, is now inspected unless `ignoreFiles` names it.
@@ -179,7 +187,7 @@ What an app sees:
 { "main": true }
 
 // packages/billing/pikku.config.json: an addon
-{ "addon": { "displayName": "Billing" }, "namespace": "billing" }
+{ "addon": { "displayName": "Billing" } }
 
 // packages/functions/src/wirings.ts
 wireAddon({ name: 'billing', package: '@acme/billing', expose: true })

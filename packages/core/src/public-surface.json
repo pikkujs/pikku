@@ -315,6 +315,7 @@
     "pikkuAgentScorer",
     "wireAgentScorerQueueWorkers"
   ],
+  "./harness": ["pikkuHarness", "pikkuHarnessGate", "pikkuHarnessGateAgent"],
   "./analytics": [
     "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",

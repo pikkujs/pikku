@@ -29,6 +29,7 @@ pub mod contracts;
 pub mod convert_dsl_to_graph;
 pub mod files_and_methods;
 pub mod finalize_workflows;
+pub mod harness;
 pub mod hash;
 pub mod jsval;
 pub mod openapi;
@@ -116,6 +117,7 @@ pub fn run(log: &mut Logger, st: &mut State, opts: &Options) -> Result<(), Strin
         agents::validate_permission_data_used(log, st, opts);
         agents::validate_sessionless_permissions(log, st);
         agents::validate_agent_scorer_references(log, st);
+        harness::validate_harness_gate_references(log, st);
         addons::validate_secret_overrides(log, st);
         addons::validate_variable_overrides(log, st);
         addons::validate_credential_overrides(log, st);

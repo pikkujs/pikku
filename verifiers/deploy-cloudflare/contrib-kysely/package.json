@@ -14,6 +14,9 @@
     "src",
     ".pikku"
   ],
+  "dependencies": {
+    "@pikku/kysely-sqlite": "workspace:*"
+  },
   "scripts": {
     "pikku": "pikku all"
   },

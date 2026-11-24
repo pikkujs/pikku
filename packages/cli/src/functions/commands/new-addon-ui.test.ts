@@ -75,7 +75,7 @@ test('package.json carries the studio block Studio links the addon by', () => {
   })
 })
 
-test('the emitted pikku.config.json loads, under the addon name as its namespace', async () => {
+test('the emitted pikku.config.json loads and names no namespace', async () => {
   const files = addonUiFiles('invoice-tracker')
   const dir = await mkdtemp(join(tmpdir(), 'pikku-new-addon-ui-'))
   try {
@@ -87,10 +87,7 @@ test('the emitted pikku.config.json loads, under the addon name as its namespace
       join(dir, 'pikku.config.json'),
       []
     )
-    assert.equal(
-      (loaded as { namespace?: string }).namespace,
-      'invoice-tracker'
-    )
+    assert.equal((loaded as { namespace?: string }).namespace, undefined)
   } finally {
     await rm(dir, { recursive: true, force: true })
   }

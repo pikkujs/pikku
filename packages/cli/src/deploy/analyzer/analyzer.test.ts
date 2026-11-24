@@ -149,6 +149,31 @@ describe('analyzeDeployment - scenarios are not deployable', () => {
     )
   })
 
+  test('a harness gate gets no unit and no MCP gateway', () => {
+    const state = stateWithScenario()
+    ;(state.functions.meta as any).checkGate = {
+      pikkuFuncId: 'checkGate',
+      name: 'checkGate',
+      harness: true,
+      failOn: 'high',
+    }
+    ;(state as any).mcpEndpoints = {
+      toolsMeta: {
+        checkGate: { pikkuFuncId: 'checkGate', name: 'checkGate' },
+      },
+      resourcesMeta: {},
+      promptsMeta: {},
+    }
+
+    const manifest = analyzeDeployment(state, { projectId: 'test' })
+
+    assert.deepEqual(
+      manifest.units.map((u) => u.name),
+      ['create-todo']
+    )
+    assert.deepEqual(manifest.mcpEndpoints, [])
+  })
+
   test('an application MCP tool still gets its gateway alongside a scenario', () => {
     const state = stateWithScenario()
     ;(state as any).mcpEndpoints = {
