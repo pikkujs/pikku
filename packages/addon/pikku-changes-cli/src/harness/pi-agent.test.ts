@@ -13,7 +13,6 @@ import {
 import { delimiter, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { after, describe, test } from 'node:test'
-import { runHarness } from './engine.js'
 import { HarnessInfraError } from './finding.js'
 import { gitIn } from './git.js'
 import { oxlintGate } from './gates/oxlint.js'
@@ -37,9 +36,12 @@ import {
   providerRefusalOf,
   retryAfterMsOf,
 } from './provider-limit.js'
-import { InMemorySteps } from './steps.js'
-import { REPO_ROOT, removeThrowaways, throwawayRepo } from './test-support.js'
-import { workflowSteps } from './workflow-steps.js'
+import {
+  REPO_ROOT,
+  harnessRun,
+  removeThrowaways,
+  throwawayRepo,
+} from './test-support.js'
 
 after(removeThrowaways)
 
@@ -573,7 +575,7 @@ describe('provider limits', () => {
     let head = ''
     const sessionsBefore: string[] = []
     const agent = t.agent
-    const result = await runHarness({
+    const result = await harnessRun({
       worktree: t.repo,
       base: 'main',
       shortId: 'k3x9',
@@ -587,7 +589,6 @@ describe('provider limits', () => {
         }
         return agent(input)
       },
-      steps: workflowSteps(jsonWorkflow()),
       markDone: async () => {
         doneCalls++
       },
@@ -699,7 +700,7 @@ describe('provider auth', () => {
       },
     ])
     let doneCalls = 0
-    const result = await runHarness({
+    const result = await harnessRun({
       worktree: t.repo,
       base: 'main',
       shortId: 'k3x9',
@@ -707,7 +708,6 @@ describe('provider auth', () => {
       changeset: 'cs_abc',
       harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
       agent: t.agent,
-      steps: workflowSteps(jsonWorkflow()),
       markDone: async () => {
         doneCalls++
       },
@@ -776,7 +776,7 @@ describe('provider quota', () => {
 
   test('the run ends infra with provider-quota from the agent', async () => {
     const t = await setup([{ mode: 'error', error: OUT_OF_EXTRA_USAGE }])
-    const result = await runHarness({
+    const result = await harnessRun({
       worktree: t.repo,
       base: 'main',
       shortId: 'k3x9',
@@ -784,7 +784,6 @@ describe('provider quota', () => {
       changeset: 'cs_abc',
       harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
       agent: t.agent,
-      steps: workflowSteps(jsonWorkflow()),
       markDone: async () => undefined,
     })
     assert.equal(result.status, 'infra')
@@ -793,17 +792,6 @@ describe('provider quota', () => {
     assert.equal(result.infra?.retryAfterMs, undefined)
   })
 })
-
-/** A workflow that stores each step's result as JSON, as a durable one would. */
-const jsonWorkflow = () => {
-  const stored = new Map<string, string>()
-  return {
-    do: async <T>(name: string, fn: () => Promise<T>) => {
-      if (!stored.has(name)) stored.set(name, JSON.stringify(await fn()))
-      return JSON.parse(stored.get(name)!) as T
-    },
-  }
-}
 
 describe('harness prompts', () => {
   test('the build prompt says to commit per item and stop, and runs no checks', () => {
@@ -910,7 +898,7 @@ describe('piAgent with runHarness', () => {
       { ...LINT_CONFIG, 'src/a.ts': 'export const a = 0\n' }
     )
     let doneCalls = 0
-    const result = await runHarness({
+    const result = await harnessRun({
       worktree: t.repo,
       base: 'main',
       shortId: 'k3x9',
@@ -918,7 +906,6 @@ describe('piAgent with runHarness', () => {
       changeset: 'cs_abc',
       harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
       agent: t.agent,
-      steps: new InMemorySteps(),
       markDone: async () => {
         doneCalls++
       },

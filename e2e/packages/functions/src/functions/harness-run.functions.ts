@@ -12,6 +12,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   gitIn,
+  HARNESS_RUN,
   oxfmtGate,
   oxlintGate,
   parseOxfmtWrite,
@@ -30,6 +31,32 @@ const FAKE_CLI = join(
   REPO_ROOT,
   'packages/addon/pikku-changes-cli/src/harness/fixtures/fake-cli.mjs'
 )
+
+/** What `harnessRunWorkflow` builds. */
+export type HarnessRunInput = {
+  /** Absolute path of the worktree the changeset is built in. */
+  worktree: string
+  base: string
+  changeId: string
+  shortId: string
+  changeset: string
+  tries: number
+  /** The scripted agent's script, with any holds: `lint-then-clean+hold-agent-2`. */
+  script: string
+}
+
+export const harnessStartRun = pikkuSessionlessFunc<
+  HarnessRunInput,
+  { runId: string }
+>({
+  description:
+    'Start harnessRunWorkflow as a harness run: its wire is flagged harness and the caller owns it',
+  expose: true,
+  func: async (_services, data, { rpc, pikkuUserId }) =>
+    rpc.startWorkflow('harnessRunWorkflow', data, {
+      wire: { type: HARNESS_RUN, ...(pikkuUserId ? { pikkuUserId } : {}) },
+    }),
+})
 
 /** Absolute paths the run uses, fixed once per run so a replay uses the same ones. */
 export type HarnessTools = {

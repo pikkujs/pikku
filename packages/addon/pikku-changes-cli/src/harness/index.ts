@@ -1,8 +1,6 @@
 export * from './engine.js'
 export * from './finding.js'
 export * from './gate.js'
-export * from './steps.js'
-export * from './workflow-steps.js'
 export { commitFixes, fixCommitMessage } from './commit.js'
 export { harnessEpoch } from './epoch.js'
 export { checkoutBranch, DETACHED_HEAD, harnessBase } from './base.js'
@@ -69,8 +67,6 @@ export { COMPARE_OUT, pagesGate } from './gates/pages.js'
 export {
   pageFindings,
   readCompareReport,
-  readWaivers,
   type CompareReport,
   type PageNeed,
-  type PageWaiver,
 } from './gates/pages-parser.js'
