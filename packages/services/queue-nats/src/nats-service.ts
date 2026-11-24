@@ -1,5 +1,7 @@
-import type { Contributor } from '@pikku/core/contributors'
+import { pikkuService } from '@pikku/core/pikku-service'
 import type { Logger } from '@pikku/core/services'
+import type { NatsQueueService } from './nats-queue-service.js'
+import type { NatsSchedulerService } from './nats-scheduler-service.js'
 import { NatsServiceFactory } from './nats-service-factory.js'
 import type { NatsServiceFactoryOptions } from './nats-service-factory.js'
 
@@ -23,11 +25,22 @@ type NatsFactory = Pick<
   | 'close'
 >
 
-/** What the lifecycle hooks use of the factory, under no `stop` name. */
-type NatsLifecycle = {
+/**
+ * What the server lifecycle uses of the factory. Its `stop()` drains the
+ * workers, then closes the connection, so `stopSingletonServices` ends NATS
+ * cleanly without the factory itself being a singleton service.
+ */
+export type NatsLifecycle = {
   registerQueues(logger: Logger | undefined): Promise<unknown>
   drainWorkers(timeoutMs: number): Promise<string[]>
   close(): Promise<void>
+  stop(): Promise<void>
+}
+
+export interface NatsProvided {
+  queueService: NatsQueueService
+  schedulerService: NatsSchedulerService
+  natsLifecycle: NatsLifecycle
 }
 
 type Env = Record<string, string | undefined>
@@ -36,7 +49,7 @@ const required = (env: Env, name: string, why: string): string => {
   const value = env[name]
   if (!value) {
     throw new Error(
-      `The nats contributor needs ${name} (${why}). It never falls back to the in-memory queue: set ${name}, or remove 'nats' from wireContributors.`
+      `The nats service needs ${name} (${why}). It never falls back to the in-memory queue: set ${name}, or remove 'nats' from wireAddon({ services }).`
     )
   }
   return value
@@ -91,49 +104,56 @@ export const natsOptionsFromEnv = (env: Env): NatsServiceFactoryOptions => {
   }
 }
 
-export const createNatsDeploy = (
+/**
+ * Connects to the stage's stream and provides the queue and scheduler over it.
+ * Fails before connecting when the environment is incomplete.
+ */
+export const connectNats = async (
+  logger: Logger | undefined,
+  env: Env,
   newFactory: (options: NatsServiceFactoryOptions) => NatsFactory = (options) =>
     new NatsServiceFactory(options)
-): Contributor => ({
-  provides: ['queueService', 'schedulerService', 'natsLifecycle'],
-  // Only a standalone deploy, and only when it uses the queue. The platform
-  // names the provider on every deploy build and never on `pikku dev`, so the
-  // same app built for Cloudflare, or run in dev, keeps its in-memory queue
-  // even though its source opts in. Absent the provider, this is not applied.
-  when: (platform) => platform.needsQueue && platform.provider === 'standalone',
-  async run(services, env) {
-    const factory = newFactory(natsOptionsFromEnv(env))
-    await factory.init()
-    services.queueService = factory.getQueueService()
-    services.schedulerService = factory.getSchedulerService()
-    // Not the factory itself: it has a `stop()`, and the server stops every
-    // singleton service that has one before the stop hooks run. That would
-    // close the workers before `onServerStop` could drain them.
-    const lifecycle: NatsLifecycle = {
-      registerQueues: (logger) =>
-        factory.getQueueWorkers().registerQueues(logger),
-      drainWorkers: (timeoutMs) => factory.drainWorkers(timeoutMs),
-      close: () => factory.close(),
-    }
-    services.natsLifecycle = lifecycle
-  },
+): Promise<NatsProvided> => {
+  const factory = newFactory(natsOptionsFromEnv(env))
+  await factory.init()
+  const natsLifecycle: NatsLifecycle = {
+    registerQueues: (registerLogger) =>
+      factory.getQueueWorkers().registerQueues(registerLogger),
+    drainWorkers: (timeoutMs) => factory.drainWorkers(timeoutMs),
+    close: () => factory.close(),
+    async stop() {
+      try {
+        const unfinished = await factory.drainWorkers(DRAIN_TIMEOUT_MS)
+        if (unfinished.length > 0) {
+          logger?.warn(
+            `NATS queues still had jobs in flight after ${DRAIN_TIMEOUT_MS}ms: ${unfinished.join(', ')}. They are redelivered after ack_wait.`
+          )
+        }
+      } finally {
+        await factory.close()
+      }
+    },
+  }
+  return {
+    queueService: factory.getQueueService(),
+    schedulerService: factory.getSchedulerService(),
+    natsLifecycle,
+  }
+}
+
+/**
+ * Standalone deploys put a stage on its own JetStream stream. Deploy only, so
+ * `pikku dev` keeps its in-memory queue; an app opts in with
+ * `wireAddon({ services: ['nats'] })` and builds it for a target that runs the
+ * server lifecycle.
+ *
+ * Queue workers register once the server starts. Teardown is
+ * `natsLifecycle.stop()`.
+ */
+export const nats = pikkuService({
+  deploy: async ({ logger }, env) => connectNats(logger, env),
   async onServerStart(services) {
     const lifecycle: NatsLifecycle = services.natsLifecycle
     await lifecycle.registerQueues(services.logger)
   },
-  async onServerStop(services) {
-    const lifecycle: NatsLifecycle = services.natsLifecycle
-    try {
-      const unfinished = await lifecycle.drainWorkers(DRAIN_TIMEOUT_MS)
-      if (unfinished.length > 0) {
-        services.logger?.warn(
-          `NATS queues still had jobs in flight after ${DRAIN_TIMEOUT_MS}ms: ${unfinished.join(', ')}. They are redelivered after ack_wait.`
-        )
-      }
-    } finally {
-      await lifecycle.close()
-    }
-  },
 })
-
-export const natsDeploy = createNatsDeploy()

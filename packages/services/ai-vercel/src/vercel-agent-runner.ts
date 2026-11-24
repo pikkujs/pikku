@@ -271,8 +271,8 @@ function isCallable(value: unknown): value is (...args: any[]) => any {
 }
 
 export class VercelAgentRunner implements AgentRunnerService {
-  /** Public + mutable so deploy-time contributors (e.g. cloud's AI Gateway
-   *  contributor) can replace providers post-construction with ones that
+  /** Public + mutable so a deploy-time `pikkuService` (e.g. cloud's AI Gateway
+   *  service) can replace providers post-construction with ones that
    *  route through a gateway / inject headers. */
   public providers: Record<string, any>
 

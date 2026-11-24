@@ -1,8 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createNatsDeploy, natsOptionsFromEnv } from './nats-contributor.js'
-import { contributors } from './contributors.js'
+import { connectNats, nats, natsOptionsFromEnv } from './nats-service.js'
 
 const env = {
   NATS_URL: 'nats://localhost:4222',
@@ -38,38 +37,15 @@ const fakeFactory = () => {
   return { calls, factory, queueService, schedulerService }
 }
 
-describe('nats contributor registration', () => {
-  test('is registered as a deploy-only contributor named nats', () => {
-    assert.deepEqual(Object.keys(contributors), ['nats'])
-    assert.equal(contributors.nats.deploy.run.length > 0, true)
-    assert.equal('dev' in contributors.nats, false)
+describe('nats service registration', () => {
+  test('is a deploy-only service: pikku dev never gets it', () => {
+    assert.equal(typeof nats.deploy, 'function')
+    assert.equal('dev' in nats, false)
+    assert.equal('common' in nats, false)
   })
 
-  test('is selected only for a standalone deploy that uses the queue', () => {
-    const nats = createNatsDeploy()
-    const platform = (needsQueue: boolean, provider?: string) =>
-      ({ serviceNames: [], needsQueue, provider }) as never
-    assert.equal(nats.when!(platform(true, 'standalone')), true)
-    assert.equal(nats.when!(platform(false, 'standalone')), false)
-  })
-
-  test('is not selected for another provider, or when the provider is unknown', () => {
-    const nats = createNatsDeploy()
-    for (const provider of ['cloudflare', 'aws', 'azure', '', undefined]) {
-      assert.equal(
-        nats.when!({ serviceNames: [], needsQueue: true, provider } as never),
-        false,
-        String(provider)
-      )
-    }
-  })
-
-  test('replaces the baseline queue and scheduler and exposes the factory', () => {
-    assert.deepEqual(createNatsDeploy().provides, [
-      'queueService',
-      'schedulerService',
-      'natsLifecycle',
-    ])
+  test('registers the queue workers once the server starts', () => {
+    assert.equal(typeof nats.onServerStart, 'function')
   })
 })
 
@@ -144,47 +120,30 @@ describe('natsOptionsFromEnv', () => {
   })
 })
 
-type Lifecycle = {
-  registerQueues(logger: unknown): Promise<unknown>
-  drainWorkers(timeoutMs: number): Promise<string[]>
-  close(): Promise<void>
-}
-type Services = {
-  queueService?: unknown
-  schedulerService?: unknown
-  natsLifecycle?: Lifecycle
-}
+const connect = (fake: ReturnType<typeof fakeFactory>, logger?: unknown) =>
+  connectNats(logger as never, env, () => fake.factory)
 
-const lifecycleOf = async (fake: ReturnType<typeof fakeFactory>) => {
-  const services: Services = {}
-  await createNatsDeploy(() => fake.factory).run(services, env, {}, {} as never)
-  fake.calls.length = 0
-  return services.natsLifecycle as Lifecycle
-}
-
-describe('nats contributor lifecycle', () => {
-  test('run connects, then provides queue, scheduler and the factory', async () => {
+describe('nats service lifecycle', () => {
+  test('connecting initialises, then provides queue, scheduler and the lifecycle', async () => {
     const fake = fakeFactory()
-    const services: Services = {}
-    await createNatsDeploy(() => fake.factory).run(
-      services,
-      env,
-      {},
-      {} as never
-    )
+    const provided = await connect(fake)
     assert.deepEqual(fake.calls, ['init'])
-    assert.equal(services.queueService, fake.queueService)
-    assert.equal(services.schedulerService, fake.schedulerService)
-    // The server stops every singleton service that has stop(); this one must
-    // not, or the workers close before onServerStop can drain them.
-    assert.equal('stop' in services.natsLifecycle!, false)
-    assert.equal(services.natsLifecycle!.drainWorkers.length, 1)
+    assert.equal(provided.queueService, fake.queueService as never)
+    assert.equal(provided.schedulerService, fake.schedulerService as never)
+    assert.equal(typeof provided.natsLifecycle.stop, 'function')
   })
 
-  test('run fails before connecting when the env is incomplete', async () => {
+  test('the deploy variant builds from the logger and env', async () => {
+    await assert.rejects(
+      nats.deploy!({ logger: undefined } as never, {}),
+      /needs NATS_URL/
+    )
+  })
+
+  test('fails before connecting when the env is incomplete', async () => {
     const fake = fakeFactory()
     await assert.rejects(
-      createNatsDeploy(() => fake.factory).run({}, {}, {}, {} as never),
+      connectNats(undefined, {}, () => fake.factory),
       /needs NATS_URL/
     )
     assert.deepEqual(fake.calls, [])
@@ -192,37 +151,33 @@ describe('nats contributor lifecycle', () => {
 
   test('onServerStart registers the queue workers with the app logger', async () => {
     const fake = fakeFactory()
-    await createNatsDeploy(() => fake.factory).onServerStart!({
-      natsLifecycle: await lifecycleOf(fake),
-      logger: 'logger',
-    })
+    const { natsLifecycle } = await connect(fake)
+    fake.calls.length = 0
+    await nats.onServerStart!({ natsLifecycle, logger: 'logger' })
     assert.deepEqual(fake.calls, ['registerQueues:true'])
   })
 
-  test('onServerStop drains the workers, warns about stragglers, then closes', async () => {
+  test('stop drains the workers, warns about stragglers, then closes', async () => {
     const fake = fakeFactory()
     const warnings: string[] = []
-    await createNatsDeploy(() => fake.factory).onServerStop!({
-      natsLifecycle: await lifecycleOf(fake),
-      logger: { warn: (m: string) => warnings.push(m) },
+    const { natsLifecycle } = await connect(fake, {
+      warn: (m: string) => warnings.push(m),
     })
+    fake.calls.length = 0
+    await natsLifecycle.stop()
     assert.deepEqual(fake.calls, ['drain:10000', 'close'])
     assert.match(warnings[0]!, /slow/)
   })
 
-  test('onServerStop still closes the connection when the drain throws', async () => {
+  test('stop still closes the connection when the drain throws', async () => {
     const fake = fakeFactory()
     fake.factory.drainWorkers = async () => {
       fake.calls.push('drain')
       throw new Error('drain failed')
     }
-    await assert.rejects(
-      createNatsDeploy(() => fake.factory).onServerStop!({
-        natsLifecycle: await lifecycleOf(fake),
-        logger: { warn: () => {} },
-      }),
-      /drain failed/
-    )
+    const { natsLifecycle } = await connect(fake)
+    fake.calls.length = 0
+    await assert.rejects(natsLifecycle.stop(), /drain failed/)
     assert.deepEqual(fake.calls, ['drain', 'close'])
   })
 })

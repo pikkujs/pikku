@@ -36,18 +36,15 @@ export type {
 } from './provider-adapter.js'
 
 export type {
-  ContributorSupport,
-  DeployContributorPlatform,
   EntryPlatformServices,
-  FrameworkContributor,
-} from './contributor-support.js'
+  ServiceSupport,
+} from './service-support.js'
 export {
   appLifecycleVariable,
   composedLifecycleLines,
   composedLifecycleVariable,
   entryLifecycleVariable,
-  withDeployUnit,
-} from './contributor-support.js'
+} from './service-support.js'
 
 export { nodeBuiltinExternals } from './node-builtins.js'
 

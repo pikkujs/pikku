@@ -1,28 +1,24 @@
 ---
 type: decision
-title: Standalone deploys get NATS from a contributor opted in with wireContributors, not an addon
-description: '@pikku/queue-nats publishes a standalone-only deploy contributor that puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
-tags: [nats, contributors, deploy, standalone, permissions]
+title: Standalone deploys get NATS from a service opted in with wireAddon
+description: '@pikku/queue-nats publishes a deploy-only service that puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
+tags: [nats, pikku-service, deploy, standalone, permissions]
 ---
 
-# Standalone deploys get NATS from a contributor opted in with wireContributors
+# Standalone deploys get NATS from a service opted in with wireAddon
 
-`@pikku/queue-nats` is not an addon: it has no functions. It publishes one
-contributor, `nats` (deploy variant only, so `pikku dev` never gets it),
-through `pikku.config.json` and a `pikku all` build step (exports
-`./.pikku/contributors/*`). An app opts in at build time with
-`wireContributors({ package: '@pikku/queue-nats', contributors: ['nats'] })`.
+`@pikku/queue-nats` has no functions. It publishes one `pikkuService`, `nats`
+(deploy variant only, so `pikku dev` never gets it), through a `pikku all` build
+step (exports `./.pikku/services/*`). An app opts in at build time with
+`wireAddon({ name: 'nats', package: '@pikku/queue-nats', services: ['nats'] })`.
 
 ## Which build applies it
 
-Source opt-in is not enough, because the cloud builds the same source. The
-deploy build puts the provider's name on the contributor platform
-(`platform.provider`; unset in dev), and the contributor's `when` is
-`needsQueue && provider === 'standalone'`. A Cloudflare build of the same app
-selects nothing and bundles no NATS code; the cloud keeps HTTP dispatch.
-Absent the provider the contributor is not applied. Limit: a provider with no
-contributor support at all (serverless, Azure) still fails the build for any
-opted-in deploy variant; that check predates this and was left alone.
+A service has no `when`, so opting in is what selects it, on every deploy of
+that source. The service is for a standalone build: its `onServerStart` registers
+the queue workers, which a target that does not run the server lifecycle (a
+Worker) rejects at build time. An app built for several providers wires it only
+where it deploys standalone.
 
 ## One stream per stage
 
@@ -45,9 +41,8 @@ the config to reuse.
   Consumers use the library default names; the old `<project>_<stage>_` consumer
   prefix and its exact-name scoping are gone.
 - Reply inboxes use `_INBOX.<project>.<stage>`.
-- It provides `natsLifecycle`, not the factory (the server stops singleton
-  services before stop hooks, which would close workers before they drain).
-  `onServerStop` drains (10s), then closes.
+- It provides `natsLifecycle`, not the factory. Its `stop()`, called by
+  `stopSingletonServices`, drains the workers (10s), then closes the connection.
 
 ## Permissions
 
@@ -79,8 +74,7 @@ dropping the user alone leaves the stream with its messages and consumers.
   to NATS (its queue workers register on NATS, verified with a sleep step) but
   is not durable; durable needs workflowService, workflowRunService and
   leaseService on SQLite.
-- A cron-only app has no queue capability, so `needsQueue` is false and it
-  keeps the in-memory scheduler.
+- An app that does not opt in keeps the in-memory queue and scheduler.
 
 ## Broker operations, measured on nats-server 2.15.2
 
@@ -108,11 +102,10 @@ server with the users in an `include`d file and `--signal reload=<pidfile>`.
 
 - Open question: the generated `RequiredSingletonServices` still requires
   `queueService`, `schedulerService`, `workflowService` and `workflowRunService`
-  for an app that wires a queue worker, although the contributor or the deploy
-  build provides them. The verifier app casts its services object (a comment says
-  why) so tsc can pass; the cast supplies no fallback, so a missing contributor
-  still fails at run time. Whether the type should know about contributor-provided
-  services is undecided.
+  for an app that wires a queue worker, although the nats service or the deploy
+  build provides them. `SingletonServices` from `#pikku/service` carries the
+  keys a service provides, so an app that declares the services type through it
+  needs no cast.
 - NATS permissions cannot filter reply subjects or a push consumer's
   `deliver_subject`. Observed: stage A can send a reply into B's inbox through
   its own API. The data is A's own and request tokens are random, so nothing of

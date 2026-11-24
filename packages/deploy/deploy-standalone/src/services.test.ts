@@ -21,7 +21,7 @@ const ctx = {
   mcpServerOption: '',
 } as never
 
-describe(`StandaloneProviderAdapter contributors`, () => {
+describe(`StandaloneProviderAdapter services`, () => {
   test('without a generated platform-services file the entry has none', () => {
     const source = new StandaloneProviderAdapter({}).generateEntrySource(ctx)
 
@@ -46,12 +46,12 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     assert.match(
       source,
       /analyticsSinks: __pikkuAnalyticsSinks,\n    \.\.\.platformServices,\n  \}\)/,
-      'contributed services must be spread last so they override the defaults'
+      'provided services must be spread last so they override the defaults'
     )
     assert.doesNotMatch(source, /const createPlatformServices = async/)
   })
 
-  test('contributors run after the database is opened and see it as runtime.kysely', () => {
+  test('services run after the database is opened and see it as runtime.kysely', () => {
     const source = new StandaloneProviderAdapter({}).generateEntrySource({
       ...(ctx as object),
       db: { engine: 'sqlite' },
@@ -66,72 +66,23 @@ describe(`StandaloneProviderAdapter contributors`, () => {
     )
   })
 
-  test('contributorSupport offers env bindings only, and the runtime services the entry holds', () => {
-    const support = new StandaloneProviderAdapter({}).contributorSupport(
-      ctx as never
-    )
-    assert.deepEqual([...support.supported], ['env'])
-    assert.ok(support.runtimeServices.includes('logger'))
-    assert.ok(!support.runtimeServices.includes('kysely'))
+  test('serviceSupport lists the keys the entry holds, with kysely only when it opens a database', () => {
+    const adapter = new StandaloneProviderAdapter({})
+    const support = adapter.serviceSupport(ctx as never)
+    assert.ok(support.baseline.includes('logger'))
+    assert.ok(!support.baseline.includes('kysely'))
     assert.ok(
-      new StandaloneProviderAdapter({})
-        .contributorSupport({
+      adapter
+        .serviceSupport({
           ...(ctx as object),
           db: { engine: 'sqlite' },
         } as never)
-        .runtimeServices.includes('kysely')
-    )
-  })
-
-  test('the platform is widened with the unit being generated', () => {
-    const support = new StandaloneProviderAdapter({}).contributorSupport(
-      ctx as never
-    )
-    const platform = support.widenPlatform!({
-      serviceNames: [],
-      needsQueue: false,
-      needsWorkflow: false,
-      needsAgent: false,
-    }) as unknown as { unit: { name: string } }
-    assert.equal(platform.unit.name, 'app')
-  })
-
-  test('a database the entry opens but the contributor platform lacks is an error', () => {
-    const adapter = new StandaloneProviderAdapter({})
-    const platform = {
-      serviceNames: [],
-      needsQueue: false,
-      needsWorkflow: false,
-      needsAgent: false,
-    }
-    assert.throws(
-      () =>
-        adapter.contributorSupport({
-          ...(ctx as object),
-          db: { engine: 'sqlite' },
-          contributorPlatform: platform,
-        } as never),
-      /opens a database but the contributor platform says the project has no one/
-    )
-    assert.throws(
-      () =>
-        adapter.contributorSupport({
-          ...(ctx as object),
-          contributorPlatform: { ...platform, db: { engine: 'sqlite' } },
-        } as never),
-      /does not open a database but the contributor platform says the project has one/
-    )
-    assert.doesNotThrow(() =>
-      adapter.contributorSupport({
-        ...(ctx as object),
-        db: { engine: 'sqlite' },
-        contributorPlatform: { ...platform, db: { engine: 'sqlite' } },
-      } as never)
+        .baseline.includes('kysely')
     )
   })
 })
 
-describe(`StandaloneProviderAdapter contributor server hooks`, () => {
+describe(`StandaloneProviderAdapter service server hooks`, () => {
   const lifecycle = { importPath: './lifecycle.js', variable: 'lifecycle' }
   const platformServices = { importPath: './platform-services.gen.js' }
   const generate = (extra: object) =>
@@ -147,23 +98,22 @@ describe(`StandaloneProviderAdapter contributor server hooks`, () => {
 
   test('runs the server lifecycle', () => {
     assert.equal(
-      new StandaloneProviderAdapter({}).contributorSupport(ctx)
-        .runsServerLifecycle,
+      new StandaloneProviderAdapter({}).serviceSupport(ctx).runsServerLifecycle,
       true
     )
   })
 
-  test('without contributors the entry reads as it did: the app lifecycle alone', () => {
+  test('without services the entry reads as it did: the app lifecycle alone', () => {
     const source = generate({ lifecycle })
     assert.doesNotMatch(source, /composeServerLifecycle|serverStartHooks/)
     assert.match(source, /__pikkuLifecycle\?\.beforeStart/)
   })
 
-  test('the composed lifecycle starts contributors first and stops them after afterStop, on the signal path too', () => {
+  test('the composed lifecycle starts services first, on the signal path too', () => {
     const source = generate({ lifecycle, platformServices })
     assert.match(
       source,
-      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks, stop: __pikkuStopHooks \}\)/
+      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/
     )
     assert.ok(
       at(source, '__pikkuServerLifecycle?.beforeStart') <
@@ -177,13 +127,13 @@ describe(`StandaloneProviderAdapter contributor server hooks`, () => {
     )
   })
 
-  test('contributor hooks run even when the app declares no lifecycle', () => {
+  test('service start hooks run even when the app declares no lifecycle', () => {
     const source = generate({ platformServices })
     assert.match(source, /composeServerLifecycle\(undefined,/)
     assert.match(source, /__pikkuServerLifecycle\?\.beforeStart/)
   })
 
-  test('the pool is closed after the contributors stop', () => {
+  test('the pool is closed after the app afterStop', () => {
     const source = generate({
       platformServices,
       db: { engine: 'postgres' },
