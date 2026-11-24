@@ -5,7 +5,7 @@
 - Package Structure
 - pikku.config.json
 - package.json (key fields)
-- Platform service contributors (`defineContributors`)
+- Platform services (`pikkuService`)
 - tsconfig.json (key fields)
 
 `npx pikku new addon` scaffolds these files. You rarely hand-edit them — consult this when wiring exports or config by hand.
@@ -103,82 +103,81 @@ live in a file that never imports `#pikku` — see "Functions" in the skill.
 writes `@my-org/addon-todos/.pikku/rpc/...`, exactly as it would in an
 application, and the leaf stays the package's own business.
 
-## Platform service contributors (`defineContributors`)
+## Platform services (`pikkuService`)
 
 An addon can ship code that builds services for the **host's** target — a log
 source over the host's database, a client built from a host secret. The addon
-registers them in code with `defineContributors`; nothing goes in `package.json`
-and `wireAddon` of the addon itself has no field for it. A host that wants one
-opts in by name with `wireAddon({ contributors: ['log-sources'] })`, and gets
-nothing it did not list.
+declares them in code with `pikkuService`; nothing goes in `package.json` and
+`wireAddon` of the addon itself has no field for it. A host that wants one opts
+in by name with `wireAddon({ services: ['logSources'] })`, and gets nothing it
+did not list. An opted-in service is not run everywhere: a target (`pikku dev`,
+or one deploy unit) selects it only when a key it provides is destructured by the
+functions, middleware or permissions that target includes, or by another selected
+service. A service nothing reaches gets no variant check, no `onServerStart`
+error and no import, so wiring it once does not need per-build wiring.
 
 ```ts
-// src/contributors.ts
-import { defineContributors } from '@pikku/core/contributors'
+// src/services.ts
+import { pikkuService } from '@pikku/core/pikku-service'
 import { logSourcesDev } from './log-sources-dev.js'
 import { logSourcesDeploy } from './log-sources-deploy.js'
 
-export const contributors = defineContributors({
-  'log-sources': { dev: logSourcesDev, deploy: logSourcesDeploy },
+export const logSources = pikkuService({
+  dev: logSourcesDev,
+  deploy: logSourcesDeploy,
 })
 ```
 
 ```ts
 // src/log-sources-deploy.ts — each variant in its OWN module
-import type { Contributor } from '@pikku/core/contributors'
 import { kyselyLogSource } from './log-source.js'
 
-export const logSourcesDeploy: Contributor = {
-  needs: ['kysely'], // runtime.kysely, or a contributor's services.kysely
-  provides: ['logSources', 'logSources.workspace'],
-  run: (services, _env, runtime) => {
-    services.logSources = { workspace: kyselyLogSource(runtime.kysely) }
-  },
-}
+export const logSourcesDeploy = ({ kysely }: { kysely: Kysely<any> }) => ({
+  logSources: { workspace: kyselyLogSource(kysely) },
+})
 ```
+
+A factory takes `(services, env)`: the keys it destructures from `services` are
+what it needs (a baseline key such as `kysely`, or another service's), and the
+keys of the object it returns are what it provides. There is no `needs` or
+`provides` list. A function is the same on every target; the object form gives
+`dev`, `deploy` and `common` variants (a target's own overrides `common`) and an
+optional `onServerStart`.
 
 Rules the inspector and the build enforce:
 
-- `defineContributors` takes an object literal keyed by contributor name; each
-  `dev` / `deploy` value must be a reference to an `export const`. Anything else
-  is PKU360; a name defined twice is PKU361.
-- **Each variant lives in its own module.** The build imports the module that
-  exports the selected variant, so a `dev` and a `deploy` variant sharing a file
-  both reach every bundle, production included.
-- A contributor with no variant for a target is simply not part of it.
+- The argument is an inline function or an object literal. Each `dev` / `deploy` /
+  `common` value is an inline function or a reference to an `export const`. A
+  factory must destructure its first parameter by plain name (no rest element)
+  and return an object type with known keys; anything else is PKU369, PKU371 or
+  PKU372. A name exported twice is PKU376.
+- **Each variant given by reference lives in its own module** (PKU375). The build
+  imports the module that exports the selected variant, so a `dev` and a
+  `deploy` variant sharing a file both reach every bundle, production included.
+- A service with no variant for a target is simply not part of it, unless it
+  provides a key that target needs: then the build fails.
 - Run `pikku all` in the addon: it writes
-  `.pikku/contributors/pikku-contributors-meta.gen.json`, which a host reads to
-  opt in (an unknown name is PKU363). Ship `.pikku` in `files`.
-- `pikku.contributors` in `package.json` is removed and is now an error
-  (PKU364), not silently ignored.
-- A plain package (not an addon) can register contributors the same way, and a
-  project opts in without wiring an addon:
-  `wireContributors({ package: '@my-org/queue', contributors: ['nats'] })`. It
-  is read at build time and does nothing at runtime; the names are checked
-  against the package's meta (PKU363) and the list must be string literals
-  (PKU362).
-- `platform.provider` is the deploy provider building the unit (`standalone`,
-  `cloudflare`, ...), set by every deploy build and never by `pikku dev`. A
-  `when` that depends on where the app is going tests it, and treats an unset
-  value as "not mine": `when: (p) => p.needsQueue && p.provider === 'standalone'`.
-- Contributors run after every contributor providing one of their `needs`; a
-  dotted need (`logSources.stage`) is met by a provider of the key or its
-  prefix. `run` reads services the target built before it as `runtime.<name>` —
-  `pikku dev` has logger, variables, secrets, schema and (with `db`) kysely; the
-  standalone entry has logger, kysely (with a database) and its
-  scheduler/queue/workflow/trigger services and event hub.
-- Two contributors providing the same key (after `when` / `requires` filtering)
-  is a build error naming both, except that a target's baseline services may be
-  replaced. A decorator declares `provides: []`. A contributor providing what it
-  needs is a cycle. An unmet `needs` is a build error.
-- `requires: ['cloudflare']` on a contributor a host opted in to, for a target
-  that cannot supply it, is a build error; use `when` to say "not here".
-- `onServerStart` / `onServerStop` run only where the server lifecycle runs
-  (dev, serve, standalone, generic server entry, Cloudflare container). On a
-  Worker `onServerStart` is a build error and `onServerStop` a warning.
-- Fail closed: a contributor whose bindings are missing at startup throws.
+  `.pikku/services/pikku-services-meta.gen.json`, which a host reads to opt in
+  (an unknown name is PKU374). Ship `.pikku` in `files` and export
+  `./.pikku/services/*`.
+- A plain package that is not an addon declares services the same way and is
+  wired with `wireAddon`; it needs a `pikku.config.json` with `"addon": true`.
+- Services run after every service providing one of their needs. A target's
+  baseline services are read as destructured keys — `pikku dev` holds its dev
+  baseline (logger, queue, scheduler, email and the like, but no `variables`,
+  `schema` or `secrets`) and kysely with `db`; the standalone entry has logger,
+  kysely (with a database) and its scheduler/queue/workflow/trigger services and
+  event hub.
+- Two services providing the same key is a build error naming both, except that a
+  target's baseline services may be replaced by one. A service providing what it
+  needs is a cycle. An unmet need is a build error.
+- `onServerStart` runs only where the server lifecycle runs (dev, serve,
+  standalone, generic server entry, Cloudflare container). On a Worker it is a
+  build error. Teardown is the provided value's own `stop()`, called in reverse
+  build order.
+- Fail closed: a service whose bindings are missing at startup throws.
 
-Full reference: `docs/contributors.md` in the pikku repo.
+Full reference: `docs/services.md` in the pikku repo.
 
 ## tsconfig.json (key fields)
 
