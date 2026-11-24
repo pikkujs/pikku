@@ -99,7 +99,7 @@ export const getAttention = async (
  */
 export const refreshAttention = async (
   services: any,
-  wire: PikkuWire,
+  wire: { rpc: PikkuWire['rpc']; pikkuUserId?: string },
   input: { projectKey: string; widget: string }
 ): Promise<AttentionResult | undefined> => {
   registered(input.widget)
@@ -121,7 +121,7 @@ export const refreshAttention = async (
  */
 export const refreshWatchedAttention = async (
   services: any,
-  wire: PikkuWire,
+  wire: Pick<PikkuWire, 'rpc'>,
   widget: string
 ): Promise<number> => {
   const projectKeys = await attentionResultStore(services).projectKeys(widget)

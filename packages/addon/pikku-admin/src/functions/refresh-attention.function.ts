@@ -12,6 +12,14 @@ export const refreshAttention = pikkuFunc<
     'Runs a widget’s attention func for a project now, as a workflow whose get step is retried, and returns what it stored. The project is then kept fresh on the func’s schedule.',
   tags: ['admin:attention'],
   expose: true,
-  func: async ({ attentionResults, workflowService }, data, wire) =>
-    (await refresh({ attentionResults, workflowService }, wire, data)) ?? null,
+  func: async (
+    { attentionResults, workflowService },
+    data,
+    { rpc, pikkuUserId }
+  ) =>
+    (await refresh(
+      { attentionResults, workflowService },
+      { rpc, pikkuUserId },
+      data
+    )) ?? null,
 })

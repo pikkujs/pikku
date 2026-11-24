@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { beforeEach, test } from 'node:test'
+import { before, beforeEach, test } from 'node:test'
 
 import {
   InMemoryAttentionResultStore,
@@ -15,10 +15,7 @@ const widget = 'health.verdict'
 let attentionResults: InMemoryAttentionResultStore
 let started: string[]
 
-beforeEach(() => {
-  attentionResults = new InMemoryAttentionResultStore()
-  started = []
-  pikkuState(null, 'attention', 'funcs').clear()
+before(() => {
   pikkuState(null, 'attention', 'meta')[widget] = {
     widget,
     every: '1m',
@@ -28,6 +25,11 @@ beforeEach(() => {
     widget,
     pikkuAttentionFunc({ widget, every: '1m', func: async () => undefined })
   )
+})
+
+beforeEach(() => {
+  attentionResults = new InMemoryAttentionResultStore()
+  started = []
 })
 
 test('a widget that has never run reads as null', async () => {
