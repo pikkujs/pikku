@@ -29,7 +29,7 @@ export const declaredChangeset = async (
     projectId: 'local',
     groupId,
     includeDone: true,
-  } as never)
+  })
   const group = groups.find((g) => g.groupId === groupId) as
     { creates?: string[]; alters?: string[]; needsPlan?: boolean } | undefined
   return {
