@@ -12,9 +12,10 @@ import { removeThrowaways, throwawayRepo } from '../test-support.js'
 import { guardWrites, snapshotTree } from '../write-guard.js'
 import { pagesGate } from './pages.js'
 import {
+  PAGE_RULE,
+  PHONE_RULE,
   pageFindings,
   readCompareReport,
-  readWaivers,
   type PageNeed,
 } from './pages-parser.js'
 
@@ -22,8 +23,6 @@ after(removeThrowaways)
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 const FAKE_COMPARE = join(fixtures, 'fake-pages-compare.mjs')
-const REASON =
-  'The original zooms its phone layout out to 320 px wide; a page laid out for the phone cannot match it.'
 
 /**
  * A report.json of a real compare (lab run step-w6, apps/app against www.wildwomanreborn.com at 1440 px), cut
@@ -203,20 +202,7 @@ describe('the compare report (pages-parser)', () => {
     assert.match(finding!.message, /photographed with uncommitted changes/)
   })
 
-  test('a waiver covers a phone width only, as a note; a desktop width is never waived; a short reason does not count', () => {
-    const { waivers, notes } = readWaivers({
-      waivers: [
-        { page: 'events', reason: REASON },
-        { page: '/about', reason: 'too hard' },
-      ],
-    })
-    assert.deepEqual(waivers, [{ page: '/events', reason: REASON }])
-    assert.equal(notes.length, 1)
-    assert.equal(notes[0]!.severity, 'low')
-    assert.match(
-      notes[0]!.message,
-      /for \/about does not count: it needs a page and a reason of at least 30 characters/
-    )
+  test('a phone width fails on the rule a person may waive; a desktop width on the page rule', () => {
     const report = realReport()
     report.rows.push({ ...report.rows[0]!, width: 390 })
     const findings = pageFindings({
@@ -224,21 +210,19 @@ describe('the compare report (pages-parser)', () => {
       needs: [need('events'), need('events', 390)],
       threshold: 40,
       diffDir: 'd',
-      waivers,
     })
     assert.deepEqual(
-      findings.map((f) => f.severity),
-      ['high', 'low']
+      findings.map((f) => [f.severity, f.rule]),
+      [
+        ['high', PAGE_RULE],
+        ['high', PHONE_RULE],
+      ]
     )
-    assert.match(
-      findings[0]!.message,
-      /The waiver for \/events does not cover it: a width of 1000 px or more is never waived\./
+    assert.doesNotMatch(findings.map((f) => f.message).join('\n'), /waive/)
+    assert.deepEqual(
+      pagesGate({ binary: undefined, changeset: 'cs', items: [] }).waivable,
+      [PHONE_RULE]
     )
-    assert.equal(
-      findings[1]!.message,
-      `Page compare waived for /events @390: ${REASON}`
-    )
-    assert.equal(findings[1]!.rule, 'harness/page-compare-waived')
   })
 })
 
@@ -451,7 +435,7 @@ describe('pagesGate', () => {
     assert.equal(call!.cwd, h.repo)
   })
 
-  test('the threshold and the waivers are the base commit’s: settings the builder commits change nothing', async () => {
+  test('the threshold is the base commit’s: settings the builder commits change nothing', async () => {
     const h = await setup([HOME], {
       files: PROJECT({ threshold: 50 }),
       scenario: { rows: { 'index-1440': 60 } },
@@ -459,7 +443,6 @@ describe('pagesGate', () => {
     await h.commit({
       'artifacts/pages-compare.json': JSON.stringify({
         threshold: 99,
-        waivers: [{ page: '/', reason: REASON }],
       }),
     })
     const findings = await h.gate().run(h.wire)
@@ -468,7 +451,6 @@ describe('pagesGate', () => {
       findings[0]!.message,
       /60% of its pixels changed, over the 50% limit/
     )
-    assert.doesNotMatch(findings[0]!.message, /waiver/)
     await h.setScenario({ rows: { 'index-1440': 45 } })
     assert.deepEqual(await h.gate().run(h.wire), [])
   })
@@ -485,36 +467,18 @@ describe('pagesGate', () => {
     ])
   })
 
-  test('a waiver on the base commit lets a phone width through as a note; the desktop width is still held', async () => {
+  test('settings waivers are not read: a failing phone width is a finding for a person to waive', async () => {
     const h = await setup([HOME], {
-      files: PROJECT({
-        waivers: [
-          { page: '/', reason: REASON },
-          { page: '/about', reason: 'short' },
-        ],
-      }),
+      files: PROJECT({ waivers: [{ page: '/', reason: 'x'.repeat(40) }] }),
       scenario: { rows: { 'index-390': 70, 'index-1440': 70 } },
     })
     const findings = await h.gate().run(h.wire)
     assert.deepEqual(
       findings.map((f) => [f.severity, f.rule]),
       [
-        ['low', 'harness/page-compare-waived'],
-        ['high', 'harness/page-compare'],
-        ['low', 'harness/page-compare-waived'],
+        ['high', PAGE_RULE],
+        ['high', PHONE_RULE],
       ]
-    )
-    assert.match(
-      findings[0]!.message,
-      /waiver in artifacts\/pages-compare\.json for \/about does not count/
-    )
-    assert.match(
-      findings[1]!.message,
-      /^\/ at 1440 px .*The waiver for \/ does not cover it: a width of 1000 px or more is never waived\./
-    )
-    assert.equal(
-      findings[2]!.message,
-      `Page compare waived for / @390: ${REASON}`
     )
   })
 

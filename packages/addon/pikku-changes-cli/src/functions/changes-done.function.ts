@@ -32,7 +32,6 @@ export const ChangesDoneInput = z.object({
   headCommit: z.string().optional(),
   note: z.string().optional(),
   authorName: z.string().optional(),
-  waive: z.string().optional(),
 })
 
 export const ChangesDoneOutput = z.object({
@@ -71,8 +70,7 @@ export const ChangesDone = pikkuSessionlessFunc({
     }
 
     // A change that touched pages of a site rebuilt from a reference is done
-    // only when `pikku ui pages compare` passes at HEAD (or is waived).
-    let note = input.note
+    // only when `pikku ui pages compare` passes at HEAD.
     const { rpc, projectId } = await changesContext(input.apiUrl)
     if (await isGitRepo()) {
       const ref = input.changeId.trim()
@@ -91,15 +89,13 @@ export const ChangesDone = pikkuSessionlessFunc({
         .invoke('getChange', changeRef(projectId, input.changeId))
         .then(({ change }) => change)
         .catch(() => null)
-      const gate = await refuseUntilPagesCompared({
+      await refuseUntilPagesCompared({
         git: (args) => git(args),
-        waive: input.waive,
         pages: declaredPages(change?.body),
         newPages: declaredNewPages(change?.body),
         frontend: change ? buildsPages(change) : false,
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
       })
-      if (gate.note) note = note ? `${note}\n\n${gate.note}` : gate.note
     }
 
     if (headCommit)
@@ -113,7 +109,7 @@ export const ChangesDone = pikkuSessionlessFunc({
       ...changeRef(projectId, input.changeId),
       branch,
       headCommit,
-      note,
+      note: input.note,
       authorName: input.authorName ?? 'pikku-cli',
     })
   },

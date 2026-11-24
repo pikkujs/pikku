@@ -36,10 +36,15 @@ export type HarnessGate = {
   failOn: Severity
   /** Paths the gate may change; defaults to `.pikku/**`. */
   writes?: string[]
-  /** Extra tries after an infra error: `n` retries is `n + 1` runs. Defaults to 0. */
+  /** Extra runs after a thrown error, as the step's `retries`: `n` retries is `n + 1` runs. Defaults to 0. */
   workflowRetries?: number
   /** Longest one run may take, as milliseconds or a duration such as `'5min'`. */
   workflowTimeout?: string | number
+  /**
+   * Rules of this gate's findings a person may waive. When they are all that fails an attempt, the
+   * engine asks for an approval for each; the builder never can.
+   */
+  waivable?: string[]
   run: (wire: GateWire) => Promise<Finding[]>
   /** A fixer's read-only check mode; it finds nothing once the fixer's commit is in. */
   check?: (wire: GateWire) => Promise<Finding[]>

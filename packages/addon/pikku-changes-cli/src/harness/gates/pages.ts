@@ -28,15 +28,15 @@ import { changedFiles } from './changed.js'
 import { declaredChangeset } from './declared.js'
 import {
   PAGE_RULE,
+  PHONE_RULE,
   pageFindings,
   readCompareReport,
-  readWaivers,
   type PageNeed,
 } from './pages-parser.js'
 
 /**
  * The page compare settings a person keeps on the target branch: `threshold` (changed-pixel percent,
- * DEFAULT_THRESHOLD without one), `widths` (all the capture has without one) and `waivers`. Read from the
+ * DEFAULT_THRESHOLD without one) and `widths` (all the capture has without one). Read from the
  * base commit only. They are not in `pikku.config.json`, whose keys the CLI checks.
  */
 export const COMPARE_SETTINGS = join('artifacts', 'pages-compare.json')
@@ -231,9 +231,10 @@ type Target = { app: string; path: string; shots: ReferenceShot[] }
  * A changeset that builds pages of a site rebuilt from a captured original is judged by
  * `pikku ui pages compare` against that capture, as `pikku changes done` judges a change: each
  * declared page (its `Pages:` line, else the pages a frontend change touched) at each width within
- * the threshold of the original's screenshot. The threshold, the widths and any waiver come from the
- * base commit's `artifacts/pages-compare.json`, so nothing the builder commits can loosen them,
- * and the builder cannot change the reference. The compare writes under `.pikku/compare/` in the
+ * the threshold of the original's screenshot. The threshold and the widths come from the base
+ * commit's `artifacts/pages-compare.json`, so nothing the builder commits can loosen them, and the
+ * builder cannot change the reference. Only a person can let a phone width through, by waiving its
+ * finding when the engine asks. The compare writes under `.pikku/compare/` in the
  * worktree and, with PIKKU_CHANGES_PARALLEL, starts this worktree's own servers on free ports. A
  * changeset with no pages passes without running anything.
  */
@@ -259,6 +260,7 @@ export const pagesGate = ({
     'The pages a changeset builds of a site rebuilt from an original match the original',
   failOn: 'high',
   writes: [`${COMPARE_OUT}/**`],
+  waivable: [PHONE_RULE],
   workflowTimeout: timeoutMs + 60_000,
   run: async (wire) => {
     const worktree = wire.worktree
@@ -366,8 +368,6 @@ export const pagesGate = ({
       ? configured
       : DEFAULT_THRESHOLD
     const widths = numbers(settings?.widths)
-    const { waivers, notes } = readWaivers(settings)
-    findings.push(...notes)
 
     const configDir = config ? join(worktree, dirname(config.path)) : worktree
     const workspaceRoot = findWorkspaceRoot(configDir)
@@ -538,7 +538,6 @@ export const pagesGate = ({
             needs: list,
             threshold,
             diffDir: dir,
-            waivers,
           })
         )
       } catch (error) {

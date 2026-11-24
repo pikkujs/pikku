@@ -1,5 +1,5 @@
 import type { CompareRow } from '@pikku/cli/addon-support/pages'
-import { MIN_WAIVER_LENGTH, WAIVABLE_BELOW } from '../../lib/page-reference.js'
+import { WAIVABLE_BELOW } from '../../lib/page-reference.js'
 import type { Finding } from '../finding.js'
 
 /** What `pikku ui pages compare` writes to `<out>/report.json`, as far as the page gate reads it. */
@@ -15,15 +15,9 @@ export type CompareReport = {
 /** One page at one width the gate holds the changeset to: a screenshot of the original. */
 export type PageNeed = { id: string; width: number; path: string }
 
-/**
- * A page a person let through at phone widths, written in `waivers` of the base commit's
- * `artifacts/pages-compare.json`: its route path (`/about`), why it cannot match, and the widths it covers
- * (every phone width of the page without `widths`).
- */
-export type PageWaiver = { page: string; reason: string; widths?: number[] }
-
 export const PAGE_RULE = 'harness/page-compare'
-export const WAIVED_RULE = 'harness/page-compare-waived'
+/** A page that fails at a phone width (under WAIVABLE_BELOW): the one finding a person may waive. */
+export const PHONE_RULE = 'harness/page-compare-phone'
 
 const STATUSES = new Set(['compared', 'missing', 'error'])
 const isNumberOrNull = (value: unknown) =>
@@ -64,42 +58,6 @@ export const readCompareReport = (text: string): CompareReport => {
   }
 }
 
-/**
- * The waivers of the page compare settings (`artifacts/pages-compare.json`), and a note for each one that cannot count: a reason
- * shorter than MIN_WAIVER_LENGTH, or no page.
- */
-export const readWaivers = (
-  settings: unknown
-): { waivers: PageWaiver[]; notes: Finding[] } => {
-  const listed = (settings as { waivers?: unknown } | undefined)?.waivers
-  if (!Array.isArray(listed)) return { waivers: [], notes: [] }
-  const waivers: PageWaiver[] = []
-  const notes: Finding[] = []
-  for (const entry of listed as Record<string, unknown>[]) {
-    const page = typeof entry?.page === 'string' ? entry.page.trim() : ''
-    const reason = typeof entry?.reason === 'string' ? entry.reason.trim() : ''
-    const widths = Array.isArray(entry?.widths)
-      ? (entry.widths as unknown[]).filter(
-          (w): w is number => typeof w === 'number'
-        )
-      : undefined
-    if (!page || reason.length < MIN_WAIVER_LENGTH) {
-      notes.push({
-        severity: 'low',
-        rule: WAIVED_RULE,
-        message: `A page compare waiver in artifacts/pages-compare.json${page ? ` for ${page}` : ''} does not count: it needs a page and a reason of at least ${MIN_WAIVER_LENGTH} characters.`,
-      })
-      continue
-    }
-    waivers.push({
-      page: `/${page.replace(/^\/+|\/+$/g, '')}`,
-      reason,
-      ...(widths ? { widths } : {}),
-    })
-  }
-  return { waivers, notes }
-}
-
 const signed = (n: number) => (n > 0 ? `+${n}` : `${n}`)
 
 const heightLine = (row: CompareRow) =>
@@ -112,7 +70,7 @@ const AFTER =
 
 /**
  * The findings of one compare report for the pages the changeset is held to: one per page and width
- * that is over the threshold, missing or in error (high), a waived one as a note (low), and a report
+ * that is over the threshold, missing or in error (high, PHONE_RULE at a phone width), and a report
  * taken with uncommitted changes (high). `diffDir` is where the diff images are, relative to the
  * worktree, so the builder is sent the image. A page and width the report has no row for throws:
  * the compare did not answer for it.
@@ -122,13 +80,11 @@ export const pageFindings = ({
   needs,
   threshold,
   diffDir,
-  waivers = [],
 }: {
   report: CompareReport
   needs: PageNeed[]
   threshold: number
   diffDir: string
-  waivers?: PageWaiver[]
 }): Finding[] => {
   const absent = needs.filter(
     (need) =>
@@ -154,34 +110,20 @@ export const pageFindings = ({
       row.status !== 'compared' || (row.changedPercent ?? 100) > threshold
     if (!over) continue
     const at = `${need.path} at ${need.width} px`
-    const waiver = waivers.find(
-      (w) =>
-        w.page === need.path && (!w.widths || w.widths.includes(need.width))
-    )
-    if (waiver && need.width < WAIVABLE_BELOW) {
-      findings.push({
-        severity: 'low',
-        rule: WAIVED_RULE,
-        message: `Page compare waived for ${need.path} @${need.width}: ${waiver.reason}`,
-      })
-      continue
-    }
-    const noWaiver = waiver
-      ? ` The waiver for ${need.path} does not cover it: a width of ${WAIVABLE_BELOW} px or more is never waived.`
-      : ''
+    const rule = need.width < WAIVABLE_BELOW ? PHONE_RULE : PAGE_RULE
     if (row.status === 'missing') {
       findings.push({
         severity: 'high',
-        rule: PAGE_RULE,
-        message: `MISSING ${at}: the compare found no page at ${row.path}${row.httpStatus === 404 ? ' (it answered 404)' : ''}. Build the page the original has at ${need.path}, commit, then stop; the compare runs again after you stop.${noWaiver}`,
+        rule,
+        message: `MISSING ${at}: the compare found no page at ${row.path}${row.httpStatus === 404 ? ' (it answered 404)' : ''}. Build the page the original has at ${need.path}, commit, then stop; the compare runs again after you stop.`,
       })
       continue
     }
     if (row.status === 'error') {
       findings.push({
         severity: 'high',
-        rule: PAGE_RULE,
-        message: `ERROR ${at}: the page could not be photographed: ${row.error ?? 'no screenshot'}. Make the page load without errors, commit, then stop; the compare runs again after you stop.${noWaiver}`,
+        rule,
+        message: `ERROR ${at}: the page could not be photographed: ${row.error ?? 'no screenshot'}. Make the page load without errors, commit, then stop; the compare runs again after you stop.`,
       })
       continue
     }
@@ -190,9 +132,9 @@ export const pageFindings = ({
     const diff = `${diffDir.replace(/\/+$/, '')}/${need.id}-${need.width}.diff.png`
     findings.push({
       severity: 'high',
-      rule: PAGE_RULE,
+      rule,
       message: [
-        `${at} differs from the original: ${row.changedPercent}% of its pixels changed, over the ${threshold}% limit.${heightLine(row)}${noWaiver}`,
+        `${at} differs from the original: ${row.changedPercent}% of its pixels changed, over the ${threshold}% limit.${heightLine(row)}`,
         ...(styles.length
           ? [
               'Style differences, worst first:',

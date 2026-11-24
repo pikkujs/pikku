@@ -17,12 +17,10 @@ import {
   DEFAULT_THRESHOLD,
   embeddedScreenshots,
   isCloneProject,
-  MIN_WAIVER_LENGTH,
   readSites,
   REFERENCES_DIR,
   referenceProblem,
   touchedPages,
-  WAIVABLE_BELOW,
   type Site,
 } from './page-reference.js'
 
@@ -34,11 +32,10 @@ import {
  * within the threshold of the original. Prompt text asking a model to compare
  * did not make it compare; a refusal does.
  *
- * `--waive "<reason>"` lets a phone width that cannot match through (the
- * reason goes in the done note); a page over the threshold at a desktop width
- * (1000 px or more) is refused even with a waiver, with its numbers and the
- * compare's style differences, so it gets fixed. PIKKU_COMPARE_GATE=off turns
- * the gate off for labs.
+ * A page over the threshold is refused with its numbers and the compare's
+ * style differences, so it gets fixed; there is no waiver here, since whoever
+ * runs `done` (a builder too) could give one. PIKKU_COMPARE_GATE=off turns the
+ * gate off for labs.
  *
  * A builder (PIKKU_CHANGES_BUILDER=1) is held harder, since it is the one that
  * wants to finish: it cannot turn the gate off, the threshold is
@@ -59,7 +56,6 @@ export type Git = (args: string[]) => Promise<string>
 export type PageGateOutcome =
   | { kind: 'off' }
   | { kind: 'skip'; why: string }
-  | { kind: 'waived'; reason: string; pages: string[] }
   | { kind: 'pass'; pages: string[] }
   | { kind: 'refuse'; message: string }
 
@@ -67,7 +63,6 @@ export interface PageGateInput {
   git: Git
   cwd?: string
   env?: NodeJS.ProcessEnv
-  waive?: string
   /** For the refusal: `#12`. */
   label?: string
   discover?: (workspaceRoot: string) => Promise<AppPage[]>
@@ -260,7 +255,6 @@ export async function checkPageGate({
   git,
   cwd = process.cwd(),
   env = process.env,
-  waive,
   label = 'This change',
   discover = (root) => discoverPages(root),
   pages: declaredPages = [],
@@ -270,12 +264,6 @@ export async function checkPageGate({
 }: PageGateInput): Promise<PageGateOutcome> {
   const builder = env.PIKKU_CHANGES_BUILDER === '1'
   if (env.PIKKU_COMPARE_GATE === 'off' && !builder) return { kind: 'off' }
-  const reason = waive?.trim()
-  if (waive !== undefined && (reason?.length ?? 0) < MIN_WAIVER_LENGTH)
-    return {
-      kind: 'refuse',
-      message: `--waive needs a reason of at least ${MIN_WAIVER_LENGTH} characters: say why the phone page cannot match the original. A waiver covers only widths under ${WAIVABLE_BELOW} px.`,
-    }
 
   const top = resolve((await git(['rev-parse', '--show-toplevel'])).trim())
   const sites = referenceSites(top)
@@ -461,15 +449,6 @@ export async function checkPageGate({
   const lines: string[] = []
   const commands: string[] = []
   let failing = false
-  // a failure a waiver cannot cover: a desktop width, or a report that does not show the desktop widths at HEAD
-  let desktopFailing = false
-  const waived = new Set<string>()
-  const isDesktop = (width: number) => width >= WAIVABLE_BELOW
-  const fail = (width: number | null, what?: string) => {
-    failing = true
-    if (width === null || isDesktop(width)) desktopFailing = true
-    else if (what) waived.add(what)
-  }
 
   for (const app of apps) {
     const appNeeds = needs.filter((n) => n.app === app)
@@ -513,10 +492,8 @@ export async function checkPageGate({
     commands.push(
       `pikku ui pages compare --reference ${rel(site.dir)}${multipleApps ? ` --app ${app}` : ''} --page ${ids.join(',')}`
     )
-    const hasDesktop = appNeeds.some((n) => isDesktop(n.shot.width))
     if (!report) {
-      fail(hasDesktop ? null : 0)
-      for (const n of appNeeds) waived.add(`${n.page.path} @${n.shot.width}`)
+      failing = true
       lines.push(`There is no compare report yet (${where}).`)
       lines.push(
         `Pages to compare: ${appNeeds.map((n) => `${n.shot.id} @${n.shot.width}`).join(', ')}.`
@@ -525,7 +502,7 @@ export async function checkPageGate({
     }
     const fresh = report.gitSha === head && report.dirty === false
     if (!fresh) {
-      fail(hasDesktop ? null : 0)
+      failing = true
       lines.push(
         report.gitSha === head
           ? `The compare report ${where} was taken at HEAD (${shortSha(head)}) but with uncommitted changes in ${app}, so it does not show what was committed. Commit, then compare again.`
@@ -547,14 +524,8 @@ export async function checkPageGate({
       else if ((row.changedPercent ?? 100) > threshold) over.push({ need, row })
     }
     over.sort((a, b) => b.row.changedPercent! - a.row.changedPercent!)
-    const at = (n: Need) => `${n.page.path} @${n.shot.width}`
-    for (const n of [
-      ...over.map((o) => o.need),
-      ...missing,
-      ...errors.map((e) => e.need),
-      ...absent,
-    ])
-      fail(n.shot.width, at(n))
+    if (over.length || missing.length || errors.length || absent.length)
+      failing = true
     if (over.length) {
       lines.push(`Over the ${threshold}% limit, worst first:`)
       for (const { need, row } of over) {
@@ -581,35 +552,22 @@ export async function checkPageGate({
   }
 
   if (!failing) return { kind: 'pass', pages: pageList }
-  if (reason && !desktopFailing)
-    return { kind: 'waived', reason, pages: [...waived] }
   const message = [
-    ...(reason
-      ? [
-          `--waive refused: a waiver covers only phone widths (under ${WAIVABLE_BELOW} px), and a page at ${WAIVABLE_BELOW} px or wider is not done. Fix the differences below (the style lines name what to change), commit, compare again.`,
-        ]
-      : []),
     `${label} touched pages that have a reference screenshot (${pageList.join(', ')}), so it is done only when they look like the original: every page at every width within ${threshold}% changed pixels, compared at HEAD.`,
     ...lines,
     `Run: ${commands.join('  and  ')}`,
     'Then open each diff image: the original on the left, red where pixels differ in the middle, ours on the right. Fix what differs, commit, compare again, then run done again.',
     'Fix the style lines first: they say what differs without opening an image. Then open the diff image of the worst page.',
-    `Only a phone width (under ${WAIVABLE_BELOW} px) that cannot match can be finished with --waive "<why it cannot match, ${MIN_WAIVER_LENGTH}+ characters>"; desktop widths must be within the limit.`,
   ].join('\n')
   return { kind: 'refuse', message }
 }
 
-/** Throws the refusal; otherwise says what to add to the done note (the waiver), if anything. */
+/** Throws the refusal; otherwise says how the gate passed. */
 export async function refuseUntilPagesCompared(
   input: PageGateInput
-): Promise<{ outcome: PageGateOutcome; note?: string }> {
+): Promise<PageGateOutcome> {
   const outcome = await checkPageGate(input)
   if (outcome.kind === 'refuse')
     throw new CloudPreconditionError(outcome.message)
-  if (outcome.kind === 'waived')
-    return {
-      outcome,
-      note: `Page compare waived for ${outcome.pages.join(', ')}: ${outcome.reason}`,
-    }
-  return { outcome }
+  return outcome
 }

@@ -3,13 +3,12 @@ import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
-import { runHarness, type HarnessAgent, type HarnessEvent } from './engine.js'
+import type { HarnessAgent, HarnessEvent } from './engine.js'
 import { createGateWire } from './gate.js'
 import { gitIn } from './git.js'
 import { handTypedTablesGate } from './gates/hand-typed-tables.js'
 import { needsMigrate, parseDbGenerate, runDbStep } from './migrate.js'
-import { InMemorySteps } from './steps.js'
-import { removeThrowaways, throwawayRepo } from './test-support.js'
+import { harnessRun, removeThrowaways, throwawayRepo } from './test-support.js'
 
 const FAKE_PIKKU = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -46,13 +45,12 @@ const scriptedAgent = (worktree: string, turns: Record<string, string>[]) => {
 const harness = async (worktree: string, agent: HarnessAgent) => {
   const events: HarnessEvent[] = []
   let done = 0
-  const result = await runHarness({
+  const result = await harnessRun({
     worktree,
     base: 'main',
     ...ids,
     harness: { name: 'db', gates: [handTypedTablesGate()] },
     agent,
-    steps: new InMemorySteps(),
     onEvent: (event) => events.push(event),
     markDone: async () => {
       done++

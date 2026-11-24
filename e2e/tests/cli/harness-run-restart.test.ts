@@ -1,7 +1,8 @@
 /**
  * `harnessRunWorkflow` runs the harness engine (`runHarness` from @pikku/addon-changes-cli) inside
  * one complex workflow, with every agent turn, gate run, write-guard snapshot, fix commit and
- * `markDone` recorded as a `workflow.do` step. Each change is built in its own throwaway git repo:
+ * `markDone` recorded as an inline step. `harnessStartRun` starts it as a harness run (its wire
+ * flagged `harness`), which the engine checks on every pass, replays included. Each change is built in its own throwaway git repo:
  * attempt 1 commits a file the formatter fixes and oxlint fails (a `debugger`), attempt 2 commits a
  * clean one.
  *
@@ -143,7 +144,7 @@ const request = async (
 
 const startRun = async (changeId: string, repo: string, script: string) =>
   (
-    await request('POST', `/workflow/${WORKFLOW}/start`, {
+    await request('POST', '/rpc/harnessStartRun', {
       data: {
         worktree: repo,
         base: 'main',

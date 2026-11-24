@@ -16,8 +16,7 @@ import type { AppPage, ReferenceShot } from '@pikku/cli/addon-support/pages'
  */
 
 export const DEFAULT_THRESHOLD = 40
-export const MIN_WAIVER_LENGTH = 30
-/** A waiver covers only widths under this: a desktop page has no excuse not to match. */
+/** A person may waive a page only at widths under this: a desktop page has no excuse not to match. */
 export const WAIVABLE_BELOW = 1000
 export const REFERENCES_DIR = join('artifacts', 'references')
 /** The archaeology notes of a site being rebuilt (the pikku-site-archaeology skill). */

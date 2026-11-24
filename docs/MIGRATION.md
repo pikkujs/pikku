@@ -1300,6 +1300,11 @@ The administration functions (users, roles and scopes, credentials, audit) moved
 | `pikku knowledge next` / `reconcile`  | `pikku knowledge gaps` (core 0.12.137)                              |
 | `pikku deploy apply --desktop`        | a frontend's `native.bundleServer` (cli 0.12.175)                   |
 | standalone `--runtime node`           | removed: the standalone provider builds for bun only (cli 0.12.177) |
+| `pikku changes done --waive "<why>"`  | removed: every width must pass `done`; see below                    |
+
+`pikku changes done --waive` let whoever ran `done` finish a change whose phone widths did not match the original, and a builder agent runs `done` too. It is gone, and so are the `waivers` in `artifacts/pages-compare.json`, which the build harness's pages gate no longer reads (a builder's changeset could add them). A phone width that cannot match is now waived by a person: in a harness run, a phone-width page finding that is all that fails an attempt becomes a pending `workflow.approval`, answered with `{ waive: true }` or `{ waive: false }` by a signed-in user who did not start the run; an expired or refused one keeps the finding failing. Outside a harness run, `PIKKU_COMPARE_GATE=off` still turns the `done` gate off for a person. To find affected code, search scripts and prompts for `--waive` and settings files for `"waivers"`.
+
+The build harness in `@pikku/addon-changes-cli/harness` has no step layer of its own: `runHarness` takes `workflow` (the wire of the workflow run it runs in) instead of `steps`, and `InMemorySteps`, `HarnessSteps`, `workflowSteps`, `readWaivers` and `PageWaiver` are removed. Call it from a workflow started with the wire `{ type: HARNESS_RUN }` (`rpc.startWorkflow(name, input, { wire: { type: HARNESS_RUN, pikkuUserId } })`); any other run is refused. A test runs it on `InMemoryWorkflowService`. `tries` now defaults to 2.
 
 ### `pikku.config.json`
 
