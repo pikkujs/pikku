@@ -22,7 +22,7 @@ export const leafEntries = [
   ['function', ['functionTypesFile']],
   ['middleware', ['middlewareTypesFile']],
   ['setup', ['setupTypesFile', 'addonSetupTypesFile']],
-  ['contributor', ['contributorTypesFile']],
+  ['service', ['pikkuServiceTypesFile']],
   ['error', ['errorTypesFile']],
   ['http', ['httpTypesFile']],
   ['channel', ['channelsTypesFile']],
@@ -49,7 +49,7 @@ export const leafEntries = [
 
 /**
  * Leaves whose entire content is a wiring an addon has no registry to reach, or
- * a typed surface over the application's own singleton services (`contributor`),
+ * the application's own merged singleton services (`service`),
  * so the addon half of the leaf would export nothing at all. They are named rather
  * than inferred from what is on disk: a project that used to be an application
  * still has the files an earlier run wrote, which would otherwise keep the leaf
@@ -59,7 +59,7 @@ const ADDON_RETIRED_LEAVES = new Set([
   'queue',
   'scheduler',
   'gateway',
-  'contributor',
+  'service',
 ])
 
 export const pikkuLeafIndexes = pikkuSessionlessFunc<void, void>({

@@ -3,20 +3,49 @@ import { dirname, isAbsolute, join, posix, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 
-export interface DevPlatformServicesTarget {
+export interface DevServicesTarget {
   file: string
   packageMappings?: Record<string, string>
 }
 
 /**
- * The local services `pikku dev` has built before it calls
- * `createPlatformServices`, handed over as `runtime`.
+ * The services `pikku dev` holds before any `pikkuService` runs: what
+ * `createLocalServices` assembles and the dev server passes in beside it. Keys
+ * that are only sometimes present (`secrets` from a vault, `tracer`,
+ * `coverageService`, `scopeService`, `featureFlags`) are left out, because a
+ * service cannot depend on a key a project may not have. `loadDevPikkuServices`
+ * checks the list against what dev really injected, so the two cannot drift.
  */
-export const devRuntimeServices = (options: { db: boolean }): string[] => [
+export const devBaselineServices = (options: {
+  /** The pikku config has a `db`, so dev opens a `kysely`. */
+  db: boolean
+  /** The project declares an agent or reaches for `agentRunner`, so dev builds one. */
+  agents: boolean
+  /** `pikku dev` builds a `credentialService`; `pikku serve` does not. */
+  credentials?: boolean
+}): string[] => [
+  'agentRunService',
+  'agentRunState',
+  'agentStorage',
+  'analyticsSinks',
+  'content',
+  'emailService',
+  'eventHub',
+  'eventHubRegistry',
+  'getInspectorState',
+  'incomingWebhookService',
   'logger',
-  'variables',
-  'secrets',
-  'schema',
+  'metaService',
+  'otlpSinks',
+  'queueService',
+  'schedulerService',
+  'triggerService',
+  'triggerSourceStore',
+  'webhookService',
+  'workflowRunService',
+  'workflowService',
+  ...(options.agents ? ['agentRunner'] : []),
+  ...(options.credentials === false ? [] : ['credentialService']),
   ...(options.db ? ['kysely'] : []),
 ]
 
@@ -68,7 +97,7 @@ const packageExportSpecifier = (
 
 export const localSpecifier = (
   specifier: string,
-  target: DevPlatformServicesTarget
+  target: DevServicesTarget
 ): string => {
   const path = specifier.startsWith('file:')
     ? fileURLToPath(specifier)

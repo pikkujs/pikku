@@ -10,7 +10,7 @@ import {
 } from '../../../utils/ensure-package-dependency.js'
 import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
-import { detectDatabaseDialect } from '../../../contributors/contributor-platform.js'
+import { detectDatabaseDialect } from '../../../utils/database-dialect.js'
 import { projectScopeDefinitions } from '../scopes/pikku-command-scopes.js'
 import {
   type DatabaseEngine,

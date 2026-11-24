@@ -2,20 +2,25 @@ import { test, describe, afterEach } from 'node:test'
 import * as assert from 'assert'
 import { join } from 'path'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
-import { tmpdir } from 'os'
-import { addonContributorNames } from './addon-contributor-names.js'
+import { addonServiceNames } from './addon-service-names.js'
+
+const scratchRoot = () => {
+  const dir = join(import.meta.dir, '../../../..', '.tmp')
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
 
 const dirs: string[] = []
 
 const project = (
   installed: Record<string, Record<string, unknown> | 'broken' | 'no-meta'>
 ) => {
-  const root = mkdtempSync(join(tmpdir(), 'pikku-addon-contributors-'))
+  const root = mkdtempSync(join(scratchRoot(), 'pikku-addon-services-'))
   dirs.push(root)
   writeFileSync(join(root, 'package.json'), '{"name":"app"}')
   for (const [name, meta] of Object.entries(installed)) {
     const dir = join(root, 'node_modules', name)
-    mkdirSync(join(dir, '.pikku', 'contributors'), { recursive: true })
+    mkdirSync(join(dir, '.pikku', 'services'), { recursive: true })
     writeFileSync(
       join(dir, 'package.json'),
       JSON.stringify({
@@ -26,8 +31,8 @@ const project = (
     )
     if (meta === 'no-meta') continue
     writeFileSync(
-      join(dir, '.pikku', 'contributors', 'pikku-contributors-meta.gen.json'),
-      meta === 'broken' ? '{nope' : JSON.stringify({ contributors: meta })
+      join(dir, '.pikku', 'services', 'pikku-services-meta.gen.json'),
+      meta === 'broken' ? '{nope' : JSON.stringify({ services: meta })
     )
   }
   return root
@@ -46,13 +51,13 @@ afterEach(() => {
   while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true })
 })
 
-describe('addonContributorNames', () => {
+describe('addonServiceNames', () => {
   test('lists the names an installed addon registers, by package', () => {
     const root = project({
       '@scope/mail': { mailer: {}, 'audit-log': {} },
     })
     assert.deepStrictEqual(
-      addonContributorNames(state(root, { mail: { package: '@scope/mail' } })),
+      addonServiceNames(state(root, { mail: { package: '@scope/mail' } })),
       { '@scope/mail': ['mailer', 'audit-log'] }
     )
   })
@@ -60,7 +65,7 @@ describe('addonContributorNames', () => {
   test('a package wired under two namespaces is listed once', () => {
     const root = project({ '@scope/mail': { mailer: {} } })
     assert.deepStrictEqual(
-      addonContributorNames(
+      addonServiceNames(
         state(root, {
           a: { package: '@scope/mail' },
           b: { package: '@scope/mail' },
@@ -76,7 +81,7 @@ describe('addonContributorNames', () => {
       '@scope/bare': 'no-meta',
     })
     assert.deepStrictEqual(
-      addonContributorNames(
+      addonServiceNames(
         state(root, {
           far: { package: '@scope/far', remote: true },
           gone: { package: '@scope/not-installed' },

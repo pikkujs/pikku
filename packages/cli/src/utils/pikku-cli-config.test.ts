@@ -410,9 +410,9 @@ describe('getPikkuCLIConfig', () => {
           getPikkuCLIConfig(silentLogger, join(root, 'pikku.config.json'), []),
         (e: Error) => {
           assert.ok(e.message.includes(`${section}.contributors`))
-          assert.match(e.message, /defineContributors/)
+          assert.match(e.message, /pikkuService/)
           assert.match(e.message, /wireAddon/)
-          assert.match(e.message, /docs\/contributors\.md/)
+          assert.match(e.message, /docs\/MIGRATION\.md/)
           return true
         }
       )

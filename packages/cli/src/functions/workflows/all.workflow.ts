@@ -425,6 +425,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       })
     }
 
+    // What a service provides is read from its return type, which can depend on
+    // the leaf this writes, so it runs until a pass changes nothing.
+    await workflow.do('Service types', 'pikkuServiceTypes', null)
+
     // Type generators are independent of each other
     // These write the addon-safe subset of their leaf when the project is an
     // addon, so they run either way. Skipping them for an addon only meant the
@@ -514,7 +518,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
       workflow.do('Addon types', 'pikkuAddonTypes', {}),
       workflow.do('Screens', 'pikkuScreens', null),
-      workflow.do('Contributors', 'pikkuContributors', null),
+      workflow.do('Services meta', 'pikkuServicesMeta', null),
     ])
 
     if (hasInternalRPCs) {

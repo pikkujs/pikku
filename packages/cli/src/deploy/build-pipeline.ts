@@ -39,11 +39,11 @@ import { verifyUnitsRuntime } from './runtime-verifier.js'
 import { readCoercionMap } from '../functions/db/db-codegen.js'
 import type { BundleResult } from './bundler/types.js'
 import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
-import { writeUnitPlatformServices } from './platform-services.js'
 import {
-  buildContributorPlatform,
-  detectDatabaseDialect,
-} from '../contributors/contributor-platform.js'
+  readUnitRequiredServices,
+  writeUnitPlatformServices,
+} from './platform-services.js'
+import { detectDatabaseDialect } from '../utils/database-dialect.js'
 import {
   generateServerEntrySource,
   SERVER_DOCKERFILE,
@@ -353,7 +353,7 @@ export async function runBuildPipeline(options: {
     spaFallback: boolean
   }
   deployDir?: string
-  /** The shared `.pikku`: db assets and contributors are project-wide. */
+  /** The shared `.pikku`: db assets and services are project-wide. */
   outDir?: string
   /**
    * The backend's own filtered tree (`.pikku/backends/<name>`). A single-unit
@@ -498,24 +498,15 @@ export async function runBuildPipeline(options: {
             : undefined,
         }
       ),
-      // The whole app is this one unit, so the facts are the app's own — the
-      // same ones `pikku dev` hands its contributors.
-      contributorPlatform: await buildContributorPlatform({
-        projectDir,
-        pikkuDir,
-        sourceDirs: options.sourceDirs ?? ['src'],
-        logger,
-        serviceNames: inspectorState.serviceAggregation.requiredServices,
-        subject: 'a standalone build',
-      }),
       lifecycle: resolveLifecycle(unitDir, inspectorState),
+      coercionMap: readCoercionMap(join(pikkuDir, 'db', 'coercion.gen.ts')),
     }
     ctx.platformServices = await writeUnitPlatformServices({
       provider,
       ctx,
       state: inspectorState,
       projectDir,
-      warn: (message) => logger.info(`Warning: ${message}`),
+      requiredServices: inspectorState.serviceAggregation.requiredServices,
     })
     const source = provider.generateEntrySource(ctx)
 
@@ -714,33 +705,15 @@ export async function runBuildPipeline(options: {
         ) as EntryGenerationContext),
         lifecycle: resolveLifecycle(unitDir, inspectorState),
         coercionMap,
-        contributorPlatform: await buildContributorPlatform({
-          projectDir,
-          pikkuDir: options.outDir ?? join(projectDir, '.pikku'),
-          sourceDirs: options.sourceDirs ?? ['src'],
-          logger,
-          serviceNames: unit.services.map((s) => s.sourceServiceName),
-          needs: {
-            queue: unit.services.some((s) => s.capability === 'queue'),
-            workflow: unit.services.some(
-              (s) => s.capability === 'workflow-state'
-            ),
-            agent: unit.services.some(
-              (s) =>
-                s.capability === 'ai-storage' || s.capability === 'ai-model'
-            ),
-          },
-          subject: 'a deploy build',
-        }),
       }
       ctx.platformServices = await writeUnitPlatformServices({
         provider,
         ctx,
         state: inspectorState,
         projectDir,
+        requiredServices: await readUnitRequiredServices(pikkuDir),
         genericServerEntry:
           unit.target === 'server' && !provider.generateServerEntrySource,
-        warn: (message) => logger.info(`Warning: ${message}`),
       })
       const source =
         unit.target === 'server'

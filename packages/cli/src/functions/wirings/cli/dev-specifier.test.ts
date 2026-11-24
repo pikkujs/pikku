@@ -12,12 +12,33 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
-import { devRuntimeServices, localSpecifier } from './dev-specifier.js'
+import { devBaselineServices, localSpecifier } from './dev-specifier.js'
 
-describe('devRuntimeServices', () => {
+describe('devBaselineServices', () => {
   test('kysely is a baseline service only when the app has a db', () => {
-    assert.ok(!devRuntimeServices({ db: false }).includes('kysely'))
-    assert.ok(devRuntimeServices({ db: true }).includes('kysely'))
+    assert.ok(
+      !devBaselineServices({ db: false, agents: false }).includes('kysely')
+    )
+    assert.ok(
+      devBaselineServices({ db: true, agents: false }).includes('kysely')
+    )
+  })
+
+  test('agentRunner is a baseline service only when dev builds one', () => {
+    assert.ok(
+      !devBaselineServices({ db: false, agents: false }).includes('agentRunner')
+    )
+    assert.ok(
+      devBaselineServices({ db: false, agents: true }).includes('agentRunner')
+    )
+  })
+
+  test('lists only what dev injects: no variables, schema or secrets', () => {
+    const keys = devBaselineServices({ db: true, agents: true })
+    for (const key of ['variables', 'schema', 'secrets']) {
+      assert.ok(!keys.includes(key), key)
+    }
+    assert.equal(new Set(keys).size, keys.length)
   })
 })
 
@@ -79,7 +100,7 @@ describe('the generated file typechecks', () => {
   })
 
   const generate = (from: string) => {
-    const file = join(project, '.pikku', 'pikku-dev-contributors.gen.ts')
+    const file = join(project, '.pikku', 'pikku-dev-services.gen.ts')
     const specifier = localSpecifier(from, { file })
     const code = `import { HostEmailService } from ${JSON.stringify(specifier)}\nexport const email = new HostEmailService({ url: 'x' })\nemail.send('welcome', 'en')\n`
     writeFileSync(file, code)

@@ -3,6 +3,7 @@ import { writeFileInDir } from '../../../utils/file-writer.js'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeCLITypes } from './serialize-cli-types.js'
+import { singletonServicesTypeRef } from '../../../pikku-services/service-types-source.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 
 export type CLITypesCommandInput = {
@@ -40,6 +41,12 @@ export const pikkuCLITypes = pikkuSessionlessFunc<CLITypesCommandInput, void>({
       throw new Error('Required types not found')
     }
 
+    const cliServices = singletonServicesTypeRef(
+      visitState,
+      config,
+      cliTypesFile
+    )
+
     const content = serializeCLITypes(
       functionTypesImportPath,
       getFileImportRelativePath(
@@ -49,8 +56,8 @@ export const pikkuCLITypes = pikkuSessionlessFunc<CLITypesCommandInput, void>({
       ),
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(cliTypesFile, userSessionType.typePath, packageMappings)}'`,
       userSessionType.type,
-      `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(cliTypesFile, singletonServicesType.typePath, packageMappings)}'`,
-      singletonServicesType.type,
+      cliServices.import,
+      cliServices.name,
       {
         addon: !!config.addon,
       }

@@ -4,7 +4,7 @@ import { rm } from 'fs/promises'
 import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
-import { addonContributorNames } from './addon-contributor-names.js'
+import { addonServiceNames } from './addon-service-names.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { join } from 'path'
 import {
@@ -77,7 +77,7 @@ export const pikkuAddonTypes = pikkuSessionlessFunc<
         addonTypesFile,
         serializeAddonInstallTypes(
           state ? addonFunctionNames(state) : {},
-          state ? addonContributorNames(state) : {}
+          state ? addonServiceNames(state) : {}
         )
       )
       if (state) {

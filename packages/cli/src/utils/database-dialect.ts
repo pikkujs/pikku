@@ -1,7 +1,5 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ContributorPlatform } from '@pikku/core/contributors'
-import { readCoercionMap } from '../functions/db/db-codegen.js'
 import {
   loadUserConfigForDb,
   type UserConfigShape,
@@ -93,61 +91,8 @@ export async function detectDatabaseDialect(
 }
 
 /**
- * The sentence both `pikku validate` and `pikku dev` use when the project has
- * a database but the pikku config declares no `db`.
+ * The sentence `pikku validate` uses when the project has a database but the
+ * pikku config declares no `db`.
  */
 export const dbConfigMismatch = (engine: DatabaseDialect): string =>
   `the project has a ${engine} database (createConfig or db/${engine}) but the pikku config has no \`db\``
-
-export interface ContributorPlatformFacts {
-  projectDir: string
-  /** Where `db/coercion.gen.ts` lives (`<pikkuDir>/db/coercion.gen.ts`). */
-  pikkuDir: string
-  sourceDirs: string[]
-  logger: DebugLogger
-  /** Service names the app (dev) or the unit (deploy) requires. */
-  serviceNames: Iterable<string>
-  /** Baseline services the adapter holds before any contributor runs. */
-  runtimeServices?: string[]
-  /** Overrides what `needsQueue/Workflow/Agent` would be derived as from `serviceNames`. */
-  needs?: { queue?: boolean; workflow?: boolean; agent?: boolean }
-  /** Passed to `detectDatabaseDialect` for its error messages. */
-  subject?: string
-}
-
-/**
- * The one place `ContributorPlatform` is built, for `pikku dev` and every
- * deploy path. Adapters only add their own `runtimeServices`.
- *
- * `db` is set for sqlite and postgres. MySQL is a database the app has but no
- * contributor engine, so it leaves `db` unset and the caller decides whether
- * that is an error (the standalone bundle refuses it).
- */
-export async function buildContributorPlatform(
-  facts: ContributorPlatformFacts
-): Promise<ContributorPlatform> {
-  const serviceNames = [...facts.serviceNames]
-  const dialect = await detectDatabaseDialect(
-    facts.projectDir,
-    facts.sourceDirs,
-    facts.logger,
-    facts.subject
-  )
-  const coercionMap =
-    dialect === 'sqlite' || dialect === 'postgres'
-      ? readCoercionMap(join(facts.pikkuDir, 'db', 'coercion.gen.ts'))
-      : undefined
-  return {
-    serviceNames,
-    needsQueue: facts.needs?.queue ?? serviceNames.includes('queueService'),
-    needsWorkflow:
-      facts.needs?.workflow ?? serviceNames.includes('workflowService'),
-    needsAgent: facts.needs?.agent ?? serviceNames.includes('agentRunner'),
-    ...(facts.runtimeServices
-      ? { runtimeServices: facts.runtimeServices }
-      : {}),
-    ...(dialect === 'sqlite' || dialect === 'postgres'
-      ? { db: { engine: dialect, ...(coercionMap ? { coercionMap } : {}) } }
-      : {}),
-  }
-}

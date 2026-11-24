@@ -3,14 +3,14 @@ import type { InspectorState } from '@pikku/inspector'
 import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
 
 /**
- * The contributors each installed addon registers, by package, read from the
- * `contributors` meta the addon's own `pikku all` wrote. This reads the same
- * file the inspector validates `wireAddon({ contributors })` against, so the
+ * The services each installed addon declares, by package, read from the
+ * `services` meta the addon's own `pikku all` wrote. This reads the same
+ * file the inspector validates `wireAddon({ services })` against, so the
  * type and the build-time check cannot disagree. A package whose meta is not
  * installed or unreadable is left out, which types its names as plain strings
- * and leaves the inspector's check (PKU363) as the only guard.
+ * and leaves the inspector's check (PKU374) as the only guard.
  */
-export const addonContributorNames = (
+export const addonServiceNames = (
   state: Pick<InspectorState, 'rootDir' | 'rpc'>
 ): Record<string, string[]> => {
   const names: Record<string, string[]> = {}
@@ -22,10 +22,10 @@ export const addonContributorNames = (
     try {
       const metaPath = createAddonResolver(
         addonResolutionDirs(state.rootDir, decl.file)
-      ).resolve(`${pkg}/.pikku/contributors/pikku-contributors-meta.gen.json`)
+      ).resolve(`${pkg}/.pikku/services/pikku-services-meta.gen.json`)
       const meta = JSON.parse(readFileSync(metaPath, 'utf-8'))
-      if (meta?.contributors && typeof meta.contributors === 'object') {
-        names[pkg] = Object.keys(meta.contributors)
+      if (meta?.services && typeof meta.services === 'object') {
+        names[pkg] = Object.keys(meta.services)
       }
     } catch {
       continue

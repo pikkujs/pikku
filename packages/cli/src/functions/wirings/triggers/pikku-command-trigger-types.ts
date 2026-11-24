@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
-import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
+import { singletonServicesTypeRef } from '../../../pikku-services/service-types-source.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeTriggerTypes } from './serialize-trigger-types.js'
 
@@ -9,7 +9,7 @@ export const pikkuTriggerTypes = pikkuSessionlessFunc<
   void
 >({
   func: async ({ logger, config, getInspectorState }, data) => {
-    const { triggersTypesFile, packageMappings } = config
+    const { triggersTypesFile } = config
     const visitState = await getInspectorState(
       false,
       true,
@@ -22,13 +22,15 @@ export const pikkuTriggerTypes = pikkuSessionlessFunc<
       throw new Error('SingletonServices type not found')
     }
 
-    const singletonServicesTypeImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(triggersTypesFile, singletonServicesType.typePath, packageMappings)}'`
-
-    const content = serializeTriggerTypes(
-      singletonServicesTypeImport,
-      singletonServicesType.type,
-      { addon: !!config.addon }
+    const services = singletonServicesTypeRef(
+      visitState,
+      config,
+      triggersTypesFile
     )
+
+    const content = serializeTriggerTypes(services.import, services.name, {
+      addon: !!config.addon,
+    })
     await writeFileInDir(logger, triggersTypesFile, content)
   },
   middleware: [

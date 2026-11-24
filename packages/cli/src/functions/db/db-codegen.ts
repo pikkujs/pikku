@@ -967,7 +967,7 @@ export async function generateSchemaTypes(
     `//`,
     `//   - pikku dev, pikku serve and the generated local CLI`,
     `//   - standalone deploys (@pikku/deploy-standalone)`,
-    `//   - Cloudflare deploys (@pikku/deploy-cloudflare's coercionContributor)`,
+    `//   - deploys where a pikkuService provides kysely (the generated runner)`,
     `//`,
     `// Do not attach it to that instance again. The plugin is not idempotent: a`,
     `// json column whose value is a JSON-encoded string is parsed twice.`,

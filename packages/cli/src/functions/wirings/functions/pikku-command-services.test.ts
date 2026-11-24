@@ -144,6 +144,11 @@ describe('pikkuServices', () => {
       forceRequiredServices: [],
       packageMappings: {},
       servicesFile,
+      pikkuServiceTypesFile: join(
+        dirname(servicesFile),
+        'service',
+        'pikku-service-types.gen.ts'
+      ),
       rootDir: dirname(servicesFile),
       outDir: dirname(servicesFile),
       localServicesFile: join(
