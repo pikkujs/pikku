@@ -41,6 +41,10 @@ import type {
   ScorerMeta,
 } from '../wirings/agent-scorer/agent-scorer.types.js'
 import type {
+  AttentionFuncMeta,
+  PikkuAttentionFunc,
+} from '../wirings/attention-func/attention-func.types.js'
+import type {
   CoreGateway,
   GatewaysMeta,
 } from '../wirings/gateway/gateway.types.js'
@@ -196,6 +200,10 @@ export interface PikkuPackageState {
     toolsMeta: MCPToolMeta
     prompts: Map<string, CoreMCPPrompt>
     promptsMeta: MCPPromptMeta
+  }
+  attention: {
+    funcs: Map<string, PikkuAttentionFunc>
+    meta: AttentionFuncMeta
   }
   agent: {
     agents: Map<string, CoreAgent>

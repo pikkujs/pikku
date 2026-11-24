@@ -26,6 +26,8 @@ const ALLOWED: Record<string, string[]> = {
   agent: ['rpc', 'agent-scorer', 'addon'],
   // A grade is dispatched to a queue.
   'agent-scorer': ['queue'],
+  // An attention func runs as a workflow, refreshed by a scheduled task.
+  'attention-func': ['workflow', 'scheduler'],
   // An rpc call is how an installed addon's function is reached, so the runner
   // resolves the addon instance that owns the namespace. `wire.rpc.agent` is
   // deliberately absent: the runner reaches the facade through state, because a

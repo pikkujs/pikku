@@ -11,6 +11,7 @@ import type {
 } from './wirings/mcp/mcp.types.js'
 import type { AgentsMeta } from './wirings/agent/agent.types.js'
 import type { ScorerMeta } from './wirings/agent-scorer/agent-scorer.types.js'
+import type { AttentionFuncMeta } from './wirings/attention-func/attention-func.types.js'
 import type { GatewaysMeta } from './wirings/gateway/gateway.types.js'
 import type { ScheduledTasksMeta } from './wirings/scheduler/scheduler.types.js'
 import type { TriggerMeta } from './wirings/trigger/trigger.types.js'
@@ -148,6 +149,10 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     scorers: new Map(),
     scorersMeta: {} as ScorerMeta,
     modelAliases: {},
+  },
+  attention: {
+    funcs: new Map(),
+    meta: {} as AttentionFuncMeta,
   },
   gateway: {
     gateways: new Map(),

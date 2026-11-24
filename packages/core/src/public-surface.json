@@ -315,6 +315,16 @@
     "pikkuAgentScorer",
     "wireAgentScorerQueueWorkers"
   ],
+  "./attention-func": [
+    "InMemoryAttentionResultStore",
+    "addAttentionFunc",
+    "attentionSchedule",
+    "getAttention",
+    "getAttentionFuncs",
+    "getAttentionFuncsMeta",
+    "pikkuAttentionFunc",
+    "refreshAttention"
+  ],
   "./analytics": [
     "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
