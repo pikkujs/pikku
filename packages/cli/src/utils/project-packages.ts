@@ -143,8 +143,6 @@ export type AddonPackage = {
   dir: string
   /** The package.json name. */
   name: string
-  /** The namespace the package is wired under, from its own pikku.config.json. */
-  namespace: string
   /** The package names this package depends on, whether or not they are workspace members. */
   dependsOn: string[]
 }
@@ -351,12 +349,10 @@ export type WorkspacePackages = {
 /**
  * Finds the packages of a project by the role marker in each workspace
  * member's pikku.config.json: `"main": true` is the package that owns the
- * wirings and services, `"addon": ...` (with a top-level `namespace`) is an
- * addon. Zero or one main is allowed; a project with none is its own main.
+ * wirings and services, `"addon": ...` is an addon. Zero or one main is allowed; a project with none is its own main.
  *
  * Refuses a member with neither marker or with both, two mains (naming both),
- * an addon with a missing, invalid or duplicate `namespace`, a package.json
- * without a name, a duplicate package, and a member whose real path leaves
+ * a package.json without a name, a duplicate package, and a member whose real path leaves
  * the project root.
  *
  * `configFile` is the project's pikku.config.json; members resolve against
@@ -398,7 +394,7 @@ export const resolveWorkspacePackages = async (
     }
     if (!isMain && !isAddon) {
       throw new PikkuCLIConfigError(
-        `${entry}/${CONFIG_FILE} is a workspace package with no role marker. Add "main": true if it owns the wirings and services, or an "addon" section (with a "namespace") if it is an addon, or remove the file.`
+        `${entry}/${CONFIG_FILE} is a workspace package with no role marker. Add "main": true if it owns the wirings and services, or an "addon" section if it is an addon, or remove the file.`
       )
     }
     const pkg = readJsonSync(join(dir, 'package.json'))
@@ -412,22 +408,10 @@ export const resolveWorkspacePackages = async (
       mains.push({ entry, dir, name: pkg.name })
       continue
     }
-    const namespace = config.namespace
-    if (typeof namespace !== 'string' || namespace === '') {
-      throw new PikkuCLIConfigError(
-        `${entry}/${CONFIG_FILE} is an addon with no namespace. The main package wires the addon under that name (\`namespace:function\`). Add "namespace" to ${entry}/${CONFIG_FILE}.`
-      )
-    }
-    if (!NAMESPACE_PATTERN.test(namespace)) {
-      throw new PikkuCLIConfigError(
-        `The namespace "${namespace}" in ${entry}/${CONFIG_FILE} is not valid: it must start with a lowercase letter and contain only lowercase alphanumerics, hyphens, and underscores.`
-      )
-    }
     addons.push({
       entry,
       dir,
       name: pkg.name,
-      namespace,
       dependsOn: packageDependencyNames(pkg),
     })
   }
@@ -446,16 +430,6 @@ export const resolveWorkspacePackages = async (
     }
     names.set(p.name, p.entry)
   }
-  const namespaces = new Map<string, string>()
-  for (const p of addons) {
-    const first = namespaces.get(p.namespace)
-    if (first) {
-      throw new PikkuCLIConfigError(
-        `${first} and ${p.entry} both declare the namespace "${p.namespace}". Give each addon its own namespace in its ${CONFIG_FILE}.`
-      )
-    }
-    namespaces.set(p.namespace, p.entry)
-  }
   return { addons, main: mains[0] }
 }
 
@@ -469,70 +443,40 @@ export type WireAddonDeclaration = {
 /**
  * An addon package runs its own pass and joins the root's SDK, but the main
  * package is what wires it: a `wireAddon` in the main package's own source
- * points at the addon's package, under the addon's `namespace`. Only the main
- * package's source is read: a `wireAddon` anywhere else in the root does not count.
+ * points at the addon's package, under whatever name the call chooses, and may
+ * do so more than once. Only the main package's source is read: a `wireAddon`
+ * anywhere else in the root does not count.
  *
  * `resolvePackage` names the package a call points at, the way the addon
  * loader resolves it (the package.json name of the resolved directory), so an
  * npm alias counts as the package it installs.
  *
- * Exactly one call may point at each listed addon, under its `namespace`. A
- * second call, or a call that names it otherwise, is an error, and so is a call
- * that takes the addon's namespace for another package. A listed addon no call
- * points at is dead weight, and is returned as a warning.
+ * A listed addon no call points at is dead weight, and is returned as a warning.
  */
 export const checkAddonsWired = (
   configFile: string,
-  addons: readonly { entry: string; name: string; namespace: string }[],
+  addons: readonly { entry: string; name: string }[],
   declarations: ReadonlyMap<string, WireAddonDeclaration>,
   mainDir: string,
   resolvePackage: (declaration: WireAddonDeclaration) => string = (d) =>
     d.package
 ): string[] => {
   const own = resolve(mainDir)
-  const fromMain = [...declarations]
-    .filter(
-      ([, declaration]) =>
-        declaration.file === undefined ||
-        !escapes(own, resolve(declaration.file))
+  const wired = new Set(
+    [...declarations]
+      .filter(
+        ([, declaration]) =>
+          declaration.file === undefined ||
+          !escapes(own, resolve(declaration.file))
+      )
+      .map(([, declaration]) => resolvePackage(declaration))
+  )
+  return addons
+    .filter((addon) => !wired.has(addon.name))
+    .map(
+      (addon) =>
+        `The workspace of ${configFile} has the addon "${addon.entry}", but no wireAddon in the main package's source points at ${addon.name}. Expected wireAddon({ name: '<name>', package: '${addon.name}' }); until it is wired, the addon's functions are not callable from the app. Add it, or remove the addon package.`
     )
-    .map(([name, declaration]) => ({
-      name,
-      file: declaration.file,
-      package: resolvePackage(declaration),
-    }))
-  const at = (call: { name: string; file?: string }) =>
-    `"${call.name}"${call.file ? ` in ${call.file}` : ''}`
-  const warnings: string[] = []
-  for (const addon of addons) {
-    const addonConfig = join(addon.entry, CONFIG_FILE)
-    const stolen = fromMain.find(
-      (call) => call.name === addon.namespace && call.package !== addon.name
-    )
-    if (stolen) {
-      throw new PikkuCLIConfigError(
-        `wireAddon ${at(stolen)} points at "${stolen.package}", but "${addon.namespace}" is the namespace ${addonConfig} declares for "${addon.name}" (an addon in the workspace of ${configFile}). Wire "${addon.name}" under that name, or change the namespace in both places.`
-      )
-    }
-    const calls = fromMain.filter((call) => call.package === addon.name)
-    if (calls.length > 1) {
-      throw new PikkuCLIConfigError(
-        `"${addon.name}" is wired twice: wireAddon ${at(calls[0]!)} and ${at(calls[1]!)}. An addon package is wired once, under its namespace "${addon.namespace}". Remove the extra call.`
-      )
-    }
-    const [call] = calls
-    if (call && call.name !== addon.namespace) {
-      throw new PikkuCLIConfigError(
-        `wireAddon names the package "${addon.name}" ${at(call)}, but ${addonConfig} declares its namespace as "${addon.namespace}" (an addon in the workspace of ${configFile}). Use one name in both places.`
-      )
-    }
-    if (!call) {
-      warnings.push(
-        `The workspace of ${configFile} has the addon "${addon.entry}", but no wireAddon in the main package's source points at ${addon.name}. Expected wireAddon({ name: '${addon.namespace}', package: '${addon.name}' }); until it is wired, the addon's functions are not callable from the app. Add it, or remove the addon package.`
-      )
-    }
-  }
-  return warnings
 }
 
 /**

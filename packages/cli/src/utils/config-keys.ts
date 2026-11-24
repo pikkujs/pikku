@@ -66,7 +66,6 @@ const SHAPE: Shape = obj({
   // Read by the published CLI that bootstraps this repo's own build; the
   // loader accepts the key and reads nothing from it.
   srcDirectories: 'any',
-  namespace: 'any',
   ignoreFiles: 'any',
   packageMappings: 'any',
   addon: obj({
@@ -214,7 +213,7 @@ const MOVED_TOP_LEVEL: Record<
 > = {
   base: 'is no longer a key: the package that owns the wirings and services is marked `"main": true` in its own pikku.config.json, and the root finds it in the root package.json `workspaces`. Delete it and add the marker',
   addons:
-    'is no longer a key: an addon marks itself with an `"addon"` section and a `"namespace"` in its own pikku.config.json, and the root finds it in the root package.json `workspaces`. Delete it and add them to each addon',
+    'is no longer a key: an addon marks itself with an `"addon"` section in its own pikku.config.json, and the root finds it in the root package.json `workspaces`. Delete it and add them to each addon',
   outDir:
     'is no longer a config key: generated files always go to `.pikku/` beside pikku.config.json. Delete it (`--outDir` stays as an internal flag for per-unit codegen)',
   dev: (value) => {

@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "@pikku/kysely": "^0.13.39",
-    "@pikku/kysely-sqlite": "^0.12.19"
+    "@pikku/kysely-sqlite": "workspace:*"
   }
 }

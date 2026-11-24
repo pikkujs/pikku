@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
+    "@pikku/kysely-postgres": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*"
   },
   "devDependencies": {
