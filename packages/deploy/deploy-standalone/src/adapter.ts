@@ -204,20 +204,30 @@ const triggerSourceStoreLines = (hasDb: boolean): string[] =>
       ]
     : [`  const triggerSourceStore = new InMemoryTriggerSourceStore()`]
 
-/** Where each engine's workflow service lives. SQLite adds nothing to the base. */
+/**
+ * Where each engine's workflow services and the lease service fencing its runs
+ * live. SQLite adds nothing to the base; Postgres judges leases on its own clock.
+ */
 const workflowServiceImport = (
   engine: 'sqlite' | 'postgres'
-): { line: string; service: string; runService: string } =>
+): {
+  line: string
+  service: string
+  runService: string
+  leaseService: string
+} =>
   engine === 'sqlite'
     ? {
-        line: `import { KyselyWorkflowService, KyselyWorkflowRunService } from '@pikku/addon-kysely'`,
+        line: `import { KyselyWorkflowService, KyselyWorkflowRunService, KyselyLeaseService } from '@pikku/addon-kysely'`,
         service: 'KyselyWorkflowService',
         runService: 'KyselyWorkflowRunService',
+        leaseService: 'KyselyLeaseService',
       }
     : {
-        line: `import { PgKyselyWorkflowService, PgKyselyWorkflowRunService } from '@pikku/addon-kysely-postgres'`,
+        line: `import { PgKyselyWorkflowService, PgKyselyWorkflowRunService, PgKyselyLeaseService } from '@pikku/addon-kysely-postgres'`,
         service: 'PgKyselyWorkflowService',
         runService: 'PgKyselyWorkflowRunService',
+        leaseService: 'PgKyselyLeaseService',
       }
 
 /**
@@ -225,6 +235,10 @@ const workflowServiceImport = (
  * so runs survive a restart, and dropped back to memory when its tables are not
  * migrated yet. The console reads runs through `workflowRunService`, which a
  * database-backed service does not implement itself; the in-memory one does.
+ *
+ * Its leases live in the same database, so a second process on it cannot run a
+ * run or step this one holds; without their table the runs still persist,
+ * unfenced, on in-memory leases.
  */
 const workflowServiceLines = (db: EntryGenerationContext['db']): string[] => {
   if (!db) {
@@ -234,9 +248,16 @@ const workflowServiceLines = (db: EntryGenerationContext['db']): string[] => {
       `  workflowService.wireQueueWorkers()`,
     ]
   }
-  const { service, runService } = workflowServiceImport(db.engine)
+  const { service, runService, leaseService } = workflowServiceImport(db.engine)
   return [
-    `  let workflowService: InMemoryWorkflowService | ${service} = new ${service}(kysely, { leaseService: new InMemoryLeaseService() })`,
+    `  let leaseService: InMemoryLeaseService | ${leaseService} = new ${leaseService}(kysely)`,
+    `  try {`,
+    `    await leaseService.init()`,
+    `  } catch (error) {`,
+    `    logger.warn(\`Workflow leases falling back to memory: \${error instanceof Error ? error.message : String(error)}\`)`,
+    `    leaseService = new InMemoryLeaseService()`,
+    `  }`,
+    `  let workflowService: InMemoryWorkflowService | ${service} = new ${service}(kysely, { leaseService })`,
     `  let workflowRunService: InMemoryWorkflowService | ${runService} = new ${runService}(kysely)`,
     `  try {`,
     `    await workflowService.init()`,

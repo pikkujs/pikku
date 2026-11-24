@@ -3,6 +3,10 @@ import assert from 'node:assert'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+import { spawn } from 'node:child_process'
+import { applyPikkuSchemas, leaseSchema, workflowSchema } from '@pikku/addon-kysely'
+import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
+import { createSqliteKysely } from '../../db/sqlite/sqlite-kysely.js'
 import {
   localServicesPackages,
   serializeLocalServices,
@@ -90,27 +94,33 @@ describe('the workflow services', () => {
       '@pikku/addon-kysely-sqlite',
       'SQLiteKyselyWorkflowService',
       'SQLiteKyselyWorkflowRunService',
+      'KyselyLeaseService',
     ],
     [
       'postgres',
       '@pikku/addon-kysely-postgres',
       'PgKyselyWorkflowService',
       'PgKyselyWorkflowRunService',
+      'PgKyselyLeaseService',
     ],
     [
       'mysql',
       '@pikku/addon-kysely-mysql',
       'MySQLKyselyWorkflowService',
       'MySQLKyselyWorkflowRunService',
+      'MySQLKyselyLeaseService',
     ],
   ] as const
 
-  for (const [engine, pkg, service, runService] of engines) {
+  for (const [engine, pkg, service, runService, leaseService] of engines) {
     test(`${engine}: persists runs in the database and exposes both names`, () => {
       const code = emit({ engine })
+      const leaseHere = engine === 'sqlite' ? '' : `, ${leaseService}`
       assert.match(
         code,
-        new RegExp(`import \\{ ${service}, ${runService} \\} from '${pkg}'`)
+        new RegExp(
+          `import \\{ ${service}, ${runService}${leaseHere} \\} from '${pkg}'`
+        )
       )
       assert.match(
         code,
@@ -124,6 +134,19 @@ describe('the workflow services', () => {
       )
     })
   }
+
+  test('fences runs with leases in the same database, unless the host passes its own', () => {
+    const code = emit({ engine: 'sqlite' })
+    assert.match(
+      code,
+      /import \{[^}]*\bKyselyLeaseService,[^}]*\} from '@pikku\/addon-kysely'/
+    )
+    assert.match(
+      code,
+      /hostServices\.leaseService as LeaseService \| undefined\) \?\?\s*\(await initOrWarn\(\s*new KyselyLeaseService\(kysely\)/
+    )
+    assert.match(code, /\)\) \?\?\s*new InMemoryLeaseService\(\)/)
+  })
 
   test('falls back to memory when the table is not migrated', () => {
     assert.match(
@@ -362,6 +385,95 @@ describe('the generated createLocalServices', async () => {
     assert.strictEqual(services.kysely, undefined)
     assert.strictEqual(services.scopeService, undefined)
     assert.strictEqual(services.featureFlags, undefined)
+  })
+
+  /**
+   * Two processes, each with its own createLocalServices on one SQLite file: the
+   * run the first holds is refused to the second until the first lets go.
+   */
+  test('a second process on the same database cannot take a run the first holds', async () => {
+    const services = join(dir, 'fenced.gen.ts')
+    writeFileSync(
+      services,
+      emit({
+        localServicesFile: services,
+        engine: 'sqlite',
+        localCLI: undefined,
+      })
+    )
+    const database = join(dir, 'fenced.db')
+    const setup = createSqliteKysely({
+      db: (await loadSqliteRuntime()).open(database),
+    })
+    await applyPikkuSchemas(setup, [workflowSchema, leaseSchema])
+    await setup.destroy()
+
+    const child = join(dir, 'fenced-process.ts')
+    writeFileSync(
+      child,
+      `import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
+import { createSqliteKysely } from ${JSON.stringify(fileURLToPath(new URL('../../db/sqlite/sqlite-kysely.ts', import.meta.url)))}
+import { createLocalServices } from './fenced.gen.ts'
+
+const [database, hold] = process.argv.slice(2)
+const kysely = createSqliteKysely({ db: (await loadSqliteRuntime()).open(database) })
+const { workflowService } = await createLocalServices({}, { kysely }, { logger: { warn: () => {} } })
+try {
+  await workflowService.withRunLease('run-1', async () => {
+    console.log('held')
+    if (hold) await new Promise((done) => process.stdin.on('data', done))
+  })
+  console.log('released')
+} catch (error) {
+  console.log(error.constructor.name)
+}
+await kysely.destroy()
+process.exit(0)
+`
+    )
+    const run = (hold: boolean) =>
+      spawn(process.execPath, [child, database, ...(hold ? ['hold'] : [])], {
+        cwd: dir,
+        stdio: ['pipe', 'pipe', 'inherit'],
+      })
+    const lines = (child: ReturnType<typeof run>) => {
+      const seen: string[] = []
+      let buffer = ''
+      child.stdout!.on('data', (chunk: Buffer) => {
+        buffer += chunk.toString()
+        seen.push(...buffer.split('\n').slice(0, -1))
+        buffer = buffer.slice(buffer.lastIndexOf('\n') + 1)
+      })
+      return seen
+    }
+    const exited = (child: ReturnType<typeof run>) =>
+      new Promise<number | null>((done) => child.once('exit', done))
+    const until = async (check: () => boolean) => {
+      for (let i = 0; i < 300 && !check(); i++)
+        await new Promise((done) => setTimeout(done, 50))
+    }
+
+    const first = run(true)
+    const firstSaid = lines(first)
+    const firstExit = exited(first)
+    try {
+      await until(() => firstSaid.includes('held'))
+      assert.deepStrictEqual(firstSaid, ['held'])
+
+      const second = run(false)
+      const secondSaid = lines(second)
+      assert.strictEqual(await exited(second), 0)
+      assert.deepStrictEqual(secondSaid, ['LeaseTakenError'])
+    } finally {
+      first.stdin!.end('go\n')
+    }
+    assert.strictEqual(await firstExit, 0)
+    assert.deepStrictEqual(firstSaid, ['held', 'released'])
+
+    const third = run(false)
+    const thirdSaid = lines(third)
+    assert.strictEqual(await exited(third), 0)
+    assert.deepStrictEqual(thirdSaid, ['held', 'released'])
   })
 
   test('lets what the host provides win over what it assembles', async () => {

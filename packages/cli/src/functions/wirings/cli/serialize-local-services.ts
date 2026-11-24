@@ -35,21 +35,32 @@ export interface LocalCLIServicesOptions {
 
 export type DatabaseEngine = 'sqlite' | 'postgres' | 'mysql'
 
+/**
+ * Each engine's workflow services and the lease service that fences its runs
+ * between processes. SQLite's lease service is the base one in
+ * `@pikku/addon-kysely`; the others judge leases on the database's clock.
+ */
 const ENGINE_WORKFLOW = {
   sqlite: {
     pkg: '@pikku/addon-kysely-sqlite',
     service: 'SQLiteKyselyWorkflowService',
     runService: 'SQLiteKyselyWorkflowRunService',
+    leaseService: 'KyselyLeaseService',
+    leasePkg: '@pikku/addon-kysely',
   },
   postgres: {
     pkg: '@pikku/addon-kysely-postgres',
     service: 'PgKyselyWorkflowService',
     runService: 'PgKyselyWorkflowRunService',
+    leaseService: 'PgKyselyLeaseService',
+    leasePkg: '@pikku/addon-kysely-postgres',
   },
   mysql: {
     pkg: '@pikku/addon-kysely-mysql',
     service: 'MySQLKyselyWorkflowService',
     runService: 'MySQLKyselyWorkflowRunService',
+    leaseService: 'MySQLKyselyLeaseService',
+    leasePkg: '@pikku/addon-kysely-mysql',
   },
 } as const
 
@@ -426,6 +437,10 @@ export const createLocalServices = async (
   // through workflowRunService, which the durable service does not implement
   // itself, so that name is a run service over the same database. The in-memory
   // service implements both surfaces and serves both names.
+  //
+  // Leases in the same database are what stop a second process on it from
+  // running a run or step this one holds. Without their table the runs still
+  // persist, unfenced, on in-memory leases.
 ${
   engine
     ? `  const workflowService =
@@ -434,6 +449,11 @@ ${
           new ${ENGINE_WORKFLOW[engine].service}(kysely, {
             leaseService:
               (hostServices.leaseService as LeaseService | undefined) ??
+              (await initOrWarn(
+                new ${ENGINE_WORKFLOW[engine].leaseService}(kysely),
+                '${ENGINE_WORKFLOW[engine].leaseService}',
+                warnLogger
+              )) ??
               new InMemoryLeaseService(),
           }),
           'workflowService',
@@ -558,13 +578,19 @@ export const serializeLocalServices = ({
   KyselyAnalyticsService,
   KyselyFeatureFlagStore,
   KyselyIncomingWebhookService,
-  KyselyScopeService,
+  ${engine && ENGINE_WORKFLOW[engine].leasePkg === '@pikku/addon-kysely' ? `${ENGINE_WORKFLOW[engine].leaseService},\n  ` : ''}KyselyScopeService,
   KyselyTriggerSourceStore,
   KyselyWebhookService,
 } from '@pikku/addon-kysely'`)
     if (engine) {
-      const { pkg, service, runService } = ENGINE_WORKFLOW[engine]
-      imports.push(`import { ${service}, ${runService} } from '${pkg}'`)
+      const { pkg, service, runService, leaseService, leasePkg } =
+        ENGINE_WORKFLOW[engine]
+      const names = [
+        service,
+        runService,
+        ...(leasePkg === pkg ? [leaseService] : []),
+      ]
+      imports.push(`import { ${names.join(', ')} } from '${pkg}'`)
     }
   }
   if (coerces && localCLI?.coercionFile) {

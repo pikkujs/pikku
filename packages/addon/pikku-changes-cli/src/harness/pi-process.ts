@@ -1,4 +1,5 @@
-import { readFile, rm, writeFile } from 'node:fs/promises'
+import { readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 
 /**
  * A process's start time in clock ticks since boot (field 22 of `/proc/<pid>/stat`), which tells a
@@ -83,20 +84,46 @@ export const stopGroup = async (
   return 'killed'
 }
 
-/** What `pi.lock` records about the Pi process running in a worktree. */
-export type PiLock = {
+/** Process groups started here; if this process exits they go with it. */
+const liveGroups = new Set<number>()
+let exitHooked = false
+
+/** Records a group this process started, so it is killed when this process exits and never taken for an orphan. */
+export const trackGroup = (pgid: number) => {
+  liveGroups.add(pgid)
+  if (exitHooked) return
+  exitHooked = true
+  process.once('exit', () => {
+    for (const group of liveGroups)
+      try {
+        process.kill(-group, 'SIGKILL')
+      } catch {
+        // already gone
+      }
+  })
+}
+
+export const untrackGroup = (pgid: number) => liveGroups.delete(pgid)
+
+/** What a lock file records about a process group started here: Pi in a worktree (`pi.lock`) or a gate's tool. */
+export type ProcessLock = {
   pid: number
-  /** Pi is started as the leader of its own group, so this equals `pid`. */
+  /** The process is started as the leader of its own group, so this equals `pid`. */
   pgid: number
   /** `processStartTime(pid)` when it was started; absent where it cannot be read. */
   startTime?: string
-  sessionId: string
+  /** Pi's session. */
+  sessionId?: string
+  /** A gate's tool, redacted. */
+  tool?: string
   startedAt: string
 }
 
-export const readLock = async (path: string): Promise<PiLock | undefined> => {
+export const readLock = async (
+  path: string
+): Promise<ProcessLock | undefined> => {
   try {
-    const lock = JSON.parse(await readFile(path, 'utf8')) as PiLock
+    const lock = JSON.parse(await readFile(path, 'utf8')) as ProcessLock
     return Number.isInteger(lock.pid) &&
       Number.isInteger(lock.pgid) &&
       lock.pid > 1 &&
@@ -108,7 +135,7 @@ export const readLock = async (path: string): Promise<PiLock | undefined> => {
   }
 }
 
-export const writeLock = (path: string, lock: PiLock) =>
+export const writeLock = (path: string, lock: ProcessLock) =>
   writeFile(path, `${JSON.stringify(lock)}\n`)
 
 /** Removes the lock if it is still the one `pid` wrote. */
@@ -120,13 +147,17 @@ export const removeLock = async (path: string, pid: number) => {
 
 export type OrphanOutcome =
   | { action: 'none' }
-  | { action: 'killed'; lock: PiLock; how: 'gone' | 'terminated' | 'killed' }
-  | { action: 'stale'; lock: PiLock }
+  | {
+      action: 'killed'
+      lock: ProcessLock
+      how: 'gone' | 'terminated' | 'killed'
+    }
+  | { action: 'stale'; lock: ProcessLock }
 
 /**
- * Before a launch: a lock left by a Pi that is still running (same pid and same start time) means an
- * earlier process of ours died without stopping it, so its whole group is stopped. A lock whose pid
- * is gone or now belongs to another process (a different start time) is only removed.
+ * Before a launch: a lock left by a Pi or a tool that is still running (same pid and same start
+ * time) means an earlier process of ours died without stopping it, so its whole group is stopped. A
+ * lock whose pid is gone or now belongs to another process (a different start time) is only removed.
  */
 export const clearOrphan = async (
   path: string,
@@ -160,4 +191,23 @@ export const clearOrphan = async (
   const how = await stopGroup(lock.pgid, graceMs)
   await rm(path, { force: true })
   return { action: 'killed', lock, how }
+}
+
+/**
+ * The same for a directory of locks (`<pid>.lock`), one per tool: each lock left by a group this
+ * process is not running is cleared as `clearOrphan` clears one. Returns what was found.
+ */
+export const clearOrphans = async (
+  dir: string,
+  graceMs: number
+): Promise<OrphanOutcome[]> => {
+  const names = await readdir(dir).catch(() => [] as string[])
+  const found: OrphanOutcome[] = []
+  for (const name of names) {
+    const pid = Number(name.replace(/\.lock$/, ''))
+    if (!name.endsWith('.lock') || liveGroups.has(pid)) continue
+    const outcome = await clearOrphan(join(dir, name), graceMs)
+    if (outcome.action !== 'none') found.push(outcome)
+  }
+  return found
 }

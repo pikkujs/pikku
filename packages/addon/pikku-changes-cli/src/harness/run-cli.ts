@@ -1,9 +1,17 @@
 import { spawn } from 'node:child_process'
 import { constants } from 'node:fs'
-import { access, stat } from 'node:fs/promises'
-import { isAbsolute } from 'node:path'
+import { access, mkdir, stat } from 'node:fs/promises'
+import { isAbsolute, join } from 'node:path'
 import type { HarnessCliOutput } from '@pikku/core/harness'
 import { HarnessInfraError, isFinding, type Finding } from './finding.js'
+import {
+  processStartTime,
+  removeLock,
+  stopGroup,
+  trackGroup,
+  untrackGroup,
+  writeLock,
+} from './pi-process.js'
 import { redact, redactFinding } from './redact.js'
 
 /** What a parser sees: the tool's full stdout and stderr, uncleaned, and its exit code. */
@@ -18,8 +26,13 @@ export type RunCliOptions = {
   /** Exit codes that mean the tool ran. Any other code is accepted only when the parse found something. */
   okCodes?: number[]
   timeoutMs?: number
-  /** Stops the tool (SIGTERM, then SIGKILL after a grace period) and throws an `aborted` infra error. */
+  /** Stops the tool's process group (SIGTERM, then SIGKILL after a grace period) and throws an `aborted` infra error. */
   signal?: AbortSignal
+  /**
+   * Where the tool's lock (`<pid>.lock`: pid, process group, start time) is kept while it runs, so
+   * that if this process dies the tool can be found and stopped (`clearOrphans`).
+   */
+  lockDir?: string
   /** Extra variables on top of the minimal environment the tool gets. */
   env?: Record<string, string>
   /** Characters of cleaned output kept on an infra error. */
@@ -106,13 +119,19 @@ type Exit = HarnessCliOutput & {
   spawnError?: NodeJS.ErrnoException
 }
 
+/**
+ * Runs the tool as the leader of its own process group, so a stop reaches everything it started and
+ * a killed server leaves a group a restart can find by its lock. What is left of the group when the
+ * tool exits is stopped too.
+ */
 const execute = (
   binary: string,
   args: string[],
   cwd: string,
   env: Record<string, string>,
   timeoutMs: number,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  lockDir?: string
 ): Promise<Exit> =>
   new Promise((done) => {
     const child = spawn(binary, args, {
@@ -120,7 +139,25 @@ const execute = (
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false,
+      detached: true,
     })
+    const pid = child.pid
+    const lockPath =
+      pid !== undefined && lockDir ? join(lockDir, `${pid}.lock`) : undefined
+    let lockWritten: Promise<void> = Promise.resolve()
+    if (pid !== undefined) {
+      trackGroup(pid)
+      if (lockPath)
+        lockWritten = processStartTime(pid).then((startTime) =>
+          writeLock(lockPath, {
+            pid,
+            pgid: pid,
+            ...(startTime === undefined ? {} : { startTime }),
+            tool: redact(binary),
+            startedAt: new Date().toISOString(),
+          })
+        )
+    }
     const streams = { stdout: '', stderr: '' }
     const collect = (name: 'stdout' | 'stderr') => (chunk: Buffer) => {
       if (streams[name].length < MAX_CAPTURE)
@@ -130,11 +167,10 @@ const execute = (
     child.stderr.on('data', collect('stderr'))
     let timedOut = false
     let aborted = false
-    let killer: NodeJS.Timeout | undefined
+    let stopping: Promise<unknown> | undefined
     const stop = () => {
-      if (killer) return
-      child.kill('SIGTERM')
-      killer = setTimeout(() => child.kill('SIGKILL'), KILL_GRACE_MS)
+      if (stopping || pid === undefined) return
+      stopping = stopGroup(pid, KILL_GRACE_MS)
     }
     const timer = setTimeout(() => {
       timedOut = true
@@ -147,18 +183,28 @@ const execute = (
     signal?.addEventListener('abort', onAbort, { once: true })
     let spawnError: NodeJS.ErrnoException | undefined
     child.once('error', (error) => (spawnError = error))
-    child.once('close', (code) => {
+    const settle = async (code: number | null) => {
       clearTimeout(timer)
-      clearTimeout(killer)
       signal?.removeEventListener('abort', onAbort)
-      done({
-        ...streams,
-        code: code ?? -1,
-        timedOut,
-        aborted,
-        spawnError,
-      })
-    })
+      try {
+        if (pid !== undefined) {
+          await stopping
+          await stopGroup(pid, KILL_GRACE_MS)
+          untrackGroup(pid)
+          await lockWritten.catch(() => undefined)
+          if (lockPath) await removeLock(lockPath, pid)
+        }
+      } finally {
+        done({
+          ...streams,
+          code: code ?? -1,
+          timedOut,
+          aborted,
+          spawnError,
+        })
+      }
+    }
+    child.once('close', (code) => void settle(code))
   })
 
 /**
@@ -191,6 +237,7 @@ export const runCli = async (
       `${name} is not an absolute path to an executable file`
     )
   if (signal?.aborted) throw abortedError()
+  if (options.lockDir) await mkdir(options.lockDir, { recursive: true })
   const started = performance.now()
   const exit = await execute(
     binary,
@@ -198,7 +245,8 @@ export const runCli = async (
     cwd,
     { ...baseEnv(), ...options.env },
     timeoutMs,
-    signal
+    signal,
+    options.lockDir
   )
   options.onRun?.({
     durationMs: Math.round(performance.now() - started),

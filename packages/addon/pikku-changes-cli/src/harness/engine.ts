@@ -23,6 +23,7 @@ import { HarnessInfraError, type Finding, type InfraKind } from './finding.js'
 import {
   createGateWire,
   stageOf,
+  toolLocksIn,
   type GateStage,
   type HarnessTools,
 } from './gate.js'
@@ -33,6 +34,7 @@ import {
   runDbStep,
   type HarnessMigrate,
 } from './migrate.js'
+import { clearOrphans } from './pi-process.js'
 import { redact } from './redact.js'
 import type { RunCliOptions } from './run-cli.js'
 import { guardWrites, snapshotTree, type TreeSnapshot } from './write-guard.js'
@@ -224,7 +226,8 @@ export type GateRunContext = {
  * is aborted, which stops any tool it started through `runCli`, and the run fails as `timeout` after
  * the gate has stopped (or after a grace period), so the write guard and a retry never race a tool
  * still running. The run's own `stop` signal aborts the wire's signal too; the tool then throws
- * `aborted`.
+ * `aborted`. First, a tool an earlier run of the gate left running when its process died (found by
+ * its lock in the gate's scratch dir) is stopped, so a retried gate never runs beside it.
  */
 export const runGateOnce = async (
   gate: PikkuHarnessGate,
@@ -238,6 +241,7 @@ export const runGateOnce = async (
       'aborted',
       `Gate ${gate.name} was not run: the run was stopped`
     )
+  await clearOrphans(toolLocksIn(fields.scratch), STOP_GRACE_MS)
   const onStop = () => controller.abort()
   stop?.addEventListener('abort', onStop, { once: true })
   try {
