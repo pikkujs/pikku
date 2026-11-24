@@ -24,6 +24,12 @@ export class InMemoryAttentionResultStore implements AttentionResultStore {
     return found ? { ...found } : undefined
   }
 
+  async list(projectKey: string) {
+    return [...this.results.values()]
+      .filter((result) => result.projectKey === projectKey)
+      .map((result) => ({ ...result }))
+  }
+
   async projectKeys(widget: string) {
     return [...(this.watched.get(widget) ?? [])]
   }
