@@ -117,6 +117,8 @@ describe('next --merge-one', () => {
   test('merges one finished changeset a call, and the next call the other', async () => {
     const root = realpathSync(await mkdtemp(join(tmpdir(), 'next-one-')))
     await git(['init', '-q', '-b', 'main'], root)
+    await git(['config', 'user.email', 't@example.com'], root)
+    await git(['config', 'user.name', 't'], root)
     await writeFile(join(root, 'pikku.config.json'), '{}\n')
     await git(['add', '.'], root)
     await git([...ID, 'commit', '-q', '-m', 'init'], root)
