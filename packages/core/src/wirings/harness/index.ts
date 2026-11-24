@@ -4,6 +4,7 @@ export {
   pikkuHarnessGateAgent,
 } from './harness.js'
 export type {
+  HarnessCliOutput,
   HarnessFinding,
   HarnessGateAgentsMeta,
   HarnessGateOverride,
@@ -13,4 +14,5 @@ export type {
   PikkuHarness,
   PikkuHarnessGate,
   PikkuHarnessGateAgent,
+  PikkuHarnessGateWire,
 } from './harness.types.js'

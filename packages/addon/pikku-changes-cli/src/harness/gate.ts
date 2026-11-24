@@ -1,65 +1,55 @@
-import type { Finding, Severity } from './finding.js'
+import type {
+  PikkuHarnessGate,
+  PikkuHarnessGateWire,
+} from '@pikku/core/harness'
+import { HarnessInfraError } from './finding.js'
 import { runCli, type RunCliOptions } from './run-cli.js'
 
-/** `runCli` with the worktree already chosen. */
-export type GateRunCli = (
-  args: string[],
-  options: Omit<RunCliOptions, 'cwd' | 'signal'>
-) => Promise<Finding[]>
-
-/** Everything a gate gets from the engine. Tests pass a fake one. */
-export type GateWire = {
-  worktree: string
-  base: string
-  attempt: number
-  changeId: string
-  /** A directory the gate may use for its own files; not part of the worktree. */
-  scratch: string
-  /** Aborted when the engine gives up on this run (its `workflowTimeout` passed); `runCli` honours it. */
-  signal: AbortSignal
-  runCli: GateRunCli
-}
-
 /**
- * When a gate runs in an attempt: `check` gates first and one at a time, then `fixer` gates one at a
- * time (each followed by an engine commit of what it changed), then the read-only `gate` stage in
- * parallel.
+ * When a gate runs in an attempt, read from its `writes`: a gate that writes only inside `.pikku`
+ * directories (codegen) runs first and alone (`check`), a gate that writes anywhere else is a `fixer` that runs
+ * alone and whose changes the engine commits, and a gate that writes nothing runs beside the other
+ * read-only gates (`gate`).
  */
 export type GateStage = 'check' | 'fixer' | 'gate'
 
-export type HarnessGate = {
-  name: string
-  description: string
-  /** Defaults to `gate`. */
-  stage?: GateStage
-  /** Findings at or above this severity fail the gate. */
-  failOn: Severity
-  /** Paths the gate may change; defaults to `.pikku/**`. */
-  writes?: string[]
-  /** Extra runs after a thrown error, as the step's `retries`: `n` retries is `n + 1` runs. Defaults to 0. */
-  workflowRetries?: number
-  /** Longest one run may take, as milliseconds or a duration such as `'5min'`. */
-  workflowTimeout?: string | number
-  /**
-   * Rules of this gate's findings a person may waive. When they are all that fails an attempt, the
-   * engine asks for an approval for each; the builder never can.
-   */
-  waivable?: string[]
-  run: (wire: GateWire) => Promise<Finding[]>
-  /** A fixer's read-only check mode; it finds nothing once the fixer's commit is in. */
-  check?: (wire: GateWire) => Promise<Finding[]>
-}
+/** A path pattern inside a `.pikku` directory, at the root or in a package. */
+const GENERATED = /^(?:\*\*\/)?\.pikku\//
 
-/** Without a `signal` the wire gets one that is never aborted. */
+export const stageOf = ({
+  writes,
+}: Pick<PikkuHarnessGate, 'writes'>): GateStage =>
+  writes.length === 0
+    ? 'gate'
+    : writes.every((glob) => GENERATED.test(glob))
+      ? 'check'
+      : 'fixer'
+
+/** The tools pinned for a run, by name: absolute paths found once when it starts. */
+export type HarnessTools = Readonly<Record<string, string>>
+
+/** The wire a gate gets. Without a `signal` it gets one that is never aborted. */
 export const createGateWire = (
-  wire: Omit<GateWire, 'runCli' | 'signal'> & { signal?: AbortSignal },
+  fields: Omit<PikkuHarnessGateWire, 'runCli' | 'signal' | 'tool'> & {
+    signal?: AbortSignal
+  },
+  tools: HarnessTools,
   onRun?: RunCliOptions['onRun']
-): GateWire => {
-  const signal = wire.signal ?? new AbortController().signal
+): PikkuHarnessGateWire => {
+  const signal = fields.signal ?? new AbortController().signal
   return {
-    ...wire,
+    ...fields,
     signal,
+    tool: (name) => {
+      const path = tools[name]
+      if (!path)
+        throw new HarnessInfraError(
+          'missing-binary',
+          `No ${name} is pinned for this run, so a gate that runs ${name} cannot answer`
+        )
+      return path
+    },
     runCli: (args, options) =>
-      runCli(args, { onRun, ...options, cwd: wire.worktree, signal }),
+      runCli(args, { onRun, ...options, cwd: fields.worktree, signal }),
   }
 }

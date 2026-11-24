@@ -1,16 +1,21 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { PikkuHarnessGate } from '@pikku/core/harness'
 import { runGateOnce } from './engine.js'
 import { atOrAbove, formatFinding, type GateFindings } from './feedback.js'
-import type { HarnessGate } from './gate.js'
+import type { HarnessTools } from './gate.js'
 import { gitIn } from './git.js'
 import { redact } from './redact.js'
 
 export type MainCheckOptions = {
   /** The main checkout. */
   cwd: string
-  /** The gates that judge it, one after another (Studio's: `pikku check`). */
-  gates: HarnessGate[]
+  /** The gates that judge it, one after another (`checkGate`). */
+  gates: PikkuHarnessGate[]
+  /** The tools pinned for the check, by name. */
+  tools: HarnessTools
+  /** What a gate's `func` gets as its services. */
+  services: unknown
   signal?: AbortSignal
   gitBinary?: string
 }
@@ -23,6 +28,8 @@ export type MainCheckOptions = {
 export const checkMain = async ({
   cwd,
   gates,
+  tools,
+  services,
   signal,
   gitBinary,
 }: MainCheckOptions): Promise<GateFindings[]> => {
@@ -40,9 +47,10 @@ export const checkMain = async ({
         base: head,
         attempt: 1,
         changeId: 'target',
+        input: undefined,
         scratch,
       },
-      signal
+      { services, tools, ...(signal ? { stop: signal } : {}) }
     )
     const failed = findings.filter((f) => atOrAbove(f.severity, gate.failOn))
     if (failed.length) failing.push({ gate: gate.name, findings: failed })

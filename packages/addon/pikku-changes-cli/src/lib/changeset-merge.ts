@@ -1,7 +1,7 @@
-import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
-import { rm } from 'node:fs/promises'
-import { basename, dirname, join } from 'node:path'
+import { spawn } from 'node:child_process'
+import { constants, existsSync } from 'node:fs'
+import { access, readFile, realpath, rm } from 'node:fs/promises'
+import { basename, delimiter, dirname, isAbsolute, join } from 'node:path'
 import type { ListChangesOutput } from './types.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { releaseChangeset } from './changes-local.js'
@@ -89,9 +89,13 @@ export async function syncWithUpstream(): Promise<string | null> {
   )
 }
 
+/**
+ * Merges a finished changeset into the checkout's branch. `bun` is the absolute path of the bun
+ * that regenerates a lockfile both sides changed; without one such a conflict stays a conflict.
+ */
 export async function mergeChangeset(
   { group, branch }: Finished,
-  storePath: string | undefined
+  { storePath, bun }: { storePath?: string; bun?: string }
 ): Promise<MergeOutcome> {
   const into = await currentBranch()
   if (into === branch)
@@ -143,11 +147,11 @@ export async function mergeChangeset(
         )
       throw error
     }
-    if (!lockfilesOnly(files)) {
+    if (!bun || !lockfilesOnly(files)) {
       await git(['merge', '--abort'])
       return { kind: 'conflict', group, branch, into, files, worktree }
     }
-    await healLockfiles(files, branch)
+    await healLockfiles(files, branch, bun)
   }
   if (storePath) await releaseChangeset(storePath, group.groupId)
   const commit = await git(['rev-parse', 'HEAD'])
@@ -203,29 +207,76 @@ export const lockfilesOnly = (
   files.every((file) => LOCKFILES.has(basename(file)))
 
 /**
+ * The bun a merge heals lockfiles with, as an absolute path found once by the command that merges:
+ * the runtime itself when it is bun, else the first executable `bun` on PATH. Undefined when there
+ * is none, and a lockfile conflict then stays a conflict.
+ */
+export const findBun = async (
+  env: NodeJS.ProcessEnv = process.env
+): Promise<string | undefined> => {
+  if (process.versions.bun) return process.execPath
+  for (const dir of (env.PATH ?? '').split(delimiter)) {
+    if (!isAbsolute(dir)) continue
+    try {
+      await access(join(dir, 'bun'), constants.X_OK)
+      return await realpath(join(dir, 'bun'))
+    } catch {
+      // not in this one
+    }
+  }
+  return undefined
+}
+
+/** What a command printed and how it ended; `code` is null when it did not exit (could not start, or timed out). */
+type Ran = { code: number | null; stdout: Buffer; stderr: string }
+
+/** Runs `binary` (an absolute path, or git) in `cwd` without a shell, collecting its output. */
+const runIn = (
+  binary: string,
+  args: string[],
+  cwd: string,
+  timeoutMs: number
+): Promise<Ran> =>
+  new Promise((done) => {
+    const child = spawn(binary, args, {
+      cwd,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: timeoutMs,
+    })
+    const out: Buffer[] = []
+    let stderr = ''
+    child.stdout.on('data', (chunk: Buffer) => out.push(chunk))
+    child.stderr.on('data', (chunk: Buffer) => (stderr += chunk))
+    child.once('error', (error) =>
+      done({ code: null, stdout: Buffer.concat(out), stderr: error.message })
+    )
+    child.once('close', (code) =>
+      done({ code, stdout: Buffer.concat(out), stderr })
+    )
+  })
+
+/**
  * Both sides changed a bun lockfile and nothing else conflicts (package.json
  * merged cleanly): take this checkout's lockfile, let `bun install` rewrite it
  * from the merged package.json files, and finish the merge commit. When the
  * install fails the merge is aborted, saying why.
  */
-async function healLockfiles(files: string[], branch: string): Promise<void> {
+async function healLockfiles(
+  files: string[],
+  branch: string,
+  bun: string
+): Promise<void> {
   const top = (await git(['rev-parse', '--show-toplevel'])).trim()
   await git(['checkout', '--ours', '--', ...files])
   for (const dir of [...new Set(files.map((file) => dirname(file)))]) {
-    const result = spawnSync('bun', ['install'], {
-      cwd: join(top, dir),
-      encoding: 'utf8',
-      timeout: 600_000,
-      maxBuffer: 32 * 1024 * 1024,
-    })
-    if (result.status !== 0) {
+    const result = await runIn(bun, ['install'], join(top, dir), 600_000)
+    if (result.code !== 0) {
       await git(['merge', '--abort'])
-      const why =
-        `${result.stdout ?? ''}${result.stderr ?? ''}${result.error ? result.error.message : ''}`
-          .trim()
-          .split('\n')
-          .slice(-15)
-          .join('\n')
+      const why = `${result.stdout.toString('utf8')}${result.stderr}`
+        .trim()
+        .split('\n')
+        .slice(-15)
+        .join('\n')
       throw new CloudPreconditionError(
         `${branch} conflicts only in ${files.join(', ')}, and \`bun install\` in ${join(top, dir)} failed while regenerating it, so the merge was aborted:\n${why}`
       )
@@ -246,14 +297,16 @@ export async function sameAsBranch(
 ): Promise<boolean> {
   const top = (await git(['rev-parse', '--show-toplevel'], cwd)).trim()
   for (const file of files) {
-    const theirs = spawnSync('git', ['cat-file', 'blob', `${branch}:${file}`], {
-      cwd: top,
-      maxBuffer: 512 * 1024 * 1024,
-    })
-    if (theirs.status !== 0) return false
+    const theirs = await runIn(
+      'git',
+      ['cat-file', 'blob', `${branch}:${file}`],
+      top,
+      60_000
+    )
+    if (theirs.code !== 0) return false
     let ours: Buffer
     try {
-      ours = readFileSync(join(top, file))
+      ours = await readFile(join(top, file))
     } catch {
       return false
     }

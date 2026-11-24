@@ -4,11 +4,16 @@ import { dirname, join } from 'node:path'
 import { after, before, describe, test } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import type { HarnessAgent, HarnessEvent } from './engine.js'
-import { createGateWire } from './gate.js'
 import { gitIn } from './git.js'
 import { handTypedTablesGate } from './gates/hand-typed-tables.js'
 import { needsMigrate, parseDbGenerate, runDbStep } from './migrate.js'
-import { harnessRun, removeThrowaways, throwawayRepo } from './test-support.js'
+import {
+  harnessRun,
+  removeThrowaways,
+  runGate,
+  testGateWire,
+  throwawayRepo,
+} from './test-support.js'
 
 const FAKE_PIKKU = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -49,7 +54,8 @@ const harness = async (worktree: string, agent: HarnessAgent) => {
     worktree,
     base: 'main',
     ...ids,
-    harness: { name: 'db', gates: [handTypedTablesGate()] },
+    services: {},
+    harness: { name: 'db', gates: [handTypedTablesGate] },
     agent,
     onEvent: (event) => events.push(event),
     markDone: async () => {
@@ -286,14 +292,9 @@ describe('handTypedTablesGate', () => {
     )
     await git(['add', '-A'])
     await git(['commit', '-q', '-m', 'feat: #1 guestbook'])
-    const findings = await handTypedTablesGate().run(
-      createGateWire({
-        worktree: repo,
-        base: 'main',
-        attempt: 1,
-        changeId: 'c',
-        scratch: join(repo, '.git'),
-      })
+    const findings = await runGate(
+      handTypedTablesGate,
+      testGateWire({ worktree: repo })
     )
     assert.deepEqual(
       findings.map((f) => [f.file, f.line, f.severity, f.rule]),

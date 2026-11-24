@@ -62,8 +62,8 @@ describe.skipIf(!haveCli)('ChangesRunner main checkout', () => {
       60_000
     )
     const nexts = h.calls.filter((c) => /^changes next --parallel/.test(c.args))
-    expect(nexts[0]!.env?.PIKKU_CHANGES_NO_MERGE).toBeUndefined()
-    expect(nexts.some((c) => c.env?.PIKKU_CHANGES_NO_MERGE === '1')).toBe(true)
+    expect(nexts[0]!.args).not.toMatch(/--no-merge/)
+    expect(nexts.some((c) => /--no-merge/.test(c.args))).toBe(true)
     expect(h.texts('repair')).toContain(
       'An agent is repairing the main checkout (repair 1 of 2)'
     )

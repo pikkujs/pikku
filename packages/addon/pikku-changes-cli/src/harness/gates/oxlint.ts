@@ -1,5 +1,5 @@
+import { pikkuHarnessGate } from '@pikku/core/harness'
 import type { Finding } from '../finding.js'
-import type { HarnessGate } from '../gate.js'
 import { changedFiles } from './changed.js'
 import { parseOxlint } from './oxlint-parser.js'
 
@@ -24,38 +24,27 @@ const changedLintConfig = async (
   }))
 
 /**
- * oxlint over the worktree, read-only. Exit 0 is the only ok code: oxlint exits 1 when it reports
- * an error, which the findings explain, and also when it found no files, which then throws. A
- * changeset that changes an oxlint config fails the gate, so the thresholds stay the base branch's.
- * With `changedOnly` the whole tree is still linted (so the project's own ignore rules apply) but
- * only findings in files the changeset changed count: what was already wrong on the base branch is
- * not the changeset's to fix.
+ * oxlint over the worktree with the run's pinned oxlint, read-only. Exit 0 is the only ok code:
+ * oxlint exits 1 when it reports an error, which the findings explain, and also when it found no
+ * files, which then throws. A changeset that changes an oxlint config fails the gate, so the
+ * thresholds stay the base branch's. The whole tree is linted (so the project's own ignore rules
+ * apply) but only findings in files the changeset changed count: what was already wrong on the
+ * base branch is not the changeset's to fix.
  */
-export const oxlintGate = ({
-  binary,
-  paths = ['.'],
-  timeoutMs = 120_000,
-  changedOnly = false,
-}: {
-  binary: string
-  paths?: string[]
-  timeoutMs?: number
-  changedOnly?: boolean
-}): HarnessGate => ({
+export const oxlintGate = pikkuHarnessGate({
   name: 'oxlint',
-  description: 'Lints the changeset with oxlint',
+  description: 'Lints the files the changeset changed with oxlint',
   failOn: 'high',
   writes: [],
-  run: async (wire) => {
-    const config = await changedLintConfig(wire.worktree, wire.base)
-    const findings = await wire.runCli(['--format=json', ...paths], {
-      binary,
+  func: async (_services, _data, { gate }) => {
+    const config = await changedLintConfig(gate.worktree, gate.base)
+    const findings = await gate.runCli(['--format=json', '.'], {
+      binary: gate.tool('oxlint'),
       parse: parseOxlint,
       okCodes: [0],
-      timeoutMs,
+      timeoutMs: 120_000,
     })
-    if (!changedOnly) return [...config, ...findings]
-    const changed = new Set(await changedFiles(wire.worktree, wire.base))
+    const changed = new Set(await changedFiles(gate.worktree, gate.base))
     return [
       ...config,
       ...findings.filter(

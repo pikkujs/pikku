@@ -36,6 +36,18 @@ describe('pikkuHarnessGate', () => {
     ])
   })
 
+  test('keeps the rules a person may waive', () => {
+    const pages = pikkuHarnessGate({
+      name: 'pages',
+      description: 'Compares the pages with the original',
+      failOn: 'high',
+      waivable: ['harness/pages-phone'],
+      func: async () => [],
+    })
+    assert.deepEqual(pages.waivable, ['harness/pages-phone'])
+    assert.equal(check.waivable, undefined)
+  })
+
   test('may write only .pikku/** unless it says otherwise', () => {
     assert.deepEqual(check.writes, ['.pikku/**'])
     const format = pikkuHarnessGate({

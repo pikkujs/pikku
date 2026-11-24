@@ -5,11 +5,11 @@ import {
   planShortfall,
   readPikkuMeta,
 } from '@pikku/knowledge'
+import { pikkuHarnessGate } from '@pikku/core/harness'
 import type { Finding } from '../finding.js'
-import type { HarnessGate } from '../gate.js'
 import { gitIn } from '../git.js'
-import { harnessPlanSteps, type HarnessItem } from '../prompts.js'
-import { declaredChangeset } from './declared.js'
+import { harnessPlanSteps } from '../prompts.js'
+import { changesetRun, declaredChangeset } from './declared.js'
 
 const SET = (groupId: string) =>
   `${harnessPlanSteps(groupId).join(' ')} Commit, then stop; the checks run after you stop.`
@@ -26,23 +26,16 @@ const finding = (message: string, file?: string): Finding => ({
  * last open change, the plan's first pass is in the generated meta, as `pikku changes done`
  * requires. It runs after the check stage, which regenerates the meta it reads.
  */
-export const planGate = ({
-  changeset,
-  items,
-  storePath,
-}: {
-  changeset: string
-  items: HarnessItem[]
-  storePath?: string
-}): HarnessGate => ({
+export const planGate = pikkuHarnessGate({
   name: 'plan',
   description:
     'A planned changeset has its plan on its branch, built for its last change',
   failOn: 'high',
   writes: [],
-  run: async (wire) => {
+  func: async (_services, _data, { gate }) => {
+    const { changeset, items, storePath } = changesetRun(gate)
     const declared = await declaredChangeset(
-      wire.worktree,
+      gate.worktree,
       changeset,
       storePath
     )
@@ -50,7 +43,7 @@ export const planGate = ({
     const path = planPathFor(changeset)
     let text: string
     try {
-      text = await gitIn(wire.worktree)(['show', `HEAD:${path}`])
+      text = await gitIn(gate.worktree)(['show', `HEAD:${path}`])
     } catch {
       return [
         finding(
@@ -81,7 +74,7 @@ export const planGate = ({
     if (!last) return []
     const { missing, problems } = planShortfall(
       read.plan,
-      readPikkuMeta(functionsDirFor(wire.worktree))
+      readPikkuMeta(functionsDirFor(gate.worktree))
     )
     if (!missing.length && !problems.length) return []
     return [

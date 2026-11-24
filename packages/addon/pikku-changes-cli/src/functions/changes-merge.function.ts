@@ -7,7 +7,7 @@ import {
 } from '../lib/changes.js'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
 import { dim, safe } from '@pikku/cli/addon-support'
-import { mergeChangeset } from '../lib/changeset-merge.js'
+import { findBun, mergeChangeset } from '../lib/changeset-merge.js'
 import { megabytes } from '../lib/changeset-worktree.js'
 
 export const ChangesMergeInput = z.object({
@@ -62,7 +62,10 @@ export const ChangesMerge = pikkuSessionlessFunc({
       throw new CloudPreconditionError(
         `The changes in this set landed on ${branches.map((b) => b ?? 'no branch').join(', ')}; a changeset is one branch.`
       )
-    const outcome = await mergeChangeset({ group, branch }, storePath)
+    const outcome = await mergeChangeset(
+      { group, branch },
+      { storePath, bun: await findBun() }
+    )
     if (outcome.kind === 'conflict')
       throw new CloudPreconditionError(
         `${branch} conflicts with ${outcome.into} in ${outcome.files.join(', ')}. Merge ${outcome.into} into ${branch}${outcome.worktree ? ` in ${outcome.worktree}` : ''}, resolve, commit, and run merge again.`

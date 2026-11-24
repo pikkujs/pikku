@@ -25,8 +25,13 @@ export const pikkuHarnessGate = <Services = any>(config: {
   description: string
   /** The lowest finding severity that fails the gate. */
   failOn: HarnessSeverity
-  /** Paths the gate may change. Defaults to `.pikku/**`. */
+  /**
+   * Paths the gate may change. Defaults to `.pikku/**`. A gate that writes
+   * nothing runs beside the other read-only gates; one that writes runs alone.
+   */
   writes?: string[]
+  /** Rules of this gate's findings a person may waive; the builder never can. */
+  waivable?: string[]
   /** Extra runs after the gate could not answer. */
   workflowRetries?: number
   /** Longest one run may take (e.g. '30s', '5m'). */

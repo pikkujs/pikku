@@ -1,6 +1,7 @@
+import { pikkuHarnessGate } from '@pikku/core/harness'
 import { localChangesRPC, localStorePath } from '../lib/changes-local.js'
 import type { Finding } from './finding.js'
-import type { HarnessGate } from './gate.js'
+import { changesetRun } from './gates/declared.js'
 import { gitIn } from './git.js'
 import type { HarnessItem } from './prompts.js'
 
@@ -35,19 +36,20 @@ export const changeCommit = async (
 }
 
 /**
- * Every item of the changeset has a commit on its branch carrying its trailer: what `done` will
+ * Every item the run builds has a commit on its branch carrying its trailer: what `done` will
  * record. A missing one goes back to the agent, which can still commit it.
  */
-export const trailerGate = (items: HarnessItem[]): HarnessGate => ({
+export const trailerGate = pikkuHarnessGate({
   name: 'trailers',
   description:
     'Each item of the changeset has a commit with its Change-Id trailer',
   failOn: 'high',
   writes: [],
-  run: async (wire) => {
+  func: async (_services, _data, { gate }) => {
+    const { items } = changesetRun(gate)
     const findings: Finding[] = []
     for (const item of items)
-      if (!(await changeCommit(wire.worktree, item, [`${wire.base}..HEAD`])))
+      if (!(await changeCommit(gate.worktree, item, [`${gate.base}..HEAD`])))
         findings.push({
           severity: 'high',
           rule: 'harness/trailer',

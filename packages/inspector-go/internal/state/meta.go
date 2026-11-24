@@ -86,7 +86,7 @@ type FunctionMeta struct {
 	Scenario                        *bool          `json:"scenario,omitempty"`
 	Harness                         *bool          `json:"harness,omitempty"`
 	FailOn                          string         `json:"failOn,omitempty"`
-	Writes                          []string       `json:"writes,omitempty"`
+	Writes                          *[]string      `json:"writes,omitempty"`
 	MCP                             *bool          `json:"mcp,omitempty"`
 	Readonly                        *bool          `json:"readonly,omitempty"`
 	Mock                            *bool          `json:"mock,omitempty"`

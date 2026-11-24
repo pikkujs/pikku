@@ -6,9 +6,13 @@ import { fileURLToPath } from 'node:url'
 import { after, describe, test } from 'node:test'
 import { localChangesRPC } from '../../lib/changes-local.js'
 import { HarnessInfraError } from '../finding.js'
-import { createGateWire } from '../gate.js'
 import { gitIn } from '../git.js'
-import { removeThrowaways, throwawayRepo } from '../test-support.js'
+import {
+  removeThrowaways,
+  runGate,
+  testGateWire,
+  throwawayRepo,
+} from '../test-support.js'
 import { guardWrites, snapshotTree } from '../write-guard.js'
 import { pagesGate } from './pages.js'
 import {
@@ -219,10 +223,7 @@ describe('the compare report (pages-parser)', () => {
       ]
     )
     assert.doesNotMatch(findings.map((f) => f.message).join('\n'), /waive/)
-    assert.deepEqual(
-      pagesGate({ binary: undefined, changeset: 'cs', items: [] }).waivable,
-      [PHONE_RULE]
-    )
+    assert.deepEqual(pagesGate.waivable, [PHONE_RULE])
   })
 })
 
@@ -304,21 +305,24 @@ const setup = async (
     shortId: String(c.shortId),
     changeId: c.changeId,
   }))
-  const gate = (binary: string | null = FAKE_COMPARE) =>
-    pagesGate({
-      binary: binary ?? undefined,
-      changeset: group.groupId,
-      items,
-      storePath: store,
-      env: { FAKE_COMPARE: scenarioFile },
-    })
-  const wire = createGateWire({
-    worktree: repo,
-    base,
-    attempt: 1,
-    changeId: filed.at(-1)!.changeId,
-    scratch: join(repo, '.git'),
-  })
+  /** One run of the gate, with the fake compare as the run's pinned pikku CLI unless it is `null`. */
+  const run = (binary: string | null = FAKE_COMPARE) =>
+    runGate(
+      pagesGate,
+      testGateWire(
+        {
+          worktree: repo,
+          base,
+          changeId: filed.at(-1)!.changeId,
+          input: {
+            changeset: { id: group.groupId },
+            items,
+            storePath: store,
+          },
+        },
+        binary ? { pikku: binary } : {}
+      )
+    )
   const calls = async () =>
     (await readFile(log, 'utf8').catch(() => ''))
       .split('\n')
@@ -331,7 +335,7 @@ const setup = async (
             cwd: string
           }
       )
-  return { repo, base, git, commit, gate, wire, calls, setScenario }
+  return { repo, base, git, commit, run, calls, setScenario }
 }
 
 const HOME = {
@@ -351,8 +355,8 @@ describe('pagesGate', () => {
         body: 'Return the list of members from the database.',
       },
     ])
-    assert.deepEqual(await h.gate(null).run(h.wire), [])
-    assert.deepEqual(await h.gate().run(h.wire), [])
+    assert.deepEqual(await h.run(null), [])
+    assert.deepEqual(await h.run(), [])
     assert.deepEqual(await h.calls(), [])
   })
 
@@ -367,7 +371,7 @@ describe('pagesGate', () => {
     await h.commit({
       'artifacts/references/example.com/index-1440.jpg': 'mine\n',
     })
-    assert.deepEqual(await h.gate().run(h.wire), [])
+    assert.deepEqual(await h.run(), [])
     assert.deepEqual(await h.calls(), [])
   })
 
@@ -397,8 +401,7 @@ describe('pagesGate', () => {
     // where the browser is reaches the compare; nothing else of the harness's environment does
     process.env.PLAYWRIGHT_CHROMIUM_PATH = '/opt/chromium/headless_shell'
     const findings = await h
-      .gate()
-      .run(h.wire)
+      .run()
       .finally(() => delete process.env.PLAYWRIGHT_CHROMIUM_PATH)
     assert.equal(findings.length, 1)
     assert.equal(findings[0]!.severity, 'high')
@@ -445,19 +448,19 @@ describe('pagesGate', () => {
         threshold: 99,
       }),
     })
-    const findings = await h.gate().run(h.wire)
+    const findings = await h.run()
     assert.equal(findings.length, 1)
     assert.match(
       findings[0]!.message,
       /60% of its pixels changed, over the 50% limit/
     )
     await h.setScenario({ rows: { 'index-1440': 45 } })
-    assert.deepEqual(await h.gate().run(h.wire), [])
+    assert.deepEqual(await h.run(), [])
   })
 
   test('the widths are the base commit’s too', async () => {
     const h = await setup([HOME], { files: PROJECT({ widths: [1440] }) })
-    assert.deepEqual(await h.gate().run(h.wire), [])
+    assert.deepEqual(await h.run(), [])
     const [call] = await h.calls()
     assert.deepEqual(call!.args.slice(-4), [
       '--widths',
@@ -472,7 +475,7 @@ describe('pagesGate', () => {
       files: PROJECT({ waivers: [{ page: '/', reason: 'x'.repeat(40) }] }),
       scenario: { rows: { 'index-390': 70, 'index-1440': 70 } },
     })
-    const findings = await h.gate().run(h.wire)
+    const findings = await h.run()
     assert.deepEqual(
       findings.map((f) => [f.severity, f.rule]),
       [
@@ -487,7 +490,7 @@ describe('pagesGate', () => {
     await h.commit({
       'apps/app/public/hero.jpg': 'the original index at 1440\n',
     })
-    const [finding, ...rest] = await h.gate().run(h.wire)
+    const [finding, ...rest] = await h.run()
     assert.equal(rest.length, 0)
     assert.equal(finding!.severity, 'high')
     assert.match(
@@ -507,7 +510,7 @@ describe('pagesGate', () => {
       'artifacts/references/example.com/index-1440.jpg':
         'a screenshot of my page\n',
     })
-    const [finding] = await h.gate().run(h.wire)
+    const [finding] = await h.run()
     assert.match(
       finding!.message,
       /changes the capture of the original \(artifacts\/references\/example\.com\/index-1440\.jpg\)/
@@ -522,7 +525,7 @@ describe('pagesGate', () => {
         body: 'A contact form.\n\nNew pages (no original): /contact',
       },
     ])
-    assert.deepEqual(await h.gate().run(h.wire), [])
+    assert.deepEqual(await h.run(), [])
     assert.deepEqual(await h.calls(), [])
     const g = await setup([
       {
@@ -530,7 +533,7 @@ describe('pagesGate', () => {
         body: 'The team.\n\nNew pages (no original): /team',
       },
     ])
-    const [finding] = await g.gate().run(g.wire)
+    const [finding] = await g.run()
     assert.match(
       finding!.message,
       /declares \/team as a new page \(no original to compare with\), and the frontend has no route for it/
@@ -542,7 +545,7 @@ describe('pagesGate', () => {
     const h = await setup([
       { title: 'Contact', body: 'x y z.\n\nPages: /contact' },
     ])
-    const [none] = await h.gate().run(h.wire)
+    const [none] = await h.run()
     assert.match(
       none!.message,
       /names pages that have no screenshot in the capture of the original: \/contact\. .*The capture has: \/, \/about\./
@@ -551,7 +554,7 @@ describe('pagesGate', () => {
       [{ title: 'About', body: 'x y z.\n\nPages: /about' }],
       { scenario: { rows: { 'about-1440': { status: 'missing' } } } }
     )
-    const [missing] = await m.gate().run(m.wire)
+    const [missing] = await m.run()
     assert.match(
       missing!.message,
       /^MISSING \/about at 1440 px: the compare found no page at \/about \(it answered 404\)/
@@ -559,7 +562,7 @@ describe('pagesGate', () => {
     const t = await setup([
       { title: 'Many', body: 'x y z.\n\nPages: /, /a, /b, /c, /d, /e' },
     ])
-    const [many] = await t.gate().run(t.wire)
+    const [many] = await t.run()
     assert.match(many!.message, /^#1 names 6 pages .* at most 5/)
     assert.deepEqual(await t.calls(), [])
   })
@@ -571,7 +574,7 @@ describe('pagesGate', () => {
         body: 'Make the home page layout match the original.',
       },
     ])
-    const [none] = await h.gate().run(h.wire)
+    const [none] = await h.run()
     assert.match(
       none!.message,
       /names no pages \(no `Pages:` line in its body\) and it touched no page or route file/
@@ -580,7 +583,7 @@ describe('pagesGate', () => {
       'apps/app/src/routes/index.tsx':
         "export const Route = createFileRoute('/')({ component: Home })\n",
     })
-    assert.deepEqual(await h.gate().run(h.wire), [])
+    assert.deepEqual(await h.run(), [])
     assert.deepEqual((await h.calls())[0]!.args.slice(7, 9), [
       '--page',
       'index',
@@ -590,8 +593,8 @@ describe('pagesGate', () => {
   test('it fails closed: no CLI, no report, a garbled report, a row missing, a stale report or a failed compare is infra, never a pass', async () => {
     const h = await setup([HOME])
     await assert.rejects(
-      h.gate(null).run(h.wire),
-      infra('missing-binary', /PIKKU_CLI_BIN/)
+      h.run(null),
+      infra('missing-binary', /No pikku is pinned for this run/)
     )
     for (const [mode, kind, message] of [
       [
@@ -609,20 +612,19 @@ describe('pagesGate', () => {
       ['exit', 'exit-code', /exited 1 and reported nothing\n.*port in use/],
     ] as const) {
       await h.setScenario({ mode })
-      await assert.rejects(h.gate().run(h.wire), infra(kind, message), mode)
+      await assert.rejects(h.run(), infra(kind, message), mode)
     }
   })
 
   test('it writes only under .pikku/compare; a compare that writes elsewhere is stopped by the write guard', async () => {
     const h = await setup([HOME])
-    const gate = h.gate()
     let before = await snapshotTree(h.repo)
-    await gate.run(h.wire)
+    await h.run()
     const changed = await guardWrites({
       worktree: h.repo,
       before,
-      writes: gate.writes,
-      gate: gate.name,
+      writes: pagesGate.writes,
+      gate: pagesGate.name,
     })
     assert.ok(changed.length > 0)
     assert.ok(
@@ -632,13 +634,13 @@ describe('pagesGate', () => {
     assert.ok(!existsSync(join(h.repo, 'artifacts/compare')))
     await h.setScenario({ mode: 'stray' })
     before = await snapshotTree(h.repo)
-    await gate.run(h.wire)
+    await h.run()
     await assert.rejects(
       guardWrites({
         worktree: h.repo,
         before,
-        writes: gate.writes,
-        gate: gate.name,
+        writes: pagesGate.writes,
+        gate: pagesGate.name,
       }),
       infra(
         'write-outside-allowlist',
@@ -653,7 +655,7 @@ describe('pagesGate', () => {
       if (path.endsWith('.style.json')) delete files[path]
     const h = await setup([HOME], { files })
     await assert.rejects(
-      h.gate().run(h.wire),
+      h.run(),
       infra('precondition', /was not made by pikku ui pages capture/)
     )
   })

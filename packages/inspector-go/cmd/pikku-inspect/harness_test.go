@@ -39,6 +39,10 @@ func TestHarnessGatesAreFunctions(t *testing.T) {
 	if got := marshal(t, st.Functions.Meta.At("format").Writes); got != `["**/*.{ts,tsx}"]` {
 		t.Errorf("format writes = %s", got)
 	}
+	// A gate that writes nothing keeps its empty list: without one it would read as the default.
+	if got := marshal(t, st.Functions.Meta.At("lint").Writes); got != `[]` {
+		t.Errorf("lint writes = %s", got)
+	}
 	if st.RPC.InternalMeta.Has("check") || st.RPC.InternalFiles.Has("check") {
 		t.Error("a gate is run by the harness engine, never registered as an RPC")
 	}
@@ -84,6 +88,6 @@ func TestHarnessAndGateAgentMeta(t *testing.T) {
 		"Harness 'noModel' has no agent model readable from source.",
 		"Harness gate agent 'goalless' has no goal readable from source.",
 		"Harness gate agent 'check' has the name of the harness gate in",
-		"Harness 'typo' (src/refusals.ts) lists gate 'chek', which is not declared in this project. Declared gates: check, format, review.",
+		"Harness 'typo' (src/refusals.ts) lists gate 'chek', which is not declared in this project. Declared gates: check, format, lint, review.",
 	})
 }

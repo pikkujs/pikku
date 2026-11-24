@@ -759,9 +759,9 @@ export class ChangesRunner {
       await this.deps.commands.git(this.options.cwd, ['rev-parse', 'HEAD'])
     ).output
     // While the main checkout fails its check nothing more is merged into it, and a step run merges only when the host asks.
-    const route = await this.q.next(
-      book.red || this.options.step ? { PIKKU_CHANGES_NO_MERGE: '1' } : {}
-    )
+    const route = await this.q.next({
+      merge: !(book.red || this.options.step),
+    })
     for (const line of route.merged) {
       this.merged.push(line)
       this.emit('info', 'merged', `Merged ${line}`)

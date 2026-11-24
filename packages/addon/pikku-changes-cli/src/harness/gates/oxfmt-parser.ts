@@ -1,5 +1,5 @@
 import type { Finding } from '../finding.js'
-import type { RawOutput } from '../run-cli.js'
+import type { HarnessCliOutput } from '@pikku/core/harness'
 
 /** Lines `oxfmt --write` prints when it ran; anything else is output it was not expected to give. */
 const WRITE_NOTICES = [
@@ -9,7 +9,10 @@ const WRITE_NOTICES = [
 ]
 
 /** `oxfmt --write`: it fixes and reports nothing, so a run is either clean or unparseable. */
-export const parseOxfmtWrite = ({ stdout, stderr }: RawOutput): Finding[] => {
+export const parseOxfmtWrite = ({
+  stdout,
+  stderr,
+}: HarnessCliOutput): Finding[] => {
   const unexpected = `${stdout}\n${stderr}`
     .split('\n')
     .map((line) => line.trim())
@@ -20,22 +23,3 @@ export const parseOxfmtWrite = ({ stdout, stderr }: RawOutput): Finding[] => {
     throw new Error(`unexpected oxfmt output: ${unexpected[0]}`)
   return []
 }
-
-const SOURCE_PATH = /^\S+(?: \S+)*\.(?:[cm]?[jt]sx?)$/
-
-/** `oxfmt --list-different`: one path per line on stdout for each file that is not formatted. */
-export const parseOxfmtListDifferent = ({ stdout }: RawOutput): Finding[] =>
-  stdout
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((file) => {
-      if (!SOURCE_PATH.test(file))
-        throw new Error(`not a file path in oxfmt output: ${file}`)
-      return {
-        file,
-        severity: 'low' as const,
-        rule: 'oxfmt',
-        message: 'File is not formatted',
-      }
-    })

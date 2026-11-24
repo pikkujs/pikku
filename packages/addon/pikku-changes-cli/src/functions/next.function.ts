@@ -24,6 +24,7 @@ import {
 import { knowledgeLine } from '@pikku/knowledge'
 import {
   finishedChangesets,
+  findBun,
   mergeChangeset,
   syncWithUpstream,
   type MergeOutcome,
@@ -86,26 +87,24 @@ export const next = pikkuSessionlessFunc({
   },
 })
 
-/** One merge a call: PIKKU_CHANGES_MERGE_ONE=1 (a merge lane that checks the main branch after each merge). */
-export const mergesOneAtATime = (
-  env: NodeJS.ProcessEnv = process.env
-): boolean => env.PIKKU_CHANGES_MERGE_ONE === '1'
-
-/** Merges are held: `--no-merge`, or PIKKU_CHANGES_NO_MERGE=1 (a loop whose main branch is red). */
-export const mergesHeld = (
-  merge: boolean | undefined,
-  env: NodeJS.ProcessEnv = process.env
-): boolean => merge === false || env.PIKKU_CHANGES_NO_MERGE === '1'
-
+/**
+ * `--no-merge` holds merges (a loop whose main branch is red); `--merge-one` merges at most one
+ * finished changeset a call (a merge lane that checks the main branch after each merge).
+ */
 export async function route(
   root: string,
-  { parallel = false, push = false, merge }: z.infer<typeof NextInput>
+  {
+    parallel = false,
+    push = false,
+    merge = true,
+    mergeOne = false,
+  }: z.infer<typeof NextInput>
 ): Promise<Route> {
   const { rpc, projectId, storePath } = await changesContext(undefined)
   const merged: string[] = []
   // finished changesets stay unmerged; dependents of their changes wait
   // (with --parallel, until each change's commit is in HEAD)
-  if (mergesHeld(merge))
+  if (!merge)
     return { ...(await pick(root, rpc, projectId!, parallel)), merged }
   const now = Date.now()
   // With --parallel a builder may mark its changes done before it has ended;
@@ -131,12 +130,15 @@ export async function route(
       (changeset.group as { needsPlan?: boolean }).needsPlan &&
       (await planOnBranch(changeset.branch, changeset.group.groupId))
     if (unplanned) return replan(changeset, unplanned, merged)
-    const outcome = await mergeChangeset(changeset, storePath)
+    const outcome = await mergeChangeset(changeset, {
+      storePath,
+      bun: await findBun(),
+    })
     if (outcome.kind === 'conflict') return resolve(outcome, merged)
     merged.push(
       `${outcome.group.title} → ${outcome.into} @ ${outcome.commit.slice(0, 7)}${reclaimedLine(outcome)}`
     )
-    if (mergesOneAtATime()) break
+    if (mergeOne) break
   }
   if (merged.length && push) await git(['push'])
   return { ...(await pick(root, rpc, projectId!, parallel)), merged }

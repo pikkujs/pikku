@@ -1,186 +1,201 @@
 {
- "state": {
-  "harness": {
-   "harnessesMeta": {
-    "build": {
-     "name": "build",
-     "description": "Builds one changeset",
-     "harness": true,
-     "agent": {
-      "model": "default"
-     },
-     "gates": [
-      {
-       "name": "check"
+  "state": {
+    "harness": {
+      "harnessesMeta": {
+        "build": {
+          "name": "build",
+          "description": "Builds one changeset",
+          "harness": true,
+          "agent": {
+            "model": "default"
+          },
+          "gates": [
+            {
+              "name": "check"
+            },
+            {
+              "name": "format"
+            },
+            {
+              "name": "review",
+              "failOn": "medium"
+            }
+          ],
+          "sourceFile": "<fixture>/src/gates.ts",
+          "exportedName": "buildHarness"
+        },
+        "quick": {
+          "name": "quick",
+          "description": "Only the type-check",
+          "harness": true,
+          "agent": {
+            "model": "cheap"
+          },
+          "gates": [
+            {
+              "name": "check"
+            }
+          ],
+          "sourceFile": "<fixture>/src/gates.ts",
+          "exportedName": "quickHarness"
+        },
+        "typo": {
+          "name": "typo",
+          "description": "Lists a gate nobody declares",
+          "harness": true,
+          "agent": {
+            "model": "default"
+          },
+          "gates": [
+            {
+              "name": "check"
+            },
+            {
+              "name": "chek"
+            }
+          ],
+          "sourceFile": "<fixture>/src/refusals.ts",
+          "exportedName": "typoHarness"
+        }
       },
-      {
-       "name": "format"
-      },
-      {
-       "name": "review",
-       "failOn": "medium"
+      "gateAgentsMeta": {
+        "review": {
+          "name": "review",
+          "description": "Reads the diff for dead code",
+          "harness": true,
+          "model": "cheap",
+          "goal": "The diff adds no unused code",
+          "failOn": "high",
+          "sourceFile": "<fixture>/src/gates.ts",
+          "exportedName": "reviewer"
+        }
       }
-     ],
-     "sourceFile": "<fixture>/src/gates.ts",
-     "exportedName": "buildHarness"
     },
-    "quick": {
-     "name": "quick",
-     "description": "Only the type-check",
-     "harness": true,
-     "agent": {
-      "model": "cheap"
-     },
-     "gates": [
-      {
-       "name": "check"
-      }
-     ],
-     "sourceFile": "<fixture>/src/gates.ts",
-     "exportedName": "quickHarness"
-    },
-    "typo": {
-     "name": "typo",
-     "description": "Lists a gate nobody declares",
-     "harness": true,
-     "agent": {
-      "model": "default"
-     },
-     "gates": [
-      {
-       "name": "check"
+    "functions.meta": {
+      "check": {
+        "pikkuFuncId": "check",
+        "functionType": "user",
+        "funcWrapper": "pikkuHarnessGate",
+        "sessionless": true,
+        "name": "check",
+        "services": {
+          "optimized": true,
+          "services": ["logger"]
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "CheckOutput",
+        "inputs": [],
+        "outputs": ["CheckOutput"],
+        "harness": true,
+        "failOn": "high",
+        "writes": [".pikku/**"],
+        "workflowRetries": 1,
+        "workflowTimeout": "5min",
+        "implementationHash": "cb425471f1f4ee06",
+        "description": "Runs codegen and the type-check",
+        "isDirectFunction": false,
+        "sourceFile": "<fixture>/src/gates.ts",
+        "exportedName": "checkGate",
+        "bodyStart": 15,
+        "bodyEnd": 16
       },
-      {
-       "name": "chek"
+      "format": {
+        "pikkuFuncId": "format",
+        "functionType": "user",
+        "funcWrapper": "pikkuHarnessGate",
+        "sessionless": true,
+        "name": "format",
+        "services": {
+          "optimized": true,
+          "services": []
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "FormatOutput",
+        "inputs": [],
+        "outputs": ["FormatOutput"],
+        "harness": true,
+        "failOn": "medium",
+        "writes": ["**/*.{ts,tsx}"],
+        "implementationHash": "a6d92f3b3a1f2421",
+        "description": "Formats the changed files",
+        "isDirectFunction": false,
+        "sourceFile": "<fixture>/src/gates.ts",
+        "exportedName": "formatGate",
+        "bodyStart": 25,
+        "bodyEnd": 25
+      },
+      "lint": {
+        "pikkuFuncId": "lint",
+        "functionType": "user",
+        "funcWrapper": "pikkuHarnessGate",
+        "sessionless": true,
+        "name": "lint",
+        "services": {
+          "optimized": true,
+          "services": []
+        },
+        "inputSchemaName": null,
+        "outputSchemaName": "LintOutput",
+        "inputs": [],
+        "outputs": ["LintOutput"],
+        "harness": true,
+        "failOn": "high",
+        "writes": [],
+        "implementationHash": "fb9e9be543d90bd5",
+        "description": "Lints the changed files and writes nothing",
+        "isDirectFunction": false,
+        "sourceFile": "<fixture>/src/gates.ts",
+        "exportedName": "lintGate",
+        "bodyStart": 59,
+        "bodyEnd": 59
       }
-     ],
-     "sourceFile": "<fixture>/src/refusals.ts",
-     "exportedName": "typoHarness"
     }
-   },
-   "gateAgentsMeta": {
-    "review": {
-     "name": "review",
-     "description": "Reads the diff for dead code",
-     "harness": true,
-     "model": "cheap",
-     "goal": "The diff adds no unused code",
-     "failOn": "high",
-     "sourceFile": "<fixture>/src/gates.ts",
-     "exportedName": "reviewer"
+  },
+  "diagnostics": [
+    {
+      "level": "critical",
+      "code": "PKU236",
+      "message": "Harness gate 'bodiless' has no body. A gate is decided by code, so it needs a `func` that returns its findings."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Harness gate 'loose' has no failOn of 'low', 'medium' or 'high' readable from source. It is the lowest finding severity that fails the gate."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Harness gate 'computedWrites' has a writes that is not an inline array of path patterns: `paths`. The engine checks every change the gate makes against it, so it has to be readable from source."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Harness 'computed' lists gates that are not readable from source: `makeGates()`. Use a gate name, a declared gate or gate agent (optionally `.with({ failOn })`), or a spread of a const array of these."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Harness 'callEntry' lists gates that are not readable from source: `makeGates()[0]`. Use a gate name, a declared gate or gate agent (optionally `.with({ failOn })`), or a spread of a const array of these."
+    },
+    {
+      "level": "critical",
+      "code": "PKU145",
+      "message": "Harness 'noModel' has no agent model readable from source. Give `model` as a string literal."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Harness gate agent 'goalless' has no goal readable from source. The goal is what the reviewer is asked to check."
+    },
+    {
+      "level": "critical",
+      "code": "PKU851",
+      "message": "Harness gate agent 'check' has the name of the harness gate in '<fixture>/src/gates.ts'. A harness names its gates, so the two must differ."
+    },
+    {
+      "level": "critical",
+      "code": "PKU157",
+      "message": "Harness 'typo' (src/refusals.ts) lists gate 'chek', which is not declared in this project. Declared gates: check, format, lint, review."
     }
-   }
-  },
-  "functions.meta": {
-   "check": {
-    "pikkuFuncId": "check",
-    "functionType": "user",
-    "funcWrapper": "pikkuHarnessGate",
-    "sessionless": true,
-    "name": "check",
-    "services": {
-     "optimized": true,
-     "services": [
-      "logger"
-     ]
-    },
-    "inputSchemaName": null,
-    "outputSchemaName": "CheckOutput",
-    "inputs": [],
-    "outputs": [
-     "CheckOutput"
-    ],
-    "harness": true,
-    "failOn": "high",
-    "writes": [
-     ".pikku/**"
-    ],
-    "workflowRetries": 1,
-    "workflowTimeout": "5min",
-    "implementationHash": "cb425471f1f4ee06",
-    "description": "Runs codegen and the type-check",
-    "isDirectFunction": false,
-    "sourceFile": "<fixture>/src/gates.ts",
-    "exportedName": "checkGate",
-    "bodyStart": 15,
-    "bodyEnd": 16
-   },
-   "format": {
-    "pikkuFuncId": "format",
-    "functionType": "user",
-    "funcWrapper": "pikkuHarnessGate",
-    "sessionless": true,
-    "name": "format",
-    "services": {
-     "optimized": true,
-     "services": []
-    },
-    "inputSchemaName": null,
-    "outputSchemaName": "FormatOutput",
-    "inputs": [],
-    "outputs": [
-     "FormatOutput"
-    ],
-    "harness": true,
-    "failOn": "medium",
-    "writes": [
-     "**/*.{ts,tsx}"
-    ],
-    "implementationHash": "a6d92f3b3a1f2421",
-    "description": "Formats the changed files",
-    "isDirectFunction": false,
-    "sourceFile": "<fixture>/src/gates.ts",
-    "exportedName": "formatGate",
-    "bodyStart": 25,
-    "bodyEnd": 25
-   }
-  }
- },
- "diagnostics": [
-  {
-   "level": "critical",
-   "code": "PKU236",
-   "message": "Harness gate 'bodiless' has no body. A gate is decided by code, so it needs a `func` that returns its findings."
-  },
-  {
-   "level": "critical",
-   "code": "PKU124",
-   "message": "Harness gate 'loose' has no failOn of 'low', 'medium' or 'high' readable from source. It is the lowest finding severity that fails the gate."
-  },
-  {
-   "level": "critical",
-   "code": "PKU124",
-   "message": "Harness gate 'computedWrites' has a writes that is not an inline array of path patterns: `paths`. The engine checks every change the gate makes against it, so it has to be readable from source."
-  },
-  {
-   "level": "critical",
-   "code": "PKU124",
-   "message": "Harness 'computed' lists gates that are not readable from source: `makeGates()`. Use a gate name, a declared gate or gate agent (optionally `.with({ failOn })`), or a spread of a const array of these."
-  },
-  {
-   "level": "critical",
-   "code": "PKU124",
-   "message": "Harness 'callEntry' lists gates that are not readable from source: `makeGates()[0]`. Use a gate name, a declared gate or gate agent (optionally `.with({ failOn })`), or a spread of a const array of these."
-  },
-  {
-   "level": "critical",
-   "code": "PKU145",
-   "message": "Harness 'noModel' has no agent model readable from source. Give `model` as a string literal."
-  },
-  {
-   "level": "critical",
-   "code": "PKU124",
-   "message": "Harness gate agent 'goalless' has no goal readable from source. The goal is what the reviewer is asked to check."
-  },
-  {
-   "level": "critical",
-   "code": "PKU851",
-   "message": "Harness gate agent 'check' has the name of the harness gate in '<fixture>/src/gates.ts'. A harness names its gates, so the two must differ."
-  },
-  {
-   "level": "critical",
-   "code": "PKU157",
-   "message": "Harness 'typo' (src/refusals.ts) lists gate 'chek', which is not declared in this project. Declared gates: check, format, review."
-  }
- ]
+  ]
 }

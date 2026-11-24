@@ -476,9 +476,14 @@ export const changesCommands = defineCLICommands({
       },
       merge: {
         description:
-          'Merge finished changesets before routing (the default); --no-merge (or PIKKU_CHANGES_NO_MERGE=1) only lists the work, so a loop can hold merges while the main branch is red',
+          'Merge finished changesets before routing (the default); --no-merge only lists the work, so a loop can hold merges while the main branch is red',
         type: 'boolean',
         default: true,
+      },
+      mergeOne: {
+        description:
+          'Merge at most one finished changeset, so a merge lane can check the main branch after each merge',
+        type: 'boolean',
       },
     },
   }),

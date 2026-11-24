@@ -1,5 +1,5 @@
+import { pikkuHarnessGate } from '@pikku/core/harness'
 import type { Finding } from '../finding.js'
-import type { HarnessGate } from '../gate.js'
 import { gitIn } from '../git.js'
 
 const HAND_TYPED = /withTables<|\.withTables\(/
@@ -37,19 +37,19 @@ export const addedLines = (
  * A changeset adds no hand-typed table (`withTables<...>()`, `.withTables(...)`): tables are declared with
  * defineTables in db/tables.ts, and their types are generated from the migrated database.
  */
-export const handTypedTablesGate = (): HarnessGate => ({
+export const handTypedTablesGate = pikkuHarnessGate({
   name: 'hand-typed-tables',
   description:
     'A changeset declares its tables in db/tables.ts instead of typing them by hand',
   failOn: 'high',
   writes: [],
-  run: async (wire) => {
-    const diff = await gitIn(wire.worktree)([
+  func: async (_services, _data, { gate }) => {
+    const diff = await gitIn(gate.worktree)([
       'diff',
       '-U0',
       '--no-color',
       '--no-ext-diff',
-      `${wire.base}...HEAD`,
+      `${gate.base}...HEAD`,
     ])
     return addedLines(diff)
       .filter(({ text }) => HAND_TYPED.test(text))

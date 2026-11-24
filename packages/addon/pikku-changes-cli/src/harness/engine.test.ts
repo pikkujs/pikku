@@ -3,16 +3,18 @@ import { realpathSync } from 'node:fs'
 import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
+import { pikkuHarnessGate, type PikkuHarnessGate } from '@pikku/core/harness'
 import {
   HARNESS_RUN,
   runHarness,
-  type Harness,
   type HarnessAgent,
   type HarnessEvent,
+  type HarnessPolicy,
   type RunHarnessOptions,
 } from './engine.js'
+import { buildHarness } from './build-harness.js'
 import { HarnessInfraError, type Finding } from './finding.js'
-import type { HarnessGate } from './gate.js'
+import { stageOf } from './gate.js'
 import { gitIn } from './git.js'
 import { oxfmtGate } from './gates/oxfmt.js'
 import { parseOxfmtWrite } from './gates/oxfmt-parser.js'
@@ -22,7 +24,6 @@ import { WorkflowSuspendedException } from '@pikku/core/workflow'
 import {
   FAKE_CLI,
   REPO_ROOT,
-  fakeFormatter,
   removeThrowaways,
   throwawayRepo,
   workflowRun,
@@ -32,6 +33,40 @@ after(removeThrowaways)
 
 const OXLINT = realpathSync(join(REPO_ROOT, 'node_modules/.bin/oxlint'))
 const OXFMT = process.env.OXFMT_BIN
+/** The tools the runs pin: the real oxlint (and oxfmt when OXFMT_BIN is set) and the fake CLI. */
+const tools = {
+  oxlint: OXLINT,
+  'fake-cli': FAKE_CLI,
+  ...(OXFMT ? { oxfmt: OXFMT } : {}),
+}
+/** What every run gets beside its own options: no services, and the pinned tools. */
+const pinned = { services: {}, tools }
+
+/** A throwaway repo on a changeset branch cut from `main`, which the runs judge against. */
+const changesetRepo = async (files?: Record<string, string>) => {
+  const repo = await throwawayRepo(files)
+  await gitIn(repo)(['checkout', '-q', '-b', 'changeset/test'])
+  return repo
+}
+
+type GateConfig = Parameters<typeof pikkuHarnessGate>[0]
+
+/** Formats src/a.ts by squeezing runs of spaces, through the fake CLI so it is a real child process. */
+const fakeFormatter = pikkuHarnessGate({
+  name: 'fakefmt',
+  description: 'squeezes spaces',
+  failOn: 'medium',
+  writes: ['**/*.{ts,tsx}'],
+  func: async (_services, _data, { gate }) => {
+    const source = await readFile(join(gate.worktree, 'src/a.ts'), 'utf8')
+    const formatted = source.replace(/ {2,}/g, ' ')
+    if (formatted === source) return []
+    return gate.runCli(['write', 'src/a.ts', formatted], {
+      binary: gate.tool('fake-cli'),
+      parse: parseOxfmtWrite,
+    })
+  },
+})
 const ids = { shortId: 'k3x9', changeId: 'chg_0123456789', changeset: 'cs_abc' }
 const LINT_CONFIG = { '.oxlintrc.json': '{"rules":{"no-debugger":"error"}}' }
 
@@ -55,26 +90,27 @@ const scriptedAgent = (worktree: string, turns: Edits[]) => {
   return { agent, calls }
 }
 
-/** A gate run in-process that returns what `findings` gives for each call. */
+/** A read-only gate run in-process that returns what `findings` gives for each call. */
 const scriptedGate = (
   name: string,
   findings: (call: number) => Finding[],
-  extra: Partial<HarnessGate> = {}
+  extra: Partial<GateConfig> = {}
 ) => {
   let calls = 0
-  const gate: HarnessGate = {
+  const gate = pikkuHarnessGate({
     name,
     description: name,
     failOn: 'high',
-    run: async () => findings(++calls),
+    writes: [],
+    func: async () => findings(++calls),
     ...extra,
-  }
+  })
   return { gate, calls: () => calls }
 }
 
 const run = async (
   worktree: string,
-  harness: Harness,
+  harness: RunHarnessOptions['harness'],
   agent: HarnessAgent,
   extra: Partial<RunHarnessOptions> = {}
 ) => {
@@ -85,6 +121,7 @@ const run = async (
       worktree,
       base: 'main',
       ...ids,
+      ...pinned,
       harness,
       agent,
       workflow,
@@ -114,7 +151,7 @@ const finding = (message: string, extra: Partial<Finding> = {}): Finding => ({
 
 describe('runHarness', () => {
   test('a lint error goes back to the agent; the clean second attempt is done', async () => {
-    const repo = await throwawayRepo({
+    const repo = await changesetRepo({
       ...LINT_CONFIG,
       'src/a.ts': 'export const a = 1\n',
     })
@@ -124,7 +161,7 @@ describe('runHarness', () => {
     ])
     const { result, doneCalls } = await run(
       repo,
-      { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
+      { name: 'lint', gates: [oxlintGate] },
       agent
     )
     assert.equal(result.status, 'done')
@@ -141,22 +178,25 @@ describe('runHarness', () => {
   })
 
   test('a fixer gets its own commit with trailers and the read-only gates see the formatted tree', async () => {
-    const repo = await throwawayRepo({ 'src/a.ts': 'export const a = 1\n' })
+    const repo = await changesetRepo({ 'src/a.ts': 'export const a = 1\n' })
     const { agent } = scriptedAgent(repo, [
       { 'src/a.ts': 'export  const  a  =  2\n' },
     ])
     const seen: string[] = []
-    const probe = scriptedGate('probe', () => [])
-    probe.gate.run = async (wire) => {
-      seen.push(await readFile(join(wire.worktree, 'src/a.ts'), 'utf8'))
-      return []
-    }
-    const formatter = OXFMT
-      ? oxfmtGate({ binary: OXFMT })
-      : fakeFormatter('src/a.ts')
+    const probe = pikkuHarnessGate({
+      name: 'probe',
+      description: 'reads the tree the read-only gates see',
+      failOn: 'high',
+      writes: [],
+      func: async (_services, _data, { gate }) => {
+        seen.push(await readFile(join(gate.worktree, 'src/a.ts'), 'utf8'))
+        return []
+      },
+    })
+    const formatter = OXFMT ? oxfmtGate : fakeFormatter
     const { result } = await run(
       repo,
-      { name: 'fmt', gates: [probe.gate, formatter] },
+      { name: 'fmt', gates: [probe, formatter] },
       agent
     )
     assert.equal(result.status, 'done')
@@ -179,21 +219,20 @@ describe('runHarness', () => {
   })
 
   test('a fixer that writes outside its allowlist is infra and the agent never hears of it', async () => {
-    const repo = await throwawayRepo({ 'src/a.ts': 'export const a = 1\n' })
+    const repo = await changesetRepo({ 'src/a.ts': 'export const a = 1\n' })
     const { agent, calls } = scriptedAgent(repo, [{}])
-    const rogue: HarnessGate = {
+    const rogue = pikkuHarnessGate({
       name: 'rogue',
       description: 'writes the README',
-      stage: 'fixer',
       failOn: 'medium',
       writes: ['**/*.ts'],
       workflowRetries: 1,
-      run: (wire) =>
-        wire.runCli(['write', 'README.md', 'changed\n'], {
-          binary: FAKE_CLI,
+      func: (_services, _data, { gate }) =>
+        gate.runCli(['write', 'README.md', 'changed\n'], {
+          binary: gate.tool('fake-cli'),
           parse: parseOxfmtWrite,
         }),
-    }
+    })
     const lint = scriptedGate('later', () => [])
     const { result, events, steps } = await run(
       repo,
@@ -226,7 +265,7 @@ describe('runHarness', () => {
   })
 
   test('the same failing set twice stops as repeated', async () => {
-    const repo = await throwawayRepo({
+    const repo = await changesetRepo({
       ...LINT_CONFIG,
       'src/a.ts': 'export const a = 1\n',
     })
@@ -236,12 +275,9 @@ describe('runHarness', () => {
     ])
     const { result, doneCalls } = await run(
       repo,
-      {
-        name: 'lint',
-        gates: [oxlintGate({ binary: OXLINT })],
-        policy: { tries: 5 },
-      },
-      agent
+      { name: 'lint', gates: [oxlintGate] },
+      agent,
+      { policy: { tries: 5 } }
     )
     assert.equal(result.status, 'repeated')
     assert.equal(result.attempts, 2)
@@ -252,13 +288,14 @@ describe('runHarness', () => {
   })
 
   test('a changing failing set keeps going until tries run out', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     const gate = scriptedGate('moving', (call) => [finding(`problem ${call}`)])
     const { result } = await run(
       repo,
-      { name: 'moving', gates: [gate.gate], policy: { tries: 3 } },
-      agent
+      { name: 'moving', gates: [gate.gate] },
+      agent,
+      { policy: { tries: 3 } }
     )
     assert.equal(result.status, 'gave-up')
     assert.equal(result.attempts, 3)
@@ -268,7 +305,7 @@ describe('runHarness', () => {
   })
 
   test('unresolved module findings in a lane go back to the builder like any other', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     const check = scriptedGate(
       'check',
@@ -281,7 +318,7 @@ describe('runHarness', () => {
               ),
             ]
           : [],
-      { stage: 'check' }
+      { writes: ['.pikku/**'] }
     )
     const { result } = await run(
       repo,
@@ -294,7 +331,7 @@ describe('runHarness', () => {
   })
 
   test('findings below failOn are notes and the attempt passes', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     const gate = scriptedGate('advisory', () => [
       finding('consider this', { severity: 'medium' }),
@@ -318,7 +355,7 @@ describe('runHarness', () => {
   })
 
   test('a gate that throws infra once is retried as its step and passes', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent } = scriptedAgent(repo, [])
     const flaky = scriptedGate(
       'flaky',
@@ -353,7 +390,7 @@ describe('runHarness', () => {
   })
 
   test('a gate that always throws infra ends the run after its retries', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     const broken = scriptedGate(
       'broken',
@@ -381,39 +418,39 @@ describe('runHarness', () => {
   })
 
   test('a gate past its workflowTimeout is infra', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent } = scriptedAgent(repo, [])
-    const slow: HarnessGate = {
+    const slow = pikkuHarnessGate({
       name: 'slow',
       description: 'never answers in time',
       failOn: 'high',
       workflowTimeout: '50ms',
-      run: () => new Promise((done) => setTimeout(() => done([]), 1_000)),
-    }
+      func: () => new Promise((done) => setTimeout(() => done([]), 1_000)),
+    })
     const { result } = await run(repo, { name: 'slow', gates: [slow] }, agent)
     assert.equal(result.status, 'infra')
     assert.equal(result.infra?.kind, 'timeout')
   })
 
   test('a gate past its workflowTimeout has its tool stopped', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent } = scriptedAgent(repo, [])
     const late = join(repo, '.pikku/late.txt')
     let signal: AbortSignal | undefined
-    const slow: HarnessGate = {
+    const slow = pikkuHarnessGate({
       name: 'slow-tool',
       description: 'writes a file if it is left running',
       failOn: 'high',
       workflowTimeout: '200ms',
-      run: async (wire) => {
-        signal = wire.signal
-        await mkdir(join(wire.worktree, '.pikku'), { recursive: true })
-        return wire.runCli(['write-later', late, '1500'], {
-          binary: FAKE_CLI,
+      func: async (_services, _data, { gate }) => {
+        signal = gate.signal
+        await mkdir(join(gate.worktree, '.pikku'), { recursive: true })
+        return gate.runCli(['write-later', late, '1500'], {
+          binary: gate.tool('fake-cli'),
           parse: parseOxlint,
         })
       },
-    }
+    })
     const started = Date.now()
     const { result } = await run(repo, { name: 'slow', gates: [slow] }, agent)
     assert.equal(result.status, 'infra')
@@ -428,23 +465,23 @@ describe('runHarness', () => {
   })
 
   test('a stop while a gate runs stops its tool and ends the run as aborted infra, without markDone', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent } = scriptedAgent(repo, [])
     const late = join(repo, '.pikku/late.txt')
     const stop = new AbortController()
-    const slow: HarnessGate = {
+    const slow = pikkuHarnessGate({
       name: 'slow-tool',
       description: 'writes a file if it is left running',
       failOn: 'high',
-      run: async (wire) => {
-        await mkdir(join(wire.worktree, '.pikku'), { recursive: true })
+      func: async (_services, _data, { gate }) => {
+        await mkdir(join(gate.worktree, '.pikku'), { recursive: true })
         setTimeout(() => stop.abort(), 100)
-        return wire.runCli(['write-later', late, '1500'], {
-          binary: FAKE_CLI,
+        return gate.runCli(['write-later', late, '1500'], {
+          binary: gate.tool('fake-cli'),
           parse: parseOxlint,
         })
       },
-    }
+    })
     const started = Date.now()
     const { result, doneCalls } = await run(
       repo,
@@ -464,7 +501,7 @@ describe('runHarness', () => {
   })
 
   test('uncommitted work goes back to the agent without running the gates', async () => {
-    const repo = await throwawayRepo({ 'src/a.ts': 'export const a = 1\n' })
+    const repo = await changesetRepo({ 'src/a.ts': 'export const a = 1\n' })
     const gate = scriptedGate('lint', () => [])
     const calls: { attempt: number; feedback?: string }[] = []
     const agent: HarnessAgent = async (input) => {
@@ -510,7 +547,7 @@ describe('runHarness', () => {
   })
 
   test('an agent that never commits stops as repeated', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const gate = scriptedGate('lint', () => [])
     const agent: HarnessAgent = async () => {
       await writeFile(join(repo, 'loose.ts'), 'export const x = 1\n')
@@ -529,7 +566,7 @@ describe('runHarness', () => {
   })
 
   test('needs-answer ends the run without running gates', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const gate = scriptedGate('unused', () => [])
     const { result, events, doneCalls } = await run(
       repo,
@@ -547,7 +584,7 @@ describe('runHarness', () => {
   })
 
   test('feedback is trimmed whole-finding and a secret never reaches the agent', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     // built at runtime so the repository holds no secret-shaped literal
     const secret = ['AK', 'IA', 'FAKE', 'FAKE', 'FAKE', 'FAKE'].join('')
@@ -560,12 +597,9 @@ describe('runHarness', () => {
     const maxChars = 600
     const { result } = await run(
       repo,
-      {
-        name: 'noisy',
-        gates: [gate.gate],
-        policy: { feedbackMaxChars: maxChars },
-      },
-      agent
+      { name: 'noisy', gates: [gate.gate] },
+      agent,
+      { policy: { feedbackMaxChars: maxChars } }
     )
     assert.equal(result.status, 'done')
     const feedback = calls[1]!.feedback!
@@ -583,21 +617,21 @@ describe('runHarness', () => {
   })
 
   test('every step is one named step with an event', async () => {
-    const repo = await throwawayRepo({ 'src/a.ts': 'export const a = 1\n' })
+    const repo = await changesetRepo({ 'src/a.ts': 'export const a = 1\n' })
     const { agent } = scriptedAgent(repo, [
       { 'src/a.ts': 'export  const a = 2\n' },
     ])
     const check = scriptedGate(
       'typecheck',
       (call) => (call === 1 ? [finding('type error')] : []),
-      { stage: 'check' }
+      { writes: ['.pikku/**'] }
     )
     const lint = scriptedGate('lint', () => [])
     const { result, steps, events } = await run(
       repo,
       {
         name: 'all',
-        gates: [lint.gate, fakeFormatter('src/a.ts'), check.gate],
+        gates: [lint.gate, fakeFormatter, check.gate],
       },
       agent
     )
@@ -645,6 +679,37 @@ describe('runHarness', () => {
   })
 })
 
+describe('the build harness', () => {
+  test('lists its gates by reference, and their writes put them in their stages', () => {
+    assert.deepEqual(
+      buildHarness.gates.map((gate) => {
+        const declared = gate as PikkuHarnessGate
+        return [declared.name, stageOf(declared)]
+      }),
+      [
+        ['check', 'check'],
+        ['oxfmt', 'fixer'],
+        ['oxlint', 'gate'],
+        ['trailers', 'gate'],
+        ['migrations', 'gate'],
+        ['plan', 'gate'],
+        ['pages', 'check'],
+        ['hand-typed-tables', 'gate'],
+      ]
+    )
+  })
+
+  test('a gate listed by name cannot be run: the engine runs what it is handed', async () => {
+    const repo = await changesetRepo()
+    const { agent, calls } = scriptedAgent(repo, [])
+    await assert.rejects(
+      run(repo, { name: 'named', gates: ['oxlint'] }, agent),
+      /Harness named lists oxlint by name, with an override or as a gate agent; the engine runs gates listed by reference/
+    )
+    assert.equal(calls.length, 0)
+  })
+})
+
 /** The reasons of the approvals the run waits on. */
 const pendingWaivers = async (
   service: Awaited<ReturnType<typeof workflowRun>>['service'],
@@ -656,7 +721,7 @@ const pendingWaivers = async (
 
 describe('runHarness in a harness run', () => {
   test('tries defaults to 2', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     const gate = scriptedGate('moving', (call) => [finding(`problem ${call}`)])
     const { result } = await run(
@@ -670,7 +735,7 @@ describe('runHarness in a harness run', () => {
   })
 
   test('a run not started with the harness wire is refused before the agent runs', async () => {
-    const repo = await throwawayRepo()
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     await assert.rejects(
       workflowRun(
@@ -679,6 +744,7 @@ describe('runHarness in a harness run', () => {
             worktree: repo,
             base: 'main',
             ...ids,
+            ...pinned,
             harness: { name: 'plain', gates: [] },
             agent,
             workflow,
@@ -705,8 +771,11 @@ describe('runHarness in a harness run', () => {
       { waivable: ['test/phone'] }
     )
 
-  const waiverRun = async (gates: HarnessGate[], waive?: Harness['policy']) => {
-    const repo = await throwawayRepo()
+  const waiverRun = async (
+    gates: PikkuHarnessGate[],
+    policy?: HarnessPolicy
+  ) => {
+    const repo = await changesetRepo()
     const { agent, calls } = scriptedAgent(repo, [])
     let doneCalls = 0
     const run = await workflowRun(
@@ -715,11 +784,9 @@ describe('runHarness in a harness run', () => {
           worktree: repo,
           base: 'main',
           ...ids,
-          harness: {
-            name: 'waive',
-            gates,
-            ...(waive ? { policy: waive } : {}),
-          },
+          ...pinned,
+          harness: { name: 'waive', gates },
+          ...(policy ? { policy } : {}),
           agent,
           workflow,
           markDone: async () => {
@@ -801,10 +868,10 @@ describe('runHarness in a harness run', () => {
 
   test('an expired waiver keeps its finding failing', async () => {
     const { run, calls } = await waiverRun([phoneGate().gate], {
-      waive: { approvers: 'not-initiator', expiry: 1 },
+      waive: { approvers: 'not-initiator', expiry: 200 },
     })
     assert.equal((await run.run()).status, 'suspended')
-    await new Promise((done) => setTimeout(done, 20))
+    await new Promise((done) => setTimeout(done, 300))
     await run.replay()
     const result = await run.output()
     assert.equal(result.status, 'done')
@@ -829,11 +896,11 @@ describe('runHarness in a harness run', () => {
   })
 
   test("each tool a gate runs records its duration and exit code in the run's analytics", async () => {
-    const repo = await throwawayRepo({ 'src/a.ts': 'export  const a = 1\n' })
+    const repo = await changesetRepo({ 'src/a.ts': 'export  const a = 1\n' })
     const recorded: Record<string, unknown>[] = []
     const { result } = await run(
       repo,
-      { name: 'cli', gates: [fakeFormatter('src/a.ts')] },
+      { name: 'cli', gates: [fakeFormatter] },
       scriptedAgent(repo, []).agent,
       {
         analytics: {
@@ -884,7 +951,7 @@ const idempotentAgent =
  * before its result is stored (the run is left suspended), and the run is replayed.
  */
 const runDurably = async (killAt?: string) => {
-  const repo = await throwawayRepo({
+  const repo = await changesetRepo({
     ...LINT_CONFIG,
     'src/a.ts': 'export const a = 0\n',
   })
@@ -895,9 +962,10 @@ const runDurably = async (killAt?: string) => {
       worktree: repo,
       base: 'main',
       ...ids,
+      ...pinned,
       harness: {
         name: 'durable',
-        gates: [oxlintGate({ binary: OXLINT }), fakeFormatter('src/a.ts')],
+        gates: [oxlintGate, fakeFormatter],
       },
       agent: idempotentAgent(repo),
       workflow: {

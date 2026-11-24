@@ -10,6 +10,8 @@ import {
   type Git,
 } from './page-gate.js'
 
+/** A CLI that is never run: the tests stub the compare or read a report. */
+const cli = [process.execPath, 'pikku'] as const
 const HEAD = 'a'.repeat(40)
 const BASE = 'b'.repeat(40)
 
@@ -131,6 +133,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.deepStrictEqual(outcome, { kind: 'pass', pages: ['/about'] })
@@ -141,6 +144,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
       label: '#7',
     })
@@ -168,6 +172,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -182,6 +187,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -197,6 +203,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -214,6 +221,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -231,8 +239,14 @@ describe('the page gate on changes done', () => {
     const old = join('.pikku', 'pages', 'compare', 'app')
     report(dir, { rows: allAbout }, old)
     assert.strictEqual(
-      (await checkPageGate({ git: fakeGit(dir, ABOUT), cwd: dir, env: {} }))
-        .kind,
+      (
+        await checkPageGate({
+          git: fakeGit(dir, ABOUT),
+          cwd: dir,
+          cli,
+          env: {},
+        })
+      ).kind,
       'pass'
     )
     report(dir, {
@@ -242,6 +256,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -257,6 +272,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -268,6 +284,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ['apps/app/src/routes/__root.tsx']),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -284,6 +301,7 @@ describe('the page gate on changes done', () => {
       refuseUntilPagesCompared({
         git: fakeGit(dir, ABOUT),
         cwd: dir,
+        cli,
         env: {},
       }),
       (error: Error) => {
@@ -322,6 +340,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -340,7 +359,7 @@ describe('the page gate on changes done', () => {
   test('a project with no reference is untouched', async () => {
     const dir = project({ reference: false })
     assert.deepStrictEqual(
-      await checkPageGate({ git: fakeGit(dir, ABOUT), cwd: dir, env: {} }),
+      await checkPageGate({ git: fakeGit(dir, ABOUT), cwd: dir, cli, env: {} }),
       { kind: 'skip', why: 'no reference under artifacts/references' }
     )
   })
@@ -353,6 +372,7 @@ describe('the page gate on changes done', () => {
         'apps/app/src/lib/api.ts',
       ]),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.deepStrictEqual(outcome, {
@@ -366,6 +386,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ['apps/app/src/routes/contact.tsx']),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'skip')
@@ -380,6 +401,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
       label: '#3',
     })
@@ -410,6 +432,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -435,6 +458,7 @@ describe('the page gate on changes done', () => {
     const refused = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(refused.kind, 'refuse')
@@ -446,6 +470,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -462,6 +487,7 @@ describe('the page gate on changes done', () => {
       await checkPageGate({
         git: fakeGit(dir, ['packages/functions/src/newsletter.ts']),
         cwd: dir,
+        cli,
         env: {},
       }),
       { kind: 'skip', why: 'no page file touched since main' }
@@ -481,6 +507,7 @@ describe('the page gate on changes done', () => {
       await checkPageGate({
         git: fakeGit(dir, touched),
         cwd: dir,
+        cli,
         env: {},
         pages: ['/about/'],
       }),
@@ -491,6 +518,7 @@ describe('the page gate on changes done', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ['apps/app/src/lib/theme.ts']),
       cwd: dir,
+      cli,
       env: {},
       pages: ['index'],
     })
@@ -501,16 +529,15 @@ describe('the page gate on changes done', () => {
     )
   })
 
-  test('PIKKU_COMPARE_GATE=off turns it off', async () => {
+  test('PIKKU_COMPARE_GATE=off does not turn it off', async () => {
     const dir = project()
-    assert.deepStrictEqual(
-      await checkPageGate({
-        git: fakeGit(dir, ABOUT),
-        cwd: dir,
-        env: { PIKKU_COMPARE_GATE: 'off' },
-      }),
-      { kind: 'off' }
-    )
+    const outcome = await checkPageGate({
+      git: fakeGit(dir, ABOUT),
+      cwd: dir,
+      cli,
+      env: { PIKKU_COMPARE_GATE: 'off' },
+    })
+    assert.strictEqual(outcome.kind, 'refuse')
   })
 })
 
@@ -519,7 +546,7 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
   /** A compare that writes the report a real run would, at HEAD, now. */
   const comparing =
     (rows: unknown[], calls: unknown[] = []) =>
-    (args: { out: string; ids: string[] }) => {
+    async (args: { out: string; ids: string[] }) => {
       calls.push(args)
       write(
         join(args.out, 'report.json'),
@@ -534,11 +561,12 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
       return { code: 0, output: '' }
     }
 
-  test('cannot turn the gate off', async () => {
+  test('PIKKU_COMPARE_GATE does not turn the gate off', async () => {
     const dir = project()
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: { ...BUILDER, PIKKU_COMPARE_GATE: 'off' },
       compare: comparing(allAbout),
     })
@@ -556,6 +584,7 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: BUILDER,
       compare: comparing([row('about', 1440, 64), row('about', 390, 1)], calls),
     })
@@ -574,8 +603,9 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
     const silent = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: BUILDER,
-      compare: () => ({ code: 1, output: 'No browser found' }),
+      compare: async () => ({ code: 1, output: 'No browser found' }),
     })
     assert.strictEqual(silent.kind, 'refuse')
     assert.match(
@@ -595,6 +625,7 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
     const outcome = await checkPageGate({
       git: base,
       cwd: dir,
+      cli,
       env: BUILDER,
       compare: run,
     })
@@ -604,6 +635,7 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
       await checkPageGate({
         git: base,
         cwd: dir,
+        cli,
         env: { ...BUILDER, PIKKU_COMPARE_THRESHOLD: '60' },
         compare: run,
       }),
@@ -613,6 +645,7 @@ describe('the page gate for a builder (PIKKU_CHANGES_BUILDER=1)', () => {
     const outcome2 = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: BUILDER,
       compare: run,
     })
@@ -630,6 +663,7 @@ describe('a clone change that names its pages', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ['apps/app/src/lib/theme.ts']),
       cwd: dir,
+      cli,
       env: {},
       pages: ['/about', '/contact'],
     })
@@ -645,6 +679,7 @@ describe('a clone change that names its pages', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ['apps/app/src/components/Card.tsx']),
       cwd: dir,
+      cli,
       env: {},
       frontend: true,
     })
@@ -659,6 +694,7 @@ describe('a clone change that names its pages', () => {
         await checkPageGate({
           git: fakeGit(dir, ['packages/functions/src/a.ts']),
           cwd: dir,
+          cli,
           env: {},
         })
       ).kind,
@@ -673,6 +709,7 @@ describe('a clone change that names its pages', () => {
       await checkPageGate({
         git: fakeGit(dir, ABOUT),
         cwd: dir,
+        cli,
         env: {},
         frontend: true,
       }),
@@ -683,6 +720,7 @@ describe('a clone change that names its pages', () => {
     const over = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
       frontend: true,
     })
@@ -728,6 +766,7 @@ describe("a page that is the original's screenshot", () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: { PIKKU_CHANGES_BUILDER: '1' },
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -748,6 +787,7 @@ describe("a page that is the original's screenshot", () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(outcome.kind, 'refuse')
@@ -757,13 +797,14 @@ describe("a page that is the original's screenshot", () => {
     )
   })
 
-  test("the original's own pictures, and the builder switching the gate off, do not hide it", async () => {
+  test("the original's own pictures, and an environment switching the gate off, do not hide it", async () => {
     const dir = project()
     write(join(dir, 'apps', 'app', 'public', 'hero.jpg'), 'a different picture')
     report(dir, { rows: [...allAbout, row('index', 1440, 90)] })
     const fine = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: {},
     })
     assert.strictEqual(fine.kind, 'pass')
@@ -771,6 +812,7 @@ describe("a page that is the original's screenshot", () => {
     const off = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
+      cli,
       env: { PIKKU_CHANGES_BUILDER: '1', PIKKU_COMPARE_GATE: 'off' },
     })
     assert.strictEqual(off.kind, 'refuse')
@@ -787,6 +829,7 @@ describe('new pages with no original', () => {
     const outcome = await checkPageGate({
       git: fakeGit(dir, ['apps/app/src/routes/app.calendar.tsx']),
       cwd: dir,
+      cli,
       env: {},
       pages: [],
       newPages: ['/app/calendar'],

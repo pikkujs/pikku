@@ -101,7 +101,7 @@ const waitFor = async (
 const git = (repo: string, args: string[]) =>
   execFileSync('git', args, { cwd: repo, encoding: 'utf8' })
 
-/** A throwaway repo with an oxlint config that makes `debugger` an error. */
+/** A throwaway repo with an oxlint config that makes `debugger` an error, on a changeset branch cut from main. */
 const throwawayRepo = (name: string) => {
   const repo = join(dir, name)
   mkdirSync(join(repo, 'src'), { recursive: true })
@@ -117,6 +117,7 @@ const throwawayRepo = (name: string) => {
   writeFileSync(join(repo, 'src/a.ts'), 'export const a = 0;\n')
   git(repo, ['add', '-A'])
   git(repo, ['commit', '-q', '-m', 'init'])
+  git(repo, ['checkout', '-q', '-b', 'changeset/test'])
   return repo
 }
 
@@ -231,9 +232,7 @@ test(
       [
         'init',
         `feat(agent): #${SHORT_ID} attempt 1`,
-        process.env.OXFMT_BIN
-          ? `style(oxfmt): #${SHORT_ID} apply oxfmt fixes (attempt 1)`
-          : `style(fakefmt): #${SHORT_ID} apply fakefmt fixes (attempt 1)`,
+        `style(fakefmt): #${SHORT_ID} apply fakefmt fixes (attempt 1)`,
         `feat(agent): #${SHORT_ID} attempt 2`,
       ]
     )

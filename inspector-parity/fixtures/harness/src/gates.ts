@@ -50,3 +50,11 @@ export const quickHarness = pikkuHarness({
   agent: { model: 'cheap' },
   gates: onlyCheck,
 })
+
+export const lintGate = pikkuHarnessGate({
+  name: 'lint',
+  description: 'Lints the changed files and writes nothing',
+  failOn: 'high',
+  writes: [],
+  func: async (): Promise<Finding[]> => [],
+})

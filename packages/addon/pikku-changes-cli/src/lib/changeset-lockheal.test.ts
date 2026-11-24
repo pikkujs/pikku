@@ -1,12 +1,12 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, realpathSync, symlinkSync } from 'node:fs'
+import { chmodSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { git } from '@pikku/cli/addon-support'
-import { mergeChangeset } from './changeset-merge.js'
+import { findBun, mergeChangeset } from './changeset-merge.js'
 
 const ID = ['-c', 'user.email=t@example.com', '-c', 'user.name=t']
 
@@ -63,7 +63,7 @@ const diverged = async () => {
   return dir
 }
 
-const merge = async (dir: string) => {
+const merge = async (dir: string, bun?: string) => {
   const cwd = process.cwd()
   process.chdir(dir)
   try {
@@ -72,7 +72,7 @@ const merge = async (dir: string) => {
         group: { groupId: 'g1', title: 'Add x1' } as any,
         branch: 'changeset/deps',
       },
-      undefined
+      { bun: bun ?? (await findBun()) }
     )
   } finally {
     process.chdir(cwd)
@@ -113,19 +113,16 @@ describe('a changeset whose only conflict is bun.lock', () => {
 
   test('a failed bun install aborts the merge and says why', async () => {
     const dir = await diverged()
-    const bin = join(dir, '.nobun')
-    mkdirSync(bin)
-    const gitPath = spawnSync('which', ['git'], {
-      encoding: 'utf8',
-    }).stdout.trim()
-    symlinkSync(gitPath, join(bin, 'git'))
-    const path = process.env.PATH
-    process.env.PATH = bin
-    try {
-      await assert.rejects(merge(dir), /bun install[\s\S]*merge was aborted/)
-    } finally {
-      process.env.PATH = path
-    }
+    const failing = join(dir, '.git', 'failing-bun')
+    await writeFile(
+      failing,
+      '#!/bin/sh\necho "lockfile is corrupt" >&2\nexit 1\n'
+    )
+    chmodSync(failing, 0o755)
+    await assert.rejects(
+      merge(dir, failing),
+      /bun install[\s\S]*merge was aborted:\nlockfile is corrupt/
+    )
     assert.ok(
       !(await git(['status', '--porcelain', '--', 'bun.lock'], dir)).trim()
     )

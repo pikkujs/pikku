@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, test } from 'node:test'
-import type { RawOutput } from '../run-cli.js'
-import { parseOxfmtListDifferent, parseOxfmtWrite } from './oxfmt-parser.js'
+import type { HarnessCliOutput } from '@pikku/core/harness'
+import { parseOxfmtWrite } from './oxfmt-parser.js'
 import { parseOxlint } from './oxlint-parser.js'
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
@@ -16,7 +16,7 @@ const read = (name: string) => {
   }
 }
 /** Captured stdout and stderr of a real run, with the exit code it had. */
-const captured = (name: string, code: number): RawOutput => ({
+const captured = (name: string, code: number): HarnessCliOutput => ({
   stdout: read(`${name}.stdout`),
   stderr: read(`${name}.stderr`),
   code,
@@ -110,35 +110,6 @@ describe('parseOxfmtWrite (oxfmt 0.53.0 --write)', () => {
   test('garbled', () => {
     assert.throws(() =>
       parseOxfmtWrite({ stdout: 'Finished in', stderr: '', code: 0 })
-    )
-  })
-})
-
-describe('parseOxfmtListDifferent (oxfmt 0.53.0 --list-different)', () => {
-  test('one unformatted file', () => {
-    assert.deepEqual(
-      parseOxfmtListDifferent(captured('oxfmt-list-different', 1)),
-      [
-        {
-          file: 'ugly.ts',
-          severity: 'low',
-          rule: 'oxfmt',
-          message: 'File is not formatted',
-        },
-      ]
-    )
-  })
-
-  test('clean and empty', () => {
-    assert.deepEqual(parseOxfmtListDifferent(captured('empty', 0)), [])
-  })
-
-  test('garbled', () => {
-    // the syntax error report, as if it had come on stdout
-    const { stderr } = captured('oxfmt-syntax-error', 2)
-    assert.throws(
-      () => parseOxfmtListDifferent({ stdout: stderr, stderr: '', code: 2 }),
-      /not a file path/
     )
   })
 })

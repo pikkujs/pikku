@@ -4,11 +4,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, test } from 'node:test'
 import { spawnSync } from 'node:child_process'
+import { FAKE_CLI } from '../harness/test-support.js'
 import {
   hasPikkuProject,
   refuseUntilChecked,
   uncommitted,
 } from './check-gate.js'
+
+/** A CLI that is never run: the tests stub the check. */
+const cli = [process.execPath, 'pikku'] as const
 
 const dirs: string[] = []
 const repo = (config?: string) => {
@@ -28,7 +32,6 @@ const gitFor =
     args[0] === 'rev-parse' ? `${top}\n` : status
 afterEach(() => {
   delete process.env.PIKKU_CHANGES_CHECK_GATE
-  delete process.env.PIKKU_CHANGES_BUILDER
   while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true })
 })
 
@@ -38,7 +41,8 @@ describe('refuseUntilChecked', () => {
     await refuseUntilChecked({
       git: gitFor(top),
       label: '#1',
-      check: () => assert.fail('must not run'),
+      cli,
+      check: async () => assert.fail('must not run'),
     })
   })
 
@@ -48,7 +52,8 @@ describe('refuseUntilChecked', () => {
       refuseUntilChecked({
         git: gitFor(top, ' M a.ts\n'),
         label: '#1',
-        check: () => assert.fail('must not run'),
+        cli,
+        check: async () => assert.fail('must not run'),
       }),
       /uncommitted/
     )
@@ -60,7 +65,8 @@ describe('refuseUntilChecked', () => {
       refuseUntilChecked({
         git: gitFor(top),
         label: '#5',
-        check: () => ({
+        cli,
+        check: async () => ({
           code: 1,
           output: 'a.tsx(3,19): error TS2307: Cannot find module dayjs',
         }),
@@ -69,32 +75,44 @@ describe('refuseUntilChecked', () => {
     )
   })
 
-  test('passes a clean tree whose check passes, and can be turned off', async () => {
+  test('passes a clean tree whose check passes', async () => {
     const top = repo('pikku.config.json')
     await refuseUntilChecked({
       git: gitFor(top),
       label: '#1',
-      check: () => ({ code: 0, output: '' }),
-    })
-    process.env.PIKKU_CHANGES_CHECK_GATE = 'off'
-    await refuseUntilChecked({
-      git: gitFor(top),
-      label: '#1',
-      check: () => assert.fail('must not run'),
+      cli,
+      check: async () => ({ code: 0, output: '' }),
     })
   })
 
-  test('a builder cannot turn it off', async () => {
+  test('nothing in the environment turns it off', async () => {
     const top = repo('pikku.config.json')
     process.env.PIKKU_CHANGES_CHECK_GATE = 'off'
-    process.env.PIKKU_CHANGES_BUILDER = '1'
     await assert.rejects(
       refuseUntilChecked({
         git: gitFor(top),
         label: '#1',
-        check: () => ({ code: 2, output: 'error TS1' }),
+        cli,
+        check: async () => ({ code: 2, output: 'error TS1' }),
       }),
       /does not pass/
+    )
+  })
+
+  test('runs the CLI it is given in the project root, and a failing run is refused with its output', async () => {
+    const top = repo('pikku.config.json')
+    await refuseUntilChecked({
+      git: gitFor(top),
+      label: '#1',
+      cli: [process.execPath, FAKE_CLI, 'clean'],
+    })
+    await assert.rejects(
+      refuseUntilChecked({
+        git: gitFor(top),
+        label: '#2',
+        cli: [process.execPath, FAKE_CLI, 'decorated'],
+      }),
+      /#2 does not pass `pikku check` at HEAD[\s\S]*broken output/
     )
   })
 
@@ -120,7 +138,8 @@ describe('refuseUntilChecked', () => {
     await refuseUntilChecked({
       git,
       label: '#1',
-      check: () => (checked++, { code: 0, output: '' }),
+      cli,
+      check: async () => (checked++, { code: 0, output: '' }),
     })
     assert.equal(checked, 1)
     writeFileSync(join(top, 'stray.ts'), 'x')
@@ -128,7 +147,8 @@ describe('refuseUntilChecked', () => {
       refuseUntilChecked({
         git,
         label: '#1',
-        check: () => assert.fail('must not run'),
+        cli,
+        check: async () => assert.fail('must not run'),
       }),
       /uncommitted/
     )
