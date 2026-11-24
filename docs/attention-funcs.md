@@ -60,6 +60,23 @@ type AttentionResult = {
 
 Results live in the `attentionResults` singleton service (`AttentionResultStore`). With none provided, an in-process store is used, which keeps results until the process ends.
 
+A host keeps results in its own database by implementing the interface as that service:
+
+```typescript
+interface AttentionResultStore {
+  put(result: AttentionResult): Promise<void>
+  get(projectKey: string, widget: string): Promise<AttentionResult | undefined>
+  /** Latest run of every widget that has stored one for the project. */
+  list(projectKey: string): Promise<AttentionResult[]>
+  /** Projects the schedule refreshes for this widget. */
+  projectKeys(widget: string): Promise<string[]>
+  /** Marks a project as wanting the widget kept fresh, before its first run. */
+  watch(projectKey: string, widget: string): Promise<void>
+}
+```
+
+`updatedAt` on each result is how fresh it is; Pikku owns no table for it.
+
 ## Reading and refreshing
 
 The admin addon (`@pikku/addon-admin`) exposes both as functions the host calls:

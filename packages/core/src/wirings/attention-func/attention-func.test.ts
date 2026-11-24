@@ -230,3 +230,54 @@ describe('an attention func as a workflow', () => {
     assert.equal(pikkuState(null, 'attention', 'funcs').has('x.y'), false)
   })
 })
+
+describe('InMemoryAttentionResultStore', () => {
+  test('list returns the latest run of every widget for one project only', async () => {
+    const store = new InMemoryAttentionResultStore()
+    const at = new Date('2026-11-24T10:00:00Z')
+    await store.put({
+      projectKey: 'p1',
+      widget: 'health.verdict',
+      status: 'quiet',
+      updatedAt: at,
+    })
+    await store.put({
+      projectKey: 'p1',
+      widget: 'health.verdict',
+      status: 'attention',
+      score: { score: 0.5 },
+      updatedAt: at,
+    })
+    await store.put({
+      projectKey: 'p1',
+      widget: 'deploys.latest',
+      status: 'failed',
+      error: 'down',
+      updatedAt: at,
+    })
+    await store.put({
+      projectKey: 'p2',
+      widget: 'health.verdict',
+      status: 'quiet',
+      updatedAt: at,
+    })
+    const listed = (await store.list('p1')).sort((a, b) =>
+      a.widget.localeCompare(b.widget)
+    )
+    assert.deepEqual(
+      listed.map((r) => [r.widget, r.status]),
+      [
+        ['deploys.latest', 'failed'],
+        ['health.verdict', 'attention'],
+      ]
+    )
+    assert.deepEqual(await store.list('p3'), [])
+  })
+
+  test('a watched project with no run yet is not listed', async () => {
+    const store = new InMemoryAttentionResultStore()
+    await store.watch('p1', 'health.verdict')
+    assert.deepEqual(await store.list('p1'), [])
+    assert.deepEqual(await store.projectKeys('health.verdict'), ['p1'])
+  })
+})

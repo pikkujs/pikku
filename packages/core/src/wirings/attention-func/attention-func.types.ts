@@ -78,6 +78,8 @@ export type AttentionResult = {
 export interface AttentionResultStore {
   put(result: AttentionResult): Promise<void>
   get(projectKey: string, widget: string): Promise<AttentionResult | undefined>
+  /** The latest run of every widget that has stored one for this project, so a host can rank them in one read. */
+  list(projectKey: string): Promise<AttentionResult[]>
   /** Every project that has asked for this widget, so the schedule knows whom to refresh. */
   projectKeys(widget: string): Promise<string[]>
   /** Records that a project wants this widget kept fresh, before its first run has stored anything. */
