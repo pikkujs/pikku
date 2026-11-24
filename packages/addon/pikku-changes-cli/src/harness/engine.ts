@@ -1,6 +1,12 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { AnalyticsLog } from '@pikku/core/analytics'
 import { getDurationInMilliseconds } from '@pikku/core/utils'
+import type {
+  PikkuWorkflowWire,
+  WorkflowApprovalOptions,
+} from '@pikku/core/workflow'
+import { z } from 'zod'
 import { commitFixes } from './commit.js'
 import {
   atOrAbove,
@@ -23,7 +29,7 @@ import {
   type HarnessMigrate,
 } from './migrate.js'
 import { redact } from './redact.js'
-import type { HarnessSteps, StepOptions } from './steps.js'
+import type { RunCliOptions } from './run-cli.js'
 import {
   DEFAULT_WRITES,
   guardWrites,
@@ -32,13 +38,21 @@ import {
 } from './write-guard.js'
 
 export type HarnessPolicy = {
-  /** Agent turns before the run gives up. Defaults to 3. */
+  /** Agent turns before the run gives up. Defaults to 2. */
   tries?: number
   /** Stop when an attempt fails with exactly the findings of the one before. Defaults to true. */
   stopOnRepeat?: boolean
   /** Longest feedback message sent to the agent. Defaults to 6000. */
   feedbackMaxChars?: number
+  /**
+   * Who may waive a finding of a gate's `waivable` rules, and how long the run waits for them.
+   * Defaults to a signed-in user who did not start the run, within a day.
+   */
+  waive?: Omit<WorkflowApprovalOptions, 'schema'>
 }
+
+/** What a workflow run is started with to be a harness run: `{ type: HARNESS_RUN }` as its wire. */
+export const HARNESS_RUN = 'harness'
 
 export type Harness = {
   name: string
@@ -100,7 +114,13 @@ export type RunHarnessOptions = {
   changeset: string
   harness: Harness
   agent: HarnessAgent
-  steps: HarnessSteps
+  /**
+   * The wire of the harness run the engine runs in: every agent turn, gate run and commit is an
+   * inline step of it, and a waiver is an approval on it.
+   */
+  workflow: Pick<PikkuWorkflowWire, 'do' | 'approval' | 'getRun'>
+  /** Where each tool a gate runs records its duration and exit code (`harness.cli`). */
+  analytics?: Pick<AnalyticsLog, 'record'>
   onEvent?: (event: HarnessEvent) => void
   /** Runs `done` for the changeset; called once, after an attempt passes every gate. */
   markDone: () => Promise<void>
@@ -118,6 +138,13 @@ export type RunHarnessOptions = {
 }
 
 const STAGES: GateStage[] = ['check', 'fixer', 'gate']
+const DEFAULT_TRIES = 2
+const DEFAULT_WAIVE: Omit<WorkflowApprovalOptions, 'schema'> = {
+  approvers: 'not-initiator',
+  expiry: '1d',
+}
+/** A person's answer to a waiver: `waive: false` keeps the finding failing. */
+const WAIVE_DECISION = z.object({ waive: z.boolean() })
 
 const stageOf = (gate: HarnessGate): GateStage => gate.stage ?? 'gate'
 const writesOf = (gate: HarnessGate) => gate.writes ?? DEFAULT_WRITES
@@ -146,7 +173,7 @@ const validate = (harness: Harness) => {
         `Gate ${gate.name} writes ${writesOf(gate).join(', ')}; a gate that writes outside .pikku must be a fixer`
       )
   }
-  const tries = harness.policy?.tries ?? 3
+  const tries = harness.policy?.tries ?? DEFAULT_TRIES
   if (!Number.isInteger(tries) || tries < 1)
     throw new Error(`Harness ${harness.name} needs tries of 1 or more`)
 }
@@ -178,7 +205,8 @@ const delay = (ms: number, keep: (timer: NodeJS.Timeout) => void) =>
 export const runGateOnce = async (
   gate: HarnessGate,
   fields: Omit<GateWire, 'runCli' | 'signal'>,
-  stop?: AbortSignal
+  stop?: AbortSignal,
+  onRun?: RunCliOptions['onRun']
 ): Promise<Finding[]> => {
   const controller = new AbortController()
   if (stop?.aborted)
@@ -189,7 +217,7 @@ export const runGateOnce = async (
   const onStop = () => controller.abort()
   stop?.addEventListener('abort', onStop, { once: true })
   try {
-    return await runUntil(gate, fields, controller)
+    return await runUntil(gate, fields, controller, onRun)
   } finally {
     stop?.removeEventListener('abort', onStop)
   }
@@ -198,10 +226,11 @@ export const runGateOnce = async (
 const runUntil = async (
   gate: HarnessGate,
   fields: Omit<GateWire, 'runCli' | 'signal'>,
-  controller: AbortController
+  controller: AbortController,
+  onRun?: RunCliOptions['onRun']
 ): Promise<Finding[]> => {
   const running = gate.run(
-    createGateWire({ ...fields, signal: controller.signal })
+    createGateWire({ ...fields, signal: controller.signal }, onRun)
   )
   const limit = timeoutOf(gate)
   if (limit === undefined) return running
@@ -245,7 +274,8 @@ const uncommittedFinding = (file: string): Finding => ({
 /**
  * Builds a changeset: the agent works, the gates judge, failing findings go back to the agent until
  * an attempt passes (`done`), the agent gets nowhere (`repeated`) or runs out of tries (`gave-up`).
- * A gate that cannot answer ends the run as `infra` without the agent hearing of it.
+ * A gate that cannot answer ends the run as `infra` without the agent hearing of it. It runs inside
+ * a harness run and records each call as a step of it, so a replay of the run picks up from them.
  */
 export const runHarness = async (
   options: RunHarnessOptions
@@ -258,7 +288,8 @@ export const runHarness = async (
     changeset,
     harness,
     agent,
-    steps,
+    workflow,
+    analytics,
     onEvent,
     markDone,
     gitBinary,
@@ -266,7 +297,12 @@ export const runHarness = async (
     migrate,
   } = options
   validate(harness)
-  const tries = harness.policy?.tries ?? 3
+  const run = await workflow.getRun()
+  if (run.wire?.type !== HARNESS_RUN)
+    throw new Error(
+      `runHarness runs only in a harness run: start the workflow with the wire { type: '${HARNESS_RUN}' }, not '${run.wire?.type}'`
+    )
+  const tries = harness.policy?.tries ?? DEFAULT_TRIES
   const stopOnRepeat = harness.policy?.stopOnRepeat ?? true
   const feedbackMaxChars = harness.policy?.feedbackMaxChars ?? 6000
   const scratchRoot =
@@ -281,10 +317,13 @@ export const runHarness = async (
   const feedbackHistory: string[] = []
   const notes: HarnessNote[] = []
 
-  /** A step, timed and reported. `statusOf` reads the step's result. */
+  /**
+   * An inline step of the run, timed and reported. `statusOf` reads the step's result. Only a gate
+   * gets retries (its `workflowRetries`); an agent turn, a commit or a snapshot runs once.
+   */
   const record = async <T>(
     name: string,
-    meta: StepOptions & { attempt: number },
+    meta: { attempt: number; gate?: string; retries?: number },
     fn: () => Promise<T>,
     statusOf: (result: T) => HarnessEventStatus = () => 'ok'
   ): Promise<T> => {
@@ -298,7 +337,9 @@ export const runHarness = async (
         durationMs: Math.round(performance.now() - started),
       })
     try {
-      const result = await steps.step(name, fn, meta)
+      const result: T = await workflow.do(name, fn, {
+        retries: meta.retries ?? 0,
+      })
       emit(statusOf(result))
       return result
     } catch (error) {
@@ -324,15 +365,17 @@ export const runHarness = async (
    */
   const snapshot = async (name: string): Promise<TreeSnapshot> =>
     new Map(
-      await steps.step(name, async () => [
-        ...(await snapshotTree(worktree, gitBinary)).entries(),
-      ])
+      await workflow.do(
+        name,
+        async () => [...(await snapshotTree(worktree, gitBinary)).entries()],
+        { retries: 0 }
+      )
     )
 
   /**
-   * Runs a gate with its retries. Every run is guarded against `before`, the tree as it was before
-   * the first run, with `writes` as the allowlist. Thrown errors are retried; after the last try a
-   * HarnessInfraError stops the run and any other error is rethrown.
+   * Runs a gate as one step with its `workflowRetries`. Every run is guarded against `before`, the
+   * tree as it was before the first run, with `writes` as the allowlist. Once the retries are spent
+   * a HarnessInfraError stops the run and any other error is rethrown.
    */
   const runGate = async (
     gate: HarnessGate,
@@ -343,35 +386,39 @@ export const runHarness = async (
     const scratch = join(scratchRoot, gate.name)
     await mkdir(scratch, { recursive: true })
     const wire = { worktree, base, attempt, changeId, scratch }
-    const runs = (gate.workflowRetries ?? 0) + 1
-    for (let run = 1; ; run++) {
-      const name = `attempt-${attempt}:${stageOf(gate)}:${gate.name}${run > 1 ? `:try-${run}` : ''}`
-      try {
-        return await record(
-          name,
-          { attempt, gate: gate.name },
-          async () => {
-            const findings = await runGateOnce(gate, wire, signal)
-            const changed = await guardWrites({
-              worktree,
-              before,
-              writes,
-              gate: gate.name,
-              gitBinary,
-            })
-            return { findings, changed }
-          },
-          ({ findings }) =>
-            findings.some((finding) => atOrAbove(finding.severity, gate.failOn))
-              ? 'fail'
-              : 'ok'
-        )
-      } catch (error) {
-        if (run < runs) continue
-        if (error instanceof HarnessInfraError)
-          throw infraStop(gate.name, error)
-        throw error
-      }
+    const onRun: RunCliOptions['onRun'] = analytics
+      ? ({ durationMs, exitCode }) =>
+          void analytics.record({
+            name: 'harness.cli',
+            gate: gate.name,
+            attempt,
+            durationMs,
+            exitCode,
+          })
+      : undefined
+    try {
+      return await record(
+        `attempt-${attempt}:${stageOf(gate)}:${gate.name}`,
+        { attempt, gate: gate.name, retries: gate.workflowRetries ?? 0 },
+        async () => {
+          const findings = await runGateOnce(gate, wire, signal, onRun)
+          const changed = await guardWrites({
+            worktree,
+            before,
+            writes,
+            gate: gate.name,
+            gitBinary,
+          })
+          return { findings, changed }
+        },
+        ({ findings }) =>
+          findings.some((finding) => atOrAbove(finding.severity, gate.failOn))
+            ? 'fail'
+            : 'ok'
+      )
+    } catch (error) {
+      if (error instanceof HarnessInfraError) throw infraStop(gate.name, error)
+      throw error
     }
   }
 
@@ -393,6 +440,62 @@ export const runHarness = async (
 
   const gatesIn = (stage: GateStage) =>
     harness.gates.filter((gate) => stageOf(gate) === stage)
+
+  const waivable = (gate: string, { rule }: Finding) =>
+    rule !== undefined &&
+    (harness.gates.find((g) => g.name === gate)?.waivable?.includes(rule) ??
+      false)
+
+  /**
+   * When every failing finding of an attempt is of a rule its gate lets a person waive, the run
+   * waits on one approval per finding, all raised at once. A finding a person waives becomes a note;
+   * one refused, or not answered before the approval expires, keeps failing.
+   */
+  const askWaivers = async (
+    attempt: number,
+    failing: GateFindings[]
+  ): Promise<GateFindings[]> => {
+    if (
+      !failing.every(({ gate, findings }) =>
+        findings.every((finding) => waivable(gate, finding))
+      )
+    )
+      return failing
+    const asks = failing.flatMap(({ gate, findings }) =>
+      findings.map((finding, i) => ({ gate, finding, i }))
+    )
+    const settled = await Promise.allSettled(
+      asks.map(({ gate, finding, i }) =>
+        workflow.approval(
+          redact(
+            `attempt-${attempt}:waive:${gate}:${i + 1}: ${finding.message.split('\n')[0]!.slice(0, 200)}`
+          ),
+          {
+            ...DEFAULT_WAIVE,
+            ...harness.policy?.waive,
+            schema: WAIVE_DECISION,
+          }
+        )
+      )
+    )
+    const waiting = settled.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected'
+    )
+    if (waiting) throw waiting.reason
+    const kept: GateFindings[] = []
+    settled.forEach((result, i) => {
+      const { gate, finding } = asks[i]!
+      const outcome = result.status === 'fulfilled' ? result.value : undefined
+      if (outcome?.status === 'decided' && outcome.data.waive) {
+        notes.push({ gate, attempt, finding })
+        return
+      }
+      const held = kept.find((entry) => entry.gate === gate)
+      if (held) held.findings.push(finding)
+      else kept.push({ gate, findings: [finding] })
+    })
+    return kept
+  }
 
   /**
    * The db step of an attempt, when its changeset touches the schema or the dependencies; its findings (a refused
@@ -566,6 +669,7 @@ export const runHarness = async (
         }
       throw error
     }
+    if (failing.length) failing = await askWaivers(attempt, failing)
 
     if (!failing.length) {
       await record('markDone', { attempt }, markDone)

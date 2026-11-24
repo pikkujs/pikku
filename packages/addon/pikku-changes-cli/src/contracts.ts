@@ -410,10 +410,6 @@ export const changesCommands = defineCLICommands({
         description: 'What was done, for whoever reads the thread later',
       },
       authorName: { description: 'Who did it, e.g. claude-code' },
-      waive: {
-        description:
-          'Finish a change whose phone widths (under 1000 px) cannot match the original in `pikku ui pages compare`; desktop widths must still pass. The reason (at least 30 characters) goes in the done note',
-      },
       apiUrl: { description: 'Override the API URL for this call' },
     },
   }),

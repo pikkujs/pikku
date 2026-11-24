@@ -156,7 +156,7 @@ describe('the page gate on changes done', () => {
       message,
       /pikku ui pages compare --reference artifacts\/references\/example\.com --page about/
     )
-    assert.match(message, /--waive/)
+    assert.doesNotMatch(message, /waive/)
   })
 
   test('refuses a report taken at an older commit, showing its old numbers', async () => {
@@ -277,23 +277,27 @@ describe('the page gate on changes done', () => {
     )
   })
 
-  test('--waive lets a phone width over the limit through, and is recorded for the note', async () => {
+  test('a phone width over the limit is refused: done has no waiver, since a builder runs it too', async () => {
     const dir = project()
     report(dir, { rows: [row('about', 1440, 12), row('about', 390, 70)] })
-    const result = await refuseUntilPagesCompared({
-      git: fakeGit(dir, ABOUT),
-      cwd: dir,
-      env: {},
-      waive: '  the about page embeds a live Instagram feed on phones  ',
-    })
-    assert.strictEqual(result.outcome.kind, 'waived')
-    assert.strictEqual(
-      result.note,
-      'Page compare waived for /about @390: the about page embeds a live Instagram feed on phones'
+    await assert.rejects(
+      refuseUntilPagesCompared({
+        git: fakeGit(dir, ABOUT),
+        cwd: dir,
+        env: {},
+      }),
+      (error: Error) => {
+        assert.match(
+          error.message,
+          /about @390 \(\/about\): 70% of pixels differ/
+        )
+        assert.doesNotMatch(error.message, /waive/)
+        return true
+      }
     )
   })
 
-  test('--waive is refused when a desktop width is over the limit, with its numbers and style differences', async () => {
+  test('a desktop width over the limit is refused with its numbers and style differences', async () => {
     const dir = project()
     report(dir, {
       rows: [
@@ -312,21 +316,16 @@ describe('the page gate on changes done', () => {
             },
           ],
         },
-        row('about', 390, 70),
+        row('about', 390, 10),
       ],
     })
     const outcome = await checkPageGate({
       git: fakeGit(dir, ABOUT),
       cwd: dir,
       env: {},
-      waive: 'the original phone page is the desktop page scaled down',
     })
     assert.strictEqual(outcome.kind, 'refuse')
     const message = (outcome as { message: string }).message
-    assert.match(
-      message,
-      /^--waive refused: a waiver covers only phone widths \(under 1000 px\)/
-    )
     assert.match(message, /about @1440 \(\/about\): 55% of pixels differ/)
     assert.match(
       message,
@@ -335,34 +334,6 @@ describe('the page gate on changes done', () => {
     assert.match(
       message,
       /style {2}page background: original #ffffff; yours #fdf3f1/
-    )
-  })
-
-  test('--waive is refused when there is no report to show the desktop widths', async () => {
-    const dir = project()
-    const outcome = await checkPageGate({
-      git: fakeGit(dir, ABOUT),
-      cwd: dir,
-      env: {},
-      waive: 'the about page embeds a live Instagram feed on phones',
-    })
-    assert.strictEqual(outcome.kind, 'refuse')
-    assert.match(
-      (outcome as { message: string }).message,
-      /There is no compare report yet/
-    )
-  })
-
-  test('--waive with a reason under 30 characters is refused', async () => {
-    const dir = project()
-    await assert.rejects(
-      refuseUntilPagesCompared({
-        git: fakeGit(dir, ABOUT),
-        cwd: dir,
-        env: {},
-        waive: 'the phone page differs',
-      }),
-      /--waive needs a reason of at least 30 characters/
     )
   })
 

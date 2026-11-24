@@ -34,8 +34,7 @@ is your to-do list. Then, for every page, it writes into `$REF/`: `<page>.html` 
 description, menu in order, headings with computed sizes, text, colours by use, fonts by use, CSS breakpoints, pictures),
 `<page>-<width>.layout.json` (the layout, see `references/layout.md`), `<page>-<width>.style.json` (colours and fonts of
 the page background, header, headings, first paragraph and button), `<page>-<width>.jpg` (the full-page screenshot) and
-`small/<page>-<width>-<n>.jpg` (tiles about 1024 px tall: about 1000 image tokens each or less). Widths are 1440, 390 and
-1920. It downloads the original pictures into `$REF/pictures/`. `$REF/pictures/index.json` maps each original address to
+`small/<page>-<width>-<n>.jpg` (tiles about 1024 px tall: about 1000 image tokens each or less). Widths are 1440, 390 and 1920. It downloads the original pictures into `$REF/pictures/`. `$REF/pictures/index.json` maps each original address to
 its file. Each picture in `<page>.json` has its `file`. Only some pages: `--page /,/about`.
 
 It needs a browser: `PLAYWRIGHT_CHROMIUM_PATH` (or `PIKKU_CHROMIUM`) names the chrome binary when Playwright has none.
@@ -74,8 +73,8 @@ center; yours 40px 300 #111111 left`, `page background: original #ffffff; yours 
 worst page: left the original, middle red where pixels differ, right yours; a red band from some height down means your page
 is shorter or longer from there. A page change is done only when this passes: `pikku changes done` refuses a change that
 touched pages until a compare made after your last commit has each touched page at every width within 40% changed pixels
-(`pagesCompare.threshold`). Commit, compare, then `done`. A waiver is only for phone widths (under 1000 px) that cannot
-match: `pikku changes done ... --waive "<why, 30+ characters>"`; desktop widths must pass.
+(`pagesCompare.threshold`). Commit, compare, then `done`. Every width must pass: you cannot waive one. When a phone width
+(under 1000 px) truly cannot match, say why with `pikku changes ask`; only a person can let it through.
 For a quick look at one width while you build, the script still works:
 
 ```bash
@@ -122,5 +121,4 @@ your last commit, has every touched page at every width within the threshold; ot
 refuses and says which pages, by how much, and the command. Fix the `style` lines of the compare
 first (they name the size, weight, colour and alignment that differ), then open the
 `<id>-<width>.diff.png` of the worst page (original | red where pixels differ | yours); commit,
-compare again. A waiver is only for phone widths (under 1000 px):
-`done ... --waive "<why it cannot match, 30+ characters>"`; desktop widths must pass.
+compare again. Every width must pass; only a person can waive a phone width (under 1000 px).
