@@ -1643,6 +1643,212 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
     'a further generate writes nothing and says to delete renamedFrom'
   )
 
+  // 16d. A table renamed with `renamedFrom` keeps its rows. The rename is one
+  //      file with no drop in it, what the engine names after the table moves
+  //      with it, a foreign key in another table follows the new name, and
+  //      `db check` finds nothing left to say.
+  const shelf = (name, renamed, widget = true) => `  ${name}: {
+    ${renamed ? "renamedFrom: 'desk'," : ''}
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      title: { type: 'text', required: true },
+      size: { type: 'integer', min: 0, max: 9 },
+      ownerId: { type: 'integer', references: 'probe.id' },
+      touched: { type: 'timestamptz', onUpdate: { now: true } },
+    },
+    indexes: [{ columns: ['title'] }],
+    unique: [['title', 'size']],
+  },
+${
+  widget
+    ? `  widget: {
+    columns: {
+      id: { type: 'integer', primaryKey: true },
+      deskId: { type: 'integer', references: '${name}.id' },
+    },
+  },
+`
+    : ''
+}`
+  const withShelf = (name, renamed, widget = true) =>
+    probeSource(`points: { type: 'integer', min: 0, max: 9 },`, false).replace(
+      /\}\)\n$/,
+      `${shelf(name, renamed, widget)}})\n`
+    )
+  const objectNames = async (table) => {
+    if (useMysql) {
+      const rows = await store.rows(
+        `SELECT index_name AS name FROM information_schema.statistics
+         WHERE table_schema = DATABASE() AND table_name = '${table}'
+         UNION
+         SELECT constraint_name AS name FROM information_schema.table_constraints
+         WHERE table_schema = DATABASE() AND table_name = '${table}'`
+      )
+      return rows.map((r) => r.name)
+    }
+    if (usePostgres) {
+      const rows = await store.rows(
+        `SELECT indexname AS name FROM pg_indexes WHERE schemaname = 'public' AND tablename = '${table}'
+         UNION SELECT conname FROM pg_constraint WHERE conrelid = 'public.${table}'::regclass
+         UNION SELECT tgname FROM pg_trigger WHERE tgrelid = 'public.${table}'::regclass AND NOT tgisinternal`
+      )
+      return rows.map((r) => r.name)
+    }
+    const rows = await store.rows(
+      `SELECT name FROM sqlite_master WHERE tbl_name = '${table}' AND type IN ('index', 'trigger')`
+    )
+    return rows.map((r) => r.name)
+  }
+  const isCheck = (name) => /_check$/.test(name)
+
+  declareTables(withShelf('desk', false))
+  run('app: pikku db generate (desk and widget)', 'node', [
+    PIKKU,
+    'db',
+    'generate',
+  ])
+  run('app: pikku db migrate (desk and widget)', 'node', [
+    PIKKU,
+    'db',
+    'migrate',
+  ])
+  await store.exec(
+    "INSERT INTO probe (id, title, points) VALUES (10, 'owner', 1)"
+  )
+  await store.exec(
+    "INSERT INTO desk (id, title, size, owner_id) VALUES (1, 'mine', 3, 10)"
+  )
+  await store.exec('INSERT INTO widget (id, desk_id) VALUES (1, 1)')
+  const deskNames = await objectNames('desk')
+  check(
+    deskNames.some((n) => n.startsWith('desk_')),
+    `${dialect}: the table's own indexes carry its name before the rename (${deskNames.join(', ')})`
+  )
+
+  declareTables(withShelf('dashboard', true))
+  const beforeTableRename = new Set(migrationFiles())
+  const tableRenameOutput = captureAll(
+    'app: pikku db generate (table rename)',
+    'node',
+    [PIKKU, 'db', 'generate']
+  )
+  const tableRenameFiles = migrationFiles()
+    .sort()
+    .filter((f) => !beforeTableRename.has(f))
+    .map(sqlOf)
+  check(
+    !tableRenameOutput.includes('--allowDestructive') &&
+      /ALTER TABLE ["`]desk["`] RENAME TO ["`]dashboard["`];/.test(
+        tableRenameFiles[0] ?? ''
+      ) &&
+      !/DROP TABLE|pikku:destructive/.test(tableRenameFiles.join('\n')),
+    `${dialect}: a table rename is written without approval, as a rename and not a drop`
+  )
+  run('app: pikku db migrate (table rename)', 'node', [PIKKU, 'db', 'migrate'])
+
+  const shelved = await store.rows(
+    'SELECT id, title, size, owner_id FROM dashboard ORDER BY id'
+  )
+  check(
+    !(await store.hasTable('desk')) &&
+      shelved.length === 1 &&
+      shelved[0].title === 'mine' &&
+      Number(shelved[0].size) === 3 &&
+      Number(shelved[0].owner_id) === 10,
+    `${dialect}: the row is in dashboard with its values, and desk is gone`
+  )
+  const joined = await store.rows(
+    'SELECT widget.id FROM widget JOIN dashboard ON dashboard.id = widget.desk_id'
+  )
+  check(
+    joined.length === 1,
+    `${dialect}: the widget row still reaches its dashboard row`
+  )
+  if (dialect === 'sqlite') {
+    const keys = await store.rows(
+      `SELECT "table" AS target FROM pragma_foreign_key_list('widget')`
+    )
+    check(
+      keys.length === 1 && keys[0].target === 'dashboard',
+      'sqlite: the foreign key of widget points at dashboard'
+    )
+  } else {
+    const dangling = await store.tryExec(
+      'INSERT INTO widget (id, desk_id) VALUES (2, 99)'
+    )
+    check(
+      /foreign key|constraint/i.test(dangling ?? ''),
+      `${dialect}: the engine enforces the foreign key to the new name`
+    )
+    check(
+      (await store.tryExec(
+        'INSERT INTO widget (id, desk_id) VALUES (3, 1)'
+      )) === undefined,
+      `${dialect}: a widget can be added for the existing dashboard row`
+    )
+  }
+
+  const dashboardNames = await objectNames('dashboard')
+  const expected = deskNames
+    .filter((n) => !isCheck(n))
+    .map((n) => n.replaceAll('desk', 'dashboard'))
+    .sort()
+  const actual = dashboardNames.filter((n) => !isCheck(n)).sort()
+  check(
+    JSON.stringify(expected) === JSON.stringify(actual),
+    `${dialect}: indexes, keys and triggers are named as a fresh dashboard would have them (${actual.join(', ')})`
+  )
+  check(
+    !dashboardNames.some((n) => /desk/.test(n)),
+    `${dialect}: nothing left on dashboard is named for desk`
+  )
+  if (dialect !== 'sqlite') {
+    check(
+      dashboardNames.filter(isCheck).length ===
+        deskNames.filter(isCheck).length &&
+        dashboardNames.filter(isCheck).every((n) => n.startsWith('dashboard_')),
+      `${dialect}: the generated checks were re-added under dashboard's name`
+    )
+  }
+  const settledTable = captureAll(
+    'app: pikku db generate (table rename settled)',
+    'node',
+    [PIKKU, 'db', 'generate']
+  )
+  check(
+    !settledTable.includes('wrote') &&
+      /dashboard is already renamed from 'desk'.*delete renamedFrom/.test(
+        settledTable
+      ),
+    'a further generate writes nothing and says to delete renamedFrom'
+  )
+  check(
+    captureAll('app: pikku db check (table rename)', 'node', [
+      PIKKU,
+      'db',
+      'check',
+    ]).includes('db check: the database matches its migrations'),
+    'db check reports the database matches its migrations'
+  )
+  for (const remaining of [withShelf('dashboard', false, false), undefined]) {
+    declareTables(
+      remaining ??
+        probeSource(`points: { type: 'integer', min: 0, max: 9 },`, false)
+    )
+    run('app: pikku db generate --allowDestructive (shelf tables)', 'node', [
+      PIKKU,
+      'db',
+      'generate',
+      '--allowDestructive',
+    ])
+    run('app: pikku db migrate --allowDestructive (shelf tables)', 'node', [
+      PIKKU,
+      'db',
+      'migrate',
+      '--allowDestructive',
+    ])
+  }
+
   // The probe table was only for this: take it out of the declaration too.
   writeFileSync(TABLES_TS, saved)
   run('app: pikku db generate --allowDestructive (probe table)', 'node', [

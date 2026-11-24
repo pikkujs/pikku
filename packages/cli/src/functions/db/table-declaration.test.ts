@@ -1521,6 +1521,233 @@ describe('renamedFrom', () => {
   })
 })
 
+describe('renamedFrom on a table', () => {
+  const COLUMNS = {
+    id: { type: 'key', primaryKey: true },
+    name: { type: 'text', required: true },
+  }
+  const parse = (tables: Record<string, unknown>) =>
+    parseDeclaration(tables, 'tables')
+  const refusal = (tables: Record<string, unknown>) => {
+    try {
+      parse(tables)
+    } catch (error: any) {
+      return String(error.message)
+    }
+    return ''
+  }
+
+  test('is read as physical names', () => {
+    assert.deepEqual(
+      parse({ dashboardItem: { renamedFrom: 'deskItem', columns: COLUMNS } })
+        .renamedTables,
+      [{ from: 'desk_item', to: 'dashboard_item' }]
+    )
+    assert.deepEqual(parse({ item: { columns: COLUMNS } }).renamedTables, [])
+  })
+
+  test('is refused where the old name could still be in play', () => {
+    for (const renamedFrom of ['', 7]) {
+      assert.match(
+        refusal({ board: { renamedFrom, columns: COLUMNS } }),
+        /board\.renamedFrom must be the table's old name/
+      )
+    }
+    assert.match(
+      refusal({ board: { renamedFrom: 'board', columns: COLUMNS } }),
+      /board\.renamedFrom is the table's own name/
+    )
+    assert.match(
+      refusal({
+        board: { renamedFrom: 'desk', columns: COLUMNS },
+        desk: { columns: COLUMNS },
+      }),
+      /board\.renamedFrom is 'desk', but the declaration still has a table of that name/
+    )
+    assert.match(
+      refusal({
+        board: { renamedFrom: 'desk', columns: COLUMNS },
+        panel: { renamedFrom: 'desk', columns: COLUMNS },
+      }),
+      /board and panel are both renamed from 'desk'; a table can only be renamed once/
+    )
+    assert.equal(
+      refusal({ board: { renamedFrom: 'desk', columns: COLUMNS } }),
+      ''
+    )
+  })
+
+  test('a declareOnly table cannot carry it', () => {
+    assert.match(
+      refusal({
+        board: { declareOnly: true, renamedFrom: 'desk', columns: COLUMNS },
+      }),
+      /board is declareOnly, so nothing generated renames it: renamedFrom has no effect there/
+    )
+  })
+
+  const WIDGET = (target: string) =>
+    `widget: { columns: { id: { type: 'key', primaryKey: true }, deskId: { type: 'key', references: '${target}.id' } } }`
+
+  describe('on sqlite', () => {
+    const desk = (name: string, extra = '') =>
+      `${name}: { ${extra} columns: { id: { type: 'key', primaryKey: true }, name: { type: 'text', required: true }, note: { type: 'text' } }, indexes: [{ columns: ['name'] }] }`
+    const DESK = desk('desk')
+    const DASHBOARD = desk('dashboard', `renamedFrom: 'desk',`)
+
+    const start = async () => {
+      declare(DESK, WIDGET('desk'))
+      const resolved = sqliteProject()
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+      await sqliteRun(
+        resolved,
+        `INSERT INTO desk (id, name) VALUES ('d1', 'mine')`
+      )
+      await sqliteRun(
+        resolved,
+        `INSERT INTO widget (id, desk_id) VALUES ('w1', 'd1')`
+      )
+      return resolved
+    }
+
+    test('renames the table, keeps the rows, and asks nobody', async () => {
+      const resolved = await start()
+      declare(DASHBOARD, WIDGET('dashboard'))
+      const { written, refusals, destructive } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      assert.deepEqual(destructive, [])
+      const files = written.map((w) => readFileSync(w.file, 'utf8'))
+      assert.equal(files.length, 2)
+      assert.match(files[0]!, /DROP INDEX "desk_name_idx";/)
+      assert.match(files[0]!, /ALTER TABLE "desk" RENAME TO "dashboard";/)
+      assert.match(files[1]!, /create index "dashboard_name_idx"/)
+      assert.doesNotMatch(files.join('\n'), /DROP TABLE|pikku:destructive/)
+
+      await migrateAndCodegen(resolved)
+      assert.deepEqual(
+        await sqliteRows(resolved, 'SELECT id, name FROM dashboard'),
+        [{ id: 'd1', name: 'mine' }]
+      )
+      assert.deepEqual(
+        await sqliteRows(
+          resolved,
+          `SELECT "table" AS t FROM pragma_foreign_key_list('widget')`
+        ),
+        [{ t: 'dashboard' }]
+      )
+      assert.deepEqual(
+        await sqliteRows(
+          resolved,
+          `SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'dashboard' AND name NOT LIKE 'sqlite_%'`
+        ),
+        [{ name: 'dashboard_name_idx' }]
+      )
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+
+    test('once applied, it says to delete renamedFrom and writes nothing more', async () => {
+      const resolved = await start()
+      declare(DASHBOARD, WIDGET('dashboard'))
+      await generate(resolved)
+      await migrateAndCodegen(resolved)
+
+      const again = await generate(resolved)
+      assert.deepEqual(again.written, [])
+      assert.deepEqual(again.refusals, [])
+      assert.deepEqual(again.destructive, [])
+      assert.match(
+        again.notes.join(),
+        /dashboard is already renamed from 'desk' by an applied migration: delete renamedFrom/
+      )
+    })
+
+    test('a table in both names is refused', async () => {
+      declare(DESK, desk('dashboard'), WIDGET('desk'))
+      const resolved = sqliteProject()
+      await generate(resolved)
+      const before = migrations('sqlite')
+      declare(DASHBOARD, WIDGET('dashboard'))
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(written, [])
+      assert.match(
+        refusals.join(),
+        /dashboard is declared renamedFrom 'desk', but the migrations have both tables/
+      )
+      assert.deepEqual(migrations('sqlite'), before)
+    })
+
+    test('a name that matches no table, with the new one missing too, is refused', async () => {
+      const resolved = await start()
+      declare(desk('dashboard', `renamedFrom: 'typo',`), WIDGET('desk'))
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(written, [])
+      assert.match(
+        refusals.join(),
+        /dashboard is declared renamedFrom 'typo', but the migrations have no table of that name, and none called dashboard/
+      )
+    })
+
+    test('a column renamed in the same step finds its table under the new name', async () => {
+      const resolved = await start()
+      declare(
+        DASHBOARD.replace(
+          "note: { type: 'text' }",
+          "remark: { type: 'text', renamedFrom: 'note' }"
+        ),
+        WIDGET('dashboard')
+      )
+      const { written, refusals } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      const first = readFileSync(written[0]!.file, 'utf8')
+      assert.match(
+        first,
+        /RENAME TO "dashboard";\s+ALTER TABLE "dashboard" RENAME COLUMN "note" TO "remark";/
+      )
+      await migrateAndCodegen(resolved)
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+  })
+
+  describe('on postgres', () => {
+    const desk = (name: string, extra = '') =>
+      `${name}: { ${extra} columns: { id: { type: 'key', primaryKey: true }, name: { type: 'text', required: true }, state: { type: 'text', enum: ['open', 'shut'] } }, indexes: [{ columns: ['name'] }], unique: [['name', 'state']] }`
+
+    test('renames the table and what the engine ties to its name', async () => {
+      declare(desk('desk'), WIDGET('desk'))
+      const resolved = postgresProject()
+      await generate(resolved)
+
+      declare(desk('dashboard', `renamedFrom: 'desk',`), WIDGET('dashboard'))
+      const { written, refusals, destructive } = await generate(resolved)
+      assert.deepEqual(refusals, [])
+      assert.deepEqual(destructive, [])
+      const files = written.map((w) => readFileSync(w.file, 'utf8'))
+      assert.equal(files.length, 2)
+      assert.match(files[0]!, /ALTER TABLE "desk" RENAME TO "dashboard";/)
+      assert.match(
+        files[0]!,
+        /ALTER TABLE "dashboard" RENAME CONSTRAINT "desk_pkey" TO "dashboard_pkey";/
+      )
+      assert.match(
+        files[0]!,
+        /ALTER TABLE "dashboard" RENAME CONSTRAINT "desk_name_state_key" TO "dashboard_name_state_key";/
+      )
+      assert.match(
+        files[0]!,
+        /ALTER INDEX "desk_name_idx" RENAME TO "dashboard_name_idx";/
+      )
+      assert.doesNotMatch(files.join('\n'), /DROP TABLE|pikku:destructive/)
+      assert.match(files[1]!, /DROP CONSTRAINT[^\n]*desk_state_\w+_enum_check/i)
+      assert.match(
+        files[1]!,
+        /ADD CONSTRAINT "dashboard_state_\w+_enum_check"/i
+      )
+      assert.equal((await computeDeclaredTablesDrift(resolved)).pending, false)
+    })
+  })
+})
+
 describe('parseDeclaration', () => {
   test('names its source in what it refuses, wherever the declaration came from', () => {
     assert.throws(

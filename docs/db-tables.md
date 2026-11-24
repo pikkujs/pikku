@@ -318,12 +318,12 @@ change, in the order they can apply: renames, then additions, then drops.
 | New index                                | `CREATE INDEX`                                               |
 | Table already migrated                   | Adopted, not created again                                   |
 | Column with `renamedFrom`                | `ALTER TABLE ... RENAME COLUMN`, rows kept (see below)       |
+| Table with `renamedFrom`                 | `ALTER TABLE ... RENAME TO ...`, rows kept (see below)       |
 | Column removed                           | `DROP COLUMN`, marked `-- pikku:destructive`, needs approval |
 | Table removed (one `generate` declared)  | `DROP TABLE`, marked `-- pikku:destructive`, needs approval  |
 | Type, `NOT NULL`, default or key changed | Refused: a person writes that migration                      |
 | New `NOT NULL` column without a default  | Refused                                                      |
 | New primary key column                   | Refused                                                      |
-| A table renamed                          | Not supported: it is a drop and a create, and needs approval |
 
 A refusal writes nothing and the command exits non-zero with the reason. The
 migrations of other sources (Better Auth, the Pikku runtime, addons) are still
@@ -347,7 +347,7 @@ data is only lost when both are said.
   table in one run and the table it pointed at in the next, or write that
   migration by hand.
 - On sqlite the indexes of a dropped column are dropped first.
-- A column that has moved is not a drop: see `renamedFrom` below.
+- A column or table that has moved is not a drop: see `renamedFrom` below.
 
 ### Renaming a column
 
@@ -368,6 +368,44 @@ as a new column, and the note says so. A renamed column's generated checks
 (Postgres and MySQL) are dropped before the rename and re-added under the new
 column's name in the next file, because MySQL refuses to rename a column a
 `CHECK` still names.
+
+### Renaming a table
+
+Declare the table under its new name with `renamedFrom` set to the old one, and
+`generate` writes the engine's table rename, so the rows stay:
+
+```ts
+dashboard: {
+  renamedFrom: 'desk',
+  columns: { /* as before */ },
+},
+```
+
+| Engine   | Written                                                                                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Postgres | `ALTER TABLE "desk" RENAME TO "dashboard"`, then `ALTER INDEX` / `ALTER TABLE ... RENAME CONSTRAINT` / `ALTER TRIGGER` for each name that began with `desk_`                                            |
+| MySQL    | ``ALTER TABLE `desk` RENAME TO `dashboard` ``, then `ALTER TABLE ... RENAME INDEX` for each index or unique key that began with `desk_`, and `DROP FOREIGN KEY` / `ADD CONSTRAINT` for each foreign key |
+| SQLite   | `DROP INDEX` / `DROP TRIGGER` for each name that began with `desk_`, then `ALTER TABLE "desk" RENAME TO "dashboard"`; the next file creates them under the new name                                     |
+
+What the engine names after the table moves with it, so the schema is the one a
+fresh `CREATE TABLE dashboard` writes: the default index names
+`<table>_<columns>_idx`, `<table>_pk`, `<table>_<columns>_key`, the primary key,
+unique and foreign key constraints (Postgres by its defaults, MySQL's
+`<table>_<column>_fk` dropped and added back under the new name), and the
+`onUpdate` triggers. A constraint or index you named yourself keeps its name. Generated
+`CHECK`s carry a hash of the table and column, so they are dropped and re-added
+under the new name in the next file, as a renamed column's are. A foreign key in
+another table that points at the renamed table follows the new name on every
+engine; declare it with `references: 'dashboard.id'`. No `DROP TABLE` is
+written, and nothing asks for approval.
+
+Delete `renamedFrom` once the migration is applied; until then `generate` says
+`already renamed from 'desk': delete renamedFrom`, and writes nothing more. A
+table is never created by a rename that found nothing to rename, so `generate`
+refuses, naming the table, when the migrations hold neither the old table nor
+the new one, and when they hold both. It is refused in the declaration on a
+`declareOnly` table, when another table is renamed from the same old name, and
+when the old name is the table's own or is still declared.
 
 `pikku db check` and `pikku db migrate` stop when the declaration is ahead of the
 migrations.
