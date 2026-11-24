@@ -33,6 +33,10 @@ type Options struct {
 	// IsAddon is InspectorOptions.isAddon: the project is an addon package,
 	// so checkAddonBans applies.
 	IsAddon bool `json:"isAddon,omitempty"`
+	// DeferServiceProvides is set while `#pikku/service` does not exist yet: a
+	// pikkuService whose return type depends on the merged type cannot be read,
+	// so PKU372 waits for the pass that has the leaf.
+	DeferServiceProvides bool `json:"deferServiceProvides,omitempty"`
 	// Types is InspectorOptions.types. Only finalize reads it; it is
 	// accepted and passed through untouched.
 	Types json.RawMessage `json:"types,omitempty"`

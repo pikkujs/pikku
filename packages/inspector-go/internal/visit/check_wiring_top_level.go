@@ -15,7 +15,7 @@ func init() {
 // topLevelWirings are the Pikku calls that declare a wiring for the build to
 // read; none of them does anything when it is called from inside a function.
 var topLevelWirings = []string{
-	"wireAddon", "wireRemoteAddon", "wireContributors", "wireChannel", "wireCLI",
+	"wireAddon", "wireRemoteAddon", "wireChannel", "wireCLI",
 	"wireGateway", "wireHTTP", "wireHTTPRoutes", "wireMCPPrompt", "wireMCPResource",
 	"wireQueueWorker", "wireScheduler", "wireTrigger", "wireTriggerSource",
 }

@@ -43,7 +43,7 @@ pub(crate) enum Endpoint {
 pub(crate) struct AddonLocal {
     pub pkg: String,
     pub ui: bool,
-    pub contributors: Vec<String>,
+    pub services: Vec<String>,
 }
 
 /// A `state.rpc.wireAddonDeclarations` entry, typed for the readers in the
@@ -62,14 +62,9 @@ pub struct AddonDecl {
     pub auth: Option<bool>,
     pub scopes: Vec<String>,
     pub uses: Option<Record<String>>,
-    /// The addon contributor names the project opted in to.
-    pub contributors: Vec<String>,
-    /// A wireContributors entry: the contributors are taken from a plain
-    /// package that is not an addon.
-    pub contributors_only: bool,
-    /// Where a wireContributors call is, as file:line, for diagnostics.
-    pub site: String,
-    /// A wireRemoteAddon's local package: the screens and contributors shown
+    /// The addon service names the project opted in to.
+    pub services: Vec<String>,
+    /// A wireRemoteAddon's local package: the screens and services shown
     /// under the remote name are read from it.
     pub(crate) local: Option<AddonLocal>,
     pub(crate) secret_overrides: Option<Record<OJson>>,
@@ -115,7 +110,7 @@ impl AddonDecl {
         let local = o.get("local").filter(|l| l.is_object()).map(|l| AddonLocal {
             pkg: l.get("package").and_then(OJson::str).unwrap_or("").to_string(),
             ui: l.get("ui").is_some_and(|v| *v == OJson::Bool(true)),
-            contributors: l.get("contributors").map(OJson::string_members).unwrap_or_default(),
+            services: l.get("services").map(OJson::string_members).unwrap_or_default(),
         });
         Some(AddonDecl {
             pkg: s("package"),
@@ -136,9 +131,7 @@ impl AddonDecl {
             },
             scopes: o.get("scopes").map(OJson::string_members).unwrap_or_default(),
             uses: string_record_of(o.get("uses")),
-            contributors: o.get("contributors").map(OJson::string_members).unwrap_or_default(),
-            contributors_only: false,
-            site: String::new(),
+            services: o.get("services").map(OJson::string_members).unwrap_or_default(),
             local,
             secret_overrides: object_record_of(o.get("secretOverrides")),
             variable_overrides: object_record_of(o.get("variableOverrides")),
@@ -170,10 +163,6 @@ impl Context<'_> {
     /// generated metadata so the routes sweep can resolve addon functions.
     pub fn load_addon_functions_meta(&mut self) {
         let mut l = Loader { state: self.state, log: self.log, root_dir: &self.root_dir };
-        for decl in &self.contributor_wirings {
-            let req = AddonResolver(addon_resolution_dirs(l.root_dir, &decl.file));
-            l.record_opted_in_contributors(&decl.pkg, decl, &req);
-        }
         l.load_addon_functions_meta();
     }
 }
@@ -218,16 +207,6 @@ fn read_json_file(path: &str) -> Result<OJson, String> {
 /// `JSON.parse(await readFile(require.resolve(id)))`.
 fn read_resolved_json(req: &AddonResolver, id: &str) -> Option<OJson> {
     read_json_file(&req.resolve(id)?).ok()
-}
-
-/// A package.json still carrying `pikku.contributors`, the removed
-/// string-emitting route.
-fn has_legacy_contributors(dirs: &[String], pkg: &str) -> bool {
-    let d = find_installed_package_dir(dirs, pkg);
-    if d.is_empty() {
-        return false;
-    }
-    read_json_file(&join(&[&d, "package.json"])).is_ok_and(|pj| pj.get("pikku").is_some_and(|p| p.has("contributors")))
 }
 
 /// `namespaceAddonWebhookSources`: names an addon's webhook sources after the
@@ -459,7 +438,7 @@ impl Loader<'_> {
         }
     }
 
-    /// The screens and contributors a wireRemoteAddon takes from its local
+    /// The screens and services a wireRemoteAddon takes from its local
     /// package, under the remote addon's name.
     fn load_remote_addon_local(&mut self, ns: &str, decl: &AddonDecl) {
         let l = decl.local.as_ref().unwrap();
@@ -467,12 +446,12 @@ impl Loader<'_> {
             pkg: l.pkg.clone(),
             file: decl.file.clone(),
             ui: l.ui,
-            contributors: l.contributors.clone(),
+            services: l.services.clone(),
             ..Default::default()
         };
         let req = AddonResolver(addon_resolution_dirs(self.root_dir, &decl.file));
-        if !local.contributors.is_empty() {
-            self.record_opted_in_contributors(ns, &local, &req);
+        if !local.services.is_empty() {
+            self.record_opted_in_services(ns, &local, &req);
         }
         if local.ui
             && let Err(e) = self.load_addon_studio(ns, &local, &req)
@@ -498,18 +477,8 @@ impl Loader<'_> {
         let req = AddonResolver(dirs.clone());
 
         self.record_declared_uses(ns, decl, &dirs);
-        if !decl.contributors.is_empty() {
-            self.record_opted_in_contributors(ns, decl, &req);
-        }
-
-        if has_legacy_contributors(&dirs, &decl.pkg) {
-            self.log.critical(
-                codes::ADDON_LEGACY_CONTRIBUTORS,
-                format!(
-                    "{} still declares \"pikku.contributors\" in its package.json, which is no longer read. Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('{ns}', {{ contributors: [...] }}). See docs/contributors.md.",
-                    decl.pkg
-                ),
-            );
+        if !decl.services.is_empty() {
+            self.record_opted_in_services(ns, decl, &req);
         }
 
         if decl.ui {
@@ -566,30 +535,30 @@ impl Loader<'_> {
         Ok(())
     }
 
-    /// `wireAddon({ contributors })` against what the addon registered. A name
-    /// it does not register is an error rather than a skip: the project asked
-    /// for a service and would otherwise build without it.
-    fn record_opted_in_contributors(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) {
+    /// `wireAddon({ services })` against what the addon declared. A name it
+    /// does not declare is an error rather than a skip: the project asked for a
+    /// service and would otherwise build without it.
+    fn record_opted_in_services(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) {
         let mut registered = OJson::new_object();
-        let via = if decl.contributors_only { format!("wireContributors('{ns}')") } else { format!("wireAddon('{ns}')") };
-        if let Some(path) = resolve_addon_meta(req, &decl.pkg, "contributors/pikku-contributors-meta") {
+        let via = format!("wireAddon('{ns}')");
+        if let Some(path) = resolve_addon_meta(req, &decl.pkg, "services/pikku-services-meta") {
             match read_json_file(&path) {
                 Err(e) => {
                     self.log.critical(
-                        codes::ADDON_CONTRIBUTOR_UNKNOWN,
-                        format!("{via} opts in to contributors, but the contributors manifest of {} could not be read: {e}", decl.pkg),
+                        codes::ADDON_SERVICE_UNKNOWN,
+                        format!("{via} opts in to services, but the services manifest of {} could not be read: {e}", decl.pkg),
                     );
                     return;
                 }
                 Ok(meta) => {
-                    if let Some(c) = meta.get("contributors").filter(|c| c.is_object()) {
+                    if let Some(c) = meta.get("services").filter(|c| c.is_object()) {
                         registered = c.clone();
                     }
                 }
             }
         }
         let mut selected = OJson::new_object();
-        for name in &decl.contributors {
+        for name in &decl.services {
             match registered.get(name) {
                 None => {
                     let known: Vec<String> = match &registered {
@@ -597,13 +566,13 @@ impl Loader<'_> {
                         _ => vec![],
                     };
                     let hint = if known.is_empty() {
-                        "It registers none; add a defineContributors call to the package and run pikku all in it.".to_string()
+                        "It declares none; add a pikkuService export to the package and run pikku all in it.".to_string()
                     } else {
-                        format!("It registers: {}.", known.join(", "))
+                        format!("It declares: {}.", known.join(", "))
                     };
                     self.log.critical(
-                        codes::ADDON_CONTRIBUTOR_UNKNOWN,
-                        format!("{via} opts in to contributor '{name}', but {} registers no such contributor. {hint}", decl.pkg),
+                        codes::ADDON_SERVICE_UNKNOWN,
+                        format!("{via} opts in to service '{name}', but {} declares no such service. {hint}", decl.pkg),
                     );
                 }
                 Some(v) => selected.set(name, v.clone()),
@@ -614,19 +583,16 @@ impl Loader<'_> {
         }
         let mut entry = OJson::new_object();
         entry.set("packageName", OJson::string(&decl.pkg));
-        entry.set("contributors", selected);
-        if decl.contributors_only {
-            entry.set("file", OJson::string(&decl.file));
-        }
+        entry.set("services", selected);
 
         let mut all = OJson::new_object();
-        if let Some(existing) = ojson_of_raw(&self.state.opted_in_contributors)
+        if let Some(existing) = ojson_of_raw(&self.state.opted_in_services)
             && existing.is_object()
         {
             all = existing;
         }
         all.set(ns, entry);
-        self.state.opted_in_contributors = all.raw();
+        self.state.opted_in_services = all.raw();
     }
 
     fn load_addon_studio(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) -> Result<(), String> {
@@ -1203,20 +1169,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn detects_legacy_contributors() {
-        let root = temp_dir("legacy-contrib");
-        write_files(&root, &[
-            ("node_modules/legacy/package.json", r#"{"pikku": {"contributors": ["./x.js"]}}"#),
-            ("node_modules/clean/package.json", r#"{"pikku": {"uses": ["db"]}}"#),
-            ("app/package.json", "{}"),
-        ]);
-        let dirs = vec![root.join("app").to_string_lossy().into_owned()];
-        assert!(has_legacy_contributors(&dirs, "legacy"));
-        assert!(!has_legacy_contributors(&dirs, "clean"));
-        assert!(!has_legacy_contributors(&dirs, "absent"));
-    }
-
-    #[test]
     fn loads_addon_scopes() {
         let dir = temp_dir("addon-scopes");
         write_files(&dir, &[
@@ -1244,17 +1196,17 @@ pub(crate) mod tests {
     fn wire_declarations_round_trip_to_typed_decls() {
         let mut state = State::default();
         let raw = |s: &str| Raw::of(serde_json::from_str(s).unwrap());
-        state.rpc.wire_addon_declarations.set("a", raw(r#"{"package":"@s/a","file":"/x/a.ts","mcp":["f"],"mcpEndpoint":true,"expose":true,"uses":{"db":"main"},"scopes":["s1"],"contributors":["c"],"ui":true}"#));
-        state.rpc.wire_addon_declarations.set("r", raw(r#"{"package":"@s/r","range":"^1.0.0","file":"/x/r.ts","remote":true,"hasAuth":false,"local":{"package":"@s/l","ui":true,"contributors":["c2"]}}"#));
+        state.rpc.wire_addon_declarations.set("a", raw(r#"{"package":"@s/a","file":"/x/a.ts","mcp":["f"],"mcpEndpoint":true,"expose":true,"uses":{"db":"main"},"scopes":["s1"],"services":["c"],"ui":true}"#));
+        state.rpc.wire_addon_declarations.set("r", raw(r#"{"package":"@s/r","range":"^1.0.0","file":"/x/r.ts","remote":true,"hasAuth":false,"local":{"package":"@s/l","ui":true,"services":["c2"]}}"#));
         let decls: HashMap<String, AddonDecl> = declared_addons(&state).into_iter().collect();
         let a = &decls["a"];
         assert_eq!((a.pkg.as_str(), a.ui, a.mcp.clone(), a.mcp_endpoint.clone(), a.expose.clone()), ("@s/a", true, Flex::List(vec!["f".into()]), Endpoint::Bool(true), Flex::Bool(true)));
         assert_eq!(a.uses.as_ref().unwrap().get("db").map(String::as_str), Some("main"));
-        assert_eq!((a.scopes.clone(), a.contributors.clone()), (vec!["s1".to_string()], vec!["c".to_string()]));
+        assert_eq!((a.scopes.clone(), a.services.clone()), (vec!["s1".to_string()], vec!["c".to_string()]));
         let r = &decls["r"];
         assert!(r.remote && r.rng == "^1.0.0");
         let l = r.local.as_ref().unwrap();
-        assert_eq!((l.pkg.as_str(), l.ui, l.contributors.clone()), ("@s/l", true, vec!["c2".to_string()]));
+        assert_eq!((l.pkg.as_str(), l.ui, l.services.clone()), ("@s/l", true, vec!["c2".to_string()]));
         assert_eq!(declared_addons(&state).iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(), ["a", "r"]);
     }
 }

@@ -394,6 +394,11 @@ export type InspectorOptions = Partial<{
   baseDir: string
   isAddon: boolean
   /**
+   * Set while `#pikku/service` does not exist yet: a service whose return type
+   * depends on it cannot be read, so PKU372 waits for the pass that has it.
+   */
+  deferServiceProvides?: boolean
+  /**
    * Fail the build on quality gates the runtime can live without: an agent tool
    * with no description (the runtime falls back to the tool's own name), and a
    * `pikkuPermission` that never reads its data, which is otherwise a warning
@@ -770,36 +775,47 @@ export type StudioMeta = {
 }
 
 /**
- * Where a contributor variant lives, so a host can import only that variant.
- * `module` is the source file that declares it (absolute while it is in
- * inspector state, relative to the addon package in the published meta);
- * `export` is the name that module exports it under.
+ * What the inspector read of one `pikkuService` variant: the keys its factory
+ * destructures from `services`, and the keys of its return type.
  */
-export type ContributorRef = {
+export type PikkuServiceVariantMeta = {
+  needs: string[]
+  provides: string[]
+  /**
+   * Set when the variant is a reference to an exported const rather than
+   * written inline: where a build imports just that variant from.
+   */
+  module?: string
+  export?: string
+}
+
+/**
+ * One `pikkuService` declaration. `module` is the source file that declares it
+ * (absolute while it is in inspector state, relative to the addon package in
+ * the published meta); `export` is the name that module exports it under, which
+ * is also the name a `wireAddon({ services })` opts in by. A function service
+ * has only `common`.
+ */
+export type PikkuServiceMeta = {
   module: string
   export: string
+  variants: {
+    dev?: PikkuServiceVariantMeta
+    deploy?: PikkuServiceVariantMeta
+    common?: PikkuServiceVariantMeta
+  }
+  /** True when the object form carries an `onServerStart`. */
+  onServerStart?: boolean
 }
 
-/** One `defineContributors` entry: each variant optional, each its own import. */
-export type ContributorVariantsMeta = {
-  dev?: ContributorRef
-  deploy?: ContributorRef
-}
+/** The services a package declares, keyed by exported name. */
+export type PikkuServicesManifestMeta = Record<string, PikkuServiceMeta>
 
-/** The contributors an addon registers, keyed by name. */
-export type ContributorsManifestMeta = Record<string, ContributorVariantsMeta>
-
-/** The contributors a project opted in to for one wired addon. */
-export type OptedInContributorsMeta = {
+/** The services a project opted in to for one wired addon. */
+export type OptedInServicesMeta = {
   packageName: string
-  /** Each opted-in name with the variants the addon recorded; `module` is relative to the addon package. */
-  contributors: ContributorsManifestMeta
-  /**
-   * The file that called `wireContributors`, set only for that route: the
-   * package is not a wired addon, so there is no wireAddon declaration to find
-   * where it resolves from.
-   */
-  file?: string
+  /** Each opted-in name with what the addon recorded; `module` is relative to the addon package. */
+  services: PikkuServicesManifestMeta
 }
 
 export interface InspectorServiceTypes {
@@ -816,10 +832,12 @@ export interface InspectorState {
   studio?: StudioMeta
   /** The `definePlugin` metadata of the addons this project wires with `ui: true`, by namespace. */
   addonStudio?: Record<string, StudioMeta>
-  /** Set when this package calls `defineContributors`: the contributors it registers, by name. */
-  contributorsManifest?: ContributorsManifestMeta
-  /** Per wired addon namespace, the contributors `wireAddon({ contributors })` opted in to. */
-  optedInContributors?: Record<string, OptedInContributorsMeta>
+  /** The services this package declares with `pikkuService`, by exported name. */
+  pikkuServices?: PikkuServicesManifestMeta
+  /** Per wired addon namespace, the services `wireAddon({ services })` opted in to. */
+  optedInServices?: Record<string, OptedInServicesMeta>
+  /** The services the project's `pikkuServices` factory destructures from `existingServices`, sorted. */
+  projectServicesRead?: string[]
   rootDir: string // Root directory inferred from source files
   singletonServicesTypeImportMap: PathToNameAndType
   wireServicesTypeImportMap: PathToNameAndType
@@ -967,10 +985,10 @@ export interface InspectorState {
         scopes?: string[]
         /**
          * wireRemoteAddon: a package installed in this project that carries the
-         * screens and contributors for this name, when they live apart from the
-         * contract package. `ui` and `contributors` are read from it.
+         * screens and services for this name, when they live apart from the
+         * contract package. `ui` and `services` are read from it.
          */
-        local?: { package: string; ui?: boolean; contributors?: string[] }
+        local?: { package: string; ui?: boolean; services?: string[] }
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
         /**
@@ -1009,8 +1027,8 @@ export interface InspectorState {
          * `ContentService` instead of one scoped to its own folder.
          */
         globalContent?: string
-        /** The addon contributor names this project opted in to, as `wireAddon({ contributors })` listed them. */
-        contributors?: string[]
+        /** The addon service names this project opted in to, as `wireAddon({ services })` listed them. */
+        services?: string[]
       }
     >
     wireAddonFiles: Set<string>

@@ -2336,7 +2336,7 @@
         "@pikku/core": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
         "@types/node": "^26",
-        "@verifier/contrib-marker": "workspace:*",
+        "@verifier/service-marker": "workspace:*",
       },
     },
     "verifiers/deploy-standalone-nats": {
@@ -2361,8 +2361,8 @@
         "tsx": "^4.23.15",
       },
     },
-    "verifiers/deploy-standalone/contrib-marker": {
-      "name": "@verifier/contrib-marker",
+    "verifiers/deploy-standalone/service-marker": {
+      "name": "@verifier/service-marker",
     },
     "verifiers/dev-bun": {
       "name": "@pikku/verifiers-dev-bun",
@@ -2373,8 +2373,8 @@
         "tsx": "^4",
       },
     },
-    "verifiers/dev-platform-contributors": {
-      "name": "@pikku/verifiers-dev-platform-contributors",
+    "verifiers/dev-platform-services": {
+      "name": "@pikku/verifiers-dev-platform-services",
       "dependencies": {
         "@pikku/core": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
@@ -2384,22 +2384,23 @@
         "@pikku/deploy": "workspace:*",
         "@pikku/deploy-cloudflare": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
+        "@pikku/kysely": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
-        "@verifier/contrib-bad": "workspace:*",
-        "@verifier/contrib-notify": "workspace:*",
-        "@verifier/contrib-select": "workspace:*",
+        "@verifier/svc-bad": "workspace:*",
+        "@verifier/svc-notify": "workspace:*",
+        "@verifier/svc-select": "workspace:*",
         "tsx": "^4.23.15",
       },
     },
-    "verifiers/dev-platform-contributors/contrib-bad": {
-      "name": "@verifier/contrib-bad",
+    "verifiers/dev-platform-services/svc-bad": {
+      "name": "@verifier/svc-bad",
     },
-    "verifiers/dev-platform-contributors/contrib-notify": {
-      "name": "@verifier/contrib-notify",
+    "verifiers/dev-platform-services/svc-notify": {
+      "name": "@verifier/svc-notify",
     },
-    "verifiers/dev-platform-contributors/contrib-select": {
-      "name": "@verifier/contrib-select",
+    "verifiers/dev-platform-services/svc-select": {
+      "name": "@verifier/svc-select",
     },
     "verifiers/dev-port": {
       "name": "@pikku/verifiers-dev-port",
@@ -3958,7 +3959,7 @@
 
     "@pikku/verifiers-dev-bun": ["@pikku/verifiers-dev-bun@workspace:verifiers/dev-bun"],
 
-    "@pikku/verifiers-dev-platform-contributors": ["@pikku/verifiers-dev-platform-contributors@workspace:verifiers/dev-platform-contributors"],
+    "@pikku/verifiers-dev-platform-services": ["@pikku/verifiers-dev-platform-services@workspace:verifiers/dev-platform-services"],
 
     "@pikku/verifiers-dev-port": ["@pikku/verifiers-dev-port@workspace:verifiers/dev-port"],
 
@@ -4552,13 +4553,13 @@
 
     "@vercel/oidc": ["@vercel/oidc@3.2.0", "", {}, "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="],
 
-    "@verifier/contrib-bad": ["@verifier/contrib-bad@workspace:verifiers/dev-platform-contributors/contrib-bad"],
+    "@verifier/service-marker": ["@verifier/service-marker@workspace:verifiers/deploy-standalone/service-marker"],
 
-    "@verifier/contrib-marker": ["@verifier/contrib-marker@workspace:verifiers/deploy-standalone/contrib-marker"],
+    "@verifier/svc-bad": ["@verifier/svc-bad@workspace:verifiers/dev-platform-services/svc-bad"],
 
-    "@verifier/contrib-notify": ["@verifier/contrib-notify@workspace:verifiers/dev-platform-contributors/contrib-notify"],
+    "@verifier/svc-notify": ["@verifier/svc-notify@workspace:verifiers/dev-platform-services/svc-notify"],
 
-    "@verifier/contrib-select": ["@verifier/contrib-select@workspace:verifiers/dev-platform-contributors/contrib-select"],
+    "@verifier/svc-select": ["@verifier/svc-select@workspace:verifiers/dev-platform-services/svc-select"],
 
     "@vitest/expect": ["@vitest/expect@4.1.12", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "@types/chai": "^5.2.2", "@vitest/spy": "4.1.12", "@vitest/utils": "4.1.12", "chai": "^6.2.2", "tinyrainbow": "^3.1.0" } }, "sha512-vFlTt+YEu9WBpNjdGayNmlMVzrWPi1+sv853/7t2FU7hpO5gAFBKHzQmkCq5Xjpr+evegF2994LQT3hF3mRlqQ=="],
 

@@ -152,7 +152,7 @@ fn addon_loader_matches_go_on_the_fixture() {
     let diags: Vec<(Option<String>, String)> = res
         .diagnostics
         .iter()
-        .filter(|d| matches!(d.code.as_deref(), Some("PKU356" | "PKU363" | "PKU343" | "PKU364")) || d.message.starts_with("wireAddon("))
+        .filter(|d| matches!(d.code.as_deref(), Some("PKU356" | "PKU374" | "PKU343")) || d.message.starts_with("wireAddon("))
         .map(|d| (d.code.clone(), d.message.replace(&root_s, "<ROOT>")))
         .collect();
     let want: Vec<(Option<String>, String)> = golden["diagnostics"]
@@ -162,53 +162,6 @@ fn addon_loader_matches_go_on_the_fixture() {
         .map(|d| (d["code"].as_str().map(String::from), d["message"].as_str().unwrap().to_string()))
         .collect();
     assert_eq!(diags, want);
-    let _ = std::fs::remove_dir_all(&root);
-}
-
-/// Same sources and wording as Go's `TestWireContributorsRefusesWhatItCannotRead`.
-#[test]
-fn wire_contributors_refuses_what_it_cannot_read() {
-    let root = std::env::temp_dir().join(format!("pikku-rs-wire-contributors-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&root);
-    std::fs::create_dir_all(root.join("src")).unwrap();
-    for (name, text) in [
-        (
-            "tsconfig.json",
-            r#"{"compilerOptions":{"target":"ES2022","module":"Node16","moduleResolution":"Node16","strict":true,"noEmit":true,"skipLibCheck":true},"include":["src"]}"#,
-        ),
-        (
-            "src/first.ts",
-            "import { wireContributors } from '@pikku/core/contributors'\n\nwireContributors({ package: '@fixture/shop-addon', contributors: ['inbox'] })\n",
-        ),
-        (
-            "src/second.ts",
-            "import { wireContributors } from '@pikku/core/contributors'\n\ndeclare const contributors: string[]\ndeclare const options: { contributors?: string[] }\n\nwireContributors({ package: '@fixture/shop-addon', contributors: ['cache'] })\nwireContributors({ package: '@fixture/other-addon', contributors })\nwireContributors({ package: '@fixture/other-addon', contributors: ['a'], ...options })\n",
-        ),
-    ] {
-        std::fs::write(root.join(name), text).unwrap();
-    }
-    let root = root.canonicalize().unwrap();
-    let options = Options {
-        root_dir: root.to_string_lossy().into_owned(),
-        tsconfig: root.join("tsconfig.json").to_string_lossy().into_owned(),
-        ..Default::default()
-    };
-    let req = Request {
-        route_files: ["src/first.ts", "src/second.ts"].iter().map(|f| root.join(f).to_string_lossy().into_owned()).collect(),
-        options,
-        changed_files: vec![],
-    };
-    let res = analyze::run(&req, None).unwrap_or_else(|e| panic!("{e}"));
-    let got: Vec<String> =
-        res.diagnostics.iter().filter(|d| d.code.as_deref() == Some("PKU362")).map(|d| d.message.clone()).collect();
-    assert_eq!(
-        got,
-        [
-            "wireContributors is called twice for package '@fixture/shop-addon' (src/first.ts:3 and src/second.ts:6). Call it once with every contributor to opt in to.",
-            "wireContributors' properties must be plain `key: value` entries, got: contributors",
-            "wireContributors' properties must be plain `key: value` entries, got: ...options",
-        ]
-    );
     let _ = std::fs::remove_dir_all(&root);
 }
 
@@ -225,7 +178,7 @@ fn wirings_are_top_level() {
         ),
         (
             "src/nested.ts",
-            "import { wireContributors } from '@pikku/core/contributors'\nimport { wireHTTP } from '@pikku/core/http'\n\nexport function optInToJobs() {\n  wireContributors({ package: '@fixture/shop-addon', contributors: ['jobs'] })\n}\n\nexport const addRoute = () => {\n  wireHTTP({ route: '/a', func: {} as any })\n}\n",
+            "import { wireAddon } from '@pikku/core/addon'\nimport { wireHTTP } from '@pikku/core/http'\n\nexport function optInToJobs() {\n  wireAddon({ name: 'shop', package: '@fixture/shop-addon', services: ['jobs'] })\n}\n\nexport const addRoute = () => {\n  wireHTTP({ route: '/a', func: {} as any })\n}\n",
         ),
         (
             "src/enclosures.ts",
@@ -237,7 +190,7 @@ fn wirings_are_top_level() {
         ),
         (
             "src/top.ts",
-            "import { wireContributors } from '@pikku/core/contributors'\n\nwireContributors({ package: '@fixture/top-addon', contributors: ['inbox'] })\n",
+            "import { wireAddon } from '@pikku/core/addon'\n\nwireAddon({ name: 'top', package: '@fixture/top-addon', services: ['inbox'] })\n",
         ),
     ] {
         std::fs::write(root.join(name), text).unwrap();
@@ -261,9 +214,98 @@ fn wirings_are_top_level() {
         [
             "wireHTTP must be called at the top level of a file, not inside a function (inside attach, src/enclosures.ts:4)",
             "wireHTTP must be called at the top level of a file, not inside a function (inside later, src/enclosures.ts:9)",
-            "wireContributors must be called at the top level of a file, not inside a function (inside optInToJobs, src/nested.ts:4)",
+            "wireAddon must be called at the top level of a file, not inside a function (inside optInToJobs, src/nested.ts:4)",
             "wireHTTP must be called at the top level of a file, not inside a function (inside addRoute, src/nested.ts:8)",
         ]
     );
     let _ = std::fs::remove_dir_all(&root);
+}
+
+const SERVICE_CODES: [&str; 7] = ["PKU369", "PKU371", "PKU372", "PKU373", "PKU374", "PKU375", "PKU376"];
+
+fn wirings_addons_golden() -> Value {
+    serde_json::from_slice(&std::fs::read(go_testdata("wirings-addons").join("inspect.golden.json")).unwrap()).unwrap()
+}
+
+/// The pikkuService manifest, the services each wireAddon opted in to and the
+/// PKU369-376 diagnostics, against Go's golden of `testdata/wirings-addons`.
+#[test]
+fn pikku_service_matches_the_wirings_addons_golden() {
+    let root = go_testdata("wirings-addons");
+    let root_s = root.to_string_lossy().into_owned();
+    let res = run(&root, |_| {});
+    let text = pikku_inspect::jsjson::to_string(res.state.as_ref().unwrap().as_ref()).unwrap();
+    let state: Value = serde_json::from_str(&text.replace(&root_s, "<fixture>")).unwrap();
+    let golden = wirings_addons_golden();
+    for key in ["pikkuServices", "optedInServices"] {
+        assert_eq!(state[key].to_string(), golden["state"][key].to_string(), "state.{key} differs from Go");
+    }
+    assert_eq!(state["rpc"]["wireAddonDeclarations"].to_string(), golden["state"]["rpc"]["wireAddonDeclarations"].to_string());
+    let pick = |v: &Value| -> Vec<(String, String)> {
+        v.as_array()
+            .unwrap()
+            .iter()
+            .filter(|d| SERVICE_CODES.contains(&d["code"].as_str().unwrap_or("")))
+            .map(|d| (d["code"].as_str().unwrap().to_string(), d["message"].as_str().unwrap().replace(&root_s, "<fixture>")))
+            .collect()
+    };
+    let got = Value::Array(res.diagnostics.iter().map(|d| serde_json::to_value(d).unwrap()).collect());
+    assert_eq!(pick(&got), pick(&golden["diagnostics"]));
+}
+
+/// While `#pikku/service` does not exist, a service whose return type cannot be
+/// read is not PKU372.
+#[test]
+fn defer_service_provides_skips_pku372() {
+    let root = go_testdata("wirings-addons");
+    let count = |defer: bool| {
+        run(&root, |o| o.defer_service_provides = defer)
+            .diagnostics
+            .iter()
+            .filter(|d| d.code.as_deref() == Some("PKU372"))
+            .count()
+    };
+    assert_eq!(count(false), 2);
+    assert_eq!(count(true), 0);
+}
+
+/// Same sources as Go's `TestProjectServicesRead`: what the project's
+/// pikkuServices factory destructures from its second parameter.
+#[test]
+fn project_services_read_is_the_destructured_second_parameter() {
+    let cases: [(&str, &str, Vec<&str>); 4] = [
+        ("destructured", "pikkuServices(async (config, { nats }) => ({ queue: nats }))", vec!["nats"]),
+        (
+            "sorted unique, renamed, rest skipped",
+            "pikkuServices(async (config, { nats, db: conn, nats: again, ...others }) => ({}))",
+            vec!["db", "nats"],
+        ),
+        ("no second parameter", "pikkuServices(async (config) => ({}))", vec![]),
+        ("plain identifier", "pikkuServices(async (config, existingServices) => ({ ...existingServices }))", vec![]),
+    ];
+    for (name, factory, want) in cases {
+        let root = std::env::temp_dir().join(format!("pikku-rs-services-read-{}-{}", std::process::id(), name.len()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("src")).unwrap();
+        std::fs::write(
+            root.join("tsconfig.json"),
+            r#"{"compilerOptions":{"target":"ES2022","module":"Node16","moduleResolution":"Node16","strict":true,"noEmit":true,"skipLibCheck":true},"include":["src"]}"#,
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("src/services.ts"),
+            format!("import {{ pikkuServices }} from '#pikku'\nexport const createSingletonServices = {factory}\n"),
+        )
+        .unwrap();
+        let root = root.canonicalize().unwrap();
+        let res = run(&root, |_| {});
+        let text = pikku_inspect::jsjson::to_string(res.state.as_ref().unwrap().as_ref()).unwrap();
+        let state: Value = serde_json::from_str(&text).unwrap();
+        let got: Vec<String> = state["projectServicesRead"]
+            .as_array()
+            .map(|a| a.iter().map(|v| v.as_str().unwrap().to_string()).collect())
+            .unwrap_or_default();
+        assert_eq!(got, want, "{name}");
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

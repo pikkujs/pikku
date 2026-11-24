@@ -70,20 +70,38 @@
    ]
   }
  },
- "optedInContributors": {
+ "optedInServices": {
   "ext": {
    "packageName": "@acme/addon",
-   "contributors": {
+   "services": {
     "c1": {
-     "kind": "x"
+     "module": "src/services/c1.ts",
+     "export": "c1",
+     "variants": {
+      "common": {
+       "needs": [],
+       "provides": [
+        "c1"
+       ]
+      }
+     }
     }
    }
   },
   "rem": {
    "packageName": "@acme/addon",
-   "contributors": {
+   "services": {
     "c1": {
-     "kind": "x"
+     "module": "src/services/c1.ts",
+     "export": "c1",
+     "variants": {
+      "common": {
+       "needs": [],
+       "provides": [
+        "c1"
+       ]
+      }
+     }
     }
    }
   }
@@ -320,7 +338,7 @@
     "contentGrants": {
      "x": "rw"
     },
-    "contributors": [
+    "services": [
      "c1",
      "missing"
     ],
@@ -371,7 +389,7 @@
     "local": {
      "package": "@acme/addon",
      "ui": true,
-     "contributors": [
+     "services": [
       "c1"
      ]
     }
@@ -421,8 +439,8 @@
   },
   {
    "level": "critical",
-   "code": "PKU363",
-   "message": "wireAddon('ext') opts in to contributor 'missing', but @acme/addon registers no such contributor. It registers: c1, c2."
+   "code": "PKU374",
+   "message": "wireAddon('ext') opts in to service 'missing', but @acme/addon declares no such service. It declares: c1, c2."
   },
   {
    "level": "critical",
@@ -433,11 +451,6 @@
    "level": "critical",
    "code": "PKU343",
    "message": "wireAddon('ext') lists 'bye' under expose, but @acme/addon does not declare it expose: true, so it stays unexposed."
-  },
-  {
-   "level": "critical",
-   "code": "PKU364",
-   "message": "@acme/addon2 still declares \"pikku.contributors\" in its package.json, which is no longer read. Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('two', { contributors: [...] }). See docs/contributors.md."
   },
   {
    "level": "warn",

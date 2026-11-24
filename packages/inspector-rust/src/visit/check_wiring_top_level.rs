@@ -7,10 +7,9 @@ use tsrs_core::P;
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::codes;
 
-const TOP_LEVEL_WIRINGS: [&str; 14] = [
+const TOP_LEVEL_WIRINGS: [&str; 13] = [
     "wireAddon",
     "wireRemoteAddon",
-    "wireContributors",
     "wireChannel",
     "wireCLI",
     "wireGateway",

@@ -27,14 +27,9 @@ type addonDecl struct {
 	auth        *bool
 	scopes      []string
 	uses        *state.Record[string]
-	// contributors are the addon contributor names the project opted in to.
-	contributors []string
-	// contributorsOnly marks a wireContributors entry: the contributors are
-	// taken from a plain package that is not an addon.
-	contributorsOnly bool
-	// site is where a wireContributors call is, as file:line, for diagnostics.
-	site string
-	// local is a wireRemoteAddon's local package: the screens and contributors
+	// services are the addon service names the project opted in to.
+	services []string
+	// local is a wireRemoteAddon's local package: the screens and services
 	// shown under the remote name are read from it.
 	local *addonLocal
 	// secretOverrides / variableOverrides / credentialOverrides. A
@@ -43,9 +38,9 @@ type addonDecl struct {
 }
 
 type addonLocal struct {
-	pkg          string
-	ui           bool
-	contributors []string
+	pkg      string
+	ui       bool
+	services []string
 }
 
 func init() {
@@ -174,7 +169,7 @@ func (s *Context) addWireAddon(node *ast.Node) {
 		tags, scopes, secretGrants, credentialGrants any
 		uses, secretOv, variableOv, contentGrants    *state.Record[string]
 		credentialOv                                 *state.Record[*ojson]
-		contributorNames                             []string
+		serviceNames                                 []string
 	)
 	decl := &addonDecl{}
 	strp := func(v string) *string { return &v }
@@ -246,12 +241,12 @@ func (s *Context) addWireAddon(node *ast.Node) {
 			contentGrants = parseStringRecord(init)
 		case key == "globalContent":
 			globalCont = strp(literalOrText(init))
-		case key == "contributors":
+		case key == "services":
 			if names, ok := parseStringArray(init); ok {
-				decl.contributors = names
-				contributorNames = names
+				decl.services = names
+				serviceNames = names
 			} else {
-				s.Log.Critical(diag.AddonContributorsNotStatic, "wireAddon's contributors must be an array of string literals, got: "+tsutil.NodeText(init))
+				s.Log.Critical(diag.AddonServicesNotStatic, "wireAddon's services must be an array of string literals, got: "+tsutil.NodeText(init))
 			}
 		}
 	}
@@ -292,8 +287,8 @@ func (s *Context) addWireAddon(node *ast.Node) {
 	o.set("contentBucket", nilIfNil(contentBucket))
 	o.set("contentGrants", nilIfNil(contentGrants))
 	o.set("globalContent", nilIfNil(globalCont))
-	if contributorNames != nil {
-		o.set("contributors", contributorNames)
+	if serviceNames != nil {
+		o.set("services", serviceNames)
 	}
 	s.declareAddon(name, decl, o.raw())
 }
