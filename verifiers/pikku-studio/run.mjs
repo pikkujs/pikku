@@ -45,12 +45,20 @@
  *  17. a go: action without a
  *      leading slash         → PKU345
  *  18. *.attention.ts        → pikkuAttentionFunc is discovered: the meta
- *                              carries widget, every and the schedule
+ *                              carries widget, every and the schedule;
+ *                              #pikku/attention is typed with the project's
+ *                              services, and loading the bootstrap registers
+ *                              the func, its workflow and its schedule
  *  19. an attention widget on
  *      a screen or slot the
  *      plugin does not arrange → an error naming the plugin, and the build
  *                              fails
  *  20. an every of seconds   → an error, and the build fails
+ *  21. two attention funcs
+ *      for one widget        → an error naming both, and the build fails
+ *  22. pikkuAttentionFunc in a
+ *      file not named
+ *      *.attention.ts        → an error, and the build fails
  */
 import { spawnSync } from 'node:child_process'
 import {
@@ -514,6 +522,64 @@ console.log(
   '✓ a *.attention.ts func is discovered with its widget and schedule'
 )
 
+const attentionIndex = readFileSync(
+  join(here, '.pikku', 'addon', 'attention', 'index.ts'),
+  'utf8'
+)
+const attentionTypes = readFileSync(
+  join(here, '.pikku', 'addon', 'attention', 'pikku-attention-types.gen.ts'),
+  'utf8'
+)
+if (
+  !attentionIndex.includes('pikku-attention-types.gen.js') ||
+  !attentionTypes.includes('corePikkuAttentionFunc<Services>(config)')
+) {
+  fail(
+    '#pikku/attention does not export a pikkuAttentionFunc typed with the project services',
+    attentionTypes
+  )
+}
+const bootstrap = readFileSync(
+  join(here, '.pikku', 'addon', 'pikku-bootstrap.gen.ts'),
+  'utf8'
+)
+if (!bootstrap.includes('./attention/pikku-attention-func-wirings.gen.js')) {
+  fail('the bootstrap does not import the attention func wirings', bootstrap)
+}
+const registered = spawnSync(
+  'bun',
+  [
+    '-e',
+    `await import('./.pikku/addon/pikku-bootstrap.gen.ts')
+const { pikkuState } = await import('@pikku/core/state')
+const { getAttentionFuncs } = await import('@pikku/core/attention-func')
+console.log(JSON.stringify({
+  funcs: [...getAttentionFuncs().keys()],
+  workflow: pikkuState(null, 'workflows', 'meta')['attention.health.verdict']?.name ?? null,
+  schedule: pikkuState(null, 'scheduler', 'tasks').get('attention.health.verdict.refresh')?.schedule ?? null,
+}))`,
+  ],
+  { cwd: here, encoding: 'utf8' }
+)
+const registration = `${registered.stdout}`.trim().split('\n').at(-1)
+if (
+  registered.status !== 0 ||
+  registration !==
+    JSON.stringify({
+      funcs: ['health.verdict'],
+      workflow: 'attention.health.verdict',
+      schedule: '*/1 * * * *',
+    })
+) {
+  fail(
+    'loading the bootstrap did not register the attention func, its workflow and its schedule',
+    `${registered.stdout}${registered.stderr}`
+  )
+}
+console.log(
+  '✓ #pikku/attention is typed, and the bootstrap registers the workflow and its schedule'
+)
+
 const expectAttentionError = (pattern, message) => {
   const result = pikkuAll()
   if (result.status === 0 || !pattern.test(result.output)) {
@@ -552,6 +618,47 @@ withFile(
 )
 console.log(
   '✓ an attention every the schedule cannot be built from fails the build'
+)
+withFile(
+  attentionFile,
+  (source) =>
+    `${source}
+export const healthAttentionAgain = pikkuAttentionFunc({
+  widget: 'health.verdict',
+  every: '5m',
+  func: async () => undefined,
+})
+`,
+  () =>
+    expectAttentionError(
+      /'healthAttentionAgain' names widget 'health\.verdict', which 'healthAttention' already covers/,
+      'two attention funcs for one widget did not fail the build'
+    )
+)
+console.log('✓ two attention funcs for one widget fail the build')
+
+const strayAttentionFile = join(here, 'src', 'stray-health.ts')
+try {
+  writeFileSync(
+    strayAttentionFile,
+    `import { pikkuAttentionFunc } from '../.pikku/addon/attention/index.js'
+
+export const strayAttention = pikkuAttentionFunc({
+  widget: 'health.verdict',
+  every: '1m',
+  func: async () => undefined,
+})
+`
+  )
+  expectAttentionError(
+    /Attention func 'strayAttention' must live in a \*\.attention\.ts file/,
+    'pikkuAttentionFunc outside a *.attention.ts file did not fail the build'
+  )
+} finally {
+  rmSync(strayAttentionFile, { force: true })
+}
+console.log(
+  '✓ pikkuAttentionFunc outside a *.attention.ts file fails the build'
 )
 
 const scaffoldRoot = mkdtempSync(join(tmpdir(), 'pikku-studio-scaffold-'))
