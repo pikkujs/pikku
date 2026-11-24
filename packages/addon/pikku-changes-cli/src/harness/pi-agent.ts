@@ -18,6 +18,8 @@ import {
   processStartTime,
   removeLock,
   stopGroup,
+  trackGroup,
+  untrackGroup,
   writeLock,
 } from './pi-process.js'
 import { CONTINUE_PROMPT, freshRestartPrompt, resumePrompt } from './prompts.js'
@@ -255,23 +257,6 @@ const noUsage = (): PiUsage => ({
 const number = (value: unknown) =>
   typeof value === 'number' && Number.isFinite(value) ? value : 0
 
-/** Process groups started here; if this process exits they go with it. */
-const liveGroups = new Set<number>()
-let exitHooked = false
-const track = (pgid: number) => {
-  liveGroups.add(pgid)
-  if (exitHooked) return
-  exitHooked = true
-  process.once('exit', () => {
-    for (const group of liveGroups)
-      try {
-        process.kill(-group, 'SIGKILL')
-      } catch {
-        // already gone
-      }
-  })
-}
-
 type Launch = {
   code: number | null
   signal: NodeJS.Signals | null
@@ -411,7 +396,7 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
       const pid = child.pid
       let lockWritten: Promise<void> = Promise.resolve()
       if (pid !== undefined) {
-        track(pid)
+        trackGroup(pid)
         lockWritten = processStartTime(pid).then((startTime) =>
           writeLock(lockPath, {
             pid,
@@ -554,7 +539,7 @@ export const piAgent = (options: PiAgentOptions): HarnessAgent => {
         await stopping
         // What Pi started (a dev server, a browser) does not outlive it.
         await stopGroup(pid, graceMs)
-        liveGroups.delete(pid)
+        untrackGroup(pid)
         await lockWritten.catch(() => undefined)
         await removeLock(lockPath, pid)
       }

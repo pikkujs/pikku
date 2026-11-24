@@ -26,7 +26,7 @@ const REPO_ROOT = resolve(
   '../../../../..'
 )
 
-/** The slice 3 stand-in tool: `sleep` holds for 30 s, `write <file> <content>` writes a file. */
+/** The slice 3 stand-in tool: `sleep [ms]` holds (30 s unless given), `write <file> <content>` writes a file. */
 const FAKE_CLI = join(
   REPO_ROOT,
   'packages/addon/pikku-changes-cli/src/harness/fixtures/fake-cli.mjs'
@@ -129,7 +129,8 @@ export const fakeFormatterGate = pikkuHarnessGate({
 
 /**
  * The addon's oxlint gate, which a `hold-oxlint-<attempt>` script (read from the run's input)
- * slows with the fake CLI's `sleep` first. Every run is recorded in the effect ledger.
+ * slows with the fake CLI's `sleep` first, for 10 minutes: longer than any recovery, so a test can
+ * tell a tool stopped by the restart from one that ended. Every run is recorded in the effect ledger.
  */
 export const scriptedOxlintGate = pikkuHarnessGate({
   name: 'oxlint',
@@ -147,7 +148,7 @@ export const scriptedOxlintGate = pikkuHarnessGate({
     })
     if (parseScript(script).holds.has(`hold-oxlint-${gate.attempt}`))
       await holdOnce(ledgerDir, `oxlint-${gate.attempt}`, gate.changeId, () =>
-        gate.runCli(['sleep'], {
+        gate.runCli(['sleep', '600000'], {
           binary: gate.tool('fake-cli'),
           parse: () => [],
         })

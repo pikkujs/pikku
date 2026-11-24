@@ -40,7 +40,7 @@ export {
   processGroupOf,
   processStartTime,
   stopGroup,
-  type PiLock,
+  type ProcessLock,
 } from './pi-process.js'
 export {
   atOrAbove,

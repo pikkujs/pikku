@@ -10,7 +10,9 @@
  * between the fix commit and the step that records it, and started again on the same SQLite file,
  * the run ends `done` with the feedback history and the commits (tree and subject) of an
  * uninterrupted run: one agent commit per attempt, one fix commit, one `markDone`. So the engine
- * loop, the write guard and the commits survive recovery. It uses e2e's own SQLite workflow
+ * loop, the write guard and the commits survive recovery. The tool the killed gate was running is
+ * in its own process group, so it outlives the server, and the restarted gate stops it by its lock
+ * before running again. It uses e2e's own SQLite workflow
  * services (src/services.ts), not the services a generated `pikku serve` builds (#2503).
  *
  * The working directory, the SQLite file, the effect ledger and the throwaway repos are under the
@@ -24,6 +26,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -119,6 +122,24 @@ const throwawayRepo = (name: string) => {
   git(repo, ['commit', '-q', '-m', 'init'])
   git(repo, ['checkout', '-q', '-b', 'changeset/test'])
   return repo
+}
+
+/** The pids of the tools a gate is running, from their locks in the gate's scratch dir. */
+const toolPids = (repo: string, gate: string) => {
+  const dir = join(repo, '.git', 'pikku-harness', gate, 'tools')
+  return existsSync(dir)
+    ? readdirSync(dir).map((name) => Number(name.replace(/\.lock$/, '')))
+    : []
+}
+
+/** The process is there and not merely waiting to be reaped. */
+const running = (pid: number) => {
+  try {
+    const stat = readFileSync(`/proc/${pid}/stat`, 'utf8')
+    return !stat.slice(stat.lastIndexOf(')') + 2).startsWith('Z')
+  } catch {
+    return false
+  }
 }
 
 /** Tree and subject of every commit, oldest first: equal for equal work, whatever the dates. */
@@ -254,10 +275,24 @@ test(
       () => count(`hold:oxlint-1:${changeId}`) === 1,
       'the oxlint hold'
     )
-    await sleep(500)
-    await kill()
-    await boot()
-    assertSameEnd(changeId, repo, await finished(runId, RECOVERY_MS))
+    await waitFor(
+      () => toolPids(repo, 'oxlint').length === 1,
+      "the held tool's lock"
+    )
+    const [tool] = toolPids(repo, 'oxlint')
+    try {
+      await sleep(500)
+      await kill()
+      assert.ok(running(tool!), 'the tool outlived the server')
+      await boot()
+      assertSameEnd(changeId, repo, await finished(runId, RECOVERY_MS))
+      assert.equal(running(tool!), false, 'the restart stopped the tool')
+      assert.deepEqual(toolPids(repo, 'oxlint'), [])
+    } finally {
+      try {
+        process.kill(-tool!, 'SIGTERM')
+      } catch {}
+    }
     assert.equal(
       count(`gate:oxlint:1:${changeId}`),
       2,

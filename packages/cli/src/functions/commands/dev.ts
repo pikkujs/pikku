@@ -32,7 +32,6 @@ import {
   LocalEmailService,
   spy,
 } from '@pikku/core/services'
-import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { stopSingletonServices } from '@pikku/core/utils'
 import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
@@ -277,7 +276,6 @@ export const dev = pikkuSessionlessFunc<
         [config.emailTemplatesDir, ...config.sourceDirs].filter(Boolean)
       ),
     ] as string[]
-    const workflowService = new InMemoryWorkflowService()
     // `sharedDir` is the unfiltered tree codegen writes first. A process that
     // serves a named backend loads that backend's own filtered tree instead.
     const sharedDir = resolve(config.rootDir, config.outDir)
@@ -584,9 +582,9 @@ export const dev = pikkuSessionlessFunc<
     )
     // Only what the dev server alone has is passed in: the database it opened
     // (so sqlite extensions and embedded postgres apply), its event hub,
-    // content store and credentials, the workflow service codegen already runs
-    // through, and the gates read off the live inspector rather than the ones
-    // baked in at the last codegen.
+    // content store and credentials, and the gates read off the live inspector
+    // rather than the ones baked in at the last codegen. Workflow runs live where
+    // `pikku serve` keeps them: in that database when it has their tables.
     await devServerRunner.prepare()
     const baseLocalServices = await createLocalServices(
       userConfig,
@@ -604,8 +602,6 @@ export const dev = pikkuSessionlessFunc<
         ...(coverageService ? { coverageService } : {}),
         schedulerService: new InMemorySchedulerService(),
         triggerSourceStore: new InMemoryTriggerSourceStore(),
-        workflowService,
-        workflowRunService: workflowService,
         credentialService,
         // The dev server runner (node http+ws, or bun-server) is resolved by
         // DI in services.ts. Its EventHub is shared into the singleton
@@ -792,7 +788,7 @@ export const dev = pikkuSessionlessFunc<
     // What follows a codegen pass in a running server: the new meta and schemas
     // are pulled in, and changed wiring files are registered again.
     const reloadServed = async (freshInspection: boolean) => {
-      workflowService.wireQueueWorkers()
+      resolvedServices.workflowService?.wireQueueWorkers?.()
       wireAgentScorerQueueWorkers()
       // Pull the regenerated meta + JSON schemas into the running
       // process so new/changed functions are callable without a

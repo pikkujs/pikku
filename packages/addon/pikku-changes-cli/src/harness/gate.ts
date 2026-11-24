@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import type {
   PikkuHarnessGate,
   PikkuHarnessGateWire,
@@ -28,6 +29,9 @@ export const stageOf = ({
 /** The tools pinned for a run, by name: absolute paths found once when it starts. */
 export type HarnessTools = Readonly<Record<string, string>>
 
+/** Where the locks of a gate's running tools are kept, in its scratch dir. */
+export const toolLocksIn = (scratch: string) => join(scratch, 'tools')
+
 /** The wire a gate gets. Without a `signal` it gets one that is never aborted. */
 export const createGateWire = (
   fields: Omit<PikkuHarnessGateWire, 'runCli' | 'signal' | 'tool'> & {
@@ -50,6 +54,12 @@ export const createGateWire = (
       return path
     },
     runCli: (args, options) =>
-      runCli(args, { onRun, ...options, cwd: fields.worktree, signal }),
+      runCli(args, {
+        onRun,
+        ...options,
+        cwd: fields.worktree,
+        signal,
+        lockDir: toolLocksIn(fields.scratch),
+      }),
   }
 }

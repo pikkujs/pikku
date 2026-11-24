@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // A stand-in tool for runCli tests. The first argument picks what it does.
+import { spawn } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 
 // built at runtime so the repository holds no secret-shaped literal
@@ -44,8 +45,22 @@ switch (mode) {
     )
     process.exit(0)
   case 'sleep':
+    // sleep [ms]: 30 s unless given
+    setTimeout(() => process.exit(0), Number(rest[0] ?? 30_000))
+    break
+  case 'spawn-sleep': {
+    // spawn-sleep <file>: starts a child that never ends, writes its pid to the file, then sleeps
+    const child = spawn(
+      process.execPath,
+      ['-e', 'setInterval(() => {}, 1000)'],
+      {
+        stdio: 'ignore',
+      }
+    )
+    writeFileSync(rest[0], `${child.pid}`)
     setTimeout(() => process.exit(0), 30_000)
     break
+  }
   case 'write-later':
     // write-later <file> <ms>: writes the file only if it is still running after <ms>
     setTimeout(() => {
