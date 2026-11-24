@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, test } from 'node:test'
 import { spawnSync } from 'node:child_process'
-import { FAKE_CLI } from '../harness/test-support.js'
+import { FAKE_CLI } from './test-support.js'
 import {
   hasPikkuProject,
   refuseUntilChecked,

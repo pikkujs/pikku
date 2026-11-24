@@ -132,6 +132,11 @@
       "import": "./dist/src/addon-support-pages.js",
       "default": "./dist/src/addon-support-pages.js"
     },
+    "./addon-support/changes": {
+      "types": "./dist/src/addon-support-changes.d.ts",
+      "import": "./dist/src/addon-support-changes.js",
+      "default": "./dist/src/addon-support-changes.js"
+    },
     "./addon-support/validate": {
       "types": "./dist/src/addon-support-validate.d.ts",
       "import": "./dist/src/addon-support-validate.js",

@@ -1,8 +1,8 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
-import { HarnessInfraError } from '../harness/finding.js'
-import { runCli } from '../harness/run-cli.js'
+import { HarnessInfraError } from './finding.js'
+import { runCli } from './run-cli.js'
 
 /**
  * The check gate on `pikku changes done`. A change's commit is what a person goes back to, so it

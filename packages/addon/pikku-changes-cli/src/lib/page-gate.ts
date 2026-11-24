@@ -23,8 +23,8 @@ import {
   type Site,
 } from './page-reference.js'
 import { definedEnv, type PikkuCli } from './check-gate.js'
-import { HarnessInfraError } from '../harness/finding.js'
-import { runCli } from '../harness/run-cli.js'
+import { HarnessInfraError } from './finding.js'
+import { runCli } from './run-cli.js'
 
 /**
  * The page gate on `pikku changes done`. A project rebuilt from a captured

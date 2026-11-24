@@ -3,8 +3,8 @@
 A harness declares an agent that builds and the gates its work must pass. A
 gate is decided by code, a gate agent by a model; both report findings, never a
 score. The declarations live in `@pikku/core/harness` and are marked
-experimental. None of it reaches the app or a deployment: the changes addon's
-harness engine (`runHarness` in `@pikku/addon-changes-cli/harness`) runs them.
+experimental. None of it reaches the app or a deployment: a harness engine
+outside the app runs them (Pikku Studio's build harness).
 
 ## Declaring
 
@@ -70,11 +70,8 @@ export const buildHarness = pikkuHarness<HarnessGateName>({
   harness, or as a spread of a `const` array of these. Every entry has to be
   readable from source: a computed list is refused (`PKU124`). The engine runs
   only gates listed by reference: it has their bodies.
-- A harness names gates of its own package. The changes addon declares its gates
-  and `buildHarness` (`check`, `oxfmt`, `oxlint`, `trailers`, `migrations`,
-  `plan`, `pages`, `hand-typed-tables`); a project runs that harness with
-  `runHarness({ harness: buildHarness, tools, services, workflow, ... })` from a
-  workflow started with the wire `{ type: HARNESS_RUN }`.
+- A harness names gates of its own package: an addon that declares gates
+  declares the harness that lists them.
 
 ## What codegen writes
 
