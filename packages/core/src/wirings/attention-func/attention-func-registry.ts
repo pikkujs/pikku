@@ -54,11 +54,14 @@ export const addAttentionFunc = (
     )
     return
   }
-  const funcs = pikkuState(packageName, 'attention', 'funcs')
+  // The runtime (admin RPCs, workflow, schedule) reads one registry, so an
+  // addon's funcs land beside the app's.
+  const funcs = pikkuState(null, 'attention', 'funcs')
   if (funcs.has(widget)) {
     throw new Error(`Attention func already exists: ${widget}`)
   }
   funcs.set(widget, attention)
+  pikkuState(null, 'attention', 'meta')[widget] = meta
 
   const check = attentionCheckName(widget)
   const store = attentionStoreName(widget)

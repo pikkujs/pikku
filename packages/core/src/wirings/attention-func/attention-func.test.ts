@@ -216,6 +216,35 @@ describe('an attention func as a workflow', () => {
     assert.throws(() => declare(async () => undefined), /already exists/)
   })
 
+  test("an addon's func is read and refreshed like the app's own", async () => {
+    const widget = 'addonhealth.verdict'
+    pikkuState('@acme/addon-health', 'attention', 'meta')[widget] = {
+      widget,
+      every: '15m',
+      schedule: '*/15 * * * *',
+    }
+    addAttentionFunc(
+      widget,
+      pikkuAttentionFunc({ widget, every: '15m', func: async () => undefined }),
+      '@acme/addon-health'
+    )
+    const result = await refresh('p1', widget)
+    assert.equal(result?.status, 'quiet')
+    assert.equal(
+      (await getAttention(services(), { projectKey: 'p1', widget }))?.status,
+      'quiet'
+    )
+    assert.equal(
+      pikkuState(null, 'attention', 'meta')[widget]?.schedule,
+      '*/15 * * * *'
+    )
+    assert.equal(
+      pikkuState(null, 'scheduler', 'tasks').get(`attention.${widget}.refresh`)
+        ?.schedule,
+      '*/15 * * * *'
+    )
+  })
+
   test('a func with no CLI metadata is skipped, not registered', () => {
     const warn = console.warn
     console.warn = () => {}
