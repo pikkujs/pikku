@@ -34,6 +34,7 @@ export const leafEntries = [
   ['scenarios', ['scenarioTypesFile']],
   ['mcp', ['mcpTypesFile']],
   ['agent', ['agentTypesFile']],
+  ['attention', ['attentionTypesFile']],
   ['cli', ['cliTypesFile']],
   ['addon', ['addonTypesFile']],
   ['secrets', ['secretTypesFile', 'secretsFile']],

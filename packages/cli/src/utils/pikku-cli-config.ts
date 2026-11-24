@@ -1468,6 +1468,33 @@ const _getPikkuCLIConfig = async (
       )
     }
 
+    // Attention funcs
+    const attentionDir = join(result.outDir, 'attention')
+    if (!result.attentionFuncWiringsFile) {
+      result.attentionFuncWiringsFile = join(
+        attentionDir,
+        'pikku-attention-func-wirings.gen.ts'
+      )
+    }
+    if (!result.attentionFuncMetaFile) {
+      result.attentionFuncMetaFile = join(
+        attentionDir,
+        'pikku-attention-func-wirings-meta.gen.ts'
+      )
+    }
+    if (!result.attentionTypesFile) {
+      result.attentionTypesFile = join(
+        attentionDir,
+        'pikku-attention-types.gen.ts'
+      )
+    }
+    if (!result.attentionFuncMetaJsonFile) {
+      result.attentionFuncMetaJsonFile = join(
+        attentionDir,
+        'pikku-attention-func-wirings-meta.gen.json'
+      )
+    }
+
     // CLI
     if (!result.cliWiringsFile) {
       result.cliWiringsFile = join(cliDir, 'pikku-cli-wirings.gen.ts')

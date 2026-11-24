@@ -233,6 +233,12 @@ export interface PikkuCLICoreOutputFiles {
   scorerWiringMetaJsonFile: string
   scorerNamesDeclarationFile: string
 
+  // Attention funcs
+  attentionFuncWiringsFile: string
+  attentionFuncMetaFile: string
+  attentionFuncMetaJsonFile: string
+  attentionTypesFile: string
+
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string

@@ -104,6 +104,31 @@ Recipe that built and bundled as its own chunk: `import('three')` in a `useEffec
 in Pikku Studio's host as inspected, a screen with `app` gets a route and nav entry yet is rendered by a generic
 frame that only knows `component` screens. UNCONFIRMED in a browser; ask the host's owner before using it.
 
+## Attention funcs (`*.attention.ts`)
+
+A widget on an arranged screen can say when it needs a look. Declare it beside the screen:
+
+```ts
+// src/health/health.attention.ts
+import { pikkuAttentionFunc } from '#pikku/addon/attention'
+
+export const healthAttention = pikkuAttentionFunc({
+  widget: 'health.verdict', // <arranged screen id>.<slot widget>
+  every: '1m', // whole minutes, hours or days: '1m', '15m', '2h', '1d'
+  func: async (services, { projectKey }, wire) => {
+    // read the facts through the addon's usual functions, distill them
+    return undefined // all is fine
+    // or: return { score: 0.7, verdict, reason: 'Three requests failed', impact: 3, since: iso }
+  },
+})
+```
+
+- `widget` and `every` must be string literals: `pikku all` reads them from source. A `widget` that is not a slot of one of this addon's own arranged screens fails the build, naming the addon.
+- `score` is 0 to 1 (0 is fine, 1 is on fire). A score outside that range stores "failed" rather than a result.
+- Pikku runs each func as a workflow (`attention.<widget>`): a get step that is retried, then a store step. The run is stored per project and widget with `updatedAt`. After its retries the get step stores `failed`, so the host can say "couldn't check".
+- Do not read the screen's full source in the func; use the cheap status function and keep the numbers the decision needs.
+- A host reads the stored result with the admin addon's `getAttention` and refreshes with `refreshAttention` (both take `{ projectKey, widget }`). Nothing is checked at read time.
+
 ## Verify
 
 ```bash
