@@ -9,17 +9,15 @@ export {
   cleanOutput,
   runCli,
   trimOutput,
-  type RawOutput,
   type Parse,
   type RunCliOptions,
 } from './run-cli.js'
 export { gitIn, type Git } from './git.js'
+export { buildHarness } from './build-harness.js'
+export { checkGate } from './gates/check.js'
 export { oxlintGate } from './gates/oxlint.js'
 export { oxfmtGate } from './gates/oxfmt.js'
-export {
-  parseOxfmtWrite,
-  parseOxfmtListDifferent,
-} from './gates/oxfmt-parser.js'
+export { parseOxfmtWrite } from './gates/oxfmt-parser.js'
 export { parseOxlint } from './gates/oxlint-parser.js'
 export * from './pi-agent.js'
 export * from './prompts.js'

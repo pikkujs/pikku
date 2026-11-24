@@ -37,6 +37,7 @@ for (const engine of availableEngines()) {
       assert.equal(check.workflowRetries, 1)
       assert.equal(check.workflowTimeout, '5min')
       assert.deepEqual(state.functions.meta.format!.writes, ['**/*.{ts,tsx}'])
+      assert.deepEqual(state.functions.meta.lint!.writes, [])
       assert.equal(state.rpc.internalMeta.check, undefined)
     })
 

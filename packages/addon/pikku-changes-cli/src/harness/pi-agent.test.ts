@@ -92,6 +92,8 @@ const setup = async (
   files: Record<string, string> = {}
 ) => {
   const repo = await throwawayRepo(files)
+  // the builder works on a changeset branch cut from main, which the gates judge against
+  await gitIn(repo)(['checkout', '-q', '-b', 'changeset/test'])
   const gitDir = join(repo, '.git')
   const log = join(gitDir, 'fake-pi.log')
   const scriptPath = join(gitDir, 'fake-pi-script.json')
@@ -581,7 +583,9 @@ describe('provider limits', () => {
       shortId: 'k3x9',
       changeId: 'chg_0123456789',
       changeset: 'cs_abc',
-      harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
+      services: {},
+      tools: { oxlint: OXLINT },
+      harness: { name: 'lint', gates: [oxlintGate] },
       agent: async (input) => {
         if (input.attempt === 2) {
           head = (await git(['rev-parse', 'HEAD'])).trim()
@@ -706,7 +710,9 @@ describe('provider auth', () => {
       shortId: 'k3x9',
       changeId: 'chg_0123456789',
       changeset: 'cs_abc',
-      harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
+      services: {},
+      tools: { oxlint: OXLINT },
+      harness: { name: 'lint', gates: [oxlintGate] },
       agent: t.agent,
       markDone: async () => {
         doneCalls++
@@ -782,7 +788,9 @@ describe('provider quota', () => {
       shortId: 'k3x9',
       changeId: 'chg_0123456789',
       changeset: 'cs_abc',
-      harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
+      services: {},
+      tools: { oxlint: OXLINT },
+      harness: { name: 'lint', gates: [oxlintGate] },
       agent: t.agent,
       markDone: async () => undefined,
     })
@@ -904,7 +912,9 @@ describe('piAgent with runHarness', () => {
       shortId: 'k3x9',
       changeId: 'chg_0123456789',
       changeset: 'cs_abc',
-      harness: { name: 'lint', gates: [oxlintGate({ binary: OXLINT })] },
+      services: {},
+      tools: { oxlint: OXLINT },
+      harness: { name: 'lint', gates: [oxlintGate] },
       agent: t.agent,
       markDone: async () => {
         doneCalls++

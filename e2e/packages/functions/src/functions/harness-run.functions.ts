@@ -1,6 +1,7 @@
 /**
  * The pieces `harnessRunWorkflow` runs the harness engine with, in a throwaway git repo: a scripted
- * agent that edits and commits by attempt, the real oxlint, a formatter fixer, and `markDone`.
+ * agent that edits and commits by attempt, the declared `e2eHarness` (the addon's oxlint gate and a
+ * formatter fixer), and `markDone`.
  *
  * Every effect here may run twice (a step caught by a kill runs again after the restart), so each
  * one checks whether it already happened: the agent looks for its own commit, `markDone` for its
@@ -10,13 +11,12 @@ import { realpathSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { pikkuHarness, pikkuHarnessGate } from '@pikku/core/harness'
 import {
   gitIn,
   HARNESS_RUN,
-  oxfmtGate,
   oxlintGate,
   parseOxfmtWrite,
-  type HarnessGate,
 } from '@pikku/addon-changes-cli/harness'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { readEffects, recordEffect } from './chaos-ledger.js'
@@ -58,28 +58,14 @@ export const harnessStartRun = pikkuSessionlessFunc<
     }),
 })
 
-/** Absolute paths the run uses, fixed once per run so a replay uses the same ones. */
-export type HarnessTools = {
-  oxlint: string
-  /** The real oxfmt when OXFMT_BIN is set; the fake formatter otherwise. */
-  oxfmt?: string
-  ledgerDir: string
-}
+/** The tools the run pins, found once per run so a replay uses the same ones: the real oxlint and the fake CLI. */
+export const findHarnessTools = (): Record<string, string> => ({
+  oxlint: realpathSync(join(REPO_ROOT, 'node_modules/.bin/oxlint')),
+  'fake-cli': FAKE_CLI,
+})
 
 type Variables = {
   get: (name: string) => Promise<string | undefined> | string | undefined
-}
-
-export const findHarnessTools = async (
-  variables: Variables,
-  worktree: string
-): Promise<HarnessTools> => {
-  const oxfmt = await variables.get('OXFMT_BIN')
-  return {
-    oxlint: realpathSync(join(REPO_ROOT, 'node_modules/.bin/oxlint')),
-    ...(oxfmt ? { oxfmt } : {}),
-    ledgerDir: await ledgerDirFor(variables, worktree),
-  }
 }
 
 /** HARNESS_LEDGER_DIR, or the worktree's own git dir when it is unset. */
@@ -125,61 +111,58 @@ const holdOnce = async (
 }
 
 /** Squeezes runs of spaces in src/a.ts through the fake CLI, as the slice 3 tests do. */
-const fakeFormatter: HarnessGate = {
+export const fakeFormatterGate = pikkuHarnessGate({
   name: 'fakefmt',
   description: 'Squeezes runs of spaces in src/a.ts',
-  stage: 'fixer',
   failOn: 'medium',
   writes: ['**/*.{ts,tsx}'],
-  run: async (wire) => {
-    const source = await readFile(join(wire.worktree, 'src/a.ts'), 'utf8')
+  func: async (_services, _data, { gate }) => {
+    const source = await readFile(join(gate.worktree, 'src/a.ts'), 'utf8')
     const formatted = source.replace(/ {2,}/g, ' ')
     if (formatted === source) return []
-    return wire.runCli(['write', 'src/a.ts', formatted], {
-      binary: FAKE_CLI,
+    return gate.runCli(['write', 'src/a.ts', formatted], {
+      binary: gate.tool('fake-cli'),
       parse: parseOxfmtWrite,
     })
   },
-}
+})
 
-/** oxlint, which a `hold-oxlint-<attempt>` script slows with the fake CLI's `sleep` first. */
-const scriptedOxlint = (
-  script: string,
-  changeId: string,
-  tools: HarnessTools
-): HarnessGate => {
-  const lint = oxlintGate({ binary: tools.oxlint })
-  const { holds } = parseScript(script)
-  return {
-    ...lint,
-    run: async (wire) => {
-      await recordEffect(tools.ledgerDir, {
-        key: `gate:oxlint:${wire.attempt}:${changeId}`,
-        runId: changeId,
-        attempt: wire.attempt,
-        at: Date.now(),
-      })
-      if (holds.has(`hold-oxlint-${wire.attempt}`))
-        await holdOnce(
-          tools.ledgerDir,
-          `oxlint-${wire.attempt}`,
-          changeId,
-          () => wire.runCli(['sleep'], { binary: FAKE_CLI, parse: () => [] })
-        )
-      return lint.run(wire)
-    },
-  }
-}
+/**
+ * The addon's oxlint gate, which a `hold-oxlint-<attempt>` script (read from the run's input)
+ * slows with the fake CLI's `sleep` first. Every run is recorded in the effect ledger.
+ */
+export const scriptedOxlintGate = pikkuHarnessGate({
+  name: 'oxlint',
+  description: 'The addon oxlint gate, held when the run script says so',
+  failOn: 'high',
+  writes: [],
+  func: async ({ variables }, data, { gate }) => {
+    const { script, worktree } = gate.input as HarnessRunInput
+    const ledgerDir = await ledgerDirFor(variables, worktree)
+    await recordEffect(ledgerDir, {
+      key: `gate:oxlint:${gate.attempt}:${gate.changeId}`,
+      runId: gate.changeId,
+      attempt: gate.attempt,
+      at: Date.now(),
+    })
+    if (parseScript(script).holds.has(`hold-oxlint-${gate.attempt}`))
+      await holdOnce(ledgerDir, `oxlint-${gate.attempt}`, gate.changeId, () =>
+        gate.runCli(['sleep'], {
+          binary: gate.tool('fake-cli'),
+          parse: () => [],
+        })
+      )
+    return oxlintGate.func({}, data, { gate })
+  },
+})
 
-/** The run's gates: oxlint and a formatter fixer. Pure, so a replay builds the same list. */
-export const scriptedGates = (
-  script: string,
-  changeId: string,
-  tools: HarnessTools
-): HarnessGate[] => [
-  scriptedOxlint(script, changeId, tools),
-  tools.oxfmt ? oxfmtGate({ binary: tools.oxfmt }) : fakeFormatter,
-]
+/** The harness `harnessRunWorkflow` runs: oxlint, held by script, and a formatter fixer. */
+export const e2eHarness = pikkuHarness({
+  name: 'e2e',
+  description: 'Lints and formats a scripted change in a throwaway repo',
+  agent: { model: 'default' },
+  gates: [scriptedOxlintGate, fakeFormatterGate],
+})
 
 export const harnessScriptedAgent = pikkuSessionlessFunc<
   {

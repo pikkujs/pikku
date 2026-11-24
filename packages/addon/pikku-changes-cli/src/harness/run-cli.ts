@@ -2,13 +2,12 @@ import { spawn } from 'node:child_process'
 import { constants } from 'node:fs'
 import { access, stat } from 'node:fs/promises'
 import { isAbsolute } from 'node:path'
+import type { HarnessCliOutput } from '@pikku/core/harness'
 import { HarnessInfraError, isFinding, type Finding } from './finding.js'
 import { redact, redactFinding } from './redact.js'
 
 /** What a parser sees: the tool's full stdout and stderr, uncleaned, and its exit code. */
-export type RawOutput = { stdout: string; stderr: string; code: number }
-
-export type Parse = (raw: RawOutput) => Finding[]
+export type Parse = (raw: HarnessCliOutput) => Finding[]
 
 export type RunCliOptions = {
   /** Directory the tool runs in (the gate's worktree). */
@@ -73,7 +72,7 @@ export const trimOutput = (
   return `${text.slice(0, head)}\n… [${text.length - limit} characters trimmed] …\n${text.slice(-tail)}`
 }
 
-const shown = (raw: RawOutput, limit?: number) =>
+const shown = (raw: HarnessCliOutput, limit?: number) =>
   redact(trimOutput(cleanOutput(`${raw.stdout}\n${raw.stderr}`), limit))
 
 const usable = async (binary: string) => {
@@ -101,7 +100,7 @@ const baseEnv = (): Record<string, string> => {
   return env
 }
 
-type Exit = RawOutput & {
+type Exit = HarnessCliOutput & {
   timedOut: boolean
   aborted: boolean
   spawnError?: NodeJS.ErrnoException

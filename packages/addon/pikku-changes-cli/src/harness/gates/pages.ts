@@ -2,6 +2,7 @@ import { readFile, realpath, rm, stat } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type * as CliPages from '@pikku/cli/addon-support/pages'
+import { pikkuHarnessGate } from '@pikku/core/harness'
 import type { AppPage, ReferenceShot } from '@pikku/cli/addon-support/pages'
 import {
   buildsPages,
@@ -19,13 +20,11 @@ import {
   touchedPages,
 } from '../../lib/page-reference.js'
 import { HarnessInfraError, type Finding } from '../finding.js'
-import type { HarnessGate } from '../gate.js'
 import { gitIn, type Git } from '../git.js'
-import type { HarnessItem } from '../prompts.js'
 import { redact } from '../redact.js'
 import { trimOutput } from '../run-cli.js'
 import { changedFiles } from './changed.js'
-import { declaredChangeset } from './declared.js'
+import { changesetRun, declaredChangeset } from './declared.js'
 import {
   PAGE_RULE,
   PHONE_RULE,
@@ -234,37 +233,22 @@ type Target = { app: string; path: string; shots: ReferenceShot[] }
  * the threshold of the original's screenshot. The threshold and the widths come from the base
  * commit's `artifacts/pages-compare.json`, so nothing the builder commits can loosen them, and the
  * builder cannot change the reference. Only a person can let a phone width through, by waiving its
- * finding when the engine asks. The compare writes under `.pikku/compare/` in the
- * worktree and, with PIKKU_CHANGES_PARALLEL, starts this worktree's own servers on free ports. A
- * changeset with no pages passes without running anything.
+ * finding when the engine asks. The compare runs with the run's pinned pikku CLI, writes under
+ * `.pikku/compare/` in the worktree and, with PIKKU_CHANGES_PARALLEL, starts this worktree's own
+ * servers on free ports. A changeset with no pages passes without running anything.
  */
-export const pagesGate = ({
-  binary,
-  changeset,
-  items,
-  storePath,
-  timeoutMs = DEFAULT_TIMEOUT_MS,
-  env = {},
-}: {
-  /** The pinned pikku CLI; without one a changeset that has pages to compare cannot be judged. */
-  binary: string | undefined
-  changeset: string
-  items: HarnessItem[]
-  storePath?: string
-  timeoutMs?: number
-  /** Extra variables for the compare. */
-  env?: Record<string, string>
-}): HarnessGate => ({
+export const pagesGate = pikkuHarnessGate({
   name: 'pages',
   description:
     'The pages a changeset builds of a site rebuilt from an original match the original',
   failOn: 'high',
-  writes: [`${COMPARE_OUT}/**`],
+  writes: ['.pikku/compare/**'],
   waivable: [PHONE_RULE],
-  workflowTimeout: timeoutMs + 60_000,
-  run: async (wire) => {
-    const worktree = wire.worktree
+  workflowTimeout: '16min',
+  func: async (_services, _data, { gate }) => {
+    const worktree = gate.worktree
     const git = gitIn(worktree)
+    const { changeset, items, storePath } = changesetRun(gate)
     const declared = await declaredChangeset(worktree, changeset, storePath)
     const building = new Set(items.map((item) => item.changeId))
     const changes = declared.changes.filter((c) => building.has(c.changeId))
@@ -283,21 +267,17 @@ export const pagesGate = ({
       )
     )
       return []
-    if (!(await cloneAt(git, wire.base))) return []
+    if (!(await cloneAt(git, gate.base))) return []
 
-    const changed = await referenceChanges(git, wire.base)
+    const changed = await referenceChanges(git, gate.base)
     if (changed.length)
       return [
         high(
-          `${label} changes the capture of the original (${changed.slice(0, 10).join(', ')}${changed.length > 10 ? ', …' : ''}). The capture is what the pages are judged against, as it is on ${wire.base.slice(0, 12)}: restore it (\`git checkout ${wire.base.slice(0, 12)} -- ${REFERENCES_DIR}\` and remove anything added there), commit, then stop. If a page is missing from the capture, ask with \`pikku changes ask\`.`
+          `${label} changes the capture of the original (${changed.slice(0, 10).join(', ')}${changed.length > 10 ? ', …' : ''}). The capture is what the pages are judged against, as it is on ${gate.base.slice(0, 12)}: restore it (\`git checkout ${gate.base.slice(0, 12)} -- ${REFERENCES_DIR}\` and remove anything added there), commit, then stop. If a page is missing from the capture, ask with \`pikku changes ask\`.`
         ),
       ]
 
-    if (!binary)
-      throw new HarnessInfraError(
-        'missing-binary',
-        'The page gate cannot run: it compares the pages with the local pikku CLI (PIKKU_CLI_BIN), and none is set.'
-      )
+    const binary = gate.tool('pikku')
     const {
       discoverPages,
       findWorkspaceRoot,
@@ -342,7 +322,7 @@ export const pagesGate = ({
       throw new HarnessInfraError(
         'precondition',
         redact(
-          `${label} builds pages of a site rebuilt from an original, and the capture on ${wire.base.slice(0, 12)} cannot judge them; a person has to capture it.\n${problem}`
+          `${label} builds pages of a site rebuilt from an original, and the capture on ${gate.base.slice(0, 12)} cannot judge them; a person has to capture it.\n${problem}`
         )
       )
     // Whatever the compare says, a page that is the original's screenshot is not a page.
@@ -361,8 +341,8 @@ export const pagesGate = ({
         ),
       ]
 
-    const config = await baseConfig(git, wire.base)
-    const settings = await baseSettings(git, wire.base)
+    const config = await baseConfig(git, gate.base)
+    const settings = await baseSettings(git, gate.base)
     const configured = Number(settings?.threshold)
     const threshold = Number.isFinite(configured)
       ? configured
@@ -418,7 +398,7 @@ export const pagesGate = ({
       const touched = touchedPages(
         appPages,
         workspaceRoot,
-        (await changedFiles(worktree, wire.base)).map((file) =>
+        (await changedFiles(worktree, gate.base)).map((file) =>
           resolve(worktree, file)
         )
       ).filter(
@@ -429,7 +409,7 @@ export const pagesGate = ({
         return [
           ...findings,
           high(
-            `${label} is a frontend change of a site rebuilt from an original, it names no pages (no \`Pages:\` line in its body) and it touched no page or route file since ${wire.base.slice(0, 12)}, so nothing holds it to the original. If it builds pages, commit their route files, then stop (the pages it touched are compared with the original); if it builds none, ask with \`pikku changes ask\`.`
+            `${label} is a frontend change of a site rebuilt from an original, it names no pages (no \`Pages:\` line in its body) and it touched no page or route file since ${gate.base.slice(0, 12)}, so nothing holds it to the original. If it builds pages, commit their route files, then stop (the pages it touched are compared with the original); if it builds none, ask with \`pikku changes ask\`.`
           ),
         ]
       }
@@ -464,7 +444,7 @@ export const pagesGate = ({
       if (!kept.length)
         throw new HarnessInfraError(
           'precondition',
-          `widths (${widths!.join(', ')}) in ${COMPARE_SETTINGS} on ${wire.base.slice(0, 12)} names no width the capture of ${target.path} has (${target.shots.map((s) => s.width).join(', ')}); a person has to fix the config.`
+          `widths (${widths!.join(', ')}) in ${COMPARE_SETTINGS} on ${gate.base.slice(0, 12)} names no width the capture of ${target.path} has (${target.shots.map((s) => s.width).join(', ')}); a person has to fix the config.`
         )
       const list = needs.get(target.app) ?? []
       for (const shot of kept)
@@ -481,7 +461,7 @@ export const pagesGate = ({
       // only what this run writes is read
       await rm(out, { recursive: true, force: true })
       const started = new Date().toISOString()
-      await wire.runCli(
+      await gate.runCli(
         [
           'ui',
           'pages',
@@ -500,7 +480,7 @@ export const pagesGate = ({
           binary,
           parse: () => [],
           okCodes: [0],
-          timeoutMs,
+          timeoutMs: DEFAULT_TIMEOUT_MS,
           env: {
             ...Object.fromEntries(
               BROWSER_ENV.flatMap((name) =>
@@ -509,7 +489,6 @@ export const pagesGate = ({
             ),
             PIKKU_CHANGES_PARALLEL: '1',
             PIKKU_CLI_BIN: binary,
-            ...env,
           },
         }
       )

@@ -35,5 +35,35 @@
   },
   "options": {
     "typeAware": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["packages/addon/pikku-changes-cli/src/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "node:child_process",
+                "importNames": ["spawnSync", "execSync", "execFileSync"],
+                "message": "Run tools asynchronously with an explicit cwd and an absolute pinned binary (runCli), so a run can be stopped and a gate never blocks the engine."
+              },
+              {
+                "name": "child_process",
+                "importNames": ["spawnSync", "execSync", "execFileSync"],
+                "message": "Run tools asynchronously with an explicit cwd and an absolute pinned binary (runCli), so a run can be stopped and a gate never blocks the engine."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/addon/pikku-changes-cli/src/**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ]
 }

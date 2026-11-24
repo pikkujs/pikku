@@ -1,5 +1,5 @@
 import type { Finding, Severity } from '../finding.js'
-import type { RawOutput } from '../run-cli.js'
+import type { HarnessCliOutput } from '@pikku/core/harness'
 
 type OxlintDiagnostic = {
   message: string
@@ -24,7 +24,7 @@ const ruleName = (code: string) => code.replace(/^([^(]+)\((.+)\)$/, '$1/$2')
  * notice line before it (for example "No files found to lint"), so the object starts at the first
  * line that opens with `{`.
  */
-export const parseOxlint = ({ stdout }: RawOutput): Finding[] => {
+export const parseOxlint = ({ stdout }: HarnessCliOutput): Finding[] => {
   const lines = stdout.split('\n')
   const start = lines.findIndex((line) => line.startsWith('{'))
   if (start < 0) throw new Error('no JSON object in oxlint output')

@@ -629,7 +629,7 @@ impl Context<'_> {
         if let Some(g) = &gate {
             m.harness = Some(true);
             m.fail_on = g.fail_on.clone();
-            m.writes = g.writes.clone();
+            m.writes = Some(g.writes.clone());
         }
         m.mcp = or_nil(mcp_enabled);
         if let Some(k) = scenario_step_kind_v {

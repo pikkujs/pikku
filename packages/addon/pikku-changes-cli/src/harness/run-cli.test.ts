@@ -166,8 +166,10 @@ describe('runCli', () => {
         base: 'main',
         attempt: 1,
         changeId: 'c1',
+        input: undefined,
         scratch: REPO_ROOT,
       },
+      {},
       (record) => runs.push(record)
     )
     await wire.runCli(['clean'], { binary: FAKE_CLI, parse: parseOxlint })

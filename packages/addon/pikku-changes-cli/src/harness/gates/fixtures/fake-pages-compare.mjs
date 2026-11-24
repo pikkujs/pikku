@@ -2,7 +2,7 @@
 // A stand-in for `pikku ui pages compare` in the page gate's tests: it opens no browser and starts no
 // server. Only `ui pages compare --reference <dir> --app <app> --page <ids> [--widths <w>] --out <dir>`.
 //
-// What it does comes from the JSON file named by FAKE_COMPARE:
+// What it does comes from .git/fake-compare.json in the checkout it runs in:
 //   mode     report (default): writes <out>/report.json and an <id>-<width>.diff.png per row
 //            none: writes nothing and exits 0      garbled: writes a report.json that is not JSON
 //            exit: prints an error and exits 1     stray: a report, and a file outside <out> too
@@ -24,8 +24,9 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 
 const args = process.argv.slice(2)
-const scenario = process.env.FAKE_COMPARE
-  ? JSON.parse(readFileSync(process.env.FAKE_COMPARE, 'utf8'))
+const scenarioFile = join(process.cwd(), '.git', 'fake-compare.json')
+const scenario = existsSync(scenarioFile)
+  ? JSON.parse(readFileSync(scenarioFile, 'utf8'))
   : {}
 if (scenario.log)
   appendFileSync(

@@ -54,7 +54,9 @@ fn is_durable_flow(f: &str) -> bool {
 pub fn validate_single_step_workflows(log: &mut Logger, st: &State) {
     for (name, r) in st.workflows.graph_meta.iter() {
         let g = jv(r);
-        if g.get("source").is_str("scenario") {
+        // A complex workflow's inline steps are not in its graph (a harness run records every gate
+        // and agent turn as one), so its nodes say nothing about what it buys.
+        if g.get("source").is_str("scenario") || g.get("source").is_str("complex") {
             continue;
         }
         let mut file = String::new();
@@ -120,5 +122,36 @@ pub fn validate_schema_wiring_separation(log: &mut Logger, st: &State) {
                 schemas.join(", ")
             ),
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::state::{FileExport, Raw};
+
+    /// A DSL workflow of one RPC step is told it buys nothing; a complex workflow, whose inline
+    /// steps (a harness run's gates and agent turns) are not in its graph, is not.
+    #[test]
+    fn single_step_skips_complex_workflows() {
+        let mut st = State::new("/r");
+        for (name, source) in [("oneStep", "dsl"), ("harnessRun", "complex")] {
+            let graph = serde_json::json!({
+                "name": name, "pikkuFuncId": name, "source": source,
+                "nodes": { "a": { "rpcName": "doIt" } }
+            });
+            st.workflows.graph_meta.set(name, Raw::of(graph));
+            st.workflows.files.set(name, FileExport { path: format!("src/{name}.ts"), exported_name: name.into() });
+        }
+        let mut log = Logger::new();
+        validate_single_step_workflows(&mut log, &st);
+        let flagged: Vec<String> = log
+            .entries()
+            .into_iter()
+            .filter(|d| d.code.as_deref() == Some(codes::SINGLE_STEP_WORKFLOW))
+            .map(|d| d.message)
+            .collect();
+        assert_eq!(flagged.len(), 1, "{flagged:?}");
+        assert!(flagged[0].starts_with("Workflow 'oneStep'"), "{flagged:?}");
     }
 }

@@ -2,7 +2,8 @@ import { isDependencyFile, schemaFiles } from '../lib/migration-files.js'
 import { commitFixes } from './commit.js'
 import { HarnessInfraError, type Finding } from './finding.js'
 import { gitIn } from './git.js'
-import { cleanOutput, runCli, type RawOutput } from './run-cli.js'
+import type { HarnessCliOutput } from '@pikku/core/harness'
+import { cleanOutput, runCli } from './run-cli.js'
 import { guardWrites, snapshotTree } from './write-guard.js'
 
 /**
@@ -57,7 +58,7 @@ export const parseDbGenerate = ({
   stdout,
   stderr,
   code,
-}: RawOutput): Finding[] => {
+}: HarnessCliOutput): Finding[] => {
   if (code === 0) return []
   const lines = cleanOutput(`${stdout}\n${stderr}`).split('\n')
   const destructive = lines.some((line) => LOSES_DATA.test(line))
@@ -93,7 +94,11 @@ const DRIFT = /\[PKU-DB-DRIFT\]/
  * deleted or edited one it had migrated. That database is the worktree's own scratch (git-ignored), so it is
  * rebuilt from the committed migrations instead of judged; any other failure is infra.
  */
-const parseDbMigrate = ({ stdout, stderr, code }: RawOutput): Finding[] =>
+const parseDbMigrate = ({
+  stdout,
+  stderr,
+  code,
+}: HarnessCliOutput): Finding[] =>
   code !== 0 && DRIFT.test(`${stdout}\n${stderr}`)
     ? [{ severity: 'low', rule: 'harness/db-drift', message: 'drift' }]
     : []
@@ -130,7 +135,7 @@ export const runDbStep = async ({
   const timeoutMs = migrate.timeoutMs ?? 600_000
   const pikku = (
     args: string[],
-    parse: (raw: RawOutput) => Finding[] = ran,
+    parse: (raw: HarnessCliOutput) => Finding[] = ran,
     okCodes = [0]
   ) =>
     runCli(args, {

@@ -125,7 +125,7 @@ describe('merging a changeset built in a worktree', () => {
           group: { groupId: 'g1', title: 'Add login' } as any,
           branch: 'changeset/add-login',
         },
-        store
+        { storePath: store }
       )
       assert.strictEqual(outcome.kind, 'merged')
       if (outcome.kind !== 'merged') return
@@ -171,7 +171,7 @@ describe('merging a changeset that committed scratch output', () => {
           group: { groupId: 'g1', title: 'Clone home' } as any,
           branch: 'changeset/clone-home',
         },
-        undefined
+        {}
       )
       assert.strictEqual(outcome.kind, 'merged')
     } finally {
@@ -196,7 +196,7 @@ describe('merging a changeset that committed scratch output', () => {
             group: { groupId: 'g1', title: 'Add page' } as any,
             branch: 'changeset/add-page',
           },
-          undefined
+          {}
         ),
         /holds untracked, and not all of them are the same as the branch's \(page\.tsx\)/
       )
@@ -242,7 +242,7 @@ describe('merging a changeset that committed scratch output', () => {
           group: { groupId: 'g1', title: 'Capture' } as any,
           branch: 'changeset/capture',
         },
-        undefined
+        {}
       )
       assert.strictEqual(outcome.kind, 'merged')
       assert.strictEqual(
@@ -255,7 +255,7 @@ describe('merging a changeset that committed scratch output', () => {
             group: { groupId: 'g2', title: 'Other capture' } as any,
             branch: 'changeset/other-capture',
           },
-          undefined
+          {}
         ),
         /not all of them are the same as the branch's \(notes\/a\.md, notes\/b\.md\)/
       )

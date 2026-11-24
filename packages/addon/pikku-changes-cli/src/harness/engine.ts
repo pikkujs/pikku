@@ -1,6 +1,11 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { AnalyticsLog } from '@pikku/core/analytics'
+import type {
+  PikkuHarness,
+  PikkuHarnessGate,
+  PikkuHarnessGateWire,
+} from '@pikku/core/harness'
 import { getDurationInMilliseconds } from '@pikku/core/utils'
 import type {
   PikkuWorkflowWire,
@@ -17,9 +22,9 @@ import {
 import { HarnessInfraError, type Finding, type InfraKind } from './finding.js'
 import {
   createGateWire,
+  stageOf,
   type GateStage,
-  type GateWire,
-  type HarnessGate,
+  type HarnessTools,
 } from './gate.js'
 import { gitIn } from './git.js'
 import {
@@ -30,12 +35,7 @@ import {
 } from './migrate.js'
 import { redact } from './redact.js'
 import type { RunCliOptions } from './run-cli.js'
-import {
-  DEFAULT_WRITES,
-  guardWrites,
-  snapshotTree,
-  type TreeSnapshot,
-} from './write-guard.js'
+import { guardWrites, snapshotTree, type TreeSnapshot } from './write-guard.js'
 
 export type HarnessPolicy = {
   /** Agent turns before the run gives up. Defaults to 2. */
@@ -53,12 +53,6 @@ export type HarnessPolicy = {
 
 /** What a workflow run is started with to be a harness run: `{ type: HARNESS_RUN }` as its wire. */
 export const HARNESS_RUN = 'harness'
-
-export type Harness = {
-  name: string
-  gates: HarnessGate[]
-  policy?: HarnessPolicy
-}
 
 export type AgentOutcome = 'done' | 'needs-answer' | 'failed'
 
@@ -112,7 +106,13 @@ export type RunHarnessOptions = {
   changeId: string
   shortId: string
   changeset: string
-  harness: Harness
+  /** The declared harness to run: its gates, listed by reference, run in their stages. */
+  harness: Pick<PikkuHarness, 'name' | 'gates'>
+  policy?: HarnessPolicy
+  /** The tools pinned for the run, found once when it starts so a replay uses the same ones. */
+  tools?: HarnessTools
+  /** What a gate's `func` gets as its services. */
+  services: unknown
   agent: HarnessAgent
   /**
    * The wire of the harness run the engine runs in: every agent turn, gate run and commit is an
@@ -137,7 +137,6 @@ export type RunHarnessOptions = {
   migrate?: HarnessMigrate
 }
 
-const STAGES: GateStage[] = ['check', 'fixer', 'gate']
 const DEFAULT_TRIES = 2
 const DEFAULT_WAIVE: Omit<WorkflowApprovalOptions, 'schema'> = {
   approvers: 'not-initiator',
@@ -146,12 +145,30 @@ const DEFAULT_WAIVE: Omit<WorkflowApprovalOptions, 'schema'> = {
 /** A person's answer to a waiver: `waive: false` keeps the finding failing. */
 const WAIVE_DECISION = z.object({ waive: z.boolean() })
 
-const stageOf = (gate: HarnessGate): GateStage => gate.stage ?? 'gate'
-const writesOf = (gate: HarnessGate) => gate.writes ?? DEFAULT_WRITES
+const isGate = (entry: unknown): entry is PikkuHarnessGate =>
+  typeof entry === 'object' &&
+  entry !== null &&
+  typeof (entry as { func?: unknown }).func === 'function'
 
-const validate = (harness: Harness) => {
+/**
+ * The gates of a declared harness. A harness may name a gate or override its `failOn`, which the
+ * inspector reads; this engine runs only what it is handed, so each entry must be the gate itself.
+ */
+const gatesOf = (harness: RunHarnessOptions['harness']): PikkuHarnessGate[] =>
+  harness.gates.map((entry) => {
+    if (isGate(entry)) return entry
+    throw new Error(
+      `Harness ${harness.name} lists ${typeof entry === 'string' ? entry : entry.name} by name, with an override or as a gate agent; the engine runs gates listed by reference`
+    )
+  })
+
+const validate = (
+  harness: RunHarnessOptions['harness'],
+  gates: PikkuHarnessGate[],
+  policy: HarnessPolicy | undefined
+) => {
   const names = new Set<string>()
-  for (const gate of harness.gates) {
+  for (const gate of gates) {
     if (names.has(gate.name))
       throw new Error(
         `Harness ${harness.name} has two gates named ${gate.name}`
@@ -163,17 +180,8 @@ const validate = (harness: Harness) => {
     )
       throw new Error(`Gate name ${gate.name} is kept for the engine`)
     names.add(gate.name)
-    if (!STAGES.includes(stageOf(gate)))
-      throw new Error(`Gate ${gate.name} has an unknown stage ${gate.stage}`)
-    if (
-      stageOf(gate) === 'gate' &&
-      !writesOf(gate).every((glob) => glob.startsWith('.pikku/'))
-    )
-      throw new Error(
-        `Gate ${gate.name} writes ${writesOf(gate).join(', ')}; a gate that writes outside .pikku must be a fixer`
-      )
   }
-  const tries = harness.policy?.tries ?? DEFAULT_TRIES
+  const tries = policy?.tries ?? DEFAULT_TRIES
   if (!Number.isInteger(tries) || tries < 1)
     throw new Error(`Harness ${harness.name} needs tries of 1 or more`)
 }
@@ -185,7 +193,7 @@ class Stop {
 
 type GateOutcome = { findings: Finding[]; changed: string[] }
 
-const timeoutOf = (gate: HarnessGate) =>
+const timeoutOf = (gate: PikkuHarnessGate) =>
   gate.workflowTimeout === undefined
     ? undefined
     : getDurationInMilliseconds(gate.workflowTimeout)
@@ -196,18 +204,34 @@ const STOP_GRACE_MS = 5_000
 const delay = (ms: number, keep: (timer: NodeJS.Timeout) => void) =>
   new Promise<'expired'>((done) => keep(setTimeout(() => done('expired'), ms)))
 
+/** What a gate's wire holds besides what the engine builds for each run of it. */
+export type GateFields = Omit<
+  PikkuHarnessGateWire,
+  'runCli' | 'signal' | 'tool'
+>
+
+/** What a run of a gate is given beside its wire's fields. */
+export type GateRunContext = {
+  services: unknown
+  tools: HarnessTools
+  /** The run's own stop signal. */
+  stop?: AbortSignal
+  onRun?: RunCliOptions['onRun']
+}
+
 /**
- * One run of a gate. Once its `workflowTimeout` has passed the wire's signal is aborted, which stops
- * any tool it started through `runCli`, and the run fails as `timeout` after the gate has stopped
- * (or after a grace period), so the write guard and a retry never race a tool still running. The
- * run's own `stop` signal aborts the wire's signal too; the tool then throws `aborted`.
+ * One run of a gate's `func` with its wire. Once its `workflowTimeout` has passed the wire's signal
+ * is aborted, which stops any tool it started through `runCli`, and the run fails as `timeout` after
+ * the gate has stopped (or after a grace period), so the write guard and a retry never race a tool
+ * still running. The run's own `stop` signal aborts the wire's signal too; the tool then throws
+ * `aborted`.
  */
 export const runGateOnce = async (
-  gate: HarnessGate,
-  fields: Omit<GateWire, 'runCli' | 'signal'>,
-  stop?: AbortSignal,
-  onRun?: RunCliOptions['onRun']
+  gate: PikkuHarnessGate,
+  fields: GateFields,
+  context: GateRunContext
 ): Promise<Finding[]> => {
+  const { stop } = context
   const controller = new AbortController()
   if (stop?.aborted)
     throw new HarnessInfraError(
@@ -217,21 +241,25 @@ export const runGateOnce = async (
   const onStop = () => controller.abort()
   stop?.addEventListener('abort', onStop, { once: true })
   try {
-    return await runUntil(gate, fields, controller, onRun)
+    return await runUntil(gate, fields, controller, context)
   } finally {
     stop?.removeEventListener('abort', onStop)
   }
 }
 
 const runUntil = async (
-  gate: HarnessGate,
-  fields: Omit<GateWire, 'runCli' | 'signal'>,
+  gate: PikkuHarnessGate,
+  fields: GateFields,
   controller: AbortController,
-  onRun?: RunCliOptions['onRun']
+  { services, tools, onRun }: GateRunContext
 ): Promise<Finding[]> => {
-  const running = gate.run(
-    createGateWire({ ...fields, signal: controller.signal }, onRun)
-  )
+  const running = gate.func(services, undefined, {
+    gate: createGateWire(
+      { ...fields, signal: controller.signal },
+      tools,
+      onRun
+    ),
+  })
   const limit = timeoutOf(gate)
   if (limit === undefined) return running
   let timer: NodeJS.Timeout | undefined
@@ -287,6 +315,9 @@ export const runHarness = async (
     shortId,
     changeset,
     harness,
+    policy,
+    tools = {},
+    services,
     agent,
     workflow,
     analytics,
@@ -296,15 +327,16 @@ export const runHarness = async (
     signal,
     migrate,
   } = options
-  validate(harness)
+  const gates = gatesOf(harness)
+  validate(harness, gates, policy)
   const run = await workflow.getRun()
   if (run.wire?.type !== HARNESS_RUN)
     throw new Error(
       `runHarness runs only in a harness run: start the workflow with the wire { type: '${HARNESS_RUN}' }, not '${run.wire?.type}'`
     )
-  const tries = harness.policy?.tries ?? DEFAULT_TRIES
-  const stopOnRepeat = harness.policy?.stopOnRepeat ?? true
-  const feedbackMaxChars = harness.policy?.feedbackMaxChars ?? 6000
+  const tries = policy?.tries ?? DEFAULT_TRIES
+  const stopOnRepeat = policy?.stopOnRepeat ?? true
+  const feedbackMaxChars = policy?.feedbackMaxChars ?? 6000
   const scratchRoot =
     options.scratch ??
     join(
@@ -378,14 +410,21 @@ export const runHarness = async (
    * a HarnessInfraError stops the run and any other error is rethrown.
    */
   const runGate = async (
-    gate: HarnessGate,
+    gate: PikkuHarnessGate,
     attempt: number,
     before: TreeSnapshot,
     writes: string[]
   ): Promise<GateOutcome> => {
     const scratch = join(scratchRoot, gate.name)
     await mkdir(scratch, { recursive: true })
-    const wire = { worktree, base, attempt, changeId, scratch }
+    const fields: GateFields = {
+      worktree,
+      base,
+      attempt,
+      changeId,
+      input: run.input,
+      scratch,
+    }
     const onRun: RunCliOptions['onRun'] = analytics
       ? ({ durationMs, exitCode }) =>
           void analytics.record({
@@ -401,7 +440,12 @@ export const runHarness = async (
         `attempt-${attempt}:${stageOf(gate)}:${gate.name}`,
         { attempt, gate: gate.name, retries: gate.workflowRetries ?? 0 },
         async () => {
-          const findings = await runGateOnce(gate, wire, signal, onRun)
+          const findings = await runGateOnce(gate, fields, {
+            services,
+            tools,
+            ...(signal ? { stop: signal } : {}),
+            ...(onRun ? { onRun } : {}),
+          })
           const changed = await guardWrites({
             worktree,
             before,
@@ -424,7 +468,7 @@ export const runHarness = async (
 
   /** Splits a gate's findings into failing ones and notes. */
   const judge = (
-    gate: HarnessGate,
+    gate: PikkuHarnessGate,
     attempt: number,
     findings: Finding[],
     failing: GateFindings[]
@@ -439,12 +483,11 @@ export const runHarness = async (
   }
 
   const gatesIn = (stage: GateStage) =>
-    harness.gates.filter((gate) => stageOf(gate) === stage)
+    gates.filter((gate) => stageOf(gate) === stage)
 
   const waivable = (gate: string, { rule }: Finding) =>
     rule !== undefined &&
-    (harness.gates.find((g) => g.name === gate)?.waivable?.includes(rule) ??
-      false)
+    (gates.find((g) => g.name === gate)?.waivable?.includes(rule) ?? false)
 
   /**
    * When every failing finding of an attempt is of a rule its gate lets a person waive, the run
@@ -472,7 +515,7 @@ export const runHarness = async (
           ),
           {
             ...DEFAULT_WAIVE,
-            ...harness.policy?.waive,
+            ...policy?.waive,
             schema: WAIVE_DECISION,
           }
         )
@@ -542,7 +585,7 @@ export const runHarness = async (
       const before = await snapshot(
         `attempt-${attempt}:snapshot:check:${gate.name}`
       )
-      const { findings } = await runGate(gate, attempt, before, writesOf(gate))
+      const { findings } = await runGate(gate, attempt, before, gate.writes)
       judge(gate, attempt, findings, failing)
     }
 
@@ -554,7 +597,7 @@ export const runHarness = async (
         gate,
         attempt,
         before,
-        writesOf(gate)
+        gate.writes
       )
       judge(gate, attempt, findings, failing)
       if (!changed.length) continue
@@ -581,13 +624,11 @@ export const runHarness = async (
       }
     }
 
-    // Running side by side, a write cannot be told apart by gate: each run is guarded against the
-    // stage's shared allowlist, which only ever covers `.pikku`.
+    // The gates that run side by side write nothing, so a write by any of them is caught.
     const parallel = gatesIn('gate')
-    const shared = [...new Set(parallel.flatMap(writesOf))]
     const before = await snapshot(`attempt-${attempt}:snapshot:gate`)
     const settled = await Promise.allSettled(
-      parallel.map((gate) => runGate(gate, attempt, before, shared))
+      parallel.map((gate) => runGate(gate, attempt, before, []))
     )
     const stopped = settled.find(
       (result): result is PromiseRejectedResult => result.status === 'rejected'

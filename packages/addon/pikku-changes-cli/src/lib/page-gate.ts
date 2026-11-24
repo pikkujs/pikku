@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process'
 import { readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
@@ -23,6 +22,9 @@ import {
   touchedPages,
   type Site,
 } from './page-reference.js'
+import { definedEnv, type PikkuCli } from './check-gate.js'
+import { HarnessInfraError } from '../harness/finding.js'
+import { runCli } from '../harness/run-cli.js'
 
 /**
  * The page gate on `pikku changes done`. A project rebuilt from a captured
@@ -34,11 +36,10 @@ import {
  *
  * A page over the threshold is refused with its numbers and the compare's
  * style differences, so it gets fixed; there is no waiver here, since whoever
- * runs `done` (a builder too) could give one. PIKKU_COMPARE_GATE=off turns the
- * gate off for labs.
+ * runs `done` (a builder too) could give one.
  *
  * A builder (PIKKU_CHANGES_BUILDER=1) is held harder, since it is the one that
- * wants to finish: it cannot turn the gate off, the threshold is
+ * wants to finish: the threshold is
  * PIKKU_COMPARE_THRESHOLD or the base branch's pikku.config.json (not the one
  * it can edit in its worktree), and `done` runs the compare itself instead of
  * reading a report from disk. A change that declares pages with no reference
@@ -54,14 +55,16 @@ import {
 export type Git = (args: string[]) => Promise<string>
 
 export type PageGateOutcome =
-  | { kind: 'off' }
   | { kind: 'skip'; why: string }
   | { kind: 'pass'; pages: string[] }
   | { kind: 'refuse'; message: string }
 
 export interface PageGateInput {
   git: Git
-  cwd?: string
+  /** Where `done` runs: the nearest pikku.config.json above it is the project's. */
+  cwd: string
+  /** The pikku CLI a builder's done runs the compare with. */
+  cli: PikkuCli
   env?: NodeJS.ProcessEnv
   /** For the refusal: `#12`. */
   label?: string
@@ -82,41 +85,56 @@ export interface PageGateInput {
 
 export type CompareRun = (args: {
   cwd: string
+  cli: PikkuCli
+  env: NodeJS.ProcessEnv
   reference: string
   app: string
   ids: string[]
   out: string
-}) => { code: number; output: string }
+}) => Promise<{ code: number; output: string }>
 
-const runCompare: CompareRun = ({ cwd, reference, app, ids, out }) => {
-  const bin = process.env.PIKKU_CLI_BIN ?? process.argv[1]!
-  const result = spawnSync(
-    process.execPath,
-    [
-      bin,
-      'ui',
-      'pages',
-      'compare',
-      '--reference',
-      reference,
-      '--app',
-      app,
-      '--page',
-      ids.join(','),
-      '--out',
-      out,
-    ],
-    {
-      cwd,
-      encoding: 'utf8',
-      timeout: 900_000,
-      env: { ...process.env, PIKKU_NO_LOGO: '1' },
-      maxBuffer: 32 * 1024 * 1024,
+/** `pikku ui pages compare`; a run that could not finish says why in its output. */
+const runCompare: CompareRun = async ({
+  cwd,
+  cli: [binary, ...prefix],
+  env,
+  reference,
+  app,
+  ids,
+  out,
+}) => {
+  try {
+    await runCli(
+      [
+        ...prefix,
+        'ui',
+        'pages',
+        'compare',
+        '--reference',
+        reference,
+        '--app',
+        app,
+        '--page',
+        ids.join(','),
+        '--out',
+        out,
+      ],
+      {
+        cwd,
+        binary,
+        parse: () => [],
+        okCodes: [0],
+        timeoutMs: 900_000,
+        env: definedEnv(env),
+      }
+    )
+    return { code: 0, output: '' }
+  } catch (error) {
+    if (!(error instanceof HarnessInfraError)) throw error
+    return {
+      code: error.exitCode ?? 1,
+      output: error.output ?? error.message,
     }
-  )
-  return {
-    code: result.status ?? 1,
-    output: `${result.stdout ?? ''}${result.stderr ?? ''}${result.error ? `\n${result.error.message}` : ''}`,
   }
 }
 
@@ -253,7 +271,8 @@ const shortSha = (sha?: string | null) => (sha ? sha.slice(0, 7) : 'unknown')
 
 export async function checkPageGate({
   git,
-  cwd = process.cwd(),
+  cwd,
+  cli,
   env = process.env,
   label = 'This change',
   discover = (root) => discoverPages(root),
@@ -263,7 +282,6 @@ export async function checkPageGate({
   compare = runCompare,
 }: PageGateInput): Promise<PageGateOutcome> {
   const builder = env.PIKKU_CHANGES_BUILDER === '1'
-  if (env.PIKKU_COMPARE_GATE === 'off' && !builder) return { kind: 'off' }
 
   const top = resolve((await git(['rev-parse', '--show-toplevel'])).trim())
   const sites = referenceSites(top)
@@ -460,8 +478,10 @@ export async function checkPageGate({
       // only what this run writes is read: a report already there goes first
       rmSync(path, { force: true })
       const started = new Date().toISOString()
-      const { output } = compare({
+      const { output } = await compare({
         cwd: configDir,
+        cli,
+        env,
         reference: site.dir,
         app,
         ids,

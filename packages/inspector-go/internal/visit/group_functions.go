@@ -545,7 +545,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 	if gate != nil {
 		m.Harness = tsutil.BoolPtr(true)
 		m.FailOn = gate.failOn
-		m.Writes = gate.writes
+		m.Writes = &gate.writes
 	}
 	m.MCP = tsutil.OrNil(mcpEnabled)
 	if scenarioStepKind != "" && scenarioStepKind != "virtualUser" {

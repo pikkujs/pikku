@@ -16,7 +16,7 @@ const ERROR_EDITORIAL: Partial<
   },
   [ErrorCode.SINGLE_STEP_WORKFLOW]: {
     meaning:
-      'The workflow runs at most one RPC step and never sleeps, suspends, waits at an approval or fans out, so it buys nothing a workflow is for.',
+      'The workflow runs at most one RPC step and never sleeps, suspends, waits at an approval or fans out, so it buys nothing a workflow is for. A complex workflow (`pikkuWorkflowComplexFunc`, such as a harness run) is not reported: its inline steps are not in its graph.',
     fix: 'Call the function directly, or enqueue it on a queue worker if it must survive a restart.',
   },
   [ErrorCode.DISABLED_FUNCTION_REFERENCED]: {

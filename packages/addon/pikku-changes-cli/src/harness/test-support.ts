@@ -1,6 +1,10 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import type {
+  PikkuHarnessGate,
+  PikkuHarnessGateWire,
+} from '@pikku/core/harness'
 import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import { pikkuState } from '@pikku/core/state'
 import { addWorkflow, type PikkuWorkflowWire } from '@pikku/core/workflow'
@@ -10,8 +14,7 @@ import {
   type HarnessResult,
   type RunHarnessOptions,
 } from './engine.js'
-import type { HarnessGate } from './gate.js'
-import { parseOxfmtWrite } from './gates/oxfmt-parser.js'
+import { createGateWire, type HarnessTools } from './gate.js'
 import { gitIn } from './git.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -51,23 +54,31 @@ export const removeThrowaways = async () => {
   while (made.length) await rm(made.pop()!, { recursive: true, force: true })
 }
 
-/** Formats `file` by squeezing runs of spaces, through the fake CLI so it is a real child process. */
-export const fakeFormatter = (file: string): HarnessGate => ({
-  name: 'fakefmt',
-  description: 'squeezes spaces',
-  stage: 'fixer',
-  failOn: 'medium',
-  writes: ['**/*.{ts,tsx}'],
-  run: async (wire) => {
-    const source = await readFile(join(wire.worktree, file), 'utf8')
-    const formatted = source.replace(/ {2,}/g, ' ')
-    if (formatted === source) return []
-    return wire.runCli(['write', file, formatted], {
-      binary: FAKE_CLI,
-      parse: parseOxfmtWrite,
-    })
+/** The tools the tests pin: the fake CLI. */
+export const TEST_TOOLS: HarnessTools = { 'fake-cli': FAKE_CLI }
+
+/** A gate's wire for a test, judging attempt 1 of `chg_test` in `worktree` unless `fields` say otherwise. */
+export const testGateWire = (
+  fields: Partial<Omit<PikkuHarnessGateWire, 'runCli' | 'tool'>> & {
+    worktree: string
   },
-})
+  tools: HarnessTools = TEST_TOOLS
+): PikkuHarnessGateWire =>
+  createGateWire(
+    {
+      base: 'main',
+      attempt: 1,
+      changeId: 'chg_test',
+      input: undefined,
+      scratch: join(fields.worktree, '.git'),
+      ...fields,
+    },
+    tools
+  )
+
+/** One run of a declared gate's body with `wire`, as the engine runs it. */
+export const runGate = (gate: PikkuHarnessGate, wire: PikkuHarnessGateWire) =>
+  gate.func({}, undefined, { gate: wire })
 
 const NO_RPC = undefined as never
 let workflows = 0

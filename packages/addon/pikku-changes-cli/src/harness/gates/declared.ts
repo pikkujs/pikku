@@ -1,4 +1,45 @@
+import type { PikkuHarnessGateWire } from '@pikku/core/harness'
+import { z } from 'zod'
 import { localChangesRPC, localStorePath } from '../../lib/changes-local.js'
+import { HarnessInfraError } from '../finding.js'
+import type { HarnessItem } from '../prompts.js'
+
+/** The part of a harness run's input the changes gates read: Studio starts a run with it. */
+const ChangesetRun = z.object({
+  changeset: z.object({ id: z.string().min(1) }),
+  items: z
+    .array(z.object({ shortId: z.string(), changeId: z.string() }))
+    .min(1),
+  /** The changes queue file when the project keeps it outside the checkout's git dir. */
+  storePath: z.string().optional(),
+})
+
+export type ChangesetRun = {
+  changeset: string
+  items: HarnessItem[]
+  storePath?: string
+}
+
+/**
+ * The changeset a harness run builds, read from what the run was started with. A run started
+ * without one cannot be judged by a gate that needs it, which is said as `precondition`.
+ */
+export const changesetRun = (gate: PikkuHarnessGateWire): ChangesetRun => {
+  const read = ChangesetRun.safeParse(gate.input)
+  if (!read.success)
+    throw new HarnessInfraError(
+      'precondition',
+      `The harness run was not started with a changeset (changeset.id and its items): ${read.error.issues
+        .map((issue) => `${issue.path.join('.') || 'input'}: ${issue.message}`)
+        .join('; ')}`
+    )
+  const { changeset, items, storePath } = read.data
+  return {
+    changeset: changeset.id,
+    items,
+    ...(storePath === undefined ? {} : { storePath }),
+  }
+}
 
 export type DeclaredChangeset = {
   creates: string[]

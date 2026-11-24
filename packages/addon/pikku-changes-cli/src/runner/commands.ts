@@ -110,11 +110,14 @@ export const queue = (
   cwd: string,
   env: () => Record<string, string>
 ) => ({
-  next: (extra: Record<string, string> = {}) =>
-    cliJson<NextRoute>(commands, cwd, ['changes', 'next', '--parallel'], {
-      ...env(),
-      ...extra,
-    }),
+  /** `merge: false` holds merges. */
+  next: ({ merge = true }: { merge?: boolean } = {}) =>
+    cliJson<NextRoute>(
+      commands,
+      cwd,
+      ['changes', 'next', '--parallel', ...(merge ? [] : ['--no-merge'])],
+      env()
+    ),
   list: () =>
     cliJson<{ changes: QueueChange[]; groups: QueueGroup[] }>(
       commands,

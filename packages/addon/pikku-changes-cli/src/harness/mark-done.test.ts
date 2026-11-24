@@ -3,10 +3,14 @@ import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { localChangesRPC } from '../lib/changes-local.js'
-import { createGateWire } from './gate.js'
 import { gitIn } from './git.js'
 import { changeCommit, recordChangeDone, trailerGate } from './mark-done.js'
-import { removeThrowaways, throwawayRepo } from './test-support.js'
+import {
+  removeThrowaways,
+  runGate,
+  testGateWire,
+  throwawayRepo,
+} from './test-support.js'
 
 after(removeThrowaways)
 
@@ -71,15 +75,12 @@ describe('recordChangeDone', () => {
 describe('trailerGate', () => {
   test('an item with no commit carrying its trailer since the base is a high finding; a commit with it passes', async () => {
     const { repo, item, commit } = await setup()
-    const wire = createGateWire({
+    const wire = testGateWire({
       worktree: repo,
-      base: 'main',
-      attempt: 1,
       changeId: item.changeId,
-      scratch: join(repo, '.git'),
+      input: { changeset: { id: 'cs_test' }, items: [item] },
     })
-    const gate = trailerGate([item])
-    const [missing] = await gate.run(wire)
+    const [missing] = await runGate(trailerGate, wire)
     assert.equal(missing?.severity, 'high')
     assert.equal(missing?.rule, 'harness/trailer')
     assert.match(missing!.message, new RegExp(`Change-Id: ${item.changeId}`))
@@ -88,6 +89,6 @@ describe('trailerGate', () => {
       `Change-Id: ${item.changeId}`,
     ])
     assert.equal((await changeCommit(repo, item, ['main..HEAD'])) !== '', true)
-    assert.deepEqual(await gate.run(wire), [])
+    assert.deepEqual(await runGate(trailerGate, wire), [])
   })
 })

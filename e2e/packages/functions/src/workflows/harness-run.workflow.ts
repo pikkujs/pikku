@@ -4,8 +4,8 @@ import {
   type HarnessResult,
 } from '@pikku/addon-changes-cli/harness'
 import {
+  e2eHarness,
   findHarnessTools,
-  scriptedGates,
   type HarnessRunInput,
 } from '../functions/harness-run.functions.js'
 
@@ -57,7 +57,7 @@ export const harnessRunWorkflow = pikkuWorkflowComplexFunc<
   func: async ({ variables }, data, { workflow, rpc }) => {
     const tools = await workflow.do(
       'Find the tools',
-      () => findHarnessTools(variables, data.worktree),
+      async () => findHarnessTools(),
       { retries: 0 }
     )
     const result: HarnessResult = await runHarness({
@@ -66,11 +66,10 @@ export const harnessRunWorkflow = pikkuWorkflowComplexFunc<
       changeId: data.changeId,
       shortId: data.shortId,
       changeset: data.changeset,
-      harness: {
-        name: 'e2e',
-        gates: scriptedGates(data.script, data.changeId, tools),
-        policy: { tries: data.tries },
-      },
+      harness: e2eHarness,
+      policy: { tries: data.tries },
+      tools,
+      services: { variables },
       agent: (input) =>
         rpc.invoke('harnessScriptedAgent', {
           ...input,

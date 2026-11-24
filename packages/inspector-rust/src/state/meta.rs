@@ -166,8 +166,9 @@ pub struct FunctionMetaFields {
     pub harness: Option<bool>,
     #[serde(default, skip_serializing_if = "is_empty_str")]
     pub fail_on: String,
-    #[serde(default, skip_serializing_if = "is_empty_vec")]
-    pub writes: Vec<String>,
+    /// Harness gates only, so a gate that writes nothing keeps its empty list.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub writes: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mcp: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

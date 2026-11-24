@@ -57,7 +57,9 @@ var durableFlows = map[string]bool{"sleep": true, "suspend": true, "approval": t
 func validateSingleStepWorkflows(log *diag.Logger, st *state.State) {
 	st.Workflows.GraphMeta.Each(func(name string, r state.Raw) {
 		g := decode[graphMeta](r)
-		if g.Source == "scenario" {
+		// A complex workflow's inline steps are not in its graph (a harness run records every gate
+		// and agent turn as one), so its nodes say nothing about what it buys.
+		if g.Source == "scenario" || g.Source == "complex" {
 			return
 		}
 		file := ""

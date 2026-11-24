@@ -2,9 +2,9 @@
 
 A harness declares an agent that builds and the gates its work must pass. A
 gate is decided by code, a gate agent by a model; both report findings, never a
-score. The declarations live in `@pikku/core/harness`, are marked experimental,
-and only declare: nothing in Pikku runs a harness yet, and none of it reaches
-the app or a deployment.
+score. The declarations live in `@pikku/core/harness` and are marked
+experimental. None of it reaches the app or a deployment: the changes addon's
+harness engine (`runHarness` in `@pikku/addon-changes-cli/harness`) runs them.
 
 ## Declaring
 
@@ -21,8 +21,13 @@ export const typesGate = pikkuHarnessGate({
   name: 'types',
   description: 'Reports a type error in the change',
   failOn: 'high', // the lowest severity that fails the gate
+  writes: [], // reads only, so it runs beside the other read-only gates
   workflowTimeout: '5m', // optional, as is workflowRetries
-  func: async ({ logger }): Promise<HarnessFinding[]> => [],
+  func: async (_services, _data, { gate }): Promise<HarnessFinding[]> =>
+    gate.runCli(['--noEmit'], {
+      binary: gate.tool('tsc'), // an absolute binary pinned for the run
+      parse: ({ stdout, code }) => [], // the tool's output as findings
+    }),
 })
 
 export const reviewer = pikkuHarnessGateAgent({
@@ -45,15 +50,31 @@ export const buildHarness = pikkuHarness<HarnessGateName>({
 
 - A **gate** (`pikkuHarnessGate`) is an ordinary function config with a `func`
   that returns `HarnessFinding[]` (`{ file?, line?, severity, rule?, message }`,
-  severity `low | medium | high`). `writes` lists the paths it may change and
-  defaults to `.pikku/**`; a formatter declares `['**/*.{ts,tsx}']`. Never set
-  `expose`.
+  severity `low | medium | high`). Its only input is its config and
+  `wire.gate`: `worktree`, `base`, `attempt`, `changeId`, `input` (what the
+  harness run was started with; check its shape before reading it), `scratch`,
+  `signal`, `tool(name)` (an absolute binary pinned for the run; it throws when
+  there is none) and `runCli(args, { binary, parse, okCodes?, timeoutMs? })`.
+  Never a path from whoever runs it. Never set `expose`.
+- `writes` lists the paths a gate may change and defaults to `.pikku/**`. It
+  also decides when the gate runs: only under `.pikku` (codegen) runs first and
+  alone; anywhere else (a formatter's `['**/*.{ts,tsx}']`) is a fixer, run alone
+  with its changes committed by the engine; `[]` runs beside the other
+  read-only gates.
+- `waivable` lists the rules of a gate's findings a person may waive; when they
+  are all that fails an attempt, the engine asks on `workflow.approval`.
 - A **gate agent** (`pikkuHarnessGateAgent`) has no body: `model`, `goal` and
   `failOn`.
 - A **harness** lists its gates by name, by reference to a declared gate or gate
   agent, with `.with({ failOn })` to change one gate's threshold for this
   harness, or as a spread of a `const` array of these. Every entry has to be
-  readable from source: a computed list is refused (`PKU124`).
+  readable from source: a computed list is refused (`PKU124`). The engine runs
+  only gates listed by reference: it has their bodies.
+- A harness names gates of its own package. The changes addon declares its gates
+  and `buildHarness` (`check`, `oxfmt`, `oxlint`, `trailers`, `migrations`,
+  `plan`, `pages`, `hand-typed-tables`); a project runs that harness with
+  `runHarness({ harness: buildHarness, tools, services, workflow, ... })` from a
+  workflow started with the wire `{ type: HARNESS_RUN }`.
 
 ## What codegen writes
 

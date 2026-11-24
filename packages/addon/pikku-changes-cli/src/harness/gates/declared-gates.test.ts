@@ -4,9 +4,15 @@ import { dirname, join } from 'node:path'
 import { after, describe, test } from 'node:test'
 import { planPathFor, PLAN_VERSION } from '@pikku/knowledge'
 import { localChangesRPC } from '../../lib/changes-local.js'
-import { createGateWire } from '../gate.js'
+import { HarnessInfraError } from '../finding.js'
 import { gitIn } from '../git.js'
-import { removeThrowaways, throwawayRepo } from '../test-support.js'
+import type { HarnessItem } from '../prompts.js'
+import {
+  removeThrowaways,
+  runGate,
+  testGateWire,
+  throwawayRepo,
+} from '../test-support.js'
 import { migrationGate } from './migration.js'
 import { planGate } from './plan.js'
 
@@ -46,38 +52,46 @@ const setup = async (
     await git(['add', '-A'])
     await git(['commit', '-q', '-m', subject])
   }
-  const wire = createGateWire({
-    worktree: repo,
-    base: 'main',
-    attempt: 1,
-    changeId: changes.at(-1)!.changeId,
-    scratch: join(repo, '.git'),
-  })
   const items = changes.map((c) => ({
     shortId: String(c.shortId),
     changeId: c.changeId,
   }))
-  return { repo, store, rpc, group, items, commit, wire }
+  /** The wire of a run started to build `building` of this changeset. */
+  const wireFor = (building: HarnessItem[]) =>
+    testGateWire({
+      worktree: repo,
+      changeId: building.at(-1)!.changeId,
+      input: {
+        changeset: { id: group.groupId },
+        items: building,
+        storePath: store,
+      },
+    })
+  return {
+    repo,
+    store,
+    rpc,
+    group,
+    items,
+    commit,
+    wire: wireFor(items),
+    wireFor,
+  }
 }
 
 describe('migrationGate', () => {
   test('a migration added by an undeclared changeset is a finding that says how to declare it; declared, it passes', async () => {
     const h = await setup(['One'])
-    const gate = migrationGate({
-      changeset: h.group.groupId,
-      items: h.items,
-      storePath: h.store,
-    })
     await h.commit(
       { 'pikku.config.json': '{}\n', 'src/a.ts': 'export {}\n' },
       'feat: #1 code only'
     )
-    assert.deepEqual(await gate.run(h.wire), [])
+    assert.deepEqual(await runGate(migrationGate, h.wire), [])
     await h.commit(
       { 'db/migrations/0001_entry.sql': 'create table entry ();\n' },
       'feat: #1 entry table'
     )
-    const [finding, ...rest] = await gate.run(h.wire)
+    const [finding, ...rest] = await runGate(migrationGate, h.wire)
     assert.equal(rest.length, 0)
     assert.equal(finding!.file, 'db/migrations/0001_entry.sql')
     assert.equal(finding!.severity, 'high')
@@ -100,16 +114,11 @@ describe('migrationGate', () => {
       claimedBy: 'test',
       creates: ['entry'],
     } as never)
-    assert.deepEqual(await gate.run(h.wire), [])
+    assert.deepEqual(await runGate(migrationGate, h.wire), [])
   })
 
   test('a migration in the project root of a package (the starter keeps them in packages/functions/db/sqlite/) is found too, one in its src/ is not', async () => {
     const h = await setup(['One'])
-    const gate = migrationGate({
-      changeset: h.group.groupId,
-      items: h.items,
-      storePath: h.store,
-    })
     await h.commit(
       {
         'packages/functions/pikku.config.json': '{ "rootDir": "." }\n',
@@ -119,7 +128,7 @@ describe('migrationGate', () => {
       },
       'feat: #1 table declaration'
     )
-    assert.deepEqual(await gate.run(h.wire), [])
+    assert.deepEqual(await runGate(migrationGate, h.wire), [])
     await h.commit(
       {
         'packages/functions/db/sqlite/0004-app-tables.sql':
@@ -127,7 +136,7 @@ describe('migrationGate', () => {
       },
       'feat: #1 guestbook table'
     )
-    const findings = await gate.run(h.wire)
+    const findings = await runGate(migrationGate, h.wire)
     assert.deepEqual(
       findings.map((f) => f.file),
       ['packages/functions/db/sqlite/0004-app-tables.sql']
@@ -168,23 +177,12 @@ const plan = (changeset: string) => ({
 describe('planGate', () => {
   test('a changeset that needs no plan passes', async () => {
     const h = await setup(['One'])
-    assert.deepEqual(
-      await planGate({
-        changeset: h.group.groupId,
-        items: h.items,
-        storePath: h.store,
-      }).run(h.wire),
-      []
-    )
+    assert.deepEqual(await runGate(planGate, h.wire), [])
   })
 
   test('a planned changeset with no plan on its branch is a finding that says how to write it', async () => {
     const h = await setup(['One'], { needsPlan: true })
-    const [finding] = await planGate({
-      changeset: h.group.groupId,
-      items: h.items,
-      storePath: h.store,
-    }).run(h.wire)
+    const [finding] = await runGate(planGate, h.wire)
     assert.equal(finding!.rule, 'harness/plan')
     assert.equal(finding!.file, planPathFor(h.group.groupId))
     assert.match(finding!.message, /This changeset needs a plan and has none/)
@@ -203,21 +201,9 @@ describe('planGate', () => {
       'docs: plan'
     )
     // building #1 of two: the plan is there, which is enough
-    assert.deepEqual(
-      await planGate({
-        changeset: h.group.groupId,
-        items: [h.items[0]!],
-        storePath: h.store,
-      }).run(h.wire),
-      []
-    )
+    assert.deepEqual(await runGate(planGate, h.wireFor([h.items[0]!])), [])
     // building the last open change: its first pass must be in the generated meta
-    const last = planGate({
-      changeset: h.group.groupId,
-      items: h.items,
-      storePath: h.store,
-    })
-    const [finding] = await last.run(h.wire)
+    const [finding] = await runGate(planGate, h.wire)
     assert.match(
       finding!.message,
       /This is the last change of a planned changeset and the plan is not built yet/
@@ -229,20 +215,29 @@ describe('planGate', () => {
       join(h.repo, '.pikku', 'function', 'pikku-functions-meta.gen.json'),
       JSON.stringify({ createEntry: { pikkuFuncId: 'createEntry' } })
     )
-    assert.deepEqual(await last.run(h.wire), [])
+    assert.deepEqual(await runGate(planGate, h.wire), [])
   })
 
   test('a plan that does not read is a finding', async () => {
     const h = await setup(['One'], { needsPlan: true })
     await h.commit({ [planPathFor(h.group.groupId)]: '{ nope' }, 'docs: plan')
-    const [finding] = await planGate({
-      changeset: h.group.groupId,
-      items: h.items,
-      storePath: h.store,
-    }).run(h.wire)
+    const [finding] = await runGate(planGate, h.wire)
     assert.match(
       finding!.message,
       /its plan does not read: .*is not valid JSON/
+    )
+  })
+})
+
+describe('a changes gate in a run started without a changeset', () => {
+  test('cannot answer, and says what the run lacks', async () => {
+    const h = await setup(['One'], { needsPlan: true })
+    await assert.rejects(
+      runGate(planGate, testGateWire({ worktree: h.repo, input: {} })),
+      (error) =>
+        error instanceof HarnessInfraError &&
+        error.kind === 'precondition' &&
+        /not started with a changeset .*changeset: /.test(error.message)
     )
   })
 })

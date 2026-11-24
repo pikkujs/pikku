@@ -80,9 +80,12 @@ export const ChangesDone = pikkuSessionlessFunc({
         input.changeId,
         input.headCommit
       )
+      // Both gates run this CLI, as the runtime that runs it: never one named by the environment.
+      const cli = [process.execPath, process.argv[1]!] as const
       await refuseUntilChecked({
         git: (args) => git(args),
         label: /^#?\d+$/.test(ref) ? `#${ref.replace(/^#/, '')}` : ref,
+        cli,
       })
       // the pages its plan named (a `Pages:` line), which it is held to
       const change = await rpc
@@ -91,6 +94,8 @@ export const ChangesDone = pikkuSessionlessFunc({
         .catch(() => null)
       await refuseUntilPagesCompared({
         git: (args) => git(args),
+        cwd: process.cwd(),
+        cli,
         pages: declaredPages(change?.body),
         newPages: declaredNewPages(change?.body),
         frontend: change ? buildsPages(change) : false,
