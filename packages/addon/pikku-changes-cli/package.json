@@ -33,9 +33,9 @@
       "types": "./dist/src/runner/index.d.ts",
       "import": "./dist/src/runner/index.js"
     },
-    "./harness": {
-      "types": "./dist/src/harness/index.d.ts",
-      "import": "./dist/src/harness/index.js"
+    "./lib/*.js": {
+      "types": "./dist/src/lib/*.d.ts",
+      "import": "./dist/src/lib/*.js"
     },
     "./backend": {
       "types": "./dist/src/backend.d.ts",

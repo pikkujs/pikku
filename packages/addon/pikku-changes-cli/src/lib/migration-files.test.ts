@@ -2,8 +2,7 @@ import assert from 'node:assert/strict'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { after, describe, test } from 'node:test'
-import { gitIn } from '../harness/git.js'
-import { removeThrowaways, throwawayRepo } from '../harness/test-support.js'
+import { gitIn, removeThrowaways, throwawayRepo } from './test-support.js'
 import {
   isMigrationPath,
   migrationFiles,

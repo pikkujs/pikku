@@ -1,23 +1,18 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { pikkuHarnessGate } from '@pikku/core/harness'
-import { mkdir, readdir, readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { after, describe, test } from 'node:test'
-import { HarnessInfraError } from './finding.js'
-import { runGateOnce } from './engine.js'
-import { createGateWire, toolLocksIn } from './gate.js'
-import { parseOxlint } from './gates/oxlint-parser.js'
+import { HarnessInfraError, type Finding } from './finding.js'
 import {
   groupAlive,
   isAlive,
   processStartTime,
   readLock,
   stopGroup,
-  writeLock,
-} from './pi-process.js'
+} from './process-group.js'
 import { redact } from './redact.js'
-import { cleanOutput, runCli, trimOutput } from './run-cli.js'
+import { cleanOutput, runCli, trimOutput, type Parse } from './run-cli.js'
 import {
   FAKE_CLI,
   REPO_ROOT,
@@ -26,11 +21,24 @@ import {
 } from './test-support.js'
 
 const SECRET = ['AK', 'IA', 'FAKE', 'FAKE', 'FAKE', 'FAKE'].join('')
+
+/** The fake CLI's `{ diagnostics }` output as findings; anything else throws. */
+const parseDiagnostics: Parse = ({ stdout }) =>
+  (
+    JSON.parse(stdout) as {
+      diagnostics: { message: string; severity: string; filename?: string }[]
+    }
+  ).diagnostics.map((diagnostic): Finding => ({
+    message: diagnostic.message,
+    severity: diagnostic.severity === 'error' ? 'high' : 'medium',
+    ...(diagnostic.filename ? { file: diagnostic.filename } : {}),
+  }))
+
 const run = (mode: string, extra: Partial<Parameters<typeof runCli>[1]> = {}) =>
   runCli([mode], {
     cwd: REPO_ROOT,
     binary: FAKE_CLI,
-    parse: parseOxlint,
+    parse: parseDiagnostics,
     timeoutMs: 10_000,
     ...extra,
   })
@@ -170,26 +178,6 @@ describe('runCli', () => {
     )
     assert.equal(error.output, 'broken output')
   })
-
-  test('reports duration and exit code through the gate wire', async () => {
-    const runs: { durationMs: number; exitCode: number | null }[] = []
-    const wire = createGateWire(
-      {
-        worktree: REPO_ROOT,
-        base: 'main',
-        attempt: 1,
-        changeId: 'c1',
-        input: undefined,
-        scratch: REPO_ROOT,
-      },
-      {},
-      (record) => runs.push(record)
-    )
-    await wire.runCli(['clean'], { binary: FAKE_CLI, parse: parseOxlint })
-    assert.equal(runs.length, 1)
-    assert.equal(runs[0]!.exitCode, 0)
-    assert.ok(runs[0]!.durationMs >= 0)
-  })
 })
 
 const pause = (ms: number) => new Promise((done) => setTimeout(done, ms))
@@ -202,44 +190,7 @@ const until = async (check: () => Promise<boolean>, what: string) => {
   assert.fail(`timed out waiting for ${what}`)
 }
 
-/** A detached group like a tool a killed server left behind: a leader and one child. */
-const leftover = async () => {
-  const child = spawn(
-    process.execPath,
-    [
-      '-e',
-      "require('child_process').spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], { stdio: 'ignore' }); setInterval(() => {}, 1000)",
-    ],
-    { detached: true, stdio: 'ignore' }
-  )
-  child.unref()
-  const pid = child.pid!
-  await pause(200)
-  return { pid, startTime: (await processStartTime(pid))! }
-}
-
-/** A gate that starts no tool, run once in `scratch`. */
-const runToolless = (scratch: string) =>
-  runGateOnce(
-    pikkuHarnessGate({
-      name: 'toolless',
-      description: 'Finds nothing',
-      failOn: 'high',
-      writes: [],
-      func: async () => [],
-    }),
-    {
-      worktree: REPO_ROOT,
-      base: 'HEAD',
-      attempt: 1,
-      changeId: 'chg_test',
-      input: undefined,
-      scratch,
-    },
-    { services: {}, tools: {} }
-  )
-
-describe('gate tools: own process group, locks and orphans', () => {
+describe('tools: own process group and locks', () => {
   test('an abort stops what the tool started, not only the tool', async () => {
     const dir = await throwawayRepo()
     const pidFile = join(dir, 'child.pid')
@@ -287,64 +238,38 @@ describe('gate tools: own process group, locks and orphans', () => {
     assert.deepEqual(await readdir(lockDir), [])
   })
 
-  test('a tool left running by a killed server is stopped before its gate runs again, even a run that starts no tool', async () => {
-    const scratch = await throwawayRepo()
-    const lockDir = toolLocksIn(scratch)
-    await mkdir(lockDir, { recursive: true })
-    const orphan = await leftover()
-    try {
-      await writeLock(join(lockDir, `${orphan.pid}.lock`), {
-        pid: orphan.pid,
-        pgid: orphan.pid,
-        startTime: orphan.startTime,
-        tool: FAKE_CLI,
-        startedAt: new Date().toISOString(),
-      })
-      assert.deepEqual(await runToolless(scratch), [])
-      assert.equal(groupAlive(orphan.pid), false)
-      assert.deepEqual(await readdir(lockDir), [])
-    } finally {
-      await stopGroup(orphan.pid, 100)
-    }
-  })
-
-  test('a lock whose pid now has another start time is a reused pid: removed, nothing killed', async () => {
-    const scratch = await throwawayRepo()
-    const lockDir = toolLocksIn(scratch)
-    await mkdir(lockDir, { recursive: true })
-    const other = await leftover()
-    try {
-      await writeLock(join(lockDir, `${other.pid}.lock`), {
-        pid: other.pid,
-        pgid: other.pid,
-        startTime: `${Number(other.startTime) - 1}`,
-        tool: FAKE_CLI,
-        startedAt: new Date().toISOString(),
-      })
-      assert.deepEqual(await runToolless(scratch), [])
-      assert.ok(await isAlive(other.pid))
-      assert.ok(groupAlive(other.pid))
-      assert.deepEqual(await readdir(lockDir), [])
-    } finally {
-      await stopGroup(other.pid, 100)
-    }
-  })
-
-  test('a tool this process is running is not taken for an orphan', async () => {
-    const scratch = await throwawayRepo()
-    const lockDir = toolLocksIn(scratch)
-    const first = runCli(['sleep', '1500'], {
-      cwd: REPO_ROOT,
-      binary: FAKE_CLI,
-      parse: () => [],
-      lockDir,
-    })
-    await until(
-      async () => (await readdir(lockDir).catch(() => [])).length === 1,
-      'the first lock'
+  test('a process stopped by SIGTERM mid-tool takes the tool and what it started with it', async () => {
+    const dir = await throwawayRepo()
+    const lockDir = join(dir, 'tools')
+    const pidFile = join(dir, 'child.pid')
+    const runner = spawn(
+      process.execPath,
+      [
+        '-e',
+        `import { runCli } from ${JSON.stringify(new URL('./run-cli.ts', import.meta.url).pathname)}
+await runCli(['spawn-sleep', ${JSON.stringify(pidFile)}], { cwd: ${JSON.stringify(dir)}, binary: ${JSON.stringify(FAKE_CLI)}, parse: () => [], timeoutMs: 60_000, lockDir: ${JSON.stringify(lockDir)} })`,
+      ],
+      { stdio: 'ignore' }
     )
-    assert.deepEqual(await runToolless(scratch), [])
-    assert.deepEqual(await first, [])
+    const ended = new Promise<NodeJS.Signals | null>((done) =>
+      runner.once('exit', (_code, signal) => done(signal))
+    )
+    let child = 0
+    await until(async () => {
+      child = Number(await readFile(pidFile, 'utf8').catch(() => '0'))
+      return child > 0 && (await readdir(lockDir).catch(() => [])).length === 1
+    }, 'the tool to start its child')
+    const [lock] = await readdir(lockDir)
+    const tool = Number(lock!.replace(/\.lock$/, ''))
+    try {
+      assert.ok(groupAlive(tool))
+      runner.kill('SIGTERM')
+      assert.equal(await ended, 'SIGTERM', 'the runner ends as SIGTERM ends it')
+      await until(async () => !groupAlive(tool), 'the group to go')
+      assert.equal(await isAlive(child), false)
+    } finally {
+      await stopGroup(tool, 100)
+    }
   })
 })
 

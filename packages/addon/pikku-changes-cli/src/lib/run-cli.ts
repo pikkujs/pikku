@@ -11,7 +11,7 @@ import {
   trackGroup,
   untrackGroup,
   writeLock,
-} from './pi-process.js'
+} from './process-group.js'
 import { redact, redactFinding } from './redact.js'
 
 /** What a parser sees: the tool's full stdout and stderr, uncleaned, and its exit code. */

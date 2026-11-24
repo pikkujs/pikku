@@ -6,7 +6,10 @@
     "outDir": "dist",
     "target": "esnext",
     "declaration": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "@pikku/cli/addon-support/pages": ["./src/addon-support-pages.ts"]
+    }
   },
   "include": [
     "bin/**/*.ts",

@@ -84,23 +84,48 @@ export const stopGroup = async (
   return 'killed'
 }
 
-/** Process groups started here; if this process exits they go with it. */
+/** Process groups started here; if this process exits or is stopped by SIGTERM or SIGINT they go with it. */
 const liveGroups = new Set<number>()
 let exitHooked = false
+let signalsHooked = false
 
-/** Records a group this process started, so it is killed when this process exits and never taken for an orphan. */
+const killLiveGroups = () => {
+  for (const group of liveGroups)
+    try {
+      process.kill(-group, 'SIGKILL')
+    } catch {
+      // already gone
+    }
+}
+
+/**
+ * A signal ends this process without an `exit` event, so the groups are killed on SIGTERM and SIGINT
+ * too (not SIGHUP: under nohup a handler would undo the ignore). A listener stops the default exit,
+ * so when no other listener handles the signal it is raised again and the process ends as it would
+ * have. A process that handles the signal and goes on is hooked again by its next tracked group.
+ */
+const hookSignals = () => {
+  if (signalsHooked) return
+  signalsHooked = true
+  const handlers = (['SIGTERM', 'SIGINT'] as const).map((signal) => {
+    const handler = () => {
+      for (const [hooked, listener] of handlers) process.off(hooked, listener)
+      signalsHooked = false
+      killLiveGroups()
+      if (!process.listenerCount(signal)) process.kill(process.pid, signal)
+    }
+    return [signal, handler] as const
+  })
+  for (const [signal, handler] of handlers) process.on(signal, handler)
+}
+
+/** Records a group this process started, so it is killed when this process exits or is stopped, and never taken for an orphan. */
 export const trackGroup = (pgid: number) => {
   liveGroups.add(pgid)
+  hookSignals()
   if (exitHooked) return
   exitHooked = true
-  process.once('exit', () => {
-    for (const group of liveGroups)
-      try {
-        process.kill(-group, 'SIGKILL')
-      } catch {
-        // already gone
-      }
-  })
+  process.once('exit', killLiveGroups)
 }
 
 export const untrackGroup = (pgid: number) => liveGroups.delete(pgid)
