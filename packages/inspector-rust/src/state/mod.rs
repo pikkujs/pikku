@@ -103,12 +103,16 @@ pub struct State {
     pub studio: Raw,
     #[serde(skip_serializing_if = "Raw::is_empty")]
     pub addon_studio: Raw,
-    /// What defineContributors registers.
+    /// What pikkuService declares.
     #[serde(skip_serializing_if = "Raw::is_empty")]
-    pub contributors_manifest: Raw,
-    /// What `wireAddon({ contributors })` selected from each addon's manifest.
+    pub pikku_services: Raw,
+    /// What `wireAddon({ services })` selected from each addon's manifest.
     #[serde(skip_serializing_if = "Raw::is_empty")]
-    pub opted_in_contributors: Raw,
+    pub opted_in_services: Raw,
+    /// The top-level names the project's pikkuServices factory destructures
+    /// from its second parameter, sorted and unique.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub project_services_read: Strings,
     pub exported_contracts: ExportedContracts,
 
     /// Replaces the live `typesLookup` entries for the core interfaces

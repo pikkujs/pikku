@@ -204,6 +204,32 @@ func extractServicesFromFunction(fn *ast.Node) []string {
 	return services
 }
 
+// projectServicesRead: the top-level names a pikkuServices factory destructures
+// from its second parameter (`existingServices`), sorted and unique. A
+// parameter that is not a destructuring pattern, or a name that is not a plain
+// key, contributes nothing.
+func projectServicesRead(fn *ast.Node) []string {
+	names := []string{}
+	param := tsutil.ParamAt(fn, 1)
+	if param == nil || !ast.IsObjectBindingPattern(param.Name()) {
+		return names
+	}
+	for _, e := range param.Name().Elements() {
+		if e.AsBindingElement().DotDotDotToken != nil {
+			continue
+		}
+		key := e.PropertyName()
+		if key == nil {
+			key = e.Name()
+		}
+		if name, ok := literalKeyName(key); ok && !slices.Contains(names, name) {
+			names = append(names, name)
+		}
+	}
+	slices.Sort(names)
+	return names
+}
+
 func (s *Context) addFileWithFactory(node *ast.Node, methods *state.PathToNameAndType, expected string, withState bool) {
 	if !ast.IsVariableDeclaration(node) {
 		return
@@ -221,6 +247,9 @@ func (s *Context) addFileWithFactory(node *ast.Node, methods *state.PathToNameAn
 			})
 			if withState && len(init.Arguments()) > 0 {
 				fn := functionNodeOf(init.Arguments()[0])
+				if wrapper == "pikkuServices" && fn != nil {
+					s.State.ProjectServicesRead = projectServicesRead(fn)
+				}
 				if expected == "CreateWireServices" && fn != nil {
 					s.State.WireServicesMeta.Set(variableName, extractServicesFromFunction(fn))
 				}

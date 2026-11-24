@@ -174,7 +174,7 @@ export interface SerializableInspectorState {
           file?: string
           rpcEndpoint?: string
           remote?: boolean
-          local?: { package: string; ui?: boolean; contributors?: string[] }
+          local?: { package: string; ui?: boolean; services?: string[] }
           hasAuth?: boolean
           authCredentialId?: string
           authSecretId?: string
@@ -188,7 +188,7 @@ export interface SerializableInspectorState {
           contentBucket?: string
           contentGrants?: Record<string, string>
           globalContent?: string
-          contributors?: string[]
+          services?: string[]
         },
       ]
     >
@@ -318,8 +318,9 @@ export interface SerializableInspectorState {
   remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
   studio?: InspectorState['studio']
   addonStudio?: InspectorState['addonStudio']
-  contributorsManifest?: InspectorState['contributorsManifest']
-  optedInContributors?: InspectorState['optedInContributors']
+  pikkuServices?: InspectorState['pikkuServices']
+  optedInServices?: InspectorState['optedInServices']
+  projectServicesRead?: InspectorState['projectServicesRead']
   exportedContracts: InspectorState['exportedContracts']
 }
 
@@ -563,8 +564,9 @@ export function serializeInspectorState(
     remoteAddonFunctions: state.remoteAddonFunctions,
     studio: state.studio,
     addonStudio: state.addonStudio,
-    contributorsManifest: state.contributorsManifest,
-    optedInContributors: state.optedInContributors,
+    pikkuServices: state.pikkuServices,
+    optedInServices: state.optedInServices,
+    projectServicesRead: state.projectServicesRead,
     exportedContracts: state.exportedContracts,
   }
 }
@@ -811,8 +813,9 @@ export function deserializeInspectorState(
       : {}),
     studio: data.studio,
     addonStudio: data.addonStudio,
-    contributorsManifest: data.contributorsManifest,
-    optedInContributors: data.optedInContributors,
+    pikkuServices: data.pikkuServices,
+    optedInServices: data.optedInServices,
+    projectServicesRead: data.projectServicesRead,
     exportedContracts: data.exportedContracts || {
       http: {},
       cli: {},

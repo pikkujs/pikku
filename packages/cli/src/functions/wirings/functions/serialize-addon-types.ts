@@ -45,16 +45,16 @@ export const serializeAddonsMeta = (
  */
 export const serializeAddonInstallTypes = (
   addonFunctionNames: Record<string, string[]> = {},
-  addonContributorNames: Record<string, string[]> = {}
+  addonServiceNames: Record<string, string[]> = {}
 ) => {
   const nonEmpty = (byPackage: Record<string, string[]>) =>
     Object.entries(byPackage).filter(([, names]) => names.length > 0)
   const packages = nonEmpty(addonFunctionNames)
-  const contributorPackages = nonEmpty(addonContributorNames)
+  const servicePackages = nonEmpty(addonServiceNames)
 
   // Nothing installed yet — the bootstrap run writes this before any addon's
   // metadata has been read, and a project with no addons never gets more.
-  if (packages.length === 0 && contributorPackages.length === 0) {
+  if (packages.length === 0 && servicePackages.length === 0) {
     return `/**
  * Installing an addon into this application
  */
@@ -92,17 +92,17 @@ type AddonFunctionName<Package extends string> =
   Package extends keyof AddonFunctions ? AddonFunctions[Package] : string
 
 /**
- * The contributors each installed addon registers with \`defineContributors\`,
- * read from the addon's generated contributors meta. \`contributors\` names them.
- * An addon whose meta is not installed is not listed here, so its names fall
- * back to \`string\` and the build-time check (PKU363) is what catches a typo.
+ * The services each installed addon declares with \`pikkuService\`, read from
+ * the addon's generated services meta. \`services\` names them. An addon whose
+ * meta is not installed is not listed here, so its names fall back to
+ * \`string\` and the build-time check (PKU374) is what catches a typo.
  */
-type AddonContributors = {
-${entries(contributorPackages)}
+type AddonServices = {
+${entries(servicePackages)}
 }
 
-type AddonContributorName<Package extends string> =
-  Package extends keyof AddonContributors ? AddonContributors[Package] : string
+type AddonServiceName<Package extends string> =
+  Package extends keyof AddonServices ? AddonServices[Package] : string
 
 /**
  * Installs an addon into this project: its functions, wirings and scopes become
@@ -111,20 +111,20 @@ type AddonContributorName<Package extends string> =
  * \`mcp: true\` offers every function the addon itself declared as a tool; a list
  * names the functions to offer, checked against the ones the addon publishes.
  * \`expose\` works the same way for \`rpc.exposed\`, and \`false\` exposes none.
- * \`contributors\` names the contributors the addon registers; a name it does not
- * register is a type error.
+ * \`services\` names the services the addon declares; a name it does not
+ * declare is a type error.
  *
  * @example snippet: addonWiring
  */
 export const wireAddon = <Package extends string>(
   config: Omit<
     WireAddonConfig,
-    'package' | 'mcp' | 'expose' | 'contributors'
+    'package' | 'mcp' | 'expose' | 'services'
   > & {
     package: Package
     mcp?: boolean | AddonFunctionName<Package>[]
     expose?: boolean | AddonFunctionName<Package>[]
-    contributors?: AddonContributorName<Package>[]
+    services?: AddonServiceName<Package>[]
   }
 ): void => wireAddonCore(config)
 `

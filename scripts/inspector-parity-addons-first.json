@@ -1,5 +1,5 @@
 [
-  "verifiers/dev-platform-contributors/contrib-bad",
-  "verifiers/dev-platform-contributors/contrib-notify",
-  "verifiers/dev-platform-contributors/contrib-select"
+  "verifiers/dev-platform-services/svc-bad",
+  "verifiers/dev-platform-services/svc-notify",
+  "verifiers/dev-platform-services/svc-select"
 ]

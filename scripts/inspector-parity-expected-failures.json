@@ -1,14 +1,14 @@
 [
   {
-    "project": "verifiers/dev-platform-contributors/scenarios/cycle",
-    "message": "depend on each other in a cycle: cycle-a -> cycle-b -> cycle-a"
+    "project": "verifiers/dev-platform-services/scenarios/cycle",
+    "message": "Services depend on each other in a cycle on dev"
   },
   {
-    "project": "verifiers/dev-platform-contributors/scenarios/dup",
-    "message": "Contributors 'dup-a' and 'dup-b' both provide 'shared'"
+    "project": "verifiers/dev-platform-services/scenarios/dup",
+    "message": "Services 'bad/dupA' and 'bad/dupB' both provide 'shared' on dev"
   },
   {
-    "project": "verifiers/dev-platform-contributors/scenarios/ghost",
-    "message": "Contributor 'needs-ghost' needs 'ghost', which nothing provides"
+    "project": "verifiers/dev-platform-services/scenarios/ghost",
+    "message": "Service 'bad/needsGhost' needs 'ghost' on dev, which nothing provides"
   }
 ]

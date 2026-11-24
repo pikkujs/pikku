@@ -77,3 +77,4 @@ export type {
   QueueJob,
   JobOptions,
 } from '@pikku/core/queue'
+export { nats } from './nats-service.js'

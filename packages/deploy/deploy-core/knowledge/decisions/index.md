@@ -11,6 +11,6 @@ A rule that was chosen, and what it rules out.
 <!-- pikku:knowledge-index -->
 
 - [An app-wired job inbox replaces the runtime dispatch shim](an-app-wired-job-inbox-replaces-the-runtime-shim.md) — When an app wires the remote queue-job or scheduler-job route itself, the Cloudflare adapter stops mounting its own shim ahead of routing
-- [Contributors are declared in code with defineContributors and opted in by name with wireAddon](contributors-are-declared-in-code-and-opted-in-by-name.md) — A platform-service contributor is a plain object an addon registers in code; a project takes only the ones it lists in wireAddon, and one resolver orders, checks and writes them for dev and every deploy
+- [Services are declared with pikkuService and a provider reports what its entry holds](services-are-declared-with-pikkuservice-and-opted-in-by-name.md) — A deploy provider describes its runtime through serviceSupport (baseline keys and whether the server lifecycle runs); one resolver in the CLI orders, checks and writes the services for every provider
 
 <!-- /pikku:knowledge-index -->

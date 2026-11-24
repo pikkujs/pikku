@@ -19,7 +19,7 @@ const lifecycle = { importPath: './lifecycle.js', variable: 'lifecycle' }
 const platformServices = { importPath: './platform-services.gen.js' }
 
 describe('generateServerEntrySource', () => {
-  test('without contributors the entry is the app lifecycle alone', () => {
+  test('without services the entry is the app lifecycle alone', () => {
     const source = generateServerEntrySource(ctx({ lifecycle }))
     assert.match(source, /__pikkuLifecycle\?\.beforeStart/)
     assert.doesNotMatch(source, /createPlatformServices|composeServerLifecycle/)
@@ -30,7 +30,7 @@ describe('generateServerEntrySource', () => {
     )
   })
 
-  test('with contributors, platform services reach the app and the composed lifecycle brackets the app lifecycle', () => {
+  test('with services, platform services reach the app and the composed lifecycle runs the service start hooks before the app lifecycle', () => {
     const source = generateServerEntrySource(
       ctx({ lifecycle, platformServices })
     )
@@ -41,7 +41,7 @@ describe('generateServerEntrySource', () => {
     assert.match(source, /createSingletonServices\(config, platformServices\)/)
     assert.match(
       source,
-      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks, stop: __pikkuStopHooks \}\)/
+      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/
     )
     const at = (needle: string) => source.indexOf(needle)
     assert.ok(
@@ -55,7 +55,7 @@ describe('generateServerEntrySource', () => {
     )
   })
 
-  test('contributor hooks run even when the app declares no lifecycle', () => {
+  test('service hooks run even when the app declares no lifecycle', () => {
     const source = generateServerEntrySource(ctx({ platformServices }))
     assert.match(
       source,

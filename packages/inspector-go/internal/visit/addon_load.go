@@ -67,51 +67,34 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
-// hasLegacyContributors reports a package.json still carrying
-// pikku.contributors, the removed string-emitting route.
-func hasLegacyContributors(dirs []string, pkg string) bool {
-	dir := findInstalledPackageDir(dirs, pkg)
-	if dir == "" {
-		return false
-	}
-	pj, err := readJSONFile(filepath.Join(dir, "package.json"))
-	if err != nil {
-		return false
-	}
-	return pj.get("pikku").has("contributors")
-}
-
-// recordOptedInContributors resolves wireAddon({ contributors }) against what
-// the addon registered. A name it does not register is an error rather than a
-// skip: the project asked for a service and would otherwise build without it.
-func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addonResolver) {
+// recordOptedInServices resolves wireAddon({ services }) against what the
+// addon declared. A name it does not declare is an error rather than a skip:
+// the project asked for a service and would otherwise build without it.
+func (s *Context) recordOptedInServices(ns string, decl *addonDecl, req addonResolver) {
 	registered := newOObject()
 	via := "wireAddon('" + ns + "')"
-	if decl.contributorsOnly {
-		via = "wireContributors('" + ns + "')"
-	}
-	if path := resolveAddonMeta(req, decl.pkg, "contributors/pikku-contributors-meta"); path != "" {
+	if path := resolveAddonMeta(req, decl.pkg, "services/pikku-services-meta"); path != "" {
 		meta, err := readJSONFile(path)
 		if err != nil {
-			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
-				"%s opts in to contributors, but the contributors manifest of %s could not be read: %s", via, decl.pkg, err.Error()))
+			s.Log.Critical(diag.AddonServiceUnknown, fmt.Sprintf(
+				"%s opts in to services, but the services manifest of %s could not be read: %s", via, decl.pkg, err.Error()))
 			return
 		}
-		if meta.get("contributors").isObject() {
-			registered = meta.get("contributors")
+		if meta.get("services").isObject() {
+			registered = meta.get("services")
 		}
 	}
 	selected := newOObject()
-	for _, name := range decl.contributors {
+	for _, name := range decl.services {
 		if !registered.has(name) {
 			known := []string{}
 			registered.obj.Each(func(k string, _ *ojson) { known = append(known, k) })
-			hint := "It registers none; add a defineContributors call to the package and run pikku all in it."
+			hint := "It declares none; add a pikkuService export to the package and run pikku all in it."
 			if len(known) > 0 {
-				hint = "It registers: " + strings.Join(known, ", ") + "."
+				hint = "It declares: " + strings.Join(known, ", ") + "."
 			}
-			s.Log.Critical(diag.AddonContributorUnknown, fmt.Sprintf(
-				"%s opts in to contributor '%s', but %s registers no such contributor. %s", via, name, decl.pkg, hint))
+			s.Log.Critical(diag.AddonServiceUnknown, fmt.Sprintf(
+				"%s opts in to service '%s', but %s declares no such service. %s", via, name, decl.pkg, hint))
 			continue
 		}
 		selected.set(name, registered.get(name))
@@ -121,19 +104,16 @@ func (s *Context) recordOptedInContributors(ns string, decl *addonDecl, req addo
 	}
 	entry := newOObject()
 	entry.set("packageName", ojsonString(decl.pkg))
-	entry.set("contributors", selected)
-	if decl.contributorsOnly {
-		entry.set("file", ojsonString(decl.file))
-	}
+	entry.set("services", selected)
 
 	all := newOObject()
-	if len(s.State.OptedInContributors) > 0 && string(s.State.OptedInContributors) != "null" {
-		if existing, err := parseOJSON(s.State.OptedInContributors); err == nil && existing.isObject() {
+	if len(s.State.OptedInServices) > 0 && string(s.State.OptedInServices) != "null" {
+		if existing, err := parseOJSON(s.State.OptedInServices); err == nil && existing.isObject() {
 			all = existing
 		}
 	}
 	all.set(ns, entry)
-	s.State.OptedInContributors = all.raw()
+	s.State.OptedInServices = all.raw()
 }
 
 // namespaceAddonWebhookSources names an addon's webhook sources after the
@@ -296,10 +276,6 @@ func readRequiredParentServices(path string) ([]string, bool) {
 // read each wired addon's generated metadata so the routes sweep can resolve
 // addon functions.
 func (s *Context) LoadAddonFunctionsMeta() {
-	for _, decl := range s.contributorWirings {
-		req := addonResolver(addonResolutionDirs(s.RootDir, decl.file))
-		s.recordOptedInContributors(decl.pkg, decl, req)
-	}
 	for _, ns := range s.addonOrder {
 		decl := s.addons[ns]
 		if decl.remote {
@@ -317,13 +293,13 @@ func (s *Context) LoadAddonFunctionsMeta() {
 	}
 }
 
-// loadRemoteAddonLocal reads the screens and contributors a wireRemoteAddon
+// loadRemoteAddonLocal reads the screens and services a wireRemoteAddon
 // takes from its local package, under the remote addon's name.
 func (s *Context) loadRemoteAddonLocal(ns string, decl *addonDecl) {
-	local := &addonDecl{pkg: decl.local.pkg, file: decl.file, ui: decl.local.ui, contributors: decl.local.contributors}
+	local := &addonDecl{pkg: decl.local.pkg, file: decl.file, ui: decl.local.ui, services: decl.local.services}
 	req := addonResolver(addonResolutionDirs(s.RootDir, decl.file))
-	if len(local.contributors) > 0 {
-		s.recordOptedInContributors(ns, local, req)
+	if len(local.services) > 0 {
+		s.recordOptedInServices(ns, local, req)
 	}
 	if local.ui {
 		if err := s.loadAddonStudio(ns, local, req); err != nil {
@@ -368,15 +344,8 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	req := addonResolver(dirs)
 
 	s.recordDeclaredUses(ns, decl, dirs)
-	if len(decl.contributors) > 0 {
-		s.recordOptedInContributors(ns, decl, req)
-	}
-
-	if hasLegacyContributors(dirs, decl.pkg) {
-		s.Log.Critical(diag.AddonLegacyContributors, fmt.Sprintf(
-			"%s still declares \"pikku.contributors\" in its package.json, which is no longer read. "+
-				"Remove it, register the contributors with defineContributors in the addon's source, and opt in with wireAddon('%s', { contributors: [...] }). See docs/contributors.md.",
-			decl.pkg, ns))
+	if len(decl.services) > 0 {
+		s.recordOptedInServices(ns, decl, req)
 	}
 
 	if decl.ui {

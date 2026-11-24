@@ -59,7 +59,8 @@ import {
   loadUserModule,
 } from './load-user-project.js'
 import { createDevCredentialService } from './dev-credentials.js'
-import { loadDevPlatformServices } from './dev-platform-services.js'
+import { loadDevPikkuServices } from './dev-pikku-services.js'
+import { devBaselineFor } from '../wirings/cli/write-dev-pikku-services.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
@@ -632,14 +633,11 @@ export const dev = pikkuSessionlessFunc<
       }
     )
 
-    const {
-      services: localServices,
-      startHooks,
-      stopHooks,
-    } = await loadDevPlatformServices(
+    const { services: localServices, startHooks } = await loadDevPikkuServices(
       baseLocalServices,
       config.rootDir,
-      config.devContributorsFile,
+      config.devPikkuServicesFile,
+      devBaselineFor(config, inspectorState, 'dev'),
       process.env
     )
 
@@ -701,7 +699,6 @@ export const dev = pikkuSessionlessFunc<
 
     const lifecycle = composeServerLifecycle(await loadLifecycle(), {
       start: startHooks,
-      stop: stopHooks,
     })
 
     await pikkuServer.init()

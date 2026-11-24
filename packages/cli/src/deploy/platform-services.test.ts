@@ -16,12 +16,7 @@ import {
   writeUnitPlatformServices,
 } from './platform-services.js'
 
-const basePlatform = {
-  serviceNames: [],
-  needsQueue: false,
-  needsWorkflow: false,
-  needsAgent: false,
-}
+type Variants = Record<string, { needs: string[]; provides: string[] }>
 
 describe('writeUnitPlatformServices', () => {
   let root: string
@@ -31,130 +26,169 @@ describe('writeUnitPlatformServices', () => {
     root = mkdtempSync(join(tmpdir(), 'pikku-unit-platform-'))
     unitDir = join(root, 'unit')
     mkdirSync(unitDir, { recursive: true })
-    mkdirSync(join(root, 'node_modules', 'addon', 'src'), { recursive: true })
-    writeFileSync(join(root, 'node_modules', 'addon', 'package.json'), '{}')
-    writeFileSync(
-      join(root, 'node_modules', 'addon', 'src', 'only-api.ts'),
-      `export const onlyApi = { provides: ['marker'], when: (p: any) => p.unit.name === 'api', run(s: any) { s.marker = 1 } }\n`
-    )
-    writeFileSync(
-      join(root, 'node_modules', 'addon', 'src', 'fake-only.ts'),
-      `export const fakeOnly = { provides: ['marker'], when: (p: { provider?: string }) => p.provider === 'fake', run(s: Record<string, unknown>) { s.marker = 1 } }\n`
-    )
-    writeFileSync(
-      join(root, 'node_modules', 'addon', 'src', 'bindings.ts'),
-      `export const bindings = { provides: ['b'], requires: ['cloudflare'], run() {} }\n`
-    )
+    mkdirSync(join(root, 'src'), { recursive: true })
   })
   afterEach(() => rmSync(root, { recursive: true, force: true }))
 
-  const state = (name: string, file: string, exportName: string) =>
+  const state = (
+    services: Record<
+      string,
+      { variants: Variants; onServerStart?: boolean; file?: string }
+    >
+  ) =>
     ({
-      optedInContributors: {
-        ns: {
-          packageName: 'addon',
-          contributors: {
-            [name]: { deploy: { module: file, export: exportName } },
+      pikkuServices: Object.fromEntries(
+        Object.entries(services).map(([name, service]) => [
+          name,
+          {
+            module: join(root, service.file ?? 'src/services.ts'),
+            export: name,
+            variants: service.variants,
+            ...(service.onServerStart ? { onServerStart: true } : {}),
           },
-        },
-      },
-      rpc: {
-        wireAddonDeclarations: new Map([
-          ['ns', { file: join(root, 'src/a.ts') }],
-        ]),
-      },
+        ])
+      ),
+      optedInServices: {},
+      rpc: { wireAddonDeclarations: new Map() },
     }) as never
 
   const provider = (
-    supported: string[],
-    withSupport = true,
-    runsServerLifecycle = true
+    options: { baseline?: string[]; runsServerLifecycle?: boolean } | false = {}
   ) =>
     ({
       name: 'fake',
-      ...(withSupport
-        ? {
-            contributorSupport: (ctx: any) => ({
-              supported,
-              runsServerLifecycle,
-              runtimeServices: ['logger'],
-              widenPlatform: (p: any) => ({ ...p, unit: ctx.unit }),
+      ...(options === false
+        ? {}
+        : {
+            serviceSupport: () => ({
+              baseline: options.baseline ?? ['logger'],
+              runsServerLifecycle: options.runsServerLifecycle ?? true,
             }),
-          }
-        : {}),
-    }) as never
-
-  const ctx = (name: string) =>
-    ({
-      unit: { name },
-      unitDir,
-      contributorPlatform: basePlatform,
+          }),
     }) as never
 
   const run = (
     name: string,
     st: never,
-    p = provider(['env']),
+    p = provider(),
     extra: Partial<Parameters<typeof writeUnitPlatformServices>[0]> = {}
   ) =>
     writeUnitPlatformServices({
       provider: p,
-      ctx: ctx(name),
+      ctx: { unit: { name }, unitDir } as never,
       state: st,
       projectDir: root,
+      requiredServices: new Set(
+        Object.values(
+          (st as { pikkuServices: Record<string, { variants: Variants }> })
+            .pikkuServices
+        ).flatMap((meta) =>
+          Object.values(meta.variants).flatMap((variant) => variant!.provides)
+        )
+      ),
       ...extra,
     })
 
-  test('the widened unit reaches when: the contributor is bundled only into its unit', async () => {
-    const st = state('onlyApi', 'src/only-api.ts', 'onlyApi')
-    const api = await run('api', st)
-    assert.equal(api?.importPath, './platform-services.gen.js')
-    assert.match(
-      readFileSync(join(unitDir, PLATFORM_SERVICES_FILE), 'utf8'),
-      /only-api/
-    )
-    assert.equal(await run('worker', st), undefined)
-    assert.equal(existsSync(join(unitDir, PLATFORM_SERVICES_FILE)), false)
-  })
+  const file = () => readFileSync(join(unitDir, PLATFORM_SERVICES_FILE), 'utf8')
 
-  test('the platform names the provider, so a contributor can apply to one target only', async () => {
-    const st = state('fakeOnly', 'src/fake-only.ts', 'fakeOnly')
-    assert.ok(await run('api', st))
-    const other = { ...provider(['env']), name: 'cloudflare' } as never
-    assert.equal(await run('api', st, other), undefined)
-  })
-
-  test('a contributor requiring a binding the provider lacks is a build error naming it', async () => {
-    await assert.rejects(
-      run('api', state('bindings', 'src/bindings.ts', 'bindings')),
-      /fake deploy.*'bindings' of addon 'ns' \(addon\) requires cloudflare/s
-    )
-  })
-
-  test('the same contributor builds where the provider supplies the binding', async () => {
+  test('writes a runner for the deploy variant and imports only that module', async () => {
     const result = await run(
       'api',
-      state('bindings', 'src/bindings.ts', 'bindings'),
-      provider(['env', 'cloudflare'])
+      state({
+        mailer: {
+          variants: {
+            dev: { needs: [], provides: ['mailer'] },
+            deploy: { needs: ['logger'], provides: ['mailer'] },
+          },
+        },
+      })
+    )
+    assert.equal(result?.importPath, './platform-services.gen.js')
+    const source = file()
+    assert.match(source, /target: "deploy"/)
+    assert.match(
+      source,
+      /registry\.add\("mailer", service0, \{"deploy":\{"needs":\["logger"\],"provides":\["mailer"\]\}\}\)/
+    )
+  })
+
+  test('the unit coercion map wraps the service providing kysely', async () => {
+    await run(
+      'api',
+      state({
+        db: {
+          variants: { deploy: { needs: [], provides: ['kysely'] } },
+        },
+      }),
+      provider(),
+      {
+        ctx: {
+          unit: { name: 'api' },
+          unitDir,
+          coercionMap: { users: { created_at: 'date' } },
+        } as never,
+      }
+    )
+    assert.match(file(), /registry\.add\("db", withKyselyCoercion\(service0\)/)
+  })
+
+  test('a service with only a dev variant on a deploy provider that does not hold its keys fails', async () => {
+    await assert.rejects(
+      run(
+        'api',
+        state({
+          mailer: { variants: { dev: { needs: [], provides: ['mailer'] } } },
+        })
+      ),
+      /no deploy variant and no common variant.*'mailer'/s
+    )
+  })
+
+  test('a need the provider baseline does not hold is a build error naming it', async () => {
+    await assert.rejects(
+      run(
+        'api',
+        state({
+          mailer: {
+            variants: { common: { needs: ['kysely'], provides: ['mailer'] } },
+          },
+        })
+      ),
+      /'mailer' needs 'kysely' on deploy/
+    )
+  })
+
+  test('the same service builds where the provider holds the key', async () => {
+    const result = await run(
+      'api',
+      state({
+        mailer: {
+          variants: { common: { needs: ['kysely'], provides: ['mailer'] } },
+        },
+      }),
+      provider({ baseline: ['kysely'] })
     )
     assert.ok(result)
   })
 
-  test('a provider that cannot run contributors refuses a project that opted in', async () => {
+  test('a provider that cannot run services refuses a project that declares one', async () => {
     await assert.rejects(
       run(
         'api',
-        state('onlyApi', 'src/only-api.ts', 'onlyApi'),
-        provider([], false)
+        state({
+          mailer: { variants: { common: { needs: [], provides: ['mailer'] } } },
+        }),
+        provider(false)
       ),
-      /fake deploy cannot run the contributors/
+      /fake deploy cannot run the services/
     )
   })
 
-  test('nothing opted in writes nothing and removes a stale file', async () => {
+  test('nothing declared writes nothing and removes a stale file', async () => {
     writeFileSync(join(unitDir, PLATFORM_SERVICES_FILE), 'stale')
     const none = {
-      optedInContributors: {},
+      pikkuServices: {},
+      optedInServices: {},
       rpc: { wireAddonDeclarations: new Map() },
     } as never
     assert.equal(await run('api', none), undefined)
@@ -162,86 +196,49 @@ describe('writeUnitPlatformServices', () => {
   })
 
   describe('server lifecycle hooks', () => {
-    beforeEach(() => {
-      writeFileSync(
-        join(root, 'node_modules', 'addon', 'src', 'hooks.ts'),
-        `export const starts = { provides: ['q'], run(s: any) { s.q = 1 }, onServerStart() {} }\n` +
-          `export const stops = { provides: ['q'], run(s: any) { s.q = 1 }, onServerStop() {} }\n`
+    const starts = () =>
+      state({
+        queue: {
+          variants: { common: { needs: [], provides: ['queue'] } },
+          onServerStart: true,
+        },
+      })
+
+    test('onServerStart where the target runs no server lifecycle is a build error naming service and unit', async () => {
+      await assert.rejects(
+        run('worker-unit', starts(), provider({ runsServerLifecycle: false })),
+        /onServerStart would never be called: service 'queue' in unit 'worker-unit'/
       )
     })
 
-    test('onServerStart where the target runs no server lifecycle is a build error naming contributor and unit', async () => {
-      await assert.rejects(
-        run(
-          'worker-unit',
-          state('starts', 'src/hooks.ts', 'starts'),
-          provider(['env'], true, false)
-        ),
-        /'starts'.*unit 'worker-unit'|unit 'worker-unit'.*'starts'/s
-      )
-      await assert.rejects(
-        run(
-          'worker-unit',
-          state('starts', 'src/hooks.ts', 'starts'),
-          provider(['env'], true, false)
-        ),
-        /onServerStart would never be called/
-      )
-    })
-
-    test('the same contributor builds where the target runs the server lifecycle', async () => {
-      const result = await run(
-        'container',
-        state('starts', 'src/hooks.ts', 'starts')
-      )
-      assert.ok(result)
+    test('the same service builds where the target runs the server lifecycle', async () => {
+      assert.ok(await run('container', starts()))
       assert.match(
-        readFileSync(join(unitDir, PLATFORM_SERVICES_FILE), 'utf8'),
-        /serverStartHooks: ServerHook\[\] = \[\n.*name: "starts"/
+        file(),
+        /serverStartHooks: ServerHook\[\] = \[\n.*name: "queue"/
       )
     })
 
-    test('onServerStop where the target runs no server lifecycle only warns', async () => {
-      const warnings: string[] = []
-      const result = await run(
-        'worker-unit',
-        state('stops', 'src/hooks.ts', 'stops'),
-        provider(['env'], true, false),
-        { warn: (message) => warnings.push(message) }
-      )
-      assert.ok(result)
-      assert.equal(warnings.length, 1)
-      assert.match(warnings[0]!, /'stops'.*onServerStop.*'worker-unit'/)
-    })
-
-    test('a provider that does not say it runs the server lifecycle is treated as not running it', async () => {
-      const p = {
-        name: 'fake',
-        contributorSupport: () => ({
-          supported: ['env'],
-          runtimeServices: ['logger'],
-        }),
-      } as never
-      await assert.rejects(
-        run('u', state('starts', 'src/hooks.ts', 'starts'), p),
-        /onServerStart would never be called/
-      )
-    })
-
-    test('the generic server entry supports platform services and runs the lifecycle', async () => {
+    test('the generic server entry supports services and runs the lifecycle', async () => {
       const result = await run(
         'container',
-        state('starts', 'src/hooks.ts', 'starts'),
+        starts(),
         { name: 'fake' } as never,
-        { genericServerEntry: true }
+        {
+          genericServerEntry: true,
+        }
       )
       assert.ok(result)
-      assert.deepEqual(genericServerEntrySupport(ctx('x')).runtimeServices, [])
+      assert.deepEqual(genericServerEntrySupport(), {
+        baseline: [],
+        runsServerLifecycle: true,
+      })
     })
 
-    test('the generic server entry with nothing opted in writes no file', async () => {
+    test('the generic server entry with nothing declared writes no file', async () => {
       const none = {
-        optedInContributors: {},
+        pikkuServices: {},
+        optedInServices: {},
         rpc: { wireAddonDeclarations: new Map() },
       } as never
       assert.equal(

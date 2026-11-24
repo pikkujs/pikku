@@ -47,10 +47,6 @@ export { CloudflareProviderAdapter }
 export type { CloudflareProviderAdapterOptions } from './adapter.js'
 export const createAdapter = (options: CloudflareProviderAdapterOptions = {}) =>
   new CloudflareProviderAdapter(options)
-export {
-  COERCION_CONTRIBUTOR_NAME,
-  coercionContributor,
-} from './coercion-contributor.js'
 export type { CloudflareInfraManifest } from './infra-manifest.js'
 
 // Types

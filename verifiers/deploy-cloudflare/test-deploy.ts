@@ -60,25 +60,22 @@ const COERCION_FILE = join(FUNCTIONS_DIR, '.pikku', 'db', 'coercion.gen.ts')
 const COERCION_MAP = { todo: { due_at: 'date', done: 'bool' } }
 const GATEWAY_ROUTE = '/verifier/webhook'
 
-// The template has no database, so nothing provides `kysely` and the adapter's
-// coercion contributor (which decorates it) is correctly left out. An addon that
-// provides one is linked into the shared project for the run, so the coercion
-// check below covers a real selection; both are removed on exit.
-const ADDON_DIR = join(process.cwd(), 'contrib-kysely')
+// The generated runner wraps the service that provides `kysely` with column
+// coercion, so a unit needs one that does and a function that reaches `kysely`.
+// An addon that provides one is linked into the shared project for the run, with
+// a route whose function destructures it; both are removed on exit.
+const ADDON_DIR = join(process.cwd(), 'service-kysely')
 const ADDON_LINK = join(
   FUNCTIONS_DIR,
   'node_modules',
   '@verifier',
-  'contrib-kysely'
+  'service-kysely'
 )
-// A coercion map only reaches a contributor for an app with a known database
+const COERCION_UNIT_NAME = 'verifier-db-reach'
+// A coercion map only reaches a service for an app with a known database
 // dialect, so the run also gives the project an (empty) db/sqlite folder.
 const DB_DIALECT_DIR = join(FUNCTIONS_DIR, 'db')
-const ADDON_WIRING_FILE = join(
-  FUNCTIONS_DIR,
-  'src',
-  'zz-contributors-wiring.ts'
-)
+const ADDON_WIRING_FILE = join(FUNCTIONS_DIR, 'src', 'zz-services-wiring.ts')
 
 const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
 const restoreConfig = () => {
@@ -162,12 +159,22 @@ symlinkSync(ADDON_DIR, ADDON_LINK, 'dir')
 writeFileSync(
   ADDON_WIRING_FILE,
   `import { wireAddon } from '#pikku/addon'
+import { pikkuSessionlessFunc } from '#pikku/function'
+import { wireHTTP } from '#pikku/http'
 
 wireAddon({
   name: 'kyselyStandIn',
-  package: '@verifier/contrib-kysely',
-  contributors: ['kysely-stand-in'],
+  package: '@verifier/service-kysely',
+  services: ['kyselyStandIn'],
 })
+
+// Reaching \`kysely\` is what puts the service providing it in this unit.
+export const verifierDbReach = pikkuSessionlessFunc<void, { ok: boolean }>({
+  auth: false,
+  func: async ({ kysely }) => ({ ok: kysely !== undefined }),
+})
+
+wireHTTP({ method: 'get', route: '/verifier/db-reach', func: verifierDbReach })
 `
 )
 execCli(`node ${PIKKU_BIN}`, {
@@ -553,21 +560,24 @@ check('a unit without the gateway does not import its wiring', () => {
 
 // --- Column coercion (#1913) ---
 check('a worker entry applies the generated coercion map', () => {
-  const unit = getUnitPath('greet')
+  const unit = getUnitPath(COERCION_UNIT_NAME)
   const services = readText(join(unit, 'platform-services.gen.ts'))
-  if (!services.includes('// kysely-coercion'))
+  if (
+    !/registry\.add\("kyselyStandIn\/kyselyStandIn", withKyselyCoercion\(/.test(
+      services
+    )
+  )
     throw new Error(
-      'platform services do not run the kysely-coercion contributor'
+      'the service providing kysely is not wrapped with column coercion'
     )
   if (!services.includes(JSON.stringify(COERCION_MAP)))
     throw new Error('platform services do not carry the coercion map')
-  if (
-    services.indexOf('// kysely-stand-in') >
-    services.indexOf('// kysely-coercion')
-  )
-    throw new Error('coercion runs before the contributor providing kysely')
-  if (!readText(join(unit, 'bundle.js')).includes('createCoercionPlugin'))
-    throw new Error('the unit bundle does not contain createCoercionPlugin')
+  // The bundle is minified, so the plugin's name is gone; its map is not.
+  const bundle = readText(join(unit, 'bundle.js'))
+  if (!/withPlugin\(/.test(bundle) || !/due_at:\s*"date"/.test(bundle))
+    throw new Error(
+      'the unit bundle does not carry the coercion plugin and map'
+    )
 })
 
 // --- Lazy addon registration (#1497) ---

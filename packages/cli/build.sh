@@ -123,6 +123,11 @@ done
 "$_bootstrap_dir/node_modules/.bin/pikku" all --outDir .pikku
 rm -rf "$_bootstrap_dir"
 
+# The published CLI still generates the contributor leaves, which import a module
+# @pikku/core no longer has; the local CLI never writes them, so tsc must not see them.
+test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
+rm -rf -- .pikku/contributor .pikku/backends/cli/contributor
+
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
 npx tsc -b || true

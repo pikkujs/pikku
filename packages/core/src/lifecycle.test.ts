@@ -47,11 +47,10 @@ describe('composeServerLifecycle', () => {
     return { events, hook, app }
   }
 
-  test('start hooks run first, stop hooks after the app afterStop', async () => {
+  test('start hooks run first, the rest of the app lifecycle is unchanged', async () => {
     const { events, hook, app } = recorder()
     const lifecycle = composeServerLifecycle(app, {
       start: [hook('start:a'), hook('start:b')],
-      stop: [hook('stop:b'), hook('stop:a')],
     })
     const services = {} as any
     await lifecycle.beforeStart!(services)
@@ -65,8 +64,6 @@ describe('composeServerLifecycle', () => {
       'app:afterStart',
       'app:beforeStop',
       'app:afterStop',
-      'stop:b',
-      'stop:a',
     ])
   })
 
@@ -74,65 +71,21 @@ describe('composeServerLifecycle', () => {
     const { events, hook } = recorder()
     const lifecycle = composeServerLifecycle(undefined, {
       start: [hook('s')],
-      stop: [hook('t')],
     })
     await lifecycle.beforeStart!({} as any)
     await lifecycle.afterStop!({} as any)
-    assert.deepStrictEqual(events, ['s', 't'])
+    assert.deepStrictEqual(events, ['s'])
   })
 
-  test('a failing start hook aborts startup naming the contributor', async () => {
+  test('a failing start hook aborts startup naming the service', async () => {
     const { events, hook, app } = recorder()
     const lifecycle = composeServerLifecycle(app, {
       start: [hook('start:a'), hook('start:b', true), hook('start:c')],
     })
     await assert.rejects(
       lifecycle.beforeStart!({} as any),
-      /Contributor 'start:b' failed in onServerStart: start:b broke/
+      /Service 'start:b' failed in onServerStart: start:b broke/
     )
     assert.deepStrictEqual(events, ['start:a', 'start:b'])
-  })
-
-  test('every stop hook is attempted when one throws, then all failures are reported', async () => {
-    const { events, hook, app } = recorder()
-    const lifecycle = composeServerLifecycle(app, {
-      stop: [hook('stop:c', true), hook('stop:b'), hook('stop:a', true)],
-    })
-    await assert.rejects(lifecycle.afterStop!({} as any), (error: any) => {
-      assert.match(
-        error.message,
-        /contributor 'stop:c' onServerStop: stop:c broke/
-      )
-      assert.match(
-        error.message,
-        /contributor 'stop:a' onServerStop: stop:a broke/
-      )
-      assert.strictEqual(error.errors.length, 2)
-      return true
-    })
-    assert.deepStrictEqual(events, [
-      'app:afterStop',
-      'stop:c',
-      'stop:b',
-      'stop:a',
-    ])
-  })
-
-  test('stop hooks still run when the app afterStop throws, which is rethrown as is', async () => {
-    const events: string[] = []
-    const boom = new Error('app broke')
-    const lifecycle = composeServerLifecycle(
-      {
-        afterStop: async () => {
-          throw boom
-        },
-      },
-      { stop: [{ name: 'x', run: async () => void events.push('x') }] }
-    )
-    await assert.rejects(
-      lifecycle.afterStop!({} as any),
-      (error) => error === boom
-    )
-    assert.deepStrictEqual(events, ['x'])
   })
 })

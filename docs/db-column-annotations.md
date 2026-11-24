@@ -134,12 +134,9 @@ an app is handed:
 - `pikku dev`, `pikku serve` and a generated local CLI — the local services file
   opens the database with `createCoercionPlugin({ map: coercionMap })`.
 - Standalone deploys — the entry imports the map (`db.coercionImportPath`).
-- Cloudflare deploys — the adapter selects the optional contributor
-  `kysely-coercion` (`@pikku/deploy-cloudflare`'s `coercionContributor`, on by
-  default). It decorates the `services.kysely` another contributor provides, so
-  it applies only when some contributor provides `kysely` and the app has a
-  coercion map. A platform whose own `kysely` contributor already applies the
-  map passes `coercion: false` to the adapter. See [`contributors.md`](./contributors.md).
+- Deploys where a service provides `kysely` (Cloudflare, for one) — the
+  generated runner wraps that service with `createCoercionPlugin` from
+  `@pikku/kysely` and the map. See [`services.md`](./services.md).
 
 ## Two axes: what changes the _type_ vs only the _validator_
 

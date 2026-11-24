@@ -1,0 +1,32 @@
+{
+  "name": "@pikku/verifiers-dev-platform-services",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely-postgres": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/deploy": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "tsx": "^4.23.15",
+    "@verifier/svc-notify": "workspace:*",
+    "@verifier/svc-select": "workspace:*",
+    "@verifier/svc-bad": "workspace:*",
+    "@pikku/deploy-standalone": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/deploy-cloudflare": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "pikku": "pikku",
+    "test": "./test.sh"
+  }
+}

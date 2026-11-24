@@ -8,11 +8,10 @@
  * The generic pipeline handles: analysis, codegen, bundling, plan/apply.
  */
 
-import type { ContributorPlatform } from '@pikku/core/contributors'
 import type {
-  ContributorSupport,
   EntryPlatformServices,
-} from './contributor-support.js'
+  ServiceSupport,
+} from './service-support.js'
 import type { DeploymentManifest, DeploymentUnit } from './manifest.js'
 import type { RuntimeProfile } from './runtime-profile.js'
 import type { RuntimeTier } from './runtime-tier.js'
@@ -150,16 +149,9 @@ export interface EntryGenerationContext {
   }
 
   /**
-   * The build-time facts `pikku dev` hands its contributors, for this unit
-   * (the whole app for a single-unit build). Set by the pipeline; the provider
-   * widens it through `contributorSupport`.
-   */
-  contributorPlatform?: ContributorPlatform
-
-  /**
-   * The generated file holding the contributors selected for this unit, written
+   * The generated file holding the services selected for this unit, written
    * beside the entry by the pipeline. Undefined when none was selected, in
-   * which case the entry builds no contributor services at all.
+   * which case the entry builds no services at all.
    */
   platformServices?: EntryPlatformServices
 }
@@ -262,13 +254,12 @@ export interface ProviderAdapter {
   generateServerEntrySource?(ctx: EntryGenerationContext): string
 
   /**
-   * How the contributors the project opted in to apply to this unit's runtime:
-   * which bindings it supplies, which services the entry holds first, and what
-   * the provider selects itself. Omit it and the provider supports no
-   * contributors: the build fails if the project opted in to any with a deploy
-   * variant.
+   * How the project's services apply to this unit's runtime: which keys the
+   * entry holds first, and whether it runs the server lifecycle. Omit it and
+   * the provider runs no services: the build fails if the project declares or
+   * opts in to one that runs on deploy.
    */
-  contributorSupport?(ctx: EntryGenerationContext): ContributorSupport
+  serviceSupport?(ctx: EntryGenerationContext): ServiceSupport
 
   /**
    * Generate provider-specific config files per unit (e.g. wrangler.toml).

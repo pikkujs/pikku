@@ -294,6 +294,30 @@ describe('stopSingletonServices', () => {
     )
   })
 
+  test('should stop services in reverse of the order they were built', async () => {
+    const order: string[] = []
+    const stop = (name: string) => ({
+      stop: async () => {
+        order.push(name)
+      },
+    })
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        info: () => {},
+        warn: () => {},
+        error: () => {},
+        debug: () => {},
+      },
+      first: stop('first'),
+      second: stop('second'),
+      third: stop('third'),
+    } as any)
+
+    await stopSingletonServices()
+
+    assert.deepStrictEqual(order, ['third', 'second', 'first'])
+  })
+
   test('should handle services without stop method', async () => {
     const mockServices = {
       logger: {

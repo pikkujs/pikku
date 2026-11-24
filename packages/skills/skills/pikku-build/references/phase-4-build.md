@@ -179,37 +179,33 @@ it is worth writing as a browser step on §7's scenario and running
 `pikku scenario run local --spawn --run browser`: same clicks, same assertions,
 in the repo, green or red on every future run.
 
-**A project can take platform services from an addon's contributors.** The addon
-registers them with `defineContributors` (an object keyed by name, each with an
-optional `dev` and `deploy` variant that is a plain `Contributor`), and the
-project opts in by name:
+**A project can take platform services from an addon's `pikkuService`s.** The
+addon exports them (a function, or an object with `dev`, `deploy` and `common`
+variants and an optional `onServerStart`), and the project opts in by name:
 
 ```ts
 wireAddon({
   name: 'inbox',
   package: '@my-org/addon-inbox',
-  contributors: ['inbox'],
+  services: ['inbox'],
 })
 ```
 
-A package that is not an addon but registers contributors is opted in with
-`wireContributors({ package: '@my-org/queue', contributors: ['nats'] })`
-(build-time only, no addon is declared). `platform.provider` tells a `when`
-which deploy provider is building (`standalone`, `cloudflare`, ...); it is unset
-under `pikku dev`.
+A project declares its own the same way with `pikkuService` from
+`#pikku/service`. A factory destructures what it needs from `services` and
+returns what it provides; the inspector reads both, so there is no `needs` or
+`provides` list.
 
 Nothing is injected without that list. `pikku all` resolves the `dev` variants
-(dropping what `when` or `requires` rules out, ordering by `needs`/`provides`)
-and writes `.pikku/contributors/pikku-dev-contributors.gen.ts`; `pikku dev` and
-`pikku serve` merge what it builds over the local services before
-`createSingletonServices` runs, so a contributed `emailService` beats
-`LocalEmailService` (and the test-mode spy). Both skip the file under
-`NODE_ENV=production`. A contributor's `onServerStart` runs before the app's
-`beforeStart`; its `onServerStop` after the app's `afterStop`. An unmet need, a
-key provided twice or a cycle fails `pikku all`, and so does a declared database
-(`createConfig` or `db/<dialect>`) with no `db` in the pikku config. A host that
-injects an addon (CI, Studio) writes a gitignored wiring file containing
-`wireAddon({ name, package, contributors })`. Reference: `docs/contributors.md`.
+(ordering by what each needs and provides) and writes
+`.pikku/services/pikku-dev-services.gen.ts`; `pikku dev` and `pikku serve` merge
+what it builds over the local services before `createSingletonServices` runs, so
+a provided `emailService` beats `LocalEmailService` (and the test-mode spy). Both
+skip the file under `NODE_ENV=production`. A service's `onServerStart` runs before
+the app's `beforeStart`; teardown is the provided value's `stop()`. An unmet need,
+a key provided twice or a cycle fails `pikku all`. A host that injects an addon
+(CI, Studio) writes a gitignored wiring file containing
+`wireAddon({ name, package, services })`. Reference: `docs/services.md`.
 
 ## 6a. Close the changeset against its plan, not against your memory
 

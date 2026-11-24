@@ -104,11 +104,11 @@ export type WireAddonConfig = {
   /** Hands over the whole `ContentService` unscoped. The value is the reason, recorded in the deploy manifest. */
   globalContent?: string
   /**
-   * The contributors this project takes from the addon (those it registers with
-   * `defineContributors`), by name. None unless listed: an addon never injects
-   * services into a project that did not ask for them.
+   * The services this project takes from the addon (those it declares with
+   * `pikkuService`), by exported name. None unless listed: an addon never
+   * injects services into a project that did not ask for them.
    */
-  contributors?: string[]
+  services?: string[]
 }
 
 /**

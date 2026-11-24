@@ -11,23 +11,17 @@
  * bundle into a single self-contained executable via `bun build --compile`.
  * No runtime needed on the target host.
  */
-import type { ContributorBindingSource } from '@pikku/core/contributors'
 import type {
-  ContributorSupport,
   EntryGenerationContext,
   ProviderAdapter,
+  ServiceSupport,
 } from '@pikku/deploy'
 import {
   composedLifecycleLines,
   entryLifecycleVariable,
   nodeBuiltinExternals,
   SERVER_READY_MARKER,
-  withDeployUnit,
 } from '@pikku/deploy'
-
-export const STANDALONE_BINDING_SOURCES: readonly ContributorBindingSource[] = [
-  'env',
-]
 
 /**
  * Directory the built frontend is copied to, both inside the unit and beside
@@ -535,26 +529,18 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }
 
   /**
-   * The entry holds `kysely` when it opens a database, and the contributors'
-   * platform says it has one from the same facts, so the two must agree: a
-   * contributor selected on `platform.db` would otherwise read a `runtime.kysely`
-   * that is not there, or the reverse.
+   * The entry holds `kysely` when it opens a database; a service may need it,
+   * or replace it. The server lifecycle runs here, so `onServerStart` is
+   * supported.
    */
-  contributorSupport(ctx: EntryGenerationContext): ContributorSupport {
-    if (ctx.contributorPlatform && !ctx.db !== !ctx.contributorPlatform.db) {
-      throw new Error(
-        `The standalone entry ${ctx.db ? 'opens' : 'does not open'} a database but the contributor platform says the project ${ctx.contributorPlatform.db ? 'has' : 'has no'} one; both are read from the project's database declaration and must agree.`
-      )
-    }
+  serviceSupport(ctx: EntryGenerationContext): ServiceSupport {
     return {
-      supported: STANDALONE_BINDING_SOURCES,
+      baseline: runtimeServiceNames(ctx),
       runsServerLifecycle: true,
-      runtimeServices: runtimeServiceNames(ctx),
-      widenPlatform: (platform) => withDeployUnit(platform, ctx.unit),
     }
   }
 
-  private contributorImportLines(ctx: EntryGenerationContext): string[] {
+  private platformServicesImportLines(ctx: EntryGenerationContext): string[] {
     if (!ctx.platformServices) return []
     return [
       `import { createPlatformServices } from '${ctx.platformServices.importPath}'`,
@@ -612,7 +598,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
         : []),
       ...(ctx.db ? dbImportLines(ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
-      ...this.contributorImportLines(ctx),
+      ...this.platformServicesImportLines(ctx),
       ...composedLifecycleLines(ctx).imports,
       ``,
       ctx.configImport,

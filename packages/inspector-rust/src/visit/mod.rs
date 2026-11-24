@@ -39,8 +39,7 @@ pub mod group_addon_bans;
 pub mod group_subscribe;
 pub mod group_approval_description;
 pub mod group_analytics;
-pub mod group_define_contributors;
-pub mod group_wire_contributors;
+pub mod group_pikku_service;
 pub mod check_wiring_top_level;
 pub mod group_feature;
 pub mod group_feature_flag;
@@ -151,6 +150,8 @@ pub struct Options {
     pub classification_check: bool,
     pub types: Option<Types>,
     pub is_addon: bool,
+    /// Skips PKU372 for a pikkuService whose provides cannot be read yet.
+    pub defer_service_provides: bool,
 }
 
 /// What every visitor receives: the TS visitors' (logger, checker, state,
@@ -172,9 +173,6 @@ pub struct Context<'a> {
     pub core_types: Vec<CoreType>,
     /// Go `cliConfigTypeWarned`: the missing-Config warning is logged once.
     pub cli_config_type_warned: bool,
-    /// Go `contributorWirings`: the wireContributors calls, build-time opt-ins
-    /// to a package's contributors that is not an addon.
-    pub contributor_wirings: Vec<addon_load::AddonDecl>,
     /// Read by the generated-schema check once schemas exist; it is not part of
     /// the serialized state.
     pub declared_unknowns: HashMap<String, std::collections::HashSet<String>>,
@@ -200,7 +198,6 @@ impl<'a> Context<'a> {
             types_lookup: HashMap::new(),
             core_types: Vec::new(),
             cli_config_type_warned: false,
-            contributor_wirings: Vec::new(),
             declared_unknowns: HashMap::new(),
         }
     }
@@ -271,8 +268,7 @@ pub fn register_groups(r: &mut Registry) {
     group_feature_flag::register(r);
     group_virtual_users::register(r);
     group_analytics::register(r);
-    group_define_contributors::register(r);
-    group_wire_contributors::register(r);
+    group_pikku_service::register(r);
     check_wiring_top_level::register(r);
     group_pikku_studio::register(r);
     group_middleware::register(r);

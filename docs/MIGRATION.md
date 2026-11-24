@@ -155,6 +155,22 @@ What an app sees:
 - Local content no longer reads files stored outside `private/` and `public/` under `localFileUploadPath`: move any old `<bucket>/<key>` files into `private/<bucket>/<key>`. `resolveContentRequestTarget(basePath, key)` is synchronous and takes no `mode`.
 - A column with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
 
+### `pikkuService` replaces contributors
+
+`@pikku/core/contributors` is gone: `defineContributors`, `wireContributors`, `Contributor`, `ContributorPlatform` and the resolver functions have no replacement under those names. Declare a service with `pikkuService` from `@pikku/core/pikku-service` instead.
+
+- `pikkuService(factory)` is the same on every target. `pikkuService({ dev, deploy, common, onServerStart })` is per target, and a target's own variant overrides `common`.
+- A factory takes `(services, env)`. Destructure `services` to say what it depends on (there is no `needs`); the keys of the returned object are what it provides (there is no `provides`). The inspector reads both from the source, so the factory must be written inline, destructure its first parameter by plain name, and return an object type with known keys.
+- A target runs only the services it reaches: a service is selected when a key it provides is destructured by the functions, middleware, permissions or wirings the target includes (the unit's own for a deploy unit), or by a selected service. A service nothing reaches gets no variant check, no `onServerStart` error and no import. Two services providing one key is a build error on every target, except one replacement of a baseline key. A selected service with no variant for the target fails there.
+- `wireAddon({ contributors })` and `wireRemoteAddon({ local: { contributors } })` are now `services`, and name the addon's exported `pikkuService` consts. `wireContributors` is removed.
+- Teardown is the service's own `stop()`, which `stopSingletonServices` now calls in reverse of the order services were built. `ContributorServerHook` is `ServiceServerHook`, and `composeServerLifecycle` reports `Service '<name>' failed in onServerStart`.
+- In the object form `dev`, `deploy` and `common` may be a reference to an exported const instead of an inline function, so a build imports only the variant it runs. Each such variant must live in its own module (PKU375).
+- `pikku all` generates `#pikku/service` (config key `pikkuServiceTypesFile`, replacing `contributorTypesFile` and `#pikku/contributor`): `SingletonServices` is the type you declared plus every key a service provides, as required properties with no `any`, and `pikkuService` is typed against it. `SingletonServices` from `#pikku/function` is this merged type. Config keys `devContributorsFile` and `contributorsMetaJsonFile` are now `devPikkuServicesFile` and `pikkuServicesMetaJsonFile`.
+- `pikku dev` and `pikku serve` build the services on top of the local services (their `existingServices`) before `createSingletonServices` runs. A service may need only a key the dev baseline holds (`devBaselineServices`: no `variables`, `schema` or `secrets`) or another service provides. A service with only a `deploy` variant is an error on dev unless it provides only keys the dev baseline holds. A deploy provider reports what its entry holds through `serviceSupport(ctx)`, `{ baseline, runsServerLifecycle }`, replacing `contributorSupport`; `ctx.contributorPlatform` is gone, and the generated platform-services file has no `serverStopHooks`.
+- `@pikku/deploy-cloudflare` and `@pikku/deploy-standalone` implement `serviceSupport`. `STANDALONE_BINDING_SOURCES`, `CLOUDFLARE_BINDING_SOURCES`, `coercionContributor`, `COERCION_CONTRIBUTOR_NAME` and the Cloudflare adapter's `coercion` option are gone: the generated runner wraps the service providing `kysely` with the coercion map, for every provider.
+- `@pikku/queue-nats` publishes `nats` as a `pikkuService` (deploy variant, exports `./.pikku/services/*`) instead of a contributor. Opt in with `wireAddon({ name: 'nats', package: '@pikku/queue-nats', services: ['nats'] })` in place of `wireContributors`. There is no `when` and no per-build wiring: a unit that never destructures `nats` does not run it, so a Worker unit is unaffected. It provides `natsLifecycle` with a `stop()` that drains the workers and closes the connection.
+- The inspector state keys are `pikkuServices` and `optedInServices`; an addon publishes `services/pikku-services-meta.gen.json`. PKU360 to PKU364 are retired; PKU369 to PKU376 cover a service the build cannot read, needs or provides it cannot read, an unreadable or unknown `wireAddon({ services })`, variants sharing a module (PKU375), and a duplicate service name (PKU376).
+
 ### `srcDirectories` is replaced by package markers
 
 **What:** a project inspects its own directory, so `srcDirectories` is no longer read: the loader accepts the key and ignores it. Packages are found by a role marker in each package's own `pikku.config.json`, and the root config has no key that lists them. `base` and `addons` are refused by the loader, with a message that points here.
@@ -784,7 +800,7 @@ still fails with PKU345: inline those values. Copy entries may nest and take
 
 ### Platform-service contributors are declared in code and opted in with `wireAddon`
 
-Contributors are now plain `Contributor` objects an addon registers with `defineContributors`, and a project opts in by name. The string-emitting `PlatformServiceContributor` is gone. The full reference is [`contributors.md`](./contributors.md).
+Contributors are now plain `Contributor` objects an addon registers with `defineContributors`, and a project opts in by name. The string-emitting `PlatformServiceContributor` is gone. What replaced them is in [`services.md`](./services.md).
 
 **Removed config, with no replacement key.** These are no longer read, and a leftover entry is now a hard error rather than a silent drop: the CLI refuses `dev.contributors` and `deploy.contributors` in `pikku.config.json` by name when it loads the config, and the inspector reports an addon whose `package.json` still has `pikku.contributors` (PKU364). Delete them and use the new route below.
 

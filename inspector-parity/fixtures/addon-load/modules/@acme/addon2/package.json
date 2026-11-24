@@ -1,10 +1,5 @@
 {
   "name": "@acme/addon2",
   "private": true,
-  "version": "1.0.0",
-  "pikku": {
-    "contributors": [
-      "x"
-    ]
-  }
+  "version": "1.0.0"
 }

@@ -612,7 +612,7 @@ test('coercion.gen.ts says where it is applied and warns against applying it twi
   assert.match(generated, /"created_at": "date"/)
   assert.doesNotMatch(generated, /Nothing applies this for you/)
   assert.match(generated, /pikku dev/)
-  assert.match(generated, /coercionContributor/)
+  assert.match(generated, /generated runner/)
   assert.match(generated, /Do not attach it to that instance again/)
   assert.match(generated, /createCoercionPlugin/)
   assert.match(generated, /createSingletonServices/)

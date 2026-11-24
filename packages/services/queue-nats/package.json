@@ -32,12 +32,12 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./.pikku/contributors/*": "./.pikku/addon/contributors/*",
+    "./.pikku/services/*": "./.pikku/addon/services/*",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
-    ".pikku/addon/contributors",
+    ".pikku/addon/services",
     "!dist/**/*.tsbuildinfo"
   ],
   "devDependencies": {

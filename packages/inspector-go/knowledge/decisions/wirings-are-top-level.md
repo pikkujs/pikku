@@ -19,13 +19,13 @@ the wire functions, it walks up the parents; an arrow function, function
 expression or declaration, method, constructor or accessor is a refusal. A call
 in module scope is fine, and so is one inside a module-scope `if` or block: the
 rule stops at function boundaries on purpose. The message names the function and
-where the enclosing one is: `wireContributors must be called at the top level of
+where the enclosing one is: `wireAddon must be called at the top level of
 a file, not inside a function (inside optInToJobs, a.ts:8)`.
 
 ```decision
 chosen: One shared visitor with a list of wire names, not a check in each wire visitor.
 rules-out:
-  - Per-wire checks that drift apart (the Go and Rust sides would each need fourteen)
+  - Per-wire checks that drift apart (the Go and Rust sides would each need thirteen)
   - Extending the rule to blocks and conditionals at module scope
 because: The rule is about the callee, not about what any one wiring reads. A
   new wire function is covered by adding its name to the list, and the Go and

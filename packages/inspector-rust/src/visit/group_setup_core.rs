@@ -136,6 +136,33 @@ fn extract_services_from_function(f: P<Node>) -> Vec<String> {
     services
 }
 
+/// `projectServicesRead`: the top-level names a pikkuServices factory
+/// destructures from its second parameter (`existingServices`), sorted and
+/// unique. A parameter that is not a destructuring pattern, or a name that is
+/// not a plain key, contributes nothing.
+fn project_services_read(f: P<Node>) -> Vec<String> {
+    let mut names: Vec<String> = Vec::new();
+    let Some(param) = param_at(f, 1) else { return names };
+    let pattern = param.name().unwrap();
+    if !ast::is_object_binding_pattern(pattern) {
+        return names;
+    }
+    for e in pattern.elements() {
+        let e = *e;
+        if e.as_binding_element().dot_dot_dot_token().is_some() {
+            continue;
+        }
+        let key = e.property_name().or_else(|| e.name());
+        if let Some(name) = super::util_shared::literal_key_name(key)
+            && !names.contains(&name)
+        {
+            names.push(name);
+        }
+    }
+    names.sort();
+    names
+}
+
 impl Context<'_> {
     pub fn add_file_extends_core_type(&mut self, node: P<Node>, pick: Pick, expected: &str) {
         if !ast::is_class_declaration(node) && !ast::is_interface_declaration(node) {
@@ -272,6 +299,9 @@ impl Context<'_> {
                     if with_state && !init.arguments().is_empty() {
                         let f = function_node_of(Some(init.arguments()[0]));
                         if let Some(f) = f {
+                            if wrapper == "pikkuServices" {
+                                self.state.project_services_read = project_services_read(f);
+                            }
                             if expected == "CreateWireServices" {
                                 self.state.wire_services_meta.set(variable_name, extract_services_from_function(f));
                             }

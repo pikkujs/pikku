@@ -307,28 +307,68 @@
     }
    }
   ],
-  "contributorsManifest": {
-   "logger": {
-    "dev": {
-     "module": "<fixture>/src/contrib.ts",
-     "export": "devContrib"
+  "pikkuServices": {
+   "queue": {
+    "module": "<fixture>/src/flags.ts",
+    "export": "queue",
+    "variants": {
+     "dev": {
+      "needs": [
+       "logger"
+      ],
+      "provides": [
+       "queue"
+      ],
+      "module": "<fixture>/src/service-dev.ts",
+      "export": "devVariant"
+     },
+     "deploy": {
+      "needs": [
+       "logger",
+       "kysely"
+      ],
+      "provides": [
+       "queue",
+       "queueMetrics"
+      ],
+      "module": "<fixture>/src/service-deploy.ts",
+      "export": "deployVariant"
+     }
+    }
+   },
+   "aliased": {
+    "module": "<fixture>/src/flags.ts",
+    "export": "aliased",
+    "variants": {
+     "common": {
+      "needs": [
+       "kysely",
+       "logger"
+      ],
+      "provides": []
+     }
+    }
+   },
+   "clock": {
+    "module": "<fixture>/src/flags.ts",
+    "export": "clock",
+    "variants": {
+     "common": {
+      "needs": [],
+      "provides": [
+       "clock"
+      ]
+     },
+     "dev": {
+      "needs": [
+       "logger"
+      ],
+      "provides": [
+       "clock"
+      ]
+     }
     },
-    "deploy": {
-     "module": "<fixture>/src/contrib.ts",
-     "export": "devContrib"
-    }
-   },
-   "alone": {
-    "dev": {
-     "module": "<fixture>/src/contrib.ts",
-     "export": "devContrib"
-    }
-   },
-   "dupe": {
-    "dev": {
-     "module": "<fixture>/src/contrib.ts",
-     "export": "devContrib"
-    }
+    "onServerStart": true
    }
   },
   "studio": {
@@ -496,33 +536,68 @@
   },
   {
    "level": "critical",
-   "code": "PKU360",
-   "message": "Contributor 'bad' dev 'notExported' does not resolve to a const declaration"
+   "code": "PKU375",
+   "message": "Service 'twin': dev and deploy are both exported from <fixture>/src/service-dev.ts. Each variant lives in its own module, so a build imports only the variant it runs."
   },
   {
    "level": "critical",
-   "code": "PKU360",
-   "message": "Contributor 'inline' dev must be a reference to an exported const so a host can import just that variant, got: () => 1"
+   "code": "PKU369",
+   "message": "Service 'hidden': 'hidden' is not exported by <fixture>/src/flags.ts, so a host cannot import it"
   },
   {
    "level": "critical",
-   "code": "PKU360",
-   "message": "Contributor 'neither' declares neither dev nor deploy"
+   "code": "PKU369",
+   "message": "Service 'fromDynamic': pikkuService takes a factory function or an object with dev, deploy or common, got: dynamic"
   },
   {
    "level": "critical",
-   "code": "PKU360",
-   "message": "Contributor 'extra' takes only dev and deploy, got: staging: devContrib"
+   "code": "PKU369",
+   "message": "Service 'neither': an object declares none of dev, deploy or common"
   },
   {
    "level": "critical",
-   "code": "PKU361",
-   "message": "Contributor 'logger' is defined twice. A contributor name belongs to one defineContributors entry."
+   "code": "PKU369",
+   "message": "Service 'stray': pikkuService takes only dev, deploy, common and onServerStart, got: prod"
   },
   {
    "level": "critical",
-   "code": "PKU360",
-   "message": "defineContributors takes { name: { dev?, deploy? } } entries, got: ['c' + 1]: { dev: devContrib }"
+   "code": "PKU369",
+   "message": "Service 'unresolved': dev 'notExported' does not resolve to a const declaration"
+  },
+  {
+   "level": "critical",
+   "code": "PKU369",
+   "message": "Service 'notInline': dev 'notAFunction' must be a const initialized with a function written inline"
+  },
+  {
+   "level": "critical",
+   "code": "PKU369",
+   "message": "Service 'shorthand': pikkuService takes only dev, deploy, common and onServerStart as plain entries, got: deploy"
+  },
+  {
+   "level": "critical",
+   "code": "PKU369",
+   "message": "pikkuService must be assigned to an exported const so a host can import it, got: pikkuService(() => ({ loose: 1 }))"
+  },
+  {
+   "level": "critical",
+   "code": "PKU371",
+   "message": "Service 'whole' common must destructure its services parameter, so the build can read what it depends on, got: services"
+  },
+  {
+   "level": "critical",
+   "code": "PKU371",
+   "message": "Service 'rest' common cannot collect services with a rest element, got: ...others"
+  },
+  {
+   "level": "critical",
+   "code": "PKU372",
+   "message": "Service 'untyped' common must return an object type with known keys, so the build can read what it provides, got: any"
+  },
+  {
+   "level": "critical",
+   "code": "PKU376",
+   "message": "Service 'queue' is declared twice. A service name belongs to one pikkuService export."
   },
   {
    "level": "critical",

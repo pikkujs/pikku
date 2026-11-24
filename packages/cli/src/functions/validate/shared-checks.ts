@@ -28,7 +28,7 @@ import type { PikkuScaffoldFeature } from '../../../types/config.js'
 import {
   dbConfigMismatch,
   detectDatabaseDialect,
-} from '../../contributors/contributor-platform.js'
+} from '../../utils/database-dialect.js'
 import { blankComments } from '../../utils/blank-comments.js'
 import { resolveFromProject } from '../../utils/resolve-from-project.js'
 import { SERVICE_MODULE_MAP } from '../../deploy/bundler/service-module-map.js'
@@ -639,7 +639,7 @@ export async function runSharedProjectChecks(
   const dbEngine = pikkuConfig?.db?.engine ?? 'sqlite'
 
   // A database on disk (or in createConfig) with no `db` in the pikku config
-  // builds no kysely, and the deploy build's platform contributors then fail.
+  // builds no kysely, and a pikkuService that needs it then fails.
   // Reuses the detection every host uses, so the rules are not restated here.
   if (pikkuConfig && !pikkuConfig.db) {
     const declared = await detectDatabaseDialect(
@@ -652,7 +652,7 @@ export async function runSharedProjectChecks(
       findings.push({
         id: 'pikku-config-no-db',
         severity: 'critical',
-        message: `${dbConfigMismatch(declared)}, so the deploy build fails when it adds the platform contributors`,
+        message: `${dbConfigMismatch(declared)}, so a pikkuService that needs it fails to build`,
         path: pikkuConfigPath,
         fixHint: lines(
           'Declare the engine in pikku.config.json:',

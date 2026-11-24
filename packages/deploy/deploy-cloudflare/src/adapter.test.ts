@@ -6,7 +6,6 @@ import { dirname, join } from 'node:path'
 import { build, type Plugin } from 'esbuild'
 
 import { CloudflareProviderAdapter } from './adapter.js'
-import { coercionContributor } from './coercion-contributor.js'
 
 const unit = {
   name: 'api',
@@ -37,13 +36,16 @@ const ctx = {
 const platformServices = { importPath: './platform-services.gen.js' }
 const withServices = { ...(ctx as object), platformServices } as never
 
-describe('CloudflareProviderAdapter contributors', () => {
-  test('without a generated file the entries run no contributors', () => {
+describe('CloudflareProviderAdapter services', () => {
+  test('without a generated file the entries run no services', () => {
     const adapter = new CloudflareProviderAdapter({})
-    assert.doesNotMatch(adapter.generateEntrySource(ctx), /ContributorServices/)
+    assert.doesNotMatch(
+      adapter.generateEntrySource(ctx),
+      /__pikkuPlatformServices/
+    )
     assert.doesNotMatch(
       adapter.generateServerEntrySource(ctx),
-      /ContributorServices/
+      /__pikkuPlatformServices/
     )
   })
 
@@ -54,11 +56,11 @@ describe('CloudflareProviderAdapter contributors', () => {
 
     assert.match(
       source,
-      /import \{ createPlatformServices as __pikkuContributorServices \} from '\.\/platform-services\.gen\.js'/
+      /import \{ createPlatformServices as __pikkuPlatformServices \} from '\.\/platform-services\.gen\.js'/
     )
     assert.match(
       source,
-      /Object\.assign\(services, await __pikkuContributorServices\(env, services\)\)/
+      /Object\.assign\(services, await __pikkuPlatformServices\(env, services\)\)/
     )
   })
 
@@ -66,102 +68,24 @@ describe('CloudflareProviderAdapter contributors', () => {
     const source = new CloudflareProviderAdapter({}).generateServerEntrySource(
       withServices
     )
-    assert.match(source, /__pikkuContributorServices\(env, services\)/)
+    assert.match(source, /__pikkuPlatformServices\(env, services\)/)
   })
 
-  test('a worker supplies env and cloudflare bindings', () => {
-    const support = new CloudflareProviderAdapter({}).contributorSupport({
+  test('a worker holds the queue binding service in its baseline', () => {
+    const support = new CloudflareProviderAdapter({}).serviceSupport({
       ...(ctx as object),
       unit: { ...(unit as object), target: 'serverless' },
     } as never)
-    assert.deepEqual([...support.supported].sort(), ['cloudflare', 'env'])
-    assert.ok(support.runtimeServices.includes('queueService'))
+    assert.ok(support.baseline.includes('queueService'))
+    assert.ok(support.baseline.includes('logger'))
   })
 
-  test('the container holds no bindings, so it supplies env alone', () => {
-    const support = new CloudflareProviderAdapter({}).contributorSupport({
+  test('the container holds no bindings: logger and schema only', () => {
+    const support = new CloudflareProviderAdapter({}).serviceSupport({
       ...(ctx as object),
       unit: { ...(unit as object), target: 'server' },
     } as never)
-    assert.deepEqual([...support.supported], ['env'])
-    assert.ok(!support.runtimeServices.includes('queueService'))
-  })
-
-  test('the platform is widened with the unit being generated', () => {
-    const platform = new CloudflareProviderAdapter({}).contributorSupport(ctx)
-      .widenPlatform!({
-      serviceNames: [],
-      needsQueue: false,
-      needsWorkflow: false,
-      needsAgent: false,
-    }) as unknown as { unit: { name: string } }
-    assert.equal(platform.unit.name, 'api')
-  })
-})
-
-describe('CloudflareProviderAdapter column coercion', () => {
-  const frameworkNames = (options: object) =>
-    (
-      new CloudflareProviderAdapter(options).contributorSupport(ctx)
-        .framework ?? []
-    ).map((f) => f.name)
-
-  test('the adapter selects the coercion contributor itself, as optional', () => {
-    const [coercion] =
-      new CloudflareProviderAdapter({}).contributorSupport(ctx).framework ?? []
-    assert.equal(coercion?.name, 'kysely-coercion')
-    assert.equal(coercion?.optional, true)
-    assert.equal(coercion?.contributor, coercionContributor)
-    assert.match(coercion!.module, /coercion-contributor\.(ts|js)$/)
-  })
-
-  test('a platform that applies the map itself can turn it off', () => {
-    assert.deepEqual(frameworkNames({ coercion: false }), [])
-  })
-
-  test('the contributor decorates kysely: no provides, needs kysely, only with a map', () => {
-    assert.deepEqual(coercionContributor.provides, [])
-    assert.deepEqual(coercionContributor.needs, ['kysely'])
-    const platform = {
-      serviceNames: [],
-      needsQueue: false,
-      needsWorkflow: false,
-      needsAgent: false,
-    }
-    assert.equal(coercionContributor.when?.(platform), false)
-    assert.equal(
-      coercionContributor.when?.({
-        ...platform,
-        db: { engine: 'sqlite', coercionMap: { t: { d: 'date' } } },
-      }),
-      true
-    )
-  })
-
-  test('it wraps the kysely it is given with the platform map', async () => {
-    let plugin: unknown
-    const services = {
-      kysely: {
-        withPlugin: (p: unknown) => {
-          plugin = p
-          return 'wrapped'
-        },
-      },
-    } as Record<string, any>
-    await coercionContributor.run(
-      services,
-      {},
-      {},
-      {
-        serviceNames: [],
-        needsQueue: false,
-        needsWorkflow: false,
-        needsAgent: false,
-        db: { engine: 'sqlite', coercionMap: { t: { d: 'date' } } },
-      }
-    )
-    assert.equal(services.kysely, 'wrapped')
-    assert.ok(plugin)
+    assert.deepEqual([...support.baseline], ['logger', 'schema'])
   })
 })
 
@@ -473,26 +397,26 @@ describe('CloudflareProviderAdapter container server lifecycle', () => {
     )
   })
 
-  test('no lifecycle and no contributors: the entry runs none, as it always read', () => {
+  test('no lifecycle and no services: the entry runs none, as it always read', () => {
     const source = generate({})
     assert.doesNotMatch(source, /Lifecycle|beforeStart/)
     assert.match(source, /server\.enableExitOnSignals\(\)/)
   })
 
-  test('contributor hooks bracket the app lifecycle: start first, stop after afterStop', () => {
+  test('service start hooks run before the app lifecycle', () => {
     const source = generate({ lifecycle, platformServices })
     assert.match(
       source,
-      /import \{ serverStartHooks as __pikkuStartHooks, serverStopHooks as __pikkuStopHooks \} from '\.\/platform-services\.gen\.js'/
+      /import \{ serverStartHooks as __pikkuStartHooks \} from '\.\/platform-services\.gen\.js'/
     )
     assert.match(
       source,
-      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks, stop: __pikkuStopHooks \}\)/
+      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/
     )
     assert.ok(
       at(source, 'createPlatformServices(env)') <
         at(source, 'createSingletonServices(config'),
-      'contributor services exist before the app builds its own'
+      'services exist before the app builds its own'
     )
     assert.ok(
       at(source, 'server.init()') <
@@ -520,7 +444,7 @@ describe('CloudflareProviderAdapter container server lifecycle', () => {
 
   test('only the container target runs the server lifecycle', () => {
     const support = (target: string) =>
-      new CloudflareProviderAdapter({}).contributorSupport({
+      new CloudflareProviderAdapter({}).serviceSupport({
         ...(ctx as object),
         unit: { ...(unit as object), target },
       } as never)

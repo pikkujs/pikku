@@ -5,7 +5,11 @@ import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { writeLocalServices } from '../cli/write-local-services.js'
-import { writeDevContributors } from '../cli/write-dev-contributors.js'
+import { writeDevPikkuServices } from '../cli/write-dev-pikku-services.js'
+import {
+  providedServiceKeys,
+  singletonServicesTypeRef,
+} from '../../../pikku-services/service-types-source.js'
 
 export const serializeServicesMap = (
   allSingletonServices: string[],
@@ -172,11 +176,26 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       )
     }
 
-    const servicesImport = `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(config.servicesFile, singletonServicesType.typePath, config.packageMappings)}'`
+    const servicesImport = singletonServicesTypeRef(
+      visitState,
+      config,
+      config.servicesFile
+    ).import
     const wireServicesImport = `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(config.servicesFile, wireServicesType.typePath, config.packageMappings)}'`
 
+    // What the project's services provide is part of `SingletonServices` too, so
+    // the map names those keys beside the ones the declared type has.
+    const allSingletonServices = [
+      ...new Set([
+        ...visitState.serviceAggregation.allSingletonServices,
+        ...(config.addon
+          ? []
+          : providedServiceKeys(visitState, config.rootDir)),
+      ]),
+    ]
+
     const servicesCode = serializeServicesMap(
-      visitState.serviceAggregation.allSingletonServices,
+      allSingletonServices,
       visitState.serviceAggregation.allWireServices,
       visitState.serviceAggregation.requiredServices,
       config.forceRequiredServices,
@@ -191,7 +210,7 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
     await writeLocalServices(logger, config, visitState)
-    await writeDevContributors(logger, config, visitState)
+    await writeDevPikkuServices(logger, config, visitState)
   },
   middleware: [
     logCommandInfoAndTime({

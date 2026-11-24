@@ -16,11 +16,11 @@ func TestWiringsAreTopLevel(t *testing.T) {
 	root := t.TempDir()
 	files := map[string]string{
 		"tsconfig.json": `{"compilerOptions":{"target":"ES2022","module":"Node16","moduleResolution":"Node16","strict":true,"noEmit":true,"skipLibCheck":true},"include":["src"]}`,
-		"src/nested.ts": `import { wireContributors } from '@pikku/core/contributors'
+		"src/nested.ts": `import { wireAddon } from '@pikku/core/addon'
 import { wireHTTP } from '@pikku/core/http'
 
 export function optInToJobs() {
-  wireContributors({ package: '@fixture/shop-addon', contributors: ['jobs'] })
+  wireAddon({ name: 'shop', package: '@fixture/shop-addon', services: ['jobs'] })
 }
 
 export const addRoute = () => {
@@ -47,9 +47,9 @@ export const wireHTTP = (config: any) => {
   coreWireHTTP(config)
 }
 `,
-		"src/top.ts": `import { wireContributors } from '@pikku/core/contributors'
+		"src/top.ts": `import { wireAddon } from '@pikku/core/addon'
 
-wireContributors({ package: '@fixture/top-addon', contributors: ['inbox'] })
+wireAddon({ name: 'top', package: '@fixture/top-addon', services: ['inbox'] })
 `,
 	}
 	for name, text := range files {
@@ -76,7 +76,7 @@ wireContributors({ package: '@fixture/top-addon', contributors: ['inbox'] })
 	want := []string{
 		"wireHTTP must be called at the top level of a file, not inside a function (inside attach, src/enclosures.ts:4)",
 		"wireHTTP must be called at the top level of a file, not inside a function (inside later, src/enclosures.ts:9)",
-		"wireContributors must be called at the top level of a file, not inside a function (inside optInToJobs, src/nested.ts:4)",
+		"wireAddon must be called at the top level of a file, not inside a function (inside optInToJobs, src/nested.ts:4)",
 		"wireHTTP must be called at the top level of a file, not inside a function (inside addRoute, src/nested.ts:8)",
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {

@@ -21,7 +21,10 @@ const stopService = async (
   }
 }
 
-/** Stops addon package services first, then the parent singleton services. */
+/**
+ * Stops addon package services first, then the parent singleton services.
+ * Within each group services stop in reverse of the order they were built.
+ */
 export const stopSingletonServices = async (): Promise<void> => {
   const singletonServices = getSingletonServices()
   const logger = singletonServices.logger
@@ -34,7 +37,9 @@ export const stopSingletonServices = async (): Promise<void> => {
       const packageServices = packageState.package?.singletonServices
       if (packageServices) {
         logger.info(`Stopping singleton services for package: ${packageName}`)
-        for (const [name, service] of Object.entries(packageServices)) {
+        for (const [name, service] of Object.entries(
+          packageServices
+        ).reverse()) {
           await stopService(logger, `${packageName}/${name}`, service)
         }
         packageState.package.singletonServices = null
@@ -42,7 +47,7 @@ export const stopSingletonServices = async (): Promise<void> => {
     }
   }
 
-  for (const [name, service] of Object.entries(singletonServices)) {
+  for (const [name, service] of Object.entries(singletonServices).reverse()) {
     await stopService(logger, name, service)
   }
 }
@@ -86,8 +91,8 @@ export const onShutdownSignals = (
   }
 }
 
-/** A contributor's `onServerStart` / `onServerStop`, as the generated platform-services file lists it. */
-export interface ContributorServerHook {
+/** A service's `onServerStart`, as the generated server entry lists it. */
+export interface ServiceServerHook {
   name: string
   run: (services: any) => void | Promise<void>
 }
@@ -96,22 +101,18 @@ const describeError = (error: unknown): string =>
   error instanceof Error ? error.message : String(error)
 
 /**
- * Composes the server lifecycle around the app's own: contributor start hooks
- * run first, in order, then the app's `beforeStart`; the app's `afterStart` and
- * `beforeStop` are unchanged; after the app's `afterStop` the stop hooks run
- * (already in reverse run order, as the generated file lists them).
+ * Composes the server lifecycle around the app's own: service start hooks
+ * run first, in order, then the app's `beforeStart`; the app's `afterStart`,
+ * `beforeStop` and `afterStop` are unchanged.
  *
- * A start hook that throws aborts startup with an error naming the contributor.
- * Every stop hook is attempted even if an earlier one (or the app's
- * `afterStop`) threw; the failures are then thrown together, each named.
+ * A start hook that throws aborts startup with an error naming the service.
  */
 export const composeServerLifecycle = <
   SS extends CoreSingletonServices = CoreSingletonServices,
 >(
   app: ServerLifecycle<SS> | undefined,
   hooks: {
-    start?: readonly ContributorServerHook[]
-    stop?: readonly ContributorServerHook[]
+    start?: readonly ServiceServerHook[]
   }
 ): ServerLifecycle<SS> => ({
   beforeStart: async (services) => {
@@ -120,7 +121,7 @@ export const composeServerLifecycle = <
         await hook.run(services)
       } catch (error) {
         throw new Error(
-          `Contributor '${hook.name}' failed in onServerStart: ${describeError(error)}`,
+          `Service '${hook.name}' failed in onServerStart: ${describeError(error)}`,
           { cause: error }
         )
       }
@@ -129,35 +130,5 @@ export const composeServerLifecycle = <
   },
   afterStart: (services) => app?.afterStart?.(services),
   beforeStop: (services) => app?.beforeStop?.(services),
-  afterStop: async (services) => {
-    const failures: string[] = []
-    const errors: unknown[] = []
-    let hookFailed = false
-    try {
-      await app?.afterStop?.(services)
-    } catch (error) {
-      failures.push(`the app's afterStop: ${describeError(error)}`)
-      errors.push(error)
-    }
-    for (const hook of hooks.stop ?? []) {
-      try {
-        await hook.run(services)
-      } catch (error) {
-        hookFailed = true
-        failures.push(
-          `contributor '${hook.name}' onServerStop: ${describeError(error)}`
-        )
-        errors.push(error)
-      }
-    }
-    if (errors.length === 1 && failures.length === 1 && !hookFailed) {
-      throw errors[0]
-    }
-    if (errors.length > 0) {
-      throw new AggregateError(
-        errors,
-        `Server stop failed: ${failures.join('; ')}`
-      )
-    }
-  },
+  afterStop: (services) => app?.afterStop?.(services),
 })

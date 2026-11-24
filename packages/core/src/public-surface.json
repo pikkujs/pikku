@@ -680,14 +680,11 @@
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],
-  "./contributors": [
-    "ContributorDependencyError",
-    "DEFAULT_CONTRIBUTOR_BINDING_SOURCES",
-    "defineContributors",
-    "orderContributors",
-    "resolveContributors",
-    "selectContributors",
-    "wireContributors"
+  "./pikku-service": [
+    "PikkuServiceError",
+    "ServiceRegistry",
+    "pikkuService",
+    "runPikkuServices"
   ],
   "./telemetry-store": [],
   "./telemetry-store/testing": ["MemoryTelemetryStore", "conformance"],

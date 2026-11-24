@@ -7,7 +7,7 @@ import { defineQueueTraceConformance } from '@pikku/core/testing'
 import { jetstreamManager, RetentionPolicy } from '@nats-io/jetstream'
 import { connect } from '@nats-io/transport-node'
 import { NatsServiceFactory } from './nats-service-factory.js'
-import { natsOptionsFromEnv } from './nats-contributor.js'
+import { natsOptionsFromEnv } from './nats-service.js'
 
 const servers = process.env.NATS_TEST_URL
 
@@ -36,7 +36,7 @@ if (!servers) {
     }
   })
 
-  // The same suite through the attach path the standalone contributor ships:
+  // The same suite through the attach path the standalone service ships:
   // the options come from natsOptionsFromEnv, and the stage's own stream is
   // created up front by a separate admin connection, as the broker operator does. The
   // factory must only ever attach to it.
