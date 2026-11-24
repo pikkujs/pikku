@@ -98,6 +98,7 @@ func Run(log *diag.Logger, st *state.State, opts Options) error {
 		validatePermissionDataUsed(log, st, opts)
 		validateSessionlessPermissions(log, st)
 		validateAgentScorerReferences(log, st)
+		validateHarnessGateReferences(log, st)
 		validateSecretOverrides(log, st)
 		validateVariableOverrides(log, st)
 		validateCredentialOverrides(log, st)

@@ -515,6 +515,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('RPC', 'pikkuRPC', null),
       workflow.do('AI agent', 'pikkuAgent', null),
       workflow.do('AI scorer', 'pikkuAgentScorer', null),
+      // Not imported by the app: a harness engine reads it.
+      workflow.do('Harness', 'pikkuHarnessMeta', null),
     ])
 
     allImports.push(config.modelAliasesFile)

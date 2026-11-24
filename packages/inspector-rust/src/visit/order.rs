@@ -58,4 +58,5 @@ pub const ADD_WORKFLOW_GRAPH: i32 = 200;
 pub const ADD_FEATURE: i32 = 210;
 pub const ADD_AGENT: i32 = 220;
 pub const ADD_AGENT_SCORER: i32 = 230;
+pub const ADD_HARNESS: i32 = 235;
 pub const CHECK_DISABLED_REFS: i32 = 240;

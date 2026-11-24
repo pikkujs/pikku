@@ -29,6 +29,7 @@ each says when to open it:
 | `references/virtual-users.md`    | Virtual users vs virtual users, `defineVirtualUsers`, upstream credentials for virtual users, and human sign-in as a virtual user |
 | `references/coverage.md`         | Live coverage, filling it, and unit tests for pure logic                                                                          |
 | `references/virtual-user-run.md` | Running a model-driven virtual user against a stage                                                                               |
+| `references/harness.md`          | Declaring a harness, its gates and gate agents (experimental)                                                                     |
 
 ## What a scenario is
 

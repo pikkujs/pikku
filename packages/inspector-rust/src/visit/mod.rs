@@ -31,6 +31,7 @@ pub mod addon_load;
 pub mod addon_resolve;
 pub mod boundary;
 pub mod group_agent;
+pub mod group_harness;
 pub mod check_classification;
 pub mod check_disabled;
 pub mod check_mock;
@@ -283,6 +284,7 @@ pub fn register_groups(r: &mut Registry) {
     group_gateway::register(r);
     group_mcp::register(r);
     group_agent::register(r);
+    group_harness::register(r);
     group_cli::register(r);
     group_workflow::register(r);
     group_workflow_graph::register(r);

@@ -6,6 +6,7 @@ use tsrs_ast::{self as ast, Node, NodeFlags, Symbol, SymbolFlags};
 use tsrs_core::P;
 
 use super::Context;
+use super::group_harness::HARNESS_GATE_WRAPPER;
 use super::util_channel_cli::is_workflow_helper;
 use crate::tsutil::{self, file_name_of, first_decl, has_export_modifier, is_function_like, is_pikku_call, rel_path, source_file_of};
 
@@ -126,7 +127,7 @@ impl Context<'_> {
         let callee_ident = if is_call { call_expr.expression().filter(|e| ast::is_identifier(*e)) } else { None };
 
         if let Some(ce) = callee_ident {
-            if SCENARIO_STEP_WRAPPERS.contains(&ce.text()) {
+            if SCENARIO_STEP_WRAPPERS.contains(&ce.text()) || ce.text() == HARNESS_GATE_WRAPPER {
                 let args = call_expr.arguments();
                 if !args.is_empty() && ast::is_object_literal_expression(args[0]) {
                     for p in args[0].properties() {

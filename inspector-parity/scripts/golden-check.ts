@@ -2,14 +2,15 @@
 /**
  * Keeps the committed Go goldens honest.
  *
- *   bun golden-check.ts [goBin] [--update] [--only addon-load,providers,trigger_feature,workflow_edge]
+ *   bun golden-check.ts [goBin] [--update] [--only addon-load,providers,trigger_feature,harness,workflow_edge]
  *
- * The Rust cargo tests compare against four committed files, each a slice of
+ * The Rust cargo tests compare against five committed files, each a slice of
  * what the Go inspector prints for a small fixture:
  *
  *   fixtures/addon-load/go.golden.json        tests/addons_checks.rs
  *   fixtures/providers/expected.go.json       tests/providers_fixture.rs
  *   fixtures/trigger_feature/expected.go.json tests/trigger_feature_fixture.rs
+ *   fixtures/harness/expected.go.json         tests/harness_fixture.rs
  *   fixtures/workflow_edge/golden.json        tests/workflow_fixtures.rs
  *
  * Go is the reference, so a golden that no longer matches Go is stale. This
@@ -97,6 +98,35 @@ const stateAt = (state: Json, key: string): Json => {
 }
 const codeIn = (codes: string[]) => (d: Json) => codes.includes(d.code)
 
+/**
+ * A fixture whose `src/*.ts` Go analyses and finalizes; the golden keeps the
+ * state keys it lists and every diagnostic.
+ */
+const srcFixture = (name: string): Spec => ({
+  name,
+  golden: join(FIXTURES, name, 'expected.go.json'),
+  placeholder: '<fixture>',
+  finalize: true,
+  prepare() {
+    const root = join(FIXTURES, name)
+    return {
+      root,
+      routeFiles: readdirSync(join(root, 'src'))
+        .filter((f) => f.endsWith('.ts'))
+        .sort()
+        .map((f) => join(root, 'src', f)),
+      options: { rootDir: root, tsconfig: join(root, 'tsconfig.json') },
+    }
+  },
+  slice(go, current) {
+    const state: Json = {}
+    for (const key of Object.keys(current.state ?? {})) state[key] = stateAt(go.state, key)
+    // trigger_feature's Rust test drops the virtual-user role check from both
+    // sides, so the golden keeps it.
+    return { state, diagnostics: go.diagnostics ?? [] }
+  },
+})
+
 const SPECS: Spec[] = [
   {
     name: 'addon-load',
@@ -147,31 +177,8 @@ const SPECS: Spec[] = [
       return out
     },
   },
-  {
-    name: 'trigger_feature',
-    golden: join(FIXTURES, 'trigger_feature/expected.go.json'),
-    placeholder: '<fixture>',
-    finalize: true,
-    prepare() {
-      const root = join(FIXTURES, 'trigger_feature')
-      return {
-        root,
-        routeFiles: readdirSync(join(root, 'src'))
-          .filter((f) => f.endsWith('.ts'))
-          .sort()
-          .map((f) => join(root, 'src', f)),
-        options: { rootDir: root, tsconfig: join(root, 'tsconfig.json') },
-      }
-    },
-    slice(go, current) {
-      const state: Json = {}
-      for (const key of Object.keys(current.state ?? {}))
-        state[key] = stateAt(go.state, key)
-      // The golden keeps every diagnostic; the Rust test drops the virtual-user
-      // role check from both sides, so it stays here too.
-      return { state, diagnostics: go.diagnostics ?? [] }
-    },
-  },
+  srcFixture('trigger_feature'),
+  srcFixture('harness'),
   {
     name: 'providers',
     golden: join(FIXTURES, 'providers/expected.go.json'),

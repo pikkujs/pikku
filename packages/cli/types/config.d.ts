@@ -239,6 +239,10 @@ export interface PikkuCLICoreOutputFiles {
   attentionFuncMetaJsonFile: string
   attentionTypesFile: string
 
+  // Harness
+  harnessMetaJsonFile: string
+  harnessGateNamesFile: string
+
   // CLI
   cliWiringsFile: string
   cliWiringMetaFile: string

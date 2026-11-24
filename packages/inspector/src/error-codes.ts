@@ -163,6 +163,9 @@ export enum ErrorCode {
   // Agent scorer reference errors
   AGENT_SCORER_NOT_FOUND = 'PKU155',
 
+  // Harness gate reference errors
+  HARNESS_GATE_NOT_FOUND = 'PKU157',
+
   // Agent provider configuration errors
   AGENT_PROVIDER_OPTIONS_UNREADABLE = 'PKU156',
 

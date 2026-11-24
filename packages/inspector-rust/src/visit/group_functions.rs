@@ -8,6 +8,7 @@ use tsrs_checker::Type;
 use tsrs_core::P;
 
 use super::group_functions_node::NodeConfig;
+use super::group_harness::HARNESS_GATE_WRAPPER;
 use super::util_props::extract_used_wires;
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::{Level, codes};
@@ -50,6 +51,7 @@ pub fn is_function_helper(name: &str) -> bool {
         || name == "pikkuScenario"
         || name == "pikkuWebhookReceive"
         || name == "pikkuSubscribeFunc"
+        || name == HARNESS_GATE_WRAPPER
         || scenario_step_kind(name).is_some()
 }
 
@@ -118,6 +120,13 @@ impl Context<'_> {
         let fn_name = self.extract_function_name(node);
         let mut pikku_func_id = fn_name.pikku_func_id.clone();
         let name = fn_name.name.clone();
+        let mut gate = None;
+        if wrapper == HARNESS_GATE_WRAPPER {
+            gate = self.read_harness_gate(args[0], &fn_name.explicit_name);
+            if gate.is_none() {
+                return;
+            }
+        }
         if pikku_func_id.is_empty() {
             return;
         }
@@ -359,6 +368,13 @@ impl Context<'_> {
         }
         // A mocked function has no body: its types come from `input`/`output`
         // or the generics, and everything read off the handler is left empty.
+        if gate.is_some() && (mock || !is_function_like(handler_or_object)) {
+            self.log.critical(
+                codes::MISSING_FUNC,
+                format!("Harness gate '{name}' has no body. A gate is decided by code, so it needs a `func` that returns its findings."),
+            );
+            return;
+        }
         let handler = if mock { None } else { Some(handler_or_object) };
         if !mock && !is_function_like(handler_or_object) {
             let mut stub = FunctionMeta::default();
@@ -610,6 +626,11 @@ impl Context<'_> {
             m.subscribe = Some(SubscribeMeta { topic_pattern: pattern });
         }
         m.scenario = or_nil(is_scenario);
+        if let Some(g) = &gate {
+            m.harness = Some(true);
+            m.fail_on = g.fail_on.clone();
+            m.writes = g.writes.clone();
+        }
         m.mcp = or_nil(mcp_enabled);
         if let Some(k) = scenario_step_kind_v {
             if k != "virtualUser" {
@@ -703,7 +724,7 @@ impl Context<'_> {
             expose,
             remote,
             mcp_enabled,
-            not_rpc: is_scenario_step || is_webhook_receive || is_subscribe,
+            not_rpc: is_scenario_step || is_webhook_receive || is_subscribe || gate.is_some(),
             versioned: version != 0,
         });
     }
