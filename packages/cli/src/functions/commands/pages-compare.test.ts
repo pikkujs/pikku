@@ -299,7 +299,7 @@ describe('the capture of what a site relies on and does', () => {
 <label for="email">Email</label><input id="email" name="email" type="email" required>
 <div><div><select aria-label="Country code"><option>+49</option><option>+44</option></select><input name="phone" type="tel" aria-label="Phone"></div></div>
 <button onclick="fetch('/api/submit',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'',phone:''})})">Send</button>
-</div></main><script>localStorage.setItem('visited','1');console.log('hello from the page')</script></body></html>`
+</div>${assets ? `<iframe src="${assets}/embed" title="Booking"></iframe>` : ''}</main><script>localStorage.setItem('visited','1');console.log('hello from the page')</script></body></html>`
       const server = createServer((req, res) => {
         const host = req.headers.host!
         const assets = host.startsWith('127.0.0.1')
@@ -320,6 +320,12 @@ describe('the capture of what a site relies on and does', () => {
           res
             .writeHead(200, { 'content-type': 'text/css' })
             .end('body{margin:0}')
+        else if (req.url === '/embed')
+          res
+            .writeHead(200, { 'content-type': 'text/html' })
+            .end(
+              `<!doctype html><title>Book a session</title><h2>Choose a session</h2><div class="intake"><label for="type">Session</label><select id="type" name="type" required><option>First session 90 min</option><option>Follow-up 80 min</option></select><label for="who">Name</label><input id="who" name="who" required><button onclick="fetch('/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'',who:''})})">Book</button></div>`
+            )
         else if (req.url === '/feed')
           res
             .writeHead(200, { 'content-type': 'application/rss+xml' })
@@ -424,6 +430,19 @@ describe('the capture of what a site relies on and does', () => {
         )
       )
       assert.match(page1.accessibility, /button "Menu"/)
+      const [frame] = summary.frames
+      assert.equal(frame.src, `http://localhost:${port}/embed`)
+      assert.equal(frame.title, 'Book a session')
+      assert.ok(frame.choices.includes('Book'))
+      assert.deepEqual(frame.forms[0].fields[0].options, [
+        'First session 90 min',
+        'Follow-up 80 min',
+      ])
+      assert.deepEqual(
+        frame.submits[0].wouldSend.map((w: { path: string }) => w.path),
+        ['/book']
+      )
+      assert.deepEqual(Object.keys(frame.hosts), ['localhost'])
       assert.deepEqual(
         summary.downloads.map((d: { href: string }) => d.href),
         [`${base}/guide.pdf`]
