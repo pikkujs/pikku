@@ -4,8 +4,8 @@ import {
   PikkuKysely,
   PgKyselyLeaseService,
   PgKyselyWorkflowService,
-} from '@pikku/kysely-postgres'
-import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
+} from '@pikku/addon-kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/addon-kysely-postgres'
 import { ConsoleLogger } from '@pikku/core/services'
 import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'
 import { createSingletonServices } from '../../functions/src/services.js'

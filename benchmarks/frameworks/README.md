@@ -26,7 +26,7 @@ cookie -> better-auth `getSession` (reads the session row from SQLite; `cookieCa
 ## Held equal
 
 - better-auth 1.7.5, one shared options module (`shared/auth-options.ts`), same secret; `rateLimit` off, logging off.
-- Same SQLite driver and query: `node:sqlite` through `@pikku/kysely-node-sqlite`, `shared/db.ts`. Each cell gets its own copy of one pristine database file.
+- Same SQLite driver and query: `node:sqlite` through `@pikku/addon-kysely-node-sqlite`, `shared/db.ts`. Each cell gets its own copy of one pristine database file.
 - Same validation library and schema; same response shape; no logging (Pikku console output silenced, handlers log nothing); no compression; keep-alive; one process, no cluster; both compiled with `bun build --compile`.
 - The login happens once in setup (`shared/seed.ts`, outside every measured window, so password hashing is never measured); the session cookie is sent on every request.
 - One route table (`shared/routes.ts`): N routes `POST /api/items/r<i>`, permission `p<i mod 4>`; the same fixed request plan, round-robin, for every server. N = 1 and 30. Pikku routes are generated source (`pikku/gen-routes.ts`), one binary per N; raw-bun builds its Map from the same table at start.

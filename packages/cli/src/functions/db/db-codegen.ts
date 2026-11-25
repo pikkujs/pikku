@@ -18,7 +18,7 @@ import { ErrorCode } from '@pikku/inspector'
 import { suggestSecurityForColumn } from './sensitive-names.js'
 import { withBuiltinAnnotations } from './builtin-annotations.js'
 import { typeFamilyOf } from './column-family.js'
-import type { ColumnKind, CoercionMap } from '@pikku/kysely'
+import type { ColumnKind, CoercionMap } from '@pikku/addon-kysely'
 
 // ─── Type aliases ─────────────────────────────────────────────────────────────
 
@@ -975,7 +975,7 @@ export async function generateSchemaTypes(
     `// Attach it yourself only to a kysely your own createSingletonServices`,
     `// builds, which none of the above can reach:`,
     `//`,
-    `//   import { createCoercionPlugin } from '@pikku/kysely'`,
+    `//   import { createCoercionPlugin } from '@pikku/addon-kysely'`,
     `//   import { coercionMap } from '#pikku/db/coercion.gen.js'`,
     `//`,
     `//   const kysely = new Kysely<DB>({ dialect }).withPlugin(`,

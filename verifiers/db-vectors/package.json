@@ -2,24 +2,24 @@
   "name": "@pikku/verifiers-db-vectors",
   "type": "module",
   "private": true,
-  "description": "Vector search on both embedded databases: `pikku db migrate` creates a pgvector table in PGlite and a sqlite-vec table in SQLite (under node and under bun), and a standalone artifact — node bundle and compiled bun binary — migrates and answers a nearest-neighbour query with the extension it ships",
+  "description": "Vector search on both embedded databases: `pikku db migrate` creates a pgvector table in PGlite and a sqlite-vec table in SQLite (under node and under bun), and a standalone artifact \u2014 node bundle and compiled bun binary \u2014 migrates and answers a nearest-neighbour query with the extension it ships",
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
+    "@pikku/addon-kysely": "workspace:*",
+    "@pikku/addon-kysely-sqlite": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
-    "@pikku/kysely-sqlite": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "kysely": "^0.29.6"
   },
   "devDependencies": {
+    "@pikku/addon-kysely-bun-sqlite": "workspace:*",
+    "@pikku/addon-kysely-node-sqlite": "workspace:*",
     "@pikku/bun-server": "workspace:*",
     "@pikku/cli": "workspace:*",
     "@pikku/deploy-standalone": "workspace:*",
-    "@pikku/kysely-bun-sqlite": "workspace:*",
-    "@pikku/kysely-node-sqlite": "workspace:*",
     "@pikku/node-http-server": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/ws": "workspace:*",

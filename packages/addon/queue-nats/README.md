@@ -1,4 +1,4 @@
-# @pikku/queue-nats
+# @pikku/addon-queue-nats
 
 NATS JetStream queue, worker and scheduler services for Pikku. Backed by a
 JetStream work-queue stream, with the schedules living in the broker rather
@@ -11,13 +11,13 @@ anything older rather than silently not scheduling.
 ## Install
 
 ```bash
-npm install @pikku/queue-nats
+npm install @pikku/addon-queue-nats
 ```
 
 ## Usage
 
 ```typescript
-import { NatsServiceFactory } from '@pikku/queue-nats'
+import { NatsServiceFactory } from '@pikku/addon-queue-nats'
 
 const factory = new NatsServiceFactory({
   servers: 'nats://localhost:4222',

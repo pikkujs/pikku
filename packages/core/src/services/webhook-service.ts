@@ -155,7 +155,7 @@ export abstract class WebhookService {
   /**
    * The three methods below are optional capability: the default queue-only
    * service keeps no history, and a store-backed implementation (e.g.
-   * `KyselyWebhookService` in `@pikku/kysely`) overrides them.
+   * `KyselyWebhookService` in `@pikku/addon-kysely`) overrides them.
    *
    * Only the write throws. A write that goes nowhere loses the caller's data,
    * so it has to say so; a read of a history nobody keeps is honestly empty,

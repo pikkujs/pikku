@@ -129,7 +129,7 @@ bun run --filter '@pikku/core' build
 ## Testing Guidelines
 
 - Write unit tests for new functionality
-- Tests run on bun's test runner (`bun test`), through each package's `run-tests.sh`. A few packages (`@pikku/ws`, `@pikku/uws` and `@pikku/kysely`) stay on Node's runner, and their `run-tests.sh` says why
+- Tests run on bun's test runner (`bun test`), through each package's `run-tests.sh`. A few packages (`@pikku/ws`, `@pikku/uws` and `@pikku/addon-kysely`) stay on Node's runner, and their `run-tests.sh` says why
 - Test files should be named `*.test.ts`
 - Ensure tests cover both success and error cases
 - Mock external dependencies appropriately

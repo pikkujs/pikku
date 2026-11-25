@@ -3,8 +3,8 @@
  * project sharing one broker.
  *
  * Build side: `pikku deploy plan --provider standalone` selects the `nats`
- * service of @pikku/queue-nats (opted in with wireAddon); the same
- * source planned for Cloudflare is refused: a Worker does not run the server lifecycle.
+ * service of @pikku/addon-queue-nats (opted in with wireAddon); the same
+ * source planned for Cloudflare is refused: the service has no variant for a Worker.
  * Run side: against a real nats-server (2.14+, JetStream) with one stream per
  * stage created up front and one restricted user per stage (broker.ts), two copies of
  * the bundle each get only their own jobs and crons, a restart keeps a stage's
@@ -126,7 +126,8 @@ await check(
   () => {
     if (
       !cloudflareRefusal.includes('nats/nats') ||
-      !cloudflareRefusal.includes('does not run the server lifecycle')
+      !cloudflareRefusal.includes('PKU388') ||
+      !cloudflareRefusal.includes('has no variant for the cloudflare deploy')
     )
       throw new Error(
         `the Cloudflare plan did not refuse the nats service:\n${cloudflareRefusal}`

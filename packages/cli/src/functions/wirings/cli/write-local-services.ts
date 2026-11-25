@@ -44,7 +44,7 @@ export const projectHasDatabase = (
   existsSync(join(config.rootDir, 'db', 'sqlite')) ||
   existsSync(join(config.rootDir, 'db', 'postgres')) ||
   existsSync(join(config.rootDir, 'db', 'mysql')) ||
-  declared.has('@pikku/kysely') ||
+  declared.has('@pikku/addon-kysely') ||
   declared.has('kysely')
 
 /**
@@ -95,8 +95,8 @@ export const writeLocalServices = async (
           ? '.pikku-runtime/dev.db'
           : undefined,
         drivers: {
-          nodeSqlite: declared.has('@pikku/kysely-node-sqlite'),
-          bunSqlite: declared.has('@pikku/kysely-bun-sqlite'),
+          nodeSqlite: declared.has('@pikku/addon-kysely-node-sqlite'),
+          bunSqlite: declared.has('@pikku/addon-kysely-bun-sqlite'),
           pg: declared.has('pg'),
           pgTypes: declared.has('@types/pg'),
           mysql: declared.has('mysql2'),

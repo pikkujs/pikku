@@ -7,7 +7,7 @@ import {
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import Database from 'better-sqlite3'
 import { Kysely, SqliteDialect } from 'kysely'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import type { KyselyPikkuDB } from '@pikku/addon-kysely'
 import path from 'node:path'
 import { auth } from './auth.js'
 

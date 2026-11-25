@@ -1,5 +1,5 @@
 {
-  "name": "@pikku/queue-nats",
+  "name": "@pikku/addon-queue-nats",
   "version": "0.12.7",
   "repository": {
     "type": "git",

@@ -8,12 +8,12 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
+    "@pikku/addon-kysely": "workspace:*",
+    "@pikku/addon-kysely-mysql": "workspace:*",
+    "@pikku/addon-kysely-postgres": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/fetch": "workspace:*",
     "@pikku/jose": "workspace:*",
-    "@pikku/kysely": "workspace:*",
-    "@pikku/kysely-mysql": "workspace:*",
-    "@pikku/kysely-postgres": "workspace:*",
     "@pikku/queue-bullmq": "workspace:*",
     "@pikku/queue-pg-boss": "workspace:*",
     "@pikku/redis": "workspace:*",

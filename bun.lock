@@ -51,11 +51,11 @@
     "benchmarks/frameworks/pikku": {
       "name": "@pikku/bench-frameworks-pikku",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
         "@pikku/bench-frameworks-shared": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/bun-server": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
         "@pikku/schedule": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "better-auth": "1.7.7",
@@ -81,8 +81,8 @@
       "name": "@pikku/bench-frameworks-shared",
       "dependencies": {
         "@cfworker/json-schema": "^4.1.1",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-node-sqlite": "workspace:*",
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-node-sqlite": "workspace:*",
         "better-auth": "1.7.7",
         "kysely": "0.29.6",
         "zod": "^4",
@@ -114,6 +114,11 @@
         "@pikku/addon-gmail": "0.1.2",
         "@pikku/addon-graph": "workspace:*",
         "@pikku/addon-hmac-signer": "workspace:*",
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-bun-sqlite": "workspace:*",
+        "@pikku/addon-kysely-mysql": "workspace:*",
+        "@pikku/addon-kysely-postgres": "workspace:*",
+        "@pikku/addon-kysely-sqlite": "workspace:*",
         "@pikku/addon-mandrill": "0.1.2",
         "@pikku/addon-oauth-api": "workspace:*",
         "@pikku/addon-todos": "workspace:*",
@@ -124,11 +129,6 @@
         "@pikku/e2e-functions": "workspace:*",
         "@pikku/fetch": "workspace:*",
         "@pikku/jose": "workspace:*",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-bun-sqlite": "workspace:*",
-        "@pikku/kysely-mysql": "workspace:*",
-        "@pikku/kysely-postgres": "workspace:*",
-        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/redis": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "@pikku/websocket": "workspace:*",
@@ -270,6 +270,122 @@
         "vite": "^8.3.4",
       },
     },
+    "packages/addon/kysely": {
+      "name": "@pikku/addon-kysely",
+      "version": "0.13.47",
+      "bin": {
+        "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
+      },
+      "dependencies": {
+        "kysely": "^0.29.6",
+      },
+      "devDependencies": {
+        "@electric-sql/pglite": "^0.5.10",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/better-sqlite3": "^9.6.0",
+        "better-sqlite3": "^13.0.3",
+        "kysely-codegen": "^0.20.0",
+        "kysely-postgres-js": "^5.0.1",
+        "postgres": "^3.4.9",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.161",
+      },
+    },
+    "packages/addon/kysely-bun-sqlite": {
+      "name": "@pikku/addon-kysely-bun-sqlite",
+      "version": "0.12.12",
+      "dependencies": {
+        "@pikku/addon-kysely": "^0.13.43",
+        "@pikku/addon-kysely-sqlite": "^0.12.19",
+        "kysely": "^0.29.6",
+      },
+      "devDependencies": {
+        "@pikku/core": "^0.12.156",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/bun": "^1.4.3",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.156",
+        "zod": "^4",
+      },
+    },
+    "packages/addon/kysely-mysql": {
+      "name": "@pikku/addon-kysely-mysql",
+      "version": "0.12.31",
+      "dependencies": {
+        "@pikku/addon-kysely": "^0.13.47",
+        "kysely": "^0.29.6",
+        "mysql2": "^3.24.6",
+      },
+      "devDependencies": {
+        "@pikku/core": "^0.12.161",
+        "@standard-schema/spec": "^1.1.0",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.161",
+        "zod": "^4",
+      },
+    },
+    "packages/addon/kysely-node-sqlite": {
+      "name": "@pikku/addon-kysely-node-sqlite",
+      "version": "0.12.11",
+      "dependencies": {
+        "@pikku/addon-kysely": "^0.13.43",
+        "@pikku/addon-kysely-sqlite": "^0.12.19",
+        "kysely": "^0.29.6",
+      },
+      "devDependencies": {
+        "@pikku/core": "^0.12.156",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "tsx": "^4.23.15",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.156",
+        "zod": "^4",
+      },
+    },
+    "packages/addon/kysely-postgres": {
+      "name": "@pikku/addon-kysely-postgres",
+      "version": "0.12.32",
+      "dependencies": {
+        "@pikku/addon-kysely": "^0.13.47",
+        "kysely": "^0.29.6",
+        "kysely-postgres-js": "^5.0.1",
+        "postgres": "^3.4.9",
+      },
+      "devDependencies": {
+        "@electric-sql/pglite": "^0.5.10",
+        "@pikku/core": "^0.12.161",
+        "@standard-schema/spec": "^1.1.0",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.161",
+        "zod": "^4",
+      },
+    },
+    "packages/addon/kysely-sqlite": {
+      "name": "@pikku/addon-kysely-sqlite",
+      "version": "0.12.19",
+      "dependencies": {
+        "@pikku/addon-kysely": "^0.13.43",
+        "kysely": "^0.29.6",
+      },
+      "devDependencies": {
+        "@pikku/core": "^0.12.156",
+        "@standard-schema/spec": "^1.1.0",
+        "zod": "^4",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.156",
+        "zod": "^4",
+      },
+    },
     "packages/addon/pikku-admin": {
       "name": "@pikku/addon-admin",
       "version": "0.12.19",
@@ -293,13 +409,13 @@
       "name": "@pikku/addon-altcha",
       "version": "0.0.1",
       "dependencies": {
-        "@pikku/kysely": "^0.13.47",
+        "@pikku/addon-kysely": "^0.13.47",
         "altcha-lib": "^2.9.0",
       },
       "devDependencies": {
+        "@pikku/addon-kysely-bun-sqlite": "*",
         "@pikku/cli": "^0.12.215",
         "@pikku/core": "*",
-        "@pikku/kysely-bun-sqlite": "*",
         "@standard-schema/spec": "^1.1.0",
         "kysely": "^0.29.6",
         "zod": "^4",
@@ -368,7 +484,7 @@
       },
     },
     "packages/addon/queue-nats": {
-      "name": "@pikku/queue-nats",
+      "name": "@pikku/addon-queue-nats",
       "version": "0.12.7",
       "dependencies": {
         "@nats-io/jetstream": "^3.4.0",
@@ -419,6 +535,10 @@
         "@electric-sql/pglite": "0.5.10",
         "@electric-sql/pglite-pgvector": "0.0.11",
         "@jridgewell/trace-mapping": "^0.3.31",
+        "@pikku/addon-kysely": "^0.13.47",
+        "@pikku/addon-kysely-mysql": "^0.12.31",
+        "@pikku/addon-kysely-postgres": "^0.12.32",
+        "@pikku/addon-kysely-sqlite": "^0.12.19",
         "@pikku/ai-vercel": "^0.12.17",
         "@pikku/better-auth": "^0.12.66",
         "@pikku/bun-server": "^0.12.18",
@@ -432,10 +552,7 @@
         "@pikku/inspector-go": "^0.12.19",
         "@pikku/jose": "^0.12.11",
         "@pikku/knowledge": "^0.12.23",
-        "@pikku/kysely": "^0.13.47",
-        "@pikku/kysely-mysql": "^0.12.31",
-        "@pikku/kysely-postgres": "^0.12.32",
-        "@pikku/kysely-sqlite": "^0.12.19",
+        "@pikku/kysely": "^0.13.46",
         "@pikku/migrator-sql": "^0.12.13",
         "@pikku/n8n-import": "^0.0.12",
         "@pikku/node-http-server": "^0.12.22",
@@ -570,11 +687,11 @@
         "@pikku/deploy": "^0.12.18",
       },
       "devDependencies": {
-        "@pikku/kysely": "^0.13.39",
+        "@pikku/addon-kysely": "^0.13.39",
       },
       "peerDependencies": {
+        "@pikku/addon-kysely": "^0.13.39",
         "@pikku/core": "^0.12.148",
-        "@pikku/kysely": "^0.13.39",
       },
     },
     "packages/deploy/deploy-core": {
@@ -837,8 +954,8 @@
       "devDependencies": {
         "@cloudflare/vitest-pool-workers": "^0.23.0",
         "@cloudflare/workers-types": "^5.20261016.1",
+        "@pikku/addon-kysely": "^0.13.46",
         "@pikku/core": "^0.12.162",
-        "@pikku/kysely": "^0.13.46",
         "@pikku/modelcontextprotocol": "^0.12.19",
         "@types/better-sqlite3": "^9.6.0",
         "@vitest/runner": "^4.1.12",
@@ -848,8 +965,8 @@
         "vitest": "^4.1.12",
       },
       "peerDependencies": {
+        "@pikku/addon-kysely": "^0.13.46",
         "@pikku/core": "^0.12.162",
-        "@pikku/kysely": "^0.13.46",
         "@pikku/modelcontextprotocol": "^0.12.19",
         "kysely": "^0.29.0",
       },
@@ -1158,105 +1275,6 @@
         "@pikku/core": "^0.12.159",
       },
     },
-    "packages/services/kysely": {
-      "name": "@pikku/kysely",
-      "version": "0.13.47",
-      "bin": {
-        "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js",
-      },
-      "dependencies": {
-        "kysely": "^0.29.6",
-      },
-      "devDependencies": {
-        "@electric-sql/pglite": "^0.5.10",
-        "@types/better-sqlite3": "^9.6.0",
-        "better-sqlite3": "^13.0.3",
-        "kysely-codegen": "^0.20.0",
-        "kysely-postgres-js": "^5.0.1",
-        "postgres": "^3.4.9",
-      },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.161",
-      },
-    },
-    "packages/services/kysely-bun-sqlite": {
-      "name": "@pikku/kysely-bun-sqlite",
-      "version": "0.12.12",
-      "dependencies": {
-        "@pikku/kysely": "^0.13.43",
-        "@pikku/kysely-sqlite": "^0.12.19",
-        "kysely": "^0.29.6",
-      },
-      "devDependencies": {
-        "@pikku/core": "^0.12.156",
-        "@types/bun": "^1.4.3",
-      },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.156",
-      },
-    },
-    "packages/services/kysely-mysql": {
-      "name": "@pikku/kysely-mysql",
-      "version": "0.12.31",
-      "dependencies": {
-        "@pikku/kysely": "^0.13.47",
-        "kysely": "^0.29.6",
-      },
-      "devDependencies": {
-        "@pikku/core": "^0.12.161",
-      },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.161",
-      },
-    },
-    "packages/services/kysely-node-sqlite": {
-      "name": "@pikku/kysely-node-sqlite",
-      "version": "0.12.11",
-      "dependencies": {
-        "@pikku/kysely": "^0.13.43",
-        "@pikku/kysely-sqlite": "^0.12.19",
-        "kysely": "^0.29.6",
-      },
-      "devDependencies": {
-        "@pikku/core": "^0.12.156",
-        "@types/node": "^26",
-        "tsx": "^4.23.15",
-      },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.156",
-      },
-    },
-    "packages/services/kysely-postgres": {
-      "name": "@pikku/kysely-postgres",
-      "version": "0.12.32",
-      "dependencies": {
-        "@pikku/kysely": "^0.13.47",
-        "kysely": "^0.29.6",
-        "kysely-postgres-js": "^5.0.1",
-        "postgres": "^3.4.9",
-      },
-      "devDependencies": {
-        "@electric-sql/pglite": "^0.5.10",
-        "@pikku/core": "^0.12.161",
-      },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.161",
-      },
-    },
-    "packages/services/kysely-sqlite": {
-      "name": "@pikku/kysely-sqlite",
-      "version": "0.12.19",
-      "dependencies": {
-        "@pikku/kysely": "^0.13.43",
-        "kysely": "^0.29.6",
-      },
-      "devDependencies": {
-        "@pikku/core": "^0.12.156",
-      },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.156",
-      },
-    },
     "packages/services/mongodb": {
       "name": "@pikku/mongodb",
       "version": "0.12.28",
@@ -1374,10 +1392,10 @@
       "dependencies": {
         "@ai-sdk/anthropic": "^4.0.82",
         "@ai-sdk/openai": "^4.0.96",
+        "@pikku/addon-kysely-postgres": "^0.12.32",
         "@pikku/ai-vercel": "^0.12.17",
         "@pikku/core": "^0.12.162",
         "@pikku/express": "^0.12.19",
-        "@pikku/kysely-postgres": "^0.12.32",
         "@pikku/schema-cfworker": "^0.12.9",
         "kysely": "^0.29.6",
         "kysely-postgres-js": "^5.0.1",
@@ -1422,9 +1440,9 @@
     "recipes/aws-lambda-websocket": {
       "name": "@pikku/templates-aws-lambda-websocket",
       "dependencies": {
+        "@pikku/addon-kysely-postgres": "^0.12.32",
         "@pikku/aws-services": "^0.12.19",
         "@pikku/core": "^0.12.162",
-        "@pikku/kysely-postgres": "^0.12.32",
         "@pikku/lambda": "^0.12.16",
         "kysely": "^0.29.6",
         "kysely-postgres-js": "^5.0.1",
@@ -1612,11 +1630,11 @@
       "name": "@pikku/templates-functions",
       "dependencies": {
         "@pikku/addon-graph": "workspace:*",
+        "@pikku/addon-kysely": "workspace:^",
         "@pikku/better-auth": "^0.12.66",
         "@pikku/code-edit": "workspace:*",
         "@pikku/core": "^0.12.162",
         "@pikku/jose": "workspace:^",
-        "@pikku/kysely": "workspace:^",
         "@pikku/schema-cfworker": "^0.12.9",
         "@pikku/templates-function-addon": "workspace:*",
         "better-auth": "^1.7.10",
@@ -1628,6 +1646,8 @@
       "devDependencies": {
         "@aws-sdk/client-sqs": "^3.1152.0",
         "@modelcontextprotocol/sdk": "1.32.1",
+        "@pikku/addon-kysely-node-sqlite": "workspace:*",
+        "@pikku/addon-kysely-sqlite": "workspace:*",
         "@pikku/azure-functions": "workspace:*",
         "@pikku/bun-server": "workspace:*",
         "@pikku/cli": "^0.12.216",
@@ -1637,8 +1657,6 @@
         "@pikku/deploy-serverless": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
         "@pikku/fetch": "^0.12.16",
-        "@pikku/kysely-node-sqlite": "workspace:*",
-        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/lambda": "workspace:*",
         "@pikku/modelcontextprotocol": "workspace:*",
         "@pikku/node-http-server": "workspace:*",
@@ -1677,10 +1695,10 @@
     "recipes/mesh-rpc-pg": {
       "name": "@pikku/templates-mesh-rpc-pg",
       "dependencies": {
+        "@pikku/addon-kysely-postgres": "^0.12.32",
         "@pikku/core": "^0.12.162",
         "@pikku/express": "^0.12.19",
         "@pikku/jose": "^0.12.11",
-        "@pikku/kysely-postgres": "^0.12.32",
         "@pikku/schema-cfworker": "^0.12.9",
         "kysely": "^0.29.6",
         "kysely-postgres-js": "^5.0.1",
@@ -1824,9 +1842,9 @@
     "recipes/workflows-pg-boss": {
       "name": "@pikku/templates-workflows-pg-boss",
       "dependencies": {
+        "@pikku/addon-kysely-postgres": "^0.12.32",
         "@pikku/core": "^0.12.162",
         "@pikku/express": "^0.12.19",
-        "@pikku/kysely-postgres": "^0.12.32",
         "@pikku/queue-pg-boss": "^0.12.14",
         "kysely": "^0.29.6",
         "kysely-postgres-js": "^5.0.1",
@@ -1862,13 +1880,13 @@
       "name": "@pikku/example-field-service",
       "dependencies": {
         "@ai-sdk/openai-compatible": "^3.0.71",
+        "@pikku/addon-kysely": "workspace:^",
+        "@pikku/addon-kysely-sqlite": "workspace:^",
         "@pikku/ai-vercel": "workspace:*",
         "@pikku/better-auth": "^0.12.66",
         "@pikku/core": "^0.12.162",
         "@pikku/fetch": "^0.12.16",
         "@pikku/jose": "^0.12.11",
-        "@pikku/kysely": "workspace:^",
-        "@pikku/kysely-sqlite": "workspace:^",
         "@pikku/react": "workspace:*",
         "@pikku/schema-cfworker": "^0.12.9",
         "@pikku/websocket": "^0.12.7",
@@ -1896,6 +1914,8 @@
       "name": "@pikku/example-online-shop",
       "dependencies": {
         "@ai-sdk/openai-compatible": "^3.0.71",
+        "@pikku/addon-kysely": "workspace:^",
+        "@pikku/addon-kysely-sqlite": "workspace:^",
         "@pikku/addon-stripe": "^0.1.8",
         "@pikku/ai-vercel": "workspace:*",
         "@pikku/better-auth": "^0.12.66",
@@ -1903,7 +1923,6 @@
         "@pikku/core": "^0.12.162",
         "@pikku/fetch": "^0.12.16",
         "@pikku/jose": "^0.12.11",
-        "@pikku/kysely": "workspace:^",
         "@pikku/schema-cfworker": "^0.12.9",
         "@pikku/websocket": "^0.12.7",
         "@standard-schema/spec": "^1.1.0",
@@ -2107,9 +2126,9 @@
     "verifiers/better-auth": {
       "name": "@pikku/verifiers-better-auth",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "better-auth": "^1.7.10",
         "better-sqlite3": "^13.0.3",
@@ -2153,11 +2172,11 @@
       "name": "@pikku/verifiers-ci",
       "dependencies": {
         "@pikku/addon-admin": "workspace:*",
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-bun-sqlite": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/bun-server": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-bun-sqlite": "workspace:*",
         "@pikku/schedule": "workspace:*",
         "@pikku/ws": "workspace:*",
         "better-auth": "^1.7.10",
@@ -2198,12 +2217,12 @@
     "verifiers/db-schema": {
       "name": "@pikku/verifiers-db-schema",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-mysql": "workspace:*",
+        "@pikku/addon-kysely-postgres": "workspace:*",
+        "@pikku/addon-kysely-sqlite": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-mysql": "workspace:*",
-        "@pikku/kysely-postgres": "workspace:*",
-        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "better-auth": "^1.7.10",
         "better-sqlite3": "^13.0.3",
@@ -2227,7 +2246,7 @@
       "name": "@pikku/verifier-db-addon",
       "version": "0.1.0",
       "dependencies": {
-        "@pikku/kysely": "^0.13.47",
+        "@pikku/addon-kysely": "^0.13.47",
       },
       "devDependencies": {
         "@pikku/cli": "*",
@@ -2246,7 +2265,7 @@
       "name": "@pikku/verifier-db-remote-addon",
       "version": "0.1.0",
       "dependencies": {
-        "@pikku/kysely": "^0.13.47",
+        "@pikku/addon-kysely": "^0.13.47",
       },
       "devDependencies": {
         "@pikku/cli": "*",
@@ -2264,10 +2283,10 @@
     "verifiers/db-types": {
       "name": "@pikku/verifiers-db-types",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-postgres": "workspace:*",
+        "@pikku/addon-kysely-sqlite": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-postgres": "workspace:*",
-        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "kysely": "^0.29.6",
       },
@@ -2281,18 +2300,18 @@
     "verifiers/db-vectors": {
       "name": "@pikku/verifiers-db-vectors",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-sqlite": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "kysely": "^0.29.6",
       },
       "devDependencies": {
+        "@pikku/addon-kysely-bun-sqlite": "workspace:*",
+        "@pikku/addon-kysely-node-sqlite": "workspace:*",
         "@pikku/bun-server": "workspace:*",
         "@pikku/cli": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
-        "@pikku/kysely-bun-sqlite": "workspace:*",
-        "@pikku/kysely-node-sqlite": "workspace:*",
         "@pikku/node-http-server": "workspace:*",
         "@pikku/schedule": "workspace:*",
         "@pikku/ws": "workspace:*",
@@ -2350,9 +2369,9 @@
     "verifiers/deploy-standalone-nats": {
       "name": "@pikku/verifiers-deploy-standalone-nats",
       "dependencies": {
+        "@pikku/addon-queue-nats": "workspace:*",
         "@pikku/bun-server": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/queue-nats": "workspace:*",
         "@pikku/schedule": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
       },
@@ -2384,16 +2403,16 @@
     "verifiers/dev-platform-services": {
       "name": "@pikku/verifiers-dev-platform-services",
       "dependencies": {
+        "@pikku/addon-kysely-postgres": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely-postgres": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
       },
       "devDependencies": {
+        "@pikku/addon-kysely": "workspace:*",
         "@pikku/cli": "workspace:*",
         "@pikku/deploy": "workspace:*",
         "@pikku/deploy-cloudflare": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
-        "@pikku/kysely": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
         "@verifier/svc-bad": "workspace:*",
@@ -2405,7 +2424,7 @@
     "verifiers/dev-platform-services/svc-bad": {
       "name": "@verifier/svc-bad",
       "dependencies": {
-        "@pikku/kysely-sqlite": "workspace:*",
+        "@pikku/addon-kysely-sqlite": "workspace:*",
       },
     },
     "verifiers/dev-platform-services/svc-notify": {
@@ -2545,9 +2564,9 @@
     "verifiers/next-better-auth": {
       "name": "@pikku/verifiers-next-better-auth",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
         "@pikku/next": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "better-auth": "^1.7.10",
@@ -2726,10 +2745,10 @@
     "verifiers/providers-deploy": {
       "name": "@pikku/verifiers-providers-deploy",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-bun-sqlite": "workspace:*",
+        "@pikku/addon-kysely-sqlite": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-bun-sqlite": "workspace:*",
-        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
       },
       "devDependencies": {
@@ -2801,8 +2820,8 @@
     "verifiers/rate-limits": {
       "name": "@pikku/verifiers-rate-limits",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
         "@pikku/redis": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "better-sqlite3": "^13.0.3",
@@ -2855,10 +2874,10 @@
     "verifiers/tanstack-start-better-auth": {
       "name": "@pikku/verifiers-tanstack-start-better-auth",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
         "@pikku/fetch": "workspace:*",
-        "@pikku/kysely": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "@pikku/tanstack-start": "workspace:*",
         "@pikku/uws": "workspace:*",
@@ -2973,9 +2992,9 @@
     "verifiers/virtual-users": {
       "name": "@pikku/verifiers-virtual-users",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
         "@pikku/better-auth": "workspace:*",
         "@pikku/core": "workspace:*",
-        "@pikku/kysely": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
         "better-auth": "^1.7.10",
         "better-sqlite3": "^13.0.3",
@@ -3007,12 +3026,12 @@
     "verifiers/workflows": {
       "name": "@pikku/verifiers-workflows",
       "dependencies": {
+        "@pikku/addon-kysely": "workspace:*",
+        "@pikku/addon-kysely-mysql": "workspace:*",
+        "@pikku/addon-kysely-postgres": "workspace:*",
         "@pikku/core": "workspace:*",
         "@pikku/fetch": "workspace:*",
         "@pikku/jose": "workspace:*",
-        "@pikku/kysely": "workspace:*",
-        "@pikku/kysely-mysql": "workspace:*",
-        "@pikku/kysely-postgres": "workspace:*",
         "@pikku/queue-bullmq": "workspace:*",
         "@pikku/queue-pg-boss": "workspace:*",
         "@pikku/redis": "workspace:*",
@@ -3847,9 +3866,23 @@
 
     "@pikku/addon-hmac-signer": ["@pikku/addon-hmac-signer@workspace:e2e/packages/hmac-signer"],
 
+    "@pikku/addon-kysely": ["@pikku/addon-kysely@workspace:packages/addon/kysely"],
+
+    "@pikku/addon-kysely-bun-sqlite": ["@pikku/addon-kysely-bun-sqlite@workspace:packages/addon/kysely-bun-sqlite"],
+
+    "@pikku/addon-kysely-mysql": ["@pikku/addon-kysely-mysql@workspace:packages/addon/kysely-mysql"],
+
+    "@pikku/addon-kysely-node-sqlite": ["@pikku/addon-kysely-node-sqlite@workspace:packages/addon/kysely-node-sqlite"],
+
+    "@pikku/addon-kysely-postgres": ["@pikku/addon-kysely-postgres@workspace:packages/addon/kysely-postgres"],
+
+    "@pikku/addon-kysely-sqlite": ["@pikku/addon-kysely-sqlite@workspace:packages/addon/kysely-sqlite"],
+
     "@pikku/addon-mandrill": ["@pikku/addon-mandrill@0.1.2", "", { "peerDependencies": { "@pikku/core": "^0.12.36", "zod": "^4" } }, "sha512-i7zXOPOYQaFoo2Q0quM6/TkaY4lWlBqutSfHNXJU8OwHOGtswExaaD80Tv0A5SY7GfyBAaagJ2eKs5Gb2Hxb+g=="],
 
     "@pikku/addon-oauth-api": ["@pikku/addon-oauth-api@workspace:e2e/packages/oauth-api"],
+
+    "@pikku/addon-queue-nats": ["@pikku/addon-queue-nats@workspace:packages/addon/queue-nats"],
 
     "@pikku/addon-stripe": ["@pikku/addon-stripe@0.1.8", "", { "dependencies": { "stripe": "^17.0.0" }, "peerDependencies": { "@pikku/core": "^0.12.89", "zod": "^4" } }, "sha512-oFdEL58b4BvXRTkIW/8CxxRHVuJB/F5nIIzvPQl8MWDTVIGq3IM5Pe6DaWrsAFdL8NrmKHfQ+2/yj7KMoIBpBw=="],
 
@@ -3931,17 +3964,7 @@
 
     "@pikku/knowledge": ["@pikku/knowledge@workspace:packages/knowledge"],
 
-    "@pikku/kysely": ["@pikku/kysely@workspace:packages/services/kysely"],
-
-    "@pikku/kysely-bun-sqlite": ["@pikku/kysely-bun-sqlite@workspace:packages/services/kysely-bun-sqlite"],
-
-    "@pikku/kysely-mysql": ["@pikku/kysely-mysql@workspace:packages/services/kysely-mysql"],
-
-    "@pikku/kysely-node-sqlite": ["@pikku/kysely-node-sqlite@workspace:packages/services/kysely-node-sqlite"],
-
-    "@pikku/kysely-postgres": ["@pikku/kysely-postgres@workspace:packages/services/kysely-postgres"],
-
-    "@pikku/kysely-sqlite": ["@pikku/kysely-sqlite@workspace:packages/services/kysely-sqlite"],
+    "@pikku/kysely": ["@pikku/kysely@0.13.47", "", { "dependencies": { "kysely": "^0.29.6" }, "peerDependencies": { "@pikku/core": "^0.12.161" }, "bin": { "pikku-kysely-pure": "dist/bin/pikku-kysely-pure.js" } }, "sha512-8ipiDlaLXw7qZl5IJVcKhDCL/73FcB/h1ntbkxv1GUm5rJRVxNUOW9/SUx6o4L24zK99GsolN7inqyD6V3Xatg=="],
 
     "@pikku/lambda": ["@pikku/lambda@workspace:packages/runtimes/aws-lambda"],
 
@@ -3966,8 +3989,6 @@
     "@pikku/playwright": ["@pikku/playwright@workspace:packages/playwright"],
 
     "@pikku/queue-bullmq": ["@pikku/queue-bullmq@workspace:packages/services/queue-bullmq"],
-
-    "@pikku/queue-nats": ["@pikku/queue-nats@workspace:packages/addon/queue-nats"],
 
     "@pikku/queue-pg-boss": ["@pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss"],
 
@@ -5155,7 +5176,7 @@
 
     "devtools-protocol": ["devtools-protocol@0.0.1696802", "", {}, "sha512-FO5/SENfvc2K8wRnWQflKcwuoTH4dBkXCWTQ9ebIWtuX8JM5+ZvCotaEmkfh21pO7TvIKGTM3hG4xFiq9WTwmg=="],
 
-    "diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
+    "diff": ["diff@8.0.4", "", {}, "sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw=="],
 
     "diffie-hellman": ["diffie-hellman@5.0.3", "", { "dependencies": { "bn.js": "^4.1.0", "miller-rabin": "^4.0.0", "randombytes": "^2.0.0" } }, "sha512-kqag/Nl+f3GwyK25fhUMYj81BUOrZ9IuJsjIcDE5icNM9FJHAVm3VcUDxdLPoQtTuUylWm6ZIknYJwwaPxsUzg=="],
 
@@ -5571,7 +5592,7 @@
 
     "js-tokens": ["js-tokens@4.0.0", "", {}, "sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ=="],
 
-    "js-yaml": ["js-yaml@5.4.3", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.mjs" } }, "sha512-yzzNtgczwgoVHNigCyKTXcQJU4Y8t/ikU4UxXW0BvrLfHTGWZhsNcOT2s/a7vn81/4KqVnNmHjaUEPlvWnNwVw=="],
+    "js-yaml": ["js-yaml@4.3.2", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA=="],
 
     "jsep": ["jsep@1.4.0", "", {}, "sha512-B7qPcEVE3NVkmSJbaYxvv4cHkVW7DQsZz13pUMrfS8z8Q/BuShN+gcTXrUlPiGqM2/t/EEaI030bpxMqY8gMlw=="],
 
@@ -6617,6 +6638,8 @@
 
     "@ai-sdk/provider-utils/undici": ["undici@7.30.0", "", {}, "sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ=="],
 
+    "@apidevtools/json-schema-ref-parser/js-yaml": ["js-yaml@5.4.3", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.mjs" } }, "sha512-yzzNtgczwgoVHNigCyKTXcQJU4Y8t/ikU4UxXW0BvrLfHTGWZhsNcOT2s/a7vn81/4KqVnNmHjaUEPlvWnNwVw=="],
+
     "@assistant-ui/core/nanoid": ["nanoid@6.0.2", "", { "bin": { "nanoid": "bin/nanoid.js" } }, "sha512-hIvVOb9Qr1p/9CNNLOe0OlWvgx/ziTsVwKN/GDSsuArN2K0wDiafP3s0SWmsm7o2BdnyS8Z9Z64NFBUbn6ziBg=="],
 
     "@azure/functions/cookie": ["cookie@0.7.2", "", {}, "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w=="],
@@ -6729,6 +6752,8 @@
 
     "@tanstack/react-start/vite": ["vite@8.3.4", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.7", "postcss": "^8.5.29", "rolldown": "~1.2.12", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.7.1", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-IftLE8phJhdNRIGNEV4JCCvfNScoZQVfcXaN8TQropWGJtOHcu+iAB9pHcuGvmEb/kddw0LBe/jS8ztdC6xdiQ=="],
 
+    "@tanstack/router-utils/diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
+
     "@tanstack/start-plugin-core/source-map": ["source-map@0.7.6", "", {}, "sha512-i5uvt8C3ikiWeNZSVZNWcfZPItFQOsYTUAOkcUPGd8DqDy1uOUikjt5dG+uRlwyvR108Fb9DOd4GvXfT0N2/uQ=="],
 
     "@tanstack/start-plugin-core/vite": ["vite@8.3.4", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.7", "postcss": "^8.5.29", "rolldown": "~1.2.12", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.7.1", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-IftLE8phJhdNRIGNEV4JCCvfNScoZQVfcXaN8TQropWGJtOHcu+iAB9pHcuGvmEb/kddw0LBe/jS8ztdC6xdiQ=="],
@@ -6833,8 +6858,6 @@
 
     "cookie-parser/cookie-signature": ["cookie-signature@1.0.6", "", {}, "sha512-QADzlaHc8icV8I7vbaJXJwod9HWYp8uCqf1xa4OfNu1T7JVxQIrUgOWtHdNDtPiywmFbiS12VjotIXLrKM3orQ=="],
 
-    "cosmiconfig/js-yaml": ["js-yaml@4.3.2", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA=="],
-
     "crc32-stream/readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
 
     "create-ecdh/bn.js": ["bn.js@4.12.5", "", {}, "sha512-3aRg6/JxfffFD+OlOjOFR3Vo79l39ooBTFucxx+MT3dhCtzn3EmiUPQo+6/OZuI2jbXi3YKgmiTFBgChQMwIRQ=="],
@@ -6896,8 +6919,6 @@
     "jsonstream2/through2": ["through2@3.0.2", "", { "dependencies": { "inherits": "^2.0.4", "readable-stream": "2 || 3" } }, "sha512-enaDQ4MUyP2W6ZyT6EsMzqBPZaM/avg8iuo+l2d3QCs0J+6RaqkHV/2/lOwDTueBHeJ/2LG9lrLW3d5rWPucuQ=="],
 
     "kysely-codegen/chalk": ["chalk@4.1.2", "", { "dependencies": { "ansi-styles": "^4.1.0", "supports-color": "^7.1.0" } }, "sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA=="],
-
-    "kysely-codegen/diff": ["diff@8.0.4", "", {}, "sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw=="],
 
     "make-dir/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
@@ -6973,6 +6994,8 @@
 
     "serverless-offline/jose": ["jose@5.10.0", "", {}, "sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg=="],
 
+    "sinon/diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
+
     "stream-browserify/readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
 
     "stream-http/readable-stream": ["readable-stream@3.6.2", "", { "dependencies": { "inherits": "^2.0.3", "string_decoder": "^1.1.1", "util-deprecate": "^1.0.1" } }, "sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA=="],
@@ -7016,8 +7039,6 @@
     "wrap-ansi-cjs/string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
 
     "wrap-ansi-cjs/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
-
-    "xmlbuilder2/js-yaml": ["js-yaml@4.3.2", "", { "dependencies": { "argparse": "^2.0.1" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA=="],
 
     "yargs/string-width": ["string-width@8.3.0", "", { "dependencies": { "get-east-asian-width": "^1.5.0", "strip-ansi": "^7.1.2" } }, "sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ=="],
 

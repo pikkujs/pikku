@@ -144,7 +144,7 @@ const DEFAULT_DATABASE_FILENAME = 'pikku.db'
 
 /** The dialect factory the entry opens SQLite with: `bun:sqlite`. */
 const SQLITE_FACTORY = {
-  specifier: '@pikku/kysely-bun-sqlite',
+  specifier: '@pikku/addon-kysely-bun-sqlite',
   fn: 'createBunSqliteKysely',
 } as const
 
@@ -158,7 +158,7 @@ const DATABASE_URL_VAR = 'DATABASE_URL'
 
 /** Imports the coercion plugin, for an app that generated a map. */
 const coercionImportLines = (coercionImportPath: string): string[] => [
-  `import { createCoercionPlugin } from '@pikku/kysely'`,
+  `import { createCoercionPlugin } from '@pikku/addon-kysely'`,
   `import { coercionMap as __pikkuCoercionMap } from '${coercionImportPath}'`,
 ]
 
@@ -182,7 +182,7 @@ const dbImportLines = (
             ]
           : []),
       ]
-    : [`import { PikkuKysely } from '@pikku/kysely-postgres'`]),
+    : [`import { PikkuKysely } from '@pikku/addon-kysely-postgres'`]),
   ...(db.coercionImportPath ? coercionImportLines(db.coercionImportPath) : []),
 ]
 
@@ -210,12 +210,12 @@ const workflowServiceImport = (
 ): { line: string; service: string; runService: string } =>
   engine === 'sqlite'
     ? {
-        line: `import { KyselyWorkflowService, KyselyWorkflowRunService } from '@pikku/kysely'`,
+        line: `import { KyselyWorkflowService, KyselyWorkflowRunService } from '@pikku/addon-kysely'`,
         service: 'KyselyWorkflowService',
         runService: 'KyselyWorkflowRunService',
       }
     : {
-        line: `import { PgKyselyWorkflowService, PgKyselyWorkflowRunService } from '@pikku/kysely-postgres'`,
+        line: `import { PgKyselyWorkflowService, PgKyselyWorkflowRunService } from '@pikku/addon-kysely-postgres'`,
         service: 'PgKyselyWorkflowService',
         runService: 'PgKyselyWorkflowRunService',
       }
@@ -574,7 +574,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { assertAnalyticsSinksDeclared } from '@pikku/core/analytics'`,
       ...(ctx.db
         ? [
-            `import { KyselyTriggerSourceStore } from '@pikku/kysely'`,
+            `import { KyselyTriggerSourceStore } from '@pikku/addon-kysely'`,
             workflowServiceImport(ctx.db.engine).line,
             `import { InMemoryLeaseService } from '@pikku/core/services'`,
           ]

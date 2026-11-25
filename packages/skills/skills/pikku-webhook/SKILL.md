@@ -170,10 +170,10 @@ re-serialized parsed object.
 
 The default `QueueWebhookService` keeps no history: `listDeliveries`,
 `getDelivery` and `recordAttempt` throw `NotImplementedError`. Register
-`KyselyWebhookService` from `@pikku/kysely` to get them.
+`KyselyWebhookService` from `@pikku/addon-kysely` to get them.
 
 ```ts
-import { KyselyWebhookService } from '@pikku/kysely'
+import { KyselyWebhookService } from '@pikku/addon-kysely'
 
 const webhookService = new KyselyWebhookService(queueService, kysely)
 await webhookService.init() // creates webhookDelivery + webhookDeliveryAttempt

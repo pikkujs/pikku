@@ -473,7 +473,7 @@ const bundled = await build({
   platform: 'browser',
   format: 'esm',
   logLevel: 'silent',
-  external: ['@pikku/kysely', 'kysely'],
+  external: ['@pikku/addon-kysely', 'kysely'],
 })
 const bundle = bundled.outputFiles[0]!.text
 assert.ok(bundle.includes('edgeQueue'))

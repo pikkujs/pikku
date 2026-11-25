@@ -74,7 +74,7 @@ describe('projectHasDatabase', () => {
       true
     )
     assert.strictEqual(
-      projectHasDatabase({ rootDir }, new Set(['@pikku/kysely'])),
+      projectHasDatabase({ rootDir }, new Set(['@pikku/addon-kysely'])),
       true
     )
   })
@@ -98,7 +98,10 @@ describe('writeLocalServices', () => {
     after(() => rmSync(rootDir, { recursive: true, force: true }))
     writeFileSync(
       join(rootDir, 'package.json'),
-      JSON.stringify({ name: 'app', dependencies: { '@pikku/kysely': '*' } })
+      JSON.stringify({
+        name: 'app',
+        dependencies: { '@pikku/addon-kysely': '*' },
+      })
     )
     const localServicesFile = join(rootDir, '.pikku', 'local-services.gen.ts')
     const logger = { info: () => {}, debug: () => {}, warn: () => {} } as any
@@ -133,17 +136,20 @@ describe('writeLocalServices', () => {
   })
 
   for (const [engine, pkg] of [
-    ['sqlite', '@pikku/kysely-sqlite'],
-    ['postgres', '@pikku/kysely-postgres'],
-    ['mysql', '@pikku/kysely-mysql'],
+    ['sqlite', '@pikku/addon-kysely-sqlite'],
+    ['postgres', '@pikku/addon-kysely-postgres'],
+    ['mysql', '@pikku/addon-kysely-mysql'],
   ] as const) {
-    test(`a project that only declares @pikku/kysely is told to add ${pkg}, and its package.json is left alone`, async () => {
+    test(`a project that only declares @pikku/addon-kysely is told to add ${pkg}, and its package.json is left alone`, async () => {
       const rootDir = mkdtempSync(join(tmpdir(), 'pikku-local-services-'))
       after(() => rmSync(rootDir, { recursive: true, force: true }))
       const packageJson = join(rootDir, 'package.json')
       writeFileSync(
         packageJson,
-        JSON.stringify({ name: 'app', dependencies: { '@pikku/kysely': '*' } })
+        JSON.stringify({
+          name: 'app',
+          dependencies: { '@pikku/addon-kysely': '*' },
+        })
       )
       const localServicesFile = join(rootDir, '.pikku', 'local-services.gen.ts')
       const logger = { info: () => {}, debug: () => {}, warn: () => {} } as any
@@ -173,7 +179,7 @@ describe('writeLocalServices', () => {
         Object.keys(
           JSON.parse(readFileSync(packageJson, 'utf-8')).dependencies
         ),
-        ['@pikku/kysely']
+        ['@pikku/addon-kysely']
       )
       assert.ok(readFileSync(localServicesFile, 'utf-8').includes(`'${pkg}'`))
     })

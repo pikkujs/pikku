@@ -7,9 +7,9 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
+    "@pikku/addon-kysely": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "better-auth": "^1.7.10",
     "better-sqlite3": "^13.0.3",

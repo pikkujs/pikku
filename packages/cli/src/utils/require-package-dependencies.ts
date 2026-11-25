@@ -57,6 +57,7 @@ export const requirePackageDependencies = async (
   const { path, pkg } = found
   const missing = names.filter(
     (name) =>
+      name !== pkg.name &&
       !pkg.dependencies?.[name] &&
       !pkg.devDependencies?.[name] &&
       !pkg.peerDependencies?.[name]

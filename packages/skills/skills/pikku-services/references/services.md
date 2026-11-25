@@ -275,7 +275,7 @@ what makes the split real.
 | `LocalVariablesService` | `@pikku/core/services` | Local environment variables             |
 | `PinoLogger`            | `@pikku/pino`          | Structured logging via Pino             |
 | `createInvocationAudit` | `@pikku/core/services` | Per-request audit buffer                |
-| `createAuditedKysely`   | `@pikku/kysely`        | Auto-capture DB queries as audit events |
+| `createAuditedKysely`   | `@pikku/addon-kysely`  | Auto-capture DB queries as audit events |
 
 ## Complete Example
 

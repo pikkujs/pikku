@@ -815,12 +815,15 @@ export async function runProjectChecks(
         ...fnPkg.peerDependencies,
       }
 
-      if (dbEngine !== 'postgres' && fnAllDeps['@pikku/kysely-postgres']) {
+      if (
+        dbEngine !== 'postgres' &&
+        fnAllDeps['@pikku/addon-kysely-postgres']
+      ) {
         e(
           'fn-pkg-postgres-dep',
-          '@pikku/kysely-postgres is in packages/functions dependencies — Pikku Studio Cloud uses SQLite/libSQL (Turso), not PostgreSQL',
+          '@pikku/addon-kysely-postgres is in packages/functions dependencies — Pikku Studio Cloud uses SQLite/libSQL (Turso), not PostgreSQL',
           fnPkgPath,
-          'Remove @pikku/kysely-postgres and use @pikku/kysely-sqlite with LibsqlWebDialect instead'
+          'Remove @pikku/addon-kysely-postgres and use @pikku/addon-kysely-sqlite with LibsqlWebDialect instead'
         )
       }
 
@@ -834,12 +837,12 @@ export async function runProjectChecks(
           'Run `bun add @pikku/schema-cfworker` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
-      if (!fnPkg.dependencies?.['@pikku/kysely']) {
+      if (!fnPkg.dependencies?.['@pikku/addon-kysely']) {
         e(
           'missing-pikku-kysely',
-          '@pikku/kysely is not in packages/functions dependencies — every Cloudflare worker entry requires it (KyselySecretService)',
+          '@pikku/addon-kysely is not in packages/functions dependencies — every Cloudflare worker entry requires it (KyselySecretService)',
           fnPkgPath,
-          'Run `bun add @pikku/kysely` in packages/functions — must be in dependencies, not devDependencies'
+          'Run `bun add @pikku/addon-kysely` in packages/functions — must be in dependencies, not devDependencies'
         )
       }
     }
@@ -887,7 +890,7 @@ export async function runProjectChecks(
     if (servicesText) {
       const usesKysely = /\bKysely\b/.test(servicesText)
       const usesLibsql =
-        servicesText.includes('@pikku/kysely-sqlite') ||
+        servicesText.includes('@pikku/addon-kysely-sqlite') ||
         servicesText.includes('LibsqlWebDialect')
       const usesProcessEnv = /\bprocess\.env\.[A-Z_]/.test(servicesText)
 
@@ -908,7 +911,7 @@ export async function runProjectChecks(
           'services-wrong-db-adapter',
           'services.ts uses Kysely but not LibsqlWebDialect — Pikku Studio Cloud injects a Turso/libSQL DATABASE_URL at runtime, not a PostgreSQL URL',
           servicesPath,
-          'Import LibsqlWebDialect from @pikku/kysely-sqlite and replace the dialect: new Kysely({ dialect: new LibsqlWebDialect({ url: databaseUrl }) })'
+          'Import LibsqlWebDialect from @pikku/addon-kysely-sqlite and replace the dialect: new Kysely({ dialect: new LibsqlWebDialect({ url: databaseUrl }) })'
         )
       }
 
@@ -925,14 +928,14 @@ export async function runProjectChecks(
         dbEngine !== 'postgres' &&
         usesLibsql &&
         rootPkg &&
-        !rootPkg.dependencies?.['@pikku/kysely-sqlite'] &&
-        !rootPkg.devDependencies?.['@pikku/kysely-sqlite']
+        !rootPkg.dependencies?.['@pikku/addon-kysely-sqlite'] &&
+        !rootPkg.devDependencies?.['@pikku/addon-kysely-sqlite']
       ) {
         e(
           'missing-kysely-sqlite',
-          'services.ts imports @pikku/kysely-sqlite but it is not in root package.json',
+          'services.ts imports @pikku/addon-kysely-sqlite but it is not in root package.json',
           rootPkgPath,
-          'Add "@pikku/kysely-sqlite": "file:./vendor/pikku-kysely-sqlite.tgz" to dependencies'
+          'Add "@pikku/addon-kysely-sqlite": "file:./vendor/pikku-kysely-sqlite.tgz" to dependencies'
         )
       }
     }
@@ -1155,7 +1158,7 @@ export async function runProjectChecks(
             'createSingletonServices builds itself, never to',
             'existingServices.kysely:',
             '',
-            "  import { createCoercionPlugin } from '@pikku/kysely'",
+            "  import { createCoercionPlugin } from '@pikku/addon-kysely'",
             "  import { coercionMap } from '#pikku/db/coercion.gen.js'",
             '',
             '  kysely: existingServices?.kysely ??',

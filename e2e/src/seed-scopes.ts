@@ -1,4 +1,4 @@
-import { applyPikkuSchemas, scopeSchema } from '@pikku/kysely'
+import { applyPikkuSchemas, scopeSchema } from '@pikku/addon-kysely'
 import type { SingletonServices } from './application-types.js'
 import { ADMIN_USER, GUEST_USER, STAFF_USER } from './auth-fixtures.js'
 import { SCOPES } from '#pikku/scopes/pikku-scopes.gen.js'

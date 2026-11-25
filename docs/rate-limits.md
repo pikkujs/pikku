@@ -46,12 +46,12 @@ A comma-separated list such as `x-forwarded-for` is read **from the right**. A p
 
 Add a `rateLimitService` to the singleton services:
 
-| Service                                                           | Counts are                                                 |
-| ----------------------------------------------------------------- | ---------------------------------------------------------- |
-| `InMemoryRateLimitService` (`@pikku/core/services`)               | per process, and gone on restart                           |
-| `KyselyRateLimitService` (`@pikku/kysely`)                        | in the `pikku_rate_limit` table, shared and durable        |
-| `PgKyselyRateLimitService`, `MySQLKyselyRateLimitService`         | as Kysely's, with windows judged on the database clock     |
-| `RedisRateLimitService` (`@pikku/redis`)                          | in Redis, shared and durable, with the key TTL as the window |
+| Service                                                   | Counts are                                                   |
+| --------------------------------------------------------- | ------------------------------------------------------------ |
+| `InMemoryRateLimitService` (`@pikku/core/services`)       | per process, and gone on restart                             |
+| `KyselyRateLimitService` (`@pikku/addon-kysely`)          | in the `pikku_rate_limit` table, shared and durable          |
+| `PgKyselyRateLimitService`, `MySQLKyselyRateLimitService` | as Kysely's, with windows judged on the database clock       |
+| `RedisRateLimitService` (`@pikku/redis`)                  | in Redis, shared and durable, with the key TTL as the window |
 
 A limit with no `rateLimitService` answers every call with a 500, so a missing service is never mistaken for a limit that works. Use a shared store whenever more than one instance serves traffic.
 

@@ -8,7 +8,7 @@ import {
 import { dirname, join } from 'node:path'
 import type { TableAnnotations, TablesDeclaration } from '@pikku/core/db'
 import { addonResolutionDirs, createAddonResolver } from '@pikku/inspector'
-import { compileTables } from '@pikku/kysely'
+import { compileTables } from '@pikku/addon-kysely'
 import { snakeCase } from './snake-case.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'
 import {

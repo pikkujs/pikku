@@ -15,7 +15,7 @@ the worker".
 
 The same file mentions `PIKKU_SECRET_KEK` again only in a comment about the worker
 (line 268). Searching the non-dist sources of `packages/` for `SECRET_KEK` finds no code
-that tests the variable: the other hits are `packages/services/kysely/src/kysely-secret-service.ts:197`
+that tests the variable: the other hits are `packages/addon/kysely/src/kysely-secret-service.ts:197`
 (a comment about a decrypt failure) and two CHANGELOG files. So the service that the
 comment describes is not in this repo.
 

@@ -2,14 +2,14 @@
 
 Two features with nothing in common but the word:
 
-|               | Outgoing                                                       | Incoming                                                     |
-| ------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
-| Declared with | `defineOutgoingWebhook`                                        | `wireTriggerWebhookSource`                                   |
-| Direction     | this app → a subscriber                                        | a provider → this app                                        |
-| Declares      | `event`, `title`, `description?`, `payload`                    | `name`, `events`, `receive`, `check?`, `setup?`, `teardown?` |
-| Who registers | the subscriber, at runtime                                     | this app, at deploy time, through `setup`                    |
-| Delivery      | `QueueWebhookService` → `pikku-outgoing-webhooks` queue        | `IncomingWebhookService` → `pikku-incoming-webhooks` queue   |
-| History       | `webhookDelivery` + `webhookDeliveryAttempt` (`@pikku/kysely`) | `webhookReceipt` + `webhookReceiptAttempt` (`@pikku/kysely`) |
+|               | Outgoing                                                             | Incoming                                                           |
+| ------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Declared with | `defineOutgoingWebhook`                                              | `wireTriggerWebhookSource`                                         |
+| Direction     | this app → a subscriber                                              | a provider → this app                                              |
+| Declares      | `event`, `title`, `description?`, `payload`                          | `name`, `events`, `receive`, `check?`, `setup?`, `teardown?`       |
+| Who registers | the subscriber, at runtime                                           | this app, at deploy time, through `setup`                          |
+| Delivery      | `QueueWebhookService` → `pikku-outgoing-webhooks` queue              | `IncomingWebhookService` → `pikku-incoming-webhooks` queue         |
+| History       | `webhookDelivery` + `webhookDeliveryAttempt` (`@pikku/addon-kysely`) | `webhookReceipt` + `webhookReceiptAttempt` (`@pikku/addon-kysely`) |
 
 `defineWebhook` only ever existed on `feat/console-ux` and was never released,
 so the rename to `defineOutgoingWebhook` breaks nobody.
@@ -211,7 +211,7 @@ error? }`.
    synthesis, trigger-name validation, derived events.
 3. **CLI** — generated route and worker wiring, `pikku webhooks status | setup |
 teardown`.
-4. **@pikku/kysely** — `KyselyIncomingWebhookService` and its tables.
+4. **@pikku/addon-kysely** — `KyselyIncomingWebhookService` and its tables.
 5. **commerce-stripe** — the four functions and event schemas.
 6. **Pikku Studio Cloud** — the CI phase, stored results, the gate, removing the event map.
 7. **poll sources** — not started. The design is a scheduled task per source

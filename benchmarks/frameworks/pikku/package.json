@@ -7,11 +7,11 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
+    "@pikku/addon-kysely": "workspace:*",
     "@pikku/bench-frameworks-shared": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/bun-server": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "better-auth": "1.7.7",

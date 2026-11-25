@@ -80,7 +80,7 @@ async function makeValidProject(root: string) {
     },
     dependencies: {
       '@pikku/schema-cfworker': '^0.12.0',
-      '@pikku/kysely': '^0.12.0',
+      '@pikku/addon-kysely': '^0.12.0',
       '@pikku/better-auth': '^0.12.0',
       zod: '^4',
     },
@@ -564,7 +564,7 @@ describe('project checks', () => {
           dependencies: {
             '@pikku/cloudflare': '^0.12.19',
             '@pikku/schema-cfworker': '^0.12.0',
-            '@pikku/kysely': '^0.12.0',
+            '@pikku/addon-kysely': '^0.12.0',
             '@pikku/better-auth': '^0.12.0',
             zod: '^4',
           },
@@ -677,7 +677,7 @@ describe('project checks', () => {
     const FN_DEPS = {
       '@pikku/cloudflare': '^0.12.20',
       '@pikku/schema-cfworker': '^0.12.0',
-      '@pikku/kysely': '^0.12.0',
+      '@pikku/addon-kysely': '^0.12.0',
       '@pikku/better-auth': '^0.12.0',
       zod: '^4',
     }
@@ -746,7 +746,7 @@ describe('project checks', () => {
           dependencies: {
             '@pikku/cloudflare': '^0.12.20',
             '@pikku/schema-cfworker': '^0.12.0',
-            '@pikku/kysely': '^0.12.0',
+            '@pikku/addon-kysely': '^0.12.0',
             '@pikku/better-auth': '^0.12.0',
             zod: '^4',
           },
@@ -764,13 +764,13 @@ describe('project checks', () => {
       }
     })
 
-    test('@pikku/kysely-postgres in functions deps → error', async () => {
+    test('@pikku/addon-kysely-postgres in functions deps → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
         await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
           type: 'module',
-          dependencies: { '@pikku/kysely-postgres': '^0.12.0' },
+          dependencies: { '@pikku/addon-kysely-postgres': '^0.12.0' },
         })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, false)
@@ -794,7 +794,7 @@ describe('project checks', () => {
             '#pikku/*.js': './.pikku/*.ts',
             '#pikku/*': './.pikku/*/index.ts',
           },
-          dependencies: { '@pikku/kysely': '^0.12.0' }, // schema-cfworker omitted
+          dependencies: { '@pikku/addon-kysely': '^0.12.0' }, // schema-cfworker omitted
         })
         const result = await runValidate(tmp)
         assert.strictEqual(result.ok, false)
@@ -808,7 +808,7 @@ describe('project checks', () => {
       }
     })
 
-    test('missing @pikku/kysely → error', async () => {
+    test('missing @pikku/addon-kysely → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
@@ -944,13 +944,13 @@ describe('project checks', () => {
           workspaces: ['packages/*'],
           dependencies: {
             '@pikku/core': '^1.0.0',
-            '@pikku/kysely-sqlite': '^1.0.0',
+            '@pikku/addon-kysely-sqlite': '^1.0.0',
           },
           devDependencies: { '@pikku/cloud-cli': '^1.0.0' },
         })
         await writeFile(
           join(tmp, 'packages', 'functions', 'src', 'services.ts'),
-          "import { Kysely } from 'kysely'\nimport { LibsqlWebDialect } from '@pikku/kysely-sqlite'\n",
+          "import { Kysely } from 'kysely'\nimport { LibsqlWebDialect } from '@pikku/addon-kysely-sqlite'\n",
           'utf8'
         )
         const result = await runValidate(tmp)
@@ -983,14 +983,14 @@ describe('project checks', () => {
       }
     })
 
-    test('LibsqlWebDialect used but @pikku/kysely-sqlite absent → error', async () => {
+    test('LibsqlWebDialect used but @pikku/addon-kysely-sqlite absent → error', async () => {
       const tmp = await makeTmp()
       try {
         await makeValidProject(tmp)
-        // @pikku/kysely-sqlite intentionally absent from package.json
+        // @pikku/addon-kysely-sqlite intentionally absent from package.json
         await writeFile(
           join(tmp, 'packages', 'functions', 'src', 'services.ts'),
-          "import { LibsqlWebDialect } from '@pikku/kysely-sqlite'\n",
+          "import { LibsqlWebDialect } from '@pikku/addon-kysely-sqlite'\n",
           'utf8'
         )
         const result = await runValidate(tmp)
@@ -2834,7 +2834,7 @@ describe('the generated coercion map', () => {
       await writeCoercionMap(tmp, withCoercions)
       await writeFile(
         join(tmp, 'packages', 'functions', 'src', 'services.ts'),
-        `import { createCoercionPlugin } from '@pikku/kysely'\n` +
+        `import { createCoercionPlugin } from '@pikku/addon-kysely'\n` +
           `import { coercionMap } from '#pikku/db/coercion.gen.js'\n` +
           `export const kysely = (k: any) =>\n` +
           `  k.withPlugin(createCoercionPlugin({ map: coercionMap }))\n`,

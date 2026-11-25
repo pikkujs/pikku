@@ -4,12 +4,12 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { Kysely } from 'kysely'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import type { KyselyPikkuDB } from '@pikku/addon-kysely'
 import {
   KyselyScopeService,
   applyPikkuSchemas,
   scopeSchema,
-} from '@pikku/kysely'
+} from '@pikku/addon-kysely'
 import { createKysely } from '../db/local-db.js'
 import { scopesPrune } from './scopes-prune.js'
 import { scopesAudit } from './scopes-audit.js'

@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import type { D1Database } from '@cloudflare/workers-types'
 import { defineServiceTests } from '@pikku/core/testing'
-import { KyselyRateLimitService } from '@pikku/kysely'
+import { KyselyRateLimitService } from '@pikku/addon-kysely'
 import { createD1Kysely } from './cloudflare-d1-services.js'
 
 /**

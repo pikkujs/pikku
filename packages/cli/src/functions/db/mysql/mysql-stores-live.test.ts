@@ -18,20 +18,20 @@ import {
   sessionSchema,
   triggerSourceSchema,
   withUserTable,
-} from '@pikku/kysely'
+} from '@pikku/addon-kysely'
 import { sql, type Kysely } from 'kysely'
 import { createMysqlKysely, withMysqlClient } from './mysql-client.js'
 import type { ResolvedMysqlDb } from '../local-db.js'
 
 /**
- * The @pikku/kysely stores were written against postgres and sqlite
+ * The @pikku/addon-kysely stores were written against postgres and sqlite
  * (`on conflict ... excluded.`, `returning`, `cast(... as bigint)`), none of
  * which MySQL accepts. Each store's upsert, ignore and delete-returning path is
  * run here against a real server. Needs PIKKU_TEST_MYSQL_URL, as mysql-live does.
  */
 const SERVER_URL = process.env.PIKKU_TEST_MYSQL_URL
 
-describe('@pikku/kysely stores on mysql', { skip: !SERVER_URL }, () => {
+describe('@pikku/addon-kysely stores on mysql', { skip: !SERVER_URL }, () => {
   const admin = { connectionString: SERVER_URL! } as ResolvedMysqlDb
   const database = `pikku_t_${randomBytes(5).toString('hex')}`
   let db: Kysely<any>

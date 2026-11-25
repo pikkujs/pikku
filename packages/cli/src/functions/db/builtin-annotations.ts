@@ -1,5 +1,5 @@
 import type { TableAnnotations } from '@pikku/core/db'
-import { pikkuSchemas } from '@pikku/kysely'
+import { pikkuSchemas } from '@pikku/addon-kysely'
 import {
   toColAnnotation,
   type AnnotationMap,
@@ -11,7 +11,7 @@ import { snakeCase } from './snake-case.js'
 
 /** The label `db generate` gives the migration Better Auth's tables come from. */
 const BETTER_AUTH_SOURCE = 'better-auth'
-/** The label of the migration that creates `@pikku/kysely`'s runtime tables. */
+/** The label of the migration that creates `@pikku/addon-kysely`'s runtime tables. */
 const RUNTIME_SOURCE = 'pikku-runtime'
 
 /**

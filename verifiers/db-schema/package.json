@@ -8,12 +8,12 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
+    "@pikku/addon-kysely": "workspace:*",
+    "@pikku/addon-kysely-mysql": "workspace:*",
+    "@pikku/addon-kysely-postgres": "workspace:*",
+    "@pikku/addon-kysely-sqlite": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
-    "@pikku/kysely-mysql": "workspace:*",
-    "@pikku/kysely-postgres": "workspace:*",
-    "@pikku/kysely-sqlite": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "better-auth": "^1.7.10",
     "better-sqlite3": "^13.0.3",

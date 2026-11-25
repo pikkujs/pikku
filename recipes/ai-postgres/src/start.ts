@@ -3,8 +3,8 @@ import { LocalSecretService, ConsoleLogger } from '@pikku/core/services'
 import {
   PikkuKysely,
   PgKyselyAgentStorageService,
-} from '@pikku/kysely-postgres'
-import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
+} from '@pikku/addon-kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/addon-kysely-postgres'
 import { VercelAgentRunner } from '@pikku/ai-vercel'
 import { createOpenAI } from '@ai-sdk/openai'
 import { createAnthropic } from '@ai-sdk/anthropic'

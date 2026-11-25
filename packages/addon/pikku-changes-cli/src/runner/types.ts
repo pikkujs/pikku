@@ -117,7 +117,7 @@ export interface LocalCli {
   checkout: string
   /** More @pikku packages to relink than the CLI's own, with what they depend on. */
   relinkExtra?: string[]
-  /** Dependencies whose project copies point at the one the local @pikku/kysely uses (default kysely). */
+  /** Dependencies whose project copies point at the one the local @pikku/addon-kysely uses (default kysely). */
   dedupe?: string[]
 }
 
