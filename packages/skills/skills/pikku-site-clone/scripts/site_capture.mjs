@@ -52,16 +52,21 @@ export async function pages(root) {
   }
   // the sitemap is the list; internal links catch what it misses. Only what answers with HTML is a page: a feed, an API
   // answer, a redirect off the site or a download linked from a page is not captured as one.
+  // Eight at a time: the page list is what the capture writes first, and a site of a hundred links is read in seconds.
   const queue = [base + '/', ...out], notPages = new Set()
-  for (let i = 0; i < queue.length && i < 200; i++) {
+  let next = 0
+  const visit = async (u) => {
     let html = ''
     try {
-      const r = await fetch(queue[i], { headers: { 'user-agent': UA } })
-      if (!r.ok || !/text\/html/i.test(r.headers.get('content-type') || '') || new URL(r.url).origin !== base) { notPages.add(queue[i]); continue }
+      const r = await fetch(u, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) })
+      if (!r.ok || !/text\/html/i.test(r.headers.get('content-type') || '') || new URL(r.url).origin !== base) { notPages.add(u); return }
       html = await r.text()
-    } catch { notPages.add(queue[i]); continue }
+    } catch { notPages.add(u); return }
     for (const h of html.matchAll(/href="([^"#]+)/g)) { const before = out.length; add(h[1].replace(/&amp;/g, '&')); if (out.length > before) queue.push(out[out.length - 1]) }
   }
+  const worker = async () => { while (next < queue.length && next < 200) await visit(queue[next++]) }
+  // a worker that finds the queue empty ends; new links found later are picked up by the ones still running, so run rounds until none is left
+  while (next < queue.length && next < 200) await Promise.all(Array.from({ length: 8 }, worker))
   return out.filter((u) => !notPages.has(u))
 }
 
