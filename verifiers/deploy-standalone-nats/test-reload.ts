@@ -44,16 +44,16 @@ import {
   until,
   type Stage,
 } from './broker.js'
-import { NatsServiceFactory } from '../../packages/services/queue-nats/src/nats-service-factory.js'
-import { natsOptionsFromEnv } from '../../packages/services/queue-nats/src/nats-contributor.js'
-import { consumeQueue } from '../../packages/services/queue-nats/src/consume.js'
-import { mapPikkuWorkerToNats } from '../../packages/services/queue-nats/src/nats-queue-worker.js'
+import { NatsServiceFactory } from '../../packages/addon/queue-nats/src/nats-service-factory.js'
+import { natsOptionsFromEnv } from '../../packages/addon/queue-nats/src/nats-service.js'
+import { consumeQueue } from '../../packages/addon/queue-nats/src/consume.js'
+import { mapPikkuWorkerToNats } from '../../packages/addon/queue-nats/src/nats-queue-worker.js'
 import {
   SCHEDULE_HEADER,
   SCHEDULE_TARGET_HEADER,
   scheduleSubjectFor,
   subjectForQueue,
-} from '../../packages/services/queue-nats/src/utils.js'
+} from '../../packages/addon/queue-nats/src/utils.js'
 
 const BIN = process.env.NATS_SERVER_BIN ?? 'nats-server'
 try {

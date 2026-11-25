@@ -367,6 +367,22 @@
         "zod": "^4",
       },
     },
+    "packages/addon/queue-nats": {
+      "name": "@pikku/queue-nats",
+      "version": "0.12.7",
+      "dependencies": {
+        "@nats-io/jetstream": "^3.4.0",
+        "@nats-io/nats-core": "^3.4.0",
+        "@nats-io/transport-node": "^3.4.0",
+      },
+      "devDependencies": {
+        "@pikku/cli": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "peerDependencies": {
+        "@pikku/core": "^0.12.162",
+      },
+    },
     "packages/assistant-ui": {
       "name": "@pikku/assistant-ui",
       "version": "0.12.15",
@@ -1273,21 +1289,6 @@
       },
       "peerDependencies": {
         "@pikku/core": "^0.12.151",
-      },
-    },
-    "packages/services/queue-nats": {
-      "name": "@pikku/queue-nats",
-      "version": "0.12.7",
-      "dependencies": {
-        "@nats-io/jetstream": "^3.4.0",
-        "@nats-io/nats-core": "^3.4.0",
-        "@nats-io/transport-node": "^3.4.0",
-      },
-      "devDependencies": {
-        "@pikku/cli": "workspace:*",
-      },
-      "peerDependencies": {
-        "@pikku/core": "^0.12.162",
       },
     },
     "packages/services/queue-pg-boss": {
@@ -3826,7 +3827,7 @@
 
     "@pikku/queue-bullmq": ["@pikku/queue-bullmq@workspace:packages/services/queue-bullmq"],
 
-    "@pikku/queue-nats": ["@pikku/queue-nats@workspace:packages/services/queue-nats"],
+    "@pikku/queue-nats": ["@pikku/queue-nats@workspace:packages/addon/queue-nats"],
 
     "@pikku/queue-pg-boss": ["@pikku/queue-pg-boss@workspace:packages/services/queue-pg-boss"],
 
