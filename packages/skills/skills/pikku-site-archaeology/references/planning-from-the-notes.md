@@ -31,6 +31,10 @@ rules of the `pikku-changes` skill, and these on top:
   links to it: "Decision: keep <service>: <why>". Before filing, check each one against the plan's bodies.
 - The site's own sub-domains and sibling apps are planned only as the person answered when asked (see the skill's step 4):
   one left out is a link and an "Open question: ..." in the change that links to it.
+- A checkout, booking or payment the original runs on a hosted service (a shop's cart and checkout, a booking tool, a
+  subscription) stays in place, linked from the rebuilt pages, until the person confirms what replaces it (the payment
+  processor, its account and its rules): the plan says so as "Decision: keep <service> until ..." and an "Open question: ..."
+  for the replacement. No change removes a working purchase path before that.
 - Moving the domain (DNS, registrar, mail records, the old host's shutdown) is the owner's operation, not app code: it is an
   "Open question: ..." in the data change, never a change of its own.
 - A clone needs its look first. The capture is already in `artifacts/references/<site>/` (with `behaviour.json`): file no
