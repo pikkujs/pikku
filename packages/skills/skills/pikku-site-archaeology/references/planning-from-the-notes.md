@@ -29,22 +29,26 @@ rules of the `pikku-changes` skill, and these on top:
   replaces it (a hosted form becomes the app's own form and table, a tracker or error reporter is removed, fonts and pictures
   are served by the app, the page builder's hosting is the rebuilt app), or one that keeps it, in the body of the change that
   links to it: "Decision: keep <service>: <why>". Before filing, check each one against the plan's bodies.
-- The site's own sub-domains and sibling apps are planned only as the person answered when asked (see the skill's step 4):
+- The site's own sub-domains and sibling apps are planned only as the person answered when asked (the site study's step 4):
   one left out is a link and an "Open question: ..." in the change that links to it.
 - A checkout, booking or payment the original runs on a hosted service (a shop's cart and checkout, a booking tool, a
   subscription) stays in place, linked from the rebuilt pages, until the person confirms what replaces it (the payment
   processor, its account and its rules): the plan says so as "Decision: keep <service> until ..." and an "Open question: ..."
   for the replacement. No change removes a working purchase path before that.
-- A site that itself sells through Stripe (a `buy.stripe.com` payment link or `checkout.stripe.com` in the capture,
-  `js.stripe.com` loaded by its own pages, or a shop cart being replaced whose payments the owner moves to Stripe) gets a
-  change that wires the `@pikku/addon-commerce-stripe` addon (catalogue, cart, hosted Stripe Checkout, orders, fulfilment,
-  refunds and its webhook, for one-off purchases only) instead of the plan's own cart, order and checkout tables. That
-  change cites the evidence, keeps the existing checkout or payment link until the owner has connected their Stripe account
-  and confirmed, and says it depends on a release of the addon that declares its tables in `db/tables.ts` (its tables
-  ship as SQL per dialect today, which `pikku db` refuses). Stripe seen only inside another provider's embed (Acuity,
-  ThriveCart, Eventbrite, a Shopify hosted checkout) is not this: that provider stays as decided, with an
-  "Open question: ...". Recurring payments (subscriptions, plans, memberships) are an "Open question: ..." naming
-  better-auth's Stripe plugin, never the commerce addon.
+- Payments follow the person's answer to the payment question of the site study (step 4), and the existing checkout or
+  payment link stays in place until they confirm its replacement:
+  - **Stripe**: a change that wires `@pikku/addon-commerce-stripe` (catalogue, cart, hosted Stripe Checkout, orders,
+    fulfilment, refunds and its webhook, for one-off purchases only) instead of the plan's own cart, order and checkout
+    tables, citing the capture's Stripe evidence (`behaviour:payments`). The addon ships its tables as SQL per dialect,
+    which the published Pikku CLI reads and the next CLI release refuses: the change says it needs a release of the addon
+    that declares its tables in `db/tables.ts` before the project moves to that CLI.
+  - **Another provider**: a change that uses an addon for it: an existing one first (`pikku addons search <provider>`), else
+    one generated from the provider's OpenAPI document (`pikku addons search <provider> --openapi`, then
+    `pikku addons add <name|url|path>`); a provider with no published OpenAPI document is an "Open question: ...".
+  - **No answer, or they do not know**: keep the existing checkout or payment links, with an "Open question: ..." for the
+    replacement.
+  - Recurring payments (subscriptions, plans, memberships) are an "Open question: ..." naming better-auth's Stripe
+    plugin, never the commerce addon.
 - Moving the domain (DNS, registrar, mail records, the old host's shutdown) is the owner's operation, not app code: it is an
   "Open question: ..." in the data change, never a change of its own.
 - A clone needs its look first. The capture is already in `artifacts/references/<site>/` (with `behaviour.json`): file no
