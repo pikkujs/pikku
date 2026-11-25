@@ -1,6 +1,4 @@
-import type { CoreSingletonServices } from '@pikku/core/types'
-
-export interface SingletonServices extends CoreSingletonServices {
+export interface SingletonServices {
   cache: number
   queueService?: number
 }
