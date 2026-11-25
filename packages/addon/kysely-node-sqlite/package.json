@@ -21,8 +21,7 @@
     "test:coverage": "bash run-tests.sh --coverage",
     "clean": "rm -rf dist tsconfig.tsbuildinfo .pikku",
     "build:compile": "bun run clean && tsc -b",
-    "pikku": "pikku all",
-    "prepublishOnly": "bun run build"
+    "pikku": "pikku all"
   },
   "engines": {
     "node": ">=22.10"

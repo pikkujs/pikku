@@ -18,8 +18,7 @@
     "build": "pikku all && tsc -b && pikku dist",
     "clean": "rm -rf dist tsconfig.tsbuildinfo .pikku",
     "build:compile": "bun run clean && tsc -b",
-    "pikku": "pikku all",
-    "prepublishOnly": "bun run build"
+    "pikku": "pikku all"
   },
   "dependencies": {
     "@pikku/addon-kysely": "^0.13.47",
