@@ -7,7 +7,7 @@ tags: [nats, queues, connections, reconnect]
 
 # A dead NATS connection is reported, never reopened
 
-`NatsServiceFactory` in `packages/services/queue-nats/src/nats-service-factory.ts` passes
+`NatsServiceFactory` in `packages/addon/queue-nats/src/nats-service-factory.ts` passes
 the user, pass and token it is given straight to `connect` (`nats-service-factory.ts:43-46`,
 `:126-131`). It sets `maxReconnectAttempts: -1` so the client keeps retrying
 (`nats-service-factory.ts:147`), and the comment above it explains why the client default

@@ -7,7 +7,7 @@ tags: [nats, scheduling, sessions]
 
 # Should a scheduled NATS RPC carry the caller's whole session?
 
-`scheduleRPC` in `packages/services/queue-nats/src/nats-scheduler-service.ts` takes
+`scheduleRPC` in `packages/addon/queue-nats/src/nats-scheduler-service.ts` takes
 `session?: CoreUserSession` (`nats-scheduler-service.ts:161-166`). The message body is
 `JSON.stringify({ rpcName, data, session } satisfies ScheduledJobData)`
 (`nats-scheduler-service.ts:181-184`). The session therefore lives in the broker's

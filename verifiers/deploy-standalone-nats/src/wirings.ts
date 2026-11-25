@@ -1,10 +1,10 @@
+import { wireAddon } from '#pikku/addon'
 import { wireHTTP } from '#pikku/http'
 import { wireQueueWorker } from '#pikku/queue'
 import { wireScheduler } from '#pikku/scheduler'
-import { wireContributors } from '@pikku/core/contributors'
 import { enqueueJob, processJob, startFlow, tick } from './jobs.js'
 
-wireContributors({ package: '@pikku/queue-nats', contributors: ['nats'] })
+wireAddon({ name: 'nats', package: '@pikku/queue-nats', services: ['nats'] })
 
 wireHTTP({ method: 'post', route: '/enqueue', auth: false, func: enqueueJob })
 wireHTTP({ method: 'post', route: '/start-flow', auth: false, func: startFlow })

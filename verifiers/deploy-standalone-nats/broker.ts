@@ -24,7 +24,7 @@ export type Stage = {
 
 export const prefixOf = (s: Stage) => `pikku.${s.project}.${s.stage}`
 
-/** The stage's own stream, `pikku_<project>_<stage>` (what the contributor derives). */
+/** The stage's own stream, `pikku_<project>_<stage>` (what the service derives). */
 export const streamOf = (s: Stage) => `pikku_${s.project}_${s.stage}`
 
 /**
