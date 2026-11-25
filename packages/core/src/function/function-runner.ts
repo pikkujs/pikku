@@ -687,7 +687,9 @@ export const runPikkuFunc = async <In = any, Out = any>(
       // knowledge: decisions/internals/core-function-runner-restores-the-wire-fields-it-overwrites.md
       if (invocationAuditLog) {
         if (services.auditLog?.config === resolvedAuditConfig) {
-          invocationAuditLog = undefined
+          // Wire providers may have written to core's buffer; it is still
+          // flushed in `finally`, though the function reads the project's.
+          if (!wireProviderRun) invocationAuditLog = undefined
         } else {
           services = { ...services, auditLog: invocationAuditLog }
         }

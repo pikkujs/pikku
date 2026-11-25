@@ -156,7 +156,7 @@ for (const command of ['dev', 'serve'] as const) {
   assert.notEqual(failedStart.code, 0, `${command} must exit non-zero`)
   assert.match(
     failedStart.output,
-    /Service 'notify\/hookB' failed in onServerStart: hook-b start exploded/
+    /Provider 'notify\/hookB' failed in onServerStart: hook-b start exploded/
   )
   assert.deepEqual(
     failedStart.lines,

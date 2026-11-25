@@ -1,6 +1,5 @@
 #!/bin/bash
 # Downstream (controlplane) cases from the providers plan, section 4.13.
-# Not part of test:verifiers: run it by hand with `bash verifiers/providers-controlplane/test.sh`.
 cd "$(dirname "$0")"
 unset CI
 

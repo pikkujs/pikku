@@ -1,6 +1,5 @@
 #!/bin/bash
 # Providers verifier. Usage: ./test.sh [scenario ...]   (no arguments runs every scenario)
-# Not part of test:verifiers: run it by hand with `bash verifiers/providers/test.sh`.
 cd "$(dirname "$0")"
 # CI=true implies --frozen, which refuses the lock writes the lock scenarios assert.
 unset CI
@@ -14,7 +13,7 @@ all_scenarios=(
   typed function-needs function-needs-ghost no-variant dup protected-no-replaces
   protected-addon lock-hostile-replace collection-key-conflict optional-bad-array
   collections-zero collections wire wire-lifetime wire-shadow wire-core-key runtime stop-order addon-cross
-  lock-new lock-drift lock-frozen providers-only unknown-provider remote-providers remote-local
+  lock-new lock-drift lock-frozen lock-version-bump lock-v1 providers-only unknown-provider remote-providers remote-local
   unused-services-param whole-services-param
 )
 
@@ -124,7 +123,13 @@ drift_restore() {
     (cd addons/prov-hostile && npx pikku all >/dev/null 2>&1)
   fi
 }
-trap drift_restore EXIT
+hostile_package=addons/prov-hostile/package.json
+bump_restore() {
+  if [ -f "$hostile_package.orig" ]; then
+    mv -f "$hostile_package.orig" "$hostile_package"
+  fi
+}
+trap 'drift_restore; bump_restore' EXIT
 
 run_scenario() {
   local s=$1
@@ -201,18 +206,49 @@ run_scenario() {
       fi
       ;;
     lock-drift)
-      pikku_all "$s" >/dev/null 2>&1 || true
-      drift_edit
-      before=${#failures[@]}
-      expect_failure "$s" PKU395 "+ imports kysely"
-      if [ ${#failures[@]} -eq "$before" ]; then
-        if out=$(pikku_all "$s" --approve-providers); then
-          pass "$s" "--approve-providers accepts the drift"
-        else
-          fail "$s" "--approve-providers did not accept the drift: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
+      if ! out=$(pikku_all "$s"); then
+        fail "$s" "the first build failed: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
+      else
+        drift_edit
+        before=${#failures[@]}
+        expect_failure "$s" PKU395 "+ imports kysely"
+        if [ ${#failures[@]} -eq "$before" ]; then
+          if out=$(pikku_all "$s" --approve-providers); then
+            pass "$s" "--approve-providers accepts the drift"
+          else
+            fail "$s" "--approve-providers did not accept the drift: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
+          fi
         fi
+        drift_restore
       fi
-      drift_restore
+      ;;
+    lock-version-bump)
+      lock="scenarios/lock-frozen/pikku-addons.lock"
+      if ! out=$(pikku_all lock-frozen); then
+        fail "$s" "the first build failed: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
+      else
+        before_lock=$(cat "$lock")
+        cp "$hostile_package" "$hostile_package.orig"
+        node -e "const f=process.argv[1];const p=JSON.parse(require('fs').readFileSync(f,'utf8'));p.version='9.9.9';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')" "$hostile_package"
+        if out=$(pikku_all lock-frozen --frozen) && [ "$(cat "$lock")" = "$before_lock" ]; then
+          pass "$s" "a version bump with an unchanged surface passes --frozen and leaves the lock as it was"
+        else
+          fail "$s" "--frozen refused a version-only change: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
+        fi
+        bump_restore
+      fi
+      rm -f "$lock"
+      ;;
+    lock-v1)
+      v1='{"lockfileVersion":1,"sdks":{}}'
+      lock="scenarios/optional-absent/pikku-addons.lock"
+      printf '%s' "$v1" > "$lock"
+      if out=$(pikku_all optional-absent --frozen) && [ "$(cat "$lock")" = "$v1" ]; then
+        pass "$s" "a version 1 lock in a project with no addon providers passes --frozen untouched"
+      else
+        fail "$s" "--frozen refused a version 1 lock: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
+      fi
+      rm -f "$lock"
       ;;
     lock-frozen)
       expect_failure "$s" PKU396 "is new" pikku_all "$s" --frozen

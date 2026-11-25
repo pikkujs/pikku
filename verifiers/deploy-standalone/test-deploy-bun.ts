@@ -703,7 +703,7 @@ if (!BUN_AVAILABLE) {
           if (result.code === 0 || result.code === null)
             throw new Error(`expected a non-zero exit, got ${result.code}`)
           if (
-            !/Service 'marker\/hookB' failed in onServerStart/.test(
+            !/Provider 'marker\/hookB' failed in onServerStart/.test(
               result.output
             )
           )

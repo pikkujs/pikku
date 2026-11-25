@@ -6,9 +6,10 @@ import { createNodeSqliteKysely } from './create-node-sqlite-kysely.js'
  * and a standalone deploy opens its own database, so only `dev` is declared.
  */
 export const kysely = defineProvider({
-  dev: (_services, env) => ({
-    kysely: createNodeSqliteKysely<any>({
+  dev: (_services, env) => {
+    const db = createNodeSqliteKysely<any>({
       filename: (env.SQLITE_PATH as string | undefined) ?? ':memory:',
-    }),
-  }),
+    })
+    return { kysely: Object.assign(db, { stop: () => db.destroy() }) }
+  },
 })

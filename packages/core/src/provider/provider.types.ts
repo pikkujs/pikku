@@ -14,6 +14,9 @@ export type ProviderProfile = (typeof PROVIDER_PROFILES)[number]
 
 export type ProviderEnv = Record<string, string | undefined>
 
+/** What a Cloudflare Worker's `env` holds: bindings (a database, a queue), not only strings. */
+export type ProviderWorkerEnv = Readonly<Record<string, unknown>>
+
 /**
  * Builds services. Destructure `services` to say what it depends on; the
  * object it returns is what it provides, by key. Runtime `env` guards belong
@@ -22,7 +25,8 @@ export type ProviderEnv = Record<string, string | undefined>
 export type ProviderFactory<
   TNeeds = any,
   TProvides extends object = Record<string, unknown>,
-> = (services: TNeeds, env: ProviderEnv) => TProvides | Promise<TProvides>
+  TEnv = ProviderEnv,
+> = (services: TNeeds, env: TEnv) => TProvides | Promise<TProvides>
 
 /** The per-target forms of one service. A target-specific variant overrides `common`. */
 export interface ProviderVariants<
@@ -33,7 +37,11 @@ export interface ProviderVariants<
   dev?: ProviderFactory<TNeeds, TProvides>
   deploy?: ProviderFactory<TNeeds, TProvides>
   'deploy:standalone'?: ProviderFactory<TNeeds, TProvides>
-  'deploy:cloudflare-worker'?: ProviderFactory<TNeeds, TProvides>
+  'deploy:cloudflare-worker'?: ProviderFactory<
+    TNeeds,
+    TProvides,
+    ProviderWorkerEnv
+  >
   'deploy:cloudflare-container'?: ProviderFactory<TNeeds, TProvides>
   'deploy:server'?: ProviderFactory<TNeeds, TProvides>
   /** Used on every target that has no variant of its own. */
@@ -89,10 +97,21 @@ export type ProviderMeta = Partial<
 export interface ProviderAddonScope {
   /** The `wireAddon` name: the namespace in the provider's name. */
   namespace: string
-  /** The names the addon declares with `defineVariable`/`defineSecret`, plus the names a `wireAddon` override grants. */
+  /** The names the addon declares with `defineVariable`/`defineSecret`. */
   env: readonly string[]
   /** The host name behind a name the addon reads, from `variableOverrides` and `secretOverrides`. */
   envRename?: Readonly<Record<string, string>>
+  /** The credentials the addon declares, plus the ones the host lends it. Absent leaves `credentialService` as the host's. */
+  credentials?: readonly string[]
+  /** The host handed the addon the whole `credentialService` (`globalCredentials`). */
+  globalCredentials?: boolean
+  /** The folder of the content store the addon owns, and the paths outside it the host lends. Absent leaves `content` as the host's. */
+  content?: {
+    bucket: string
+    grants?: Readonly<Record<string, 'read' | 'write'>>
+  }
+  /** The host handed the addon the whole `content` service (`globalContent`). */
+  globalContent?: boolean
 }
 
 /** What the build knows about a provider beyond what its variants read. */

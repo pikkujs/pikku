@@ -4,7 +4,8 @@ import type {
   ServerLifecycle,
 } from './types/core.types.js'
 import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
-import { readStopOrder } from './provider/stop-order.js'
+import { ProviderError } from './provider/provider-error.js'
+import { readHeldKeys, readStopOrder } from './provider/stop-order.js'
 
 const stopService = async (
   logger: Logger,
@@ -59,6 +60,15 @@ export const stopSingletonServices = async (): Promise<void> => {
   const stopped = new WeakSet<object>()
   const held = new Map(Object.entries(singletonServices))
   const handled = new Set<string>()
+  const runnerHeld = readHeldKeys()
+  if (runnerHeld) {
+    const heldByRunner = new Set(runnerHeld)
+    for (const [name, service] of [...held].reverse()) {
+      if (heldByRunner.has(name)) continue
+      handled.add(name)
+      await stopService(logger, name, service, stopped)
+    }
+  }
   for (const entry of readStopOrder()) {
     if (typeof entry !== 'string') {
       const items = held.get(entry.collection)
@@ -151,8 +161,9 @@ export const composeServerLifecycle = <
       try {
         await hook.run(services)
       } catch (error) {
-        throw new Error(
-          `Service '${hook.name}' failed in onServerStart: ${describeError(error)}`,
+        throw new ProviderError(
+          'start-failed',
+          `Provider '${hook.name}' failed in onServerStart: ${describeError(error)}`,
           { cause: error }
         )
       }

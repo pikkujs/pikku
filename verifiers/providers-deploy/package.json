@@ -35,6 +35,6 @@
   },
   "scripts": {
     "pikku": "pikku",
-    "check": "./test.sh"
+    "test": "./test.sh"
   }
 }

@@ -158,9 +158,6 @@ export const diffProviderSurface = (
   return lines
 }
 
-const sameEntry = (a: ProviderLockEntry, b: ProviderLockEntry): boolean =>
-  JSON.stringify(canonical(a)) === JSON.stringify(canonical(b))
-
 const approves = (approval: ProviderApproval, id: string): boolean =>
   approval === true || (Array.isArray(approval) && approval.includes(id))
 
@@ -181,7 +178,8 @@ export interface ProviderLockResult {
  * - A provider whose surface changed fails with PKU395 until it is approved
  *   (`approval`), and with PKU396 under `frozen`. The surface is what it
  *   provides, imports, adds to and replaces; a changed version or meta hash
- *   with the same surface is rewritten without a word.
+ *   with the same surface is rewritten without a word, and under `frozen` it
+ *   is accepted and the approved entry is kept.
  * - A provider no longer opted in is dropped (PKU396 under `frozen`).
  */
 export const checkProviderLock = ({
@@ -225,10 +223,7 @@ export const checkProviderLock = ({
       )
       continue
     }
-    if (frozen && !sameEntry(approved, entry)) {
-      throw frozenFailure(id, 'changed')
-    }
-    next[id] = entry
+    next[id] = frozen ? approved : entry
   }
   if (drifted.length > 0) {
     throw new ProviderBuildError(
@@ -247,8 +242,10 @@ export const checkProviderLock = ({
 /**
  * Brings the `providers` section of `pikku-addons.lock` in line with the
  * addon providers the project opted in to, leaving the `sdks` section as it
- * is. Nothing is written when the lock would not change, and no lock file is
- * created for a project with no addon providers.
+ * is. Nothing is written when the lock would not change. A project with no
+ * addon providers, now or in the lock, never has its lock file touched or
+ * checked, so a lock written before the `providers` section existed stays
+ * as it is.
  */
 export const syncProvidersLock = async ({
   state,
@@ -271,10 +268,15 @@ export const syncProvidersLock = async ({
     frozen,
     approval,
   })
+  if (
+    Object.keys(providers).length === 0 &&
+    Object.keys(lock.providers).length === 0
+  ) {
+    return
+  }
   const path = join(rootDir, ADDONS_LOCK_FILE)
   const next = serializeAddonsLock({ ...lock, providers })
   const existing = existsSync(path) ? readFileSync(path, 'utf8') : null
-  if (existing === null && Object.keys(providers).length === 0) return
   if (existing !== next) {
     if (frozen) {
       throw new ProviderBuildError(

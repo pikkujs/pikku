@@ -164,26 +164,33 @@ wireAddon({
 })
 ```
 
-The names are typed. `pikku all` reads the providers meta each wired addon published (`.pikku/providers/pikku-providers-meta.gen.json`, `{ metaVersion: 2, providers, collections }`) and writes the union of its names into `#pikku/addon`, so an editor completes the valid names and `tsc` rejects one the addon does not declare. A name the addon does not declare is also a build error (PKU374) that lists the names it does. An addon whose meta is not installed types its names as plain `string`. A list the inspector cannot read statically is PKU373, and naming one provider twice is an error too.
+The names are typed. `pikku all` reads the providers meta each wired addon published (`.pikku/addon/providers/pikku-providers-meta.gen.json`, `{ metaVersion: 2, providers, collections }`) and writes the union of its names into `#pikku/addon`, so an editor completes the valid names and `tsc` rejects one the addon does not declare. A name the addon does not declare is also a build error (PKU374) that lists the names it does. An addon whose meta is not installed types its names as plain `string`. A list the inspector cannot read statically is PKU373. Naming one provider twice is the same as naming it once.
 
 An addon with only providers (no functions) is valid: `wireAddon` wires it and the runner imports the provider without bootstrapping addon functions.
 
-The providers reach your app as the second argument of `createSingletonServices(config, existingServices)`. A key an opted-in provider provides is typed as present in `existingServices`, and the runner merges the injected keys onto whatever your factory returns, so a factory returns only what it adds.
+The providers reach your app as the second argument of `createSingletonServices(config, existingServices)`. A key an opted-in provider provides is typed as present in `existingServices`, and the runner merges what your factory returns over the injected keys, so a factory returns only what it adds. A key it returns that an opted-in provider also provides replaces the injected one and prints a shadow warning.
 
 An addon publishes its providers by exporting `defineProvider` consts and running `pikku all`, which writes the meta. Ship `.pikku` in the package's `files` and export `./.pikku/*`, as for any addon metadata.
 
-### The environment an addon provider sees
+### What an addon provider can reach
 
-An addon provider does not get the raw environment. Its `env` holds only the names its addon declares with `defineVariable` or `defineSecret`, so an addon that reads `NATS_URL` must declare it, and reading anything else throws `env-denied`. `variableOverrides` and `secretOverrides` on `wireAddon` rename what the addon reads (`{ NATS_URL: 'STAGE_NATS_URL' }` makes `env.NATS_URL` read the host's `STAGE_NATS_URL`). `Object.keys(env)` lists only the allowed names. A project's own providers read the raw environment.
+An addon provider is held to the declarations its addon makes, with the same limits the addon's own functions get. This is enforced for the pieces below and for nothing else.
+
+- **`env`.** Its `env` argument holds only the names its addon declares with `defineVariable` or `defineSecret`, and reading anything else throws `env-denied`. `variableOverrides` and `secretOverrides` on `wireAddon` rename what the addon reads (`{ NATS_URL: 'STAGE_NATS_URL' }` makes `env.NATS_URL` read the host's `STAGE_NATS_URL`). `Object.keys(env)` lists only the allowed names. A project's own providers read the raw `env`.
+- **`credentialService` and `content`.** An addon provider that needs one gets the scoped version: `credentialService` limited to the credentials the addon declares plus its `credentialGrants` and `credentialOverrides`, and `content` limited to the addon's own folder plus its `contentGrants`. `globalCredentials` and `globalContent` on `wireAddon` hand it the host's service instead.
+- **`onServerStart`.** It receives a frozen view of the provider's declared needs, the keys it provides and `logger`. Reading any other key throws `undeclared-read`.
+
+Not enforced: `process.env` (and `env` from `cloudflare:workers`) stays global, and so does any module an addon imports. Providers run in your process, so this limits an honest addon that reads more than it declared. It is not a sandbox. `secrets` and `variables` are not narrowed for a provider that needs them: declare the need and review it in the lock.
 
 ### The lock
 
 The first `pikku all` that sees an opted-in addon provider records its surface in `pikku-addons.lock`, which you commit: its package and version, a hash of its meta, what it provides, which keys it imports (needs), what it adds to and what it replaces. A later build compares each addon provider with its entry.
 
 - A changed surface, such as a new need, a new provided key or a new `replaces`, fails with PKU395 and a diff. Review it, then run `pikku all --approve-providers=<id>[,<id>]`, or `--approve-providers` last on the command line to approve everything.
-- A version or hash change with an identical surface is rewritten without a message.
+- A version or hash change with an identical surface is rewritten without a message. Version and hash are not part of the approved surface.
 - A provider you stopped opting in to is dropped from the lock.
-- `pikku all --frozen` refuses to write the lock at all: a new entry, a changed one (including a rewritten version), a removed one, or a lock not in the form pikku writes it is PKU396. `CI=true` implies `--frozen`. A repository that commits a lock for workspace addons must regenerate it at every release.
+- `pikku all --frozen` refuses to write the lock: a new entry, an entry whose surface changed, a removed one, or a lock not in the form pikku writes it is PKU396. A version or hash change with an identical surface is accepted and the approved entry is kept, so a release that only bumps versions builds in CI without regenerating the lock. `CI=true` implies `--frozen`.
+- A project with no addon providers, and a lock with none, is never checked or rewritten: a lock written before the `providers` section existed is read as having none.
 
 Hand-editing the lock to grant more does not widen what a provider can read at run time: the runtime view is always the declared needs.
 
@@ -193,7 +200,7 @@ A host that adds an addon on the project's behalf (CI, Pikku Studio) writes a ho
 
 ## Teardown and the server lifecycle
 
-- `onServerStart(services)` runs where the server lifecycle runs, after every provider is built and before the app's `beforeStart`, in dependency order. A hook that throws aborts startup with `Service 'x' failed in onServerStart: ...`.
+- `onServerStart(services)` runs where the server lifecycle runs, after every provider is built and before the app's `beforeStart`, in dependency order. A hook that throws aborts startup with a `ProviderError` of kind `start-failed`: `Provider 'x' failed in onServerStart: ...`.
 - Teardown is the value's own `stop()`. `stopSingletonServices` calls it in reverse resolved order, once per object however many keys hold it, and a `stop()` that throws is logged without stopping the rest. A provider that replaces a baseline key stops with its provider, before what it needs, not at the baseline's position. Collection items stop in reverse resolved order with the rest. To make one provider stop before another, make it need the other.
 - Per request, when the function returns or throws: the invocation's `auditLog` and `analytics` flush first, then the project's wire services stop (last built first, `stopWireServices`), then the wire providers stop in reverse resolved order. A wire provider's `stop()` therefore runs after the audit flush: audit writes it makes while stopping are not flushed.
 

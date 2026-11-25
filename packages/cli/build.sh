@@ -123,21 +123,22 @@ done
 "$_bootstrap_dir/node_modules/.bin/pikku" all --outDir .pikku
 rm -rf "$_bootstrap_dir"
 
-# The published CLI still generates the contributor leaves, which import a module
-# @pikku/core no longer has; the local CLI never writes them, so tsc must not see them.
+# The bootstrap CLI's generated files may name exports @pikku/core does not have.
+# Each rewrite runs only on a file that exists, so a bootstrap CLI that does not
+# generate one is not an error.
 test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
 rm -rf -- .pikku/contributor .pikku/backends/cli/contributor
 
-# It also names `createAnalyticsSinks` and `AnalyticsSinkRegistry` in the analytics leaf and
-# the local services, which @pikku/core does not export. The local CLI rewrites all four
-# files below; until then they only have to load, so those names are dropped.
+_edit_if_present() { # file, sed args...
+  _file=$1
+  shift
+  if [ -f "$_file" ]; then sed -i "$@" "$_file"; fi
+}
 for _stale in .pikku .pikku/backends/cli; do
-  sed -i -e '/^  createAnalyticsSinks,$/d' -e '/^  AnalyticsSinkRegistry,$/d' "$_stale/analytics/pikku-analytics-types.gen.ts"
-  sed -i -e "/^import { createAnalyticsSinks } from '@pikku\/core\/analytics'$/d" -e 's/ ?? createAnalyticsSinks()//' "$_stale/pikku-local-services.gen.ts"
+  _edit_if_present "$_stale/analytics/pikku-analytics-types.gen.ts" -e '/^  createAnalyticsSinks,$/d' -e '/^  AnalyticsSinkRegistry,$/d'
+  _edit_if_present "$_stale/pikku-local-services.gen.ts" -e "/^import { createAnalyticsSinks } from '@pikku\/core\/analytics'$/d" -e 's/ ?? createAnalyticsSinks()//'
 done
 
-# The published CLI also generates imports of the kysely packages under their old names,
-# which no longer exist in the workspace.
 find .pikku -path .pikku/remote -prune -o -name '*.ts' -print0 | xargs -0 -r sed -i -E "s#'@pikku/kysely(-[a-z-]+)?'#'@pikku/addon-kysely\1'#g"
 
 # Build TypeScript (may fail if published CLI generates stale types)

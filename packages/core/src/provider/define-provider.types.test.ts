@@ -40,3 +40,23 @@ describe('defineProvider optional needs', () => {
     defineWireProvider({ addTo: {}, common: () => ({ a: 1 }) })
   })
 })
+
+describe('the env a variant receives', () => {
+  test('a worker variant reads bindings, the others read strings', () => {
+    const provider = defineProvider({
+      'deploy:cloudflare-worker': (_services, env) => {
+        // @ts-expect-error a binding is not a string
+        const asString: string | undefined = env.DB
+        return { db: env.DB, asString }
+      },
+      'deploy:standalone': (_services, env) => ({
+        db: env.DB_URL?.length ?? 0,
+      }),
+      dev: (_services, env) => ({
+        // @ts-expect-error a string env has no binding members
+        db: env.DB.prepare('select 1'),
+      }),
+    })
+    assert.equal(typeof provider['deploy:cloudflare-worker'], 'function')
+  })
+})

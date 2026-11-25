@@ -3,9 +3,11 @@ import type { ProviderAddonScope, ProviderEnv } from './provider.types.js'
 
 /**
  * The environment an addon's provider reads: only the names the addon
- * declares (and the names its `wireAddon` grants), each read from the host name
- * behind it. Reading any other name throws `env-denied`; listing the keys shows
- * only the allowed names the host has set.
+ * declares (including the names `variableOverrides` and `secretOverrides`
+ * rename), each read from the host name behind it. Reading any other name
+ * throws `env-denied`; listing the keys shows only the allowed names the host
+ * has set. `process.env` itself stays global: this constrains honest code, it
+ * is not a sandbox.
  */
 export const scopedEnv = (
   env: ProviderEnv | Readonly<Record<string, unknown>>,

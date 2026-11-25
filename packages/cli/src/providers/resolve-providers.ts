@@ -146,7 +146,9 @@ const declaredIds = (path: string, idKey: string): string[] => {
  * The environment names an addon's providers may read: the variables and
  * secrets the addon declares (read from its built meta, in `dist` or beside
  * the source), plus the names `wireAddon`'s overrides grant, each mapped to the
- * host name behind it. An addon that was never built declares nothing.
+ * host name behind it. An addon that was never built declares nothing. It also
+ * carries what narrows `credentialService` and `content` for the addon, the
+ * same sets the addon's own functions get.
  */
 export const addonProviderScope = (
   namespace: string,
@@ -154,6 +156,12 @@ export const addonProviderScope = (
   overrides: {
     variableOverrides?: Record<string, string>
     secretOverrides?: Record<string, string>
+    credentialOverrides?: Record<string, unknown>
+    credentialGrants?: string[]
+    globalCredentials?: string
+    contentBucket?: string
+    contentGrants?: Record<string, string>
+    globalContent?: string
   } = {}
 ): ProviderAddonScope => {
   const metaDir = [
@@ -172,6 +180,12 @@ export const addonProviderScope = (
         ),
       ]
     : []
+  const declaredCredentials = metaDir
+    ? declaredIds(
+        join(metaDir, 'credentials', 'pikku-credentials-meta.gen.json'),
+        ''
+      )
+    : []
   const rename = {
     ...overrides.variableOverrides,
     ...overrides.secretOverrides,
@@ -186,6 +200,24 @@ export const addonProviderScope = (
     ...(Object.keys(sortedRename).length > 0
       ? { envRename: sortedRename }
       : {}),
+    credentials: [
+      ...new Set([
+        ...declaredCredentials,
+        ...(overrides.credentialGrants ?? []),
+        ...Object.keys(overrides.credentialOverrides ?? {}),
+      ]),
+    ].sort(),
+    ...(overrides.globalCredentials ? { globalCredentials: true } : {}),
+    content: {
+      bucket: overrides.contentBucket ?? namespace,
+      ...(overrides.contentGrants &&
+      Object.keys(overrides.contentGrants).length > 0
+        ? {
+            grants: overrides.contentGrants as Record<string, 'read' | 'write'>,
+          }
+        : {}),
+    },
+    ...(overrides.globalContent ? { globalContent: true } : {}),
   }
 }
 

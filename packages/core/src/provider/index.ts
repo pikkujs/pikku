@@ -24,6 +24,7 @@ export type {
   ProviderAddonScope,
   ProviderDefinition,
   ProviderEnv,
+  ProviderWorkerEnv,
   ProviderFactory,
   ProviderMeta,
   ProviderProfile,

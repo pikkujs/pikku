@@ -1,7 +1,7 @@
 ---
 type: decision
 title: The provider lock has one writer, and CI implies --frozen
-description: pikku all writes the providers section of pikku-addons.lock in one place, a version bump with an unchanged surface is rewritten silently outside --frozen, and CI=true makes every change to the lock a build error
+description: pikku all writes the providers section of pikku-addons.lock in one place, a version bump with an unchanged surface is rewritten silently outside --frozen and accepted under it, and CI=true makes a change to the approved surface a build error
 tags: [cli, provider, lock, ci]
 ---
 
@@ -21,10 +21,17 @@ dropped, and a changed surface is PKU395 until `--approve-providers` names it.
 `--approve-providers=a/b,c/d` because the array parser would swallow a following
 flag.
 
-`--frozen` refuses every write (PKU396): a new entry, a changed one, a removed one
-and a lock not in the form pikku writes it. `CI=true` implies it. A repository
-that commits a lock for workspace addons has to regenerate it at every release,
-because a version bump fails frozen even with an unchanged surface.
+`--frozen` refuses a new entry, an entry whose surface changed, a removed one and a
+lock not in the form pikku writes it (PKU396). `CI=true` implies it. Version and
+meta hash are not part of the approved surface, so under `--frozen` a version bump
+with an unchanged surface passes and the approved entry is kept: `changeset
+version` bumps workspace addons without running `pikku all`, and refusing it
+would fail the first CI run of every release.
+
+A version 1 lock (remote addon SDKs only) reads as version 2 with an empty
+`providers` section. While neither the project nor the lock has an addon
+provider, neither writer checks or rewrites it, so upgrading the CLI does not
+fail `CI=true` builds.
 
 **What this rules out:** a build that quietly changes the approved surface in CI,
 and verifier scripts that build projects opting in to addon providers without

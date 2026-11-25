@@ -443,6 +443,9 @@ jobs:
             virtual-users,
             pikku-studio,
             package-markers,
+            providers,
+            providers-deploy,
+            providers-controlplane,
           ]
     steps:
       - uses: actions/checkout@v7

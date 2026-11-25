@@ -2,6 +2,7 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ProviderError,
+  defineProvider,
   ProviderRegistry,
   runProviders,
   scopedEnv,
@@ -287,5 +288,130 @@ describe('runProviders stop order', () => {
       services: {},
     })
     assert.equal(stopOrder.length, 1)
+  })
+})
+
+describe('an addon provider reads scoped services', () => {
+  const scope = {
+    namespace: 'x',
+    env: [],
+    credentials: ['own'],
+    content: { bucket: 'x' },
+  }
+  const recording = () => {
+    const calls: string[] = []
+    return {
+      calls,
+      credentialService: {
+        get: async (name: string) => {
+          calls.push(`get:${name}`)
+          return null
+        },
+      },
+      content: {
+        readFile: async (args: { bucket: string; key: string }) => {
+          calls.push(`read:${args.bucket}/${args.key}`)
+          return null
+        },
+      },
+    }
+  }
+
+  test('credentialService only reaches the credentials the addon declares or is lent', async () => {
+    const host = recording()
+    let seen: any
+    const registry = new ProviderRegistry().add(
+      'x/a',
+      (({ credentialService }: any) => {
+        seen = credentialService
+        return { a: 1 }
+      }) as never,
+      meta(['credentialService'], ['a']),
+      { kind: 'singleton', addon: scope }
+    )
+    await runProviders(registry, {
+      target: 'dev',
+      services: { credentialService: host.credentialService },
+    })
+    await seen.get('own')
+    await assert.rejects(
+      seen.get('other'),
+      /Access denied to credential: other/
+    )
+    assert.deepEqual(host.calls, ['get:own'])
+  })
+
+  test('content lands under the addon folder, and a project provider keeps the host service', async () => {
+    const host = recording()
+    const seen: Record<string, any> = {}
+    const registry = new ProviderRegistry()
+      .add(
+        'x/a',
+        (({ content }: any) => {
+          seen.addon = content
+          return { a: 1 }
+        }) as never,
+        meta(['content'], ['a']),
+        { kind: 'singleton', addon: scope }
+      )
+      .add(
+        'p',
+        (({ content }: any) => {
+          seen.project = content
+          return { p: 1 }
+        }) as never,
+        meta(['content'], ['p'])
+      )
+    await runProviders(registry, {
+      target: 'dev',
+      services: { content: host.content },
+    })
+    assert.equal(seen.project, host.content)
+    assert.notEqual(seen.addon, host.content)
+    await seen.addon.readFile({ bucket: 'b', key: 'f.txt' })
+    assert.equal(host.calls.length, 1)
+    assert.match(host.calls[0]!, /^read:.*\bx\b/)
+  })
+
+  test('globalCredentials keeps the host credentialService', async () => {
+    const host = recording()
+    let seen: any
+    const registry = new ProviderRegistry().add(
+      'x/a',
+      (({ credentialService }: any) => {
+        seen = credentialService
+        return { a: 1 }
+      }) as never,
+      meta(['credentialService'], ['a']),
+      { kind: 'singleton', addon: { ...scope, globalCredentials: true } }
+    )
+    await runProviders(registry, {
+      target: 'dev',
+      services: { credentialService: host.credentialService },
+    })
+    assert.equal(seen, host.credentialService)
+  })
+
+  test('onServerStart of an addon provider sees its needs, what it provides and logger, nothing else', async () => {
+    let seen: any
+    const registry = new ProviderRegistry().add(
+      'x/a',
+      defineProvider({
+        common: ({ logger }: any) => ({ a: logger }),
+        onServerStart: (services: any) => {
+          seen = services
+        },
+      }),
+      meta(['logger'], ['a']),
+      { kind: 'singleton', addon: scope }
+    )
+    const { start } = await runProviders(registry, {
+      target: 'dev',
+      services: { logger: 'L', secrets: 'S' },
+    })
+    const all = { logger: 'L', secrets: 'S', a: 'L' }
+    await start[0]!.run(all)
+    assert.equal(seen.a, 'L')
+    assert.throws(() => seen.secrets, /undeclared-read|does not destructure/)
   })
 })

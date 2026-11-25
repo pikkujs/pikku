@@ -301,6 +301,16 @@ describe('provider build errors, one exact message per code', () => {
       )
     })
 
+    test('a version bump with an unchanged surface is not PKU396', () => {
+      assert.doesNotThrow(() =>
+        checkProviderLock({
+          current: { 'a/x': entry({ version: '2.0.0', metaHash: 'sha256-z' }) },
+          lock: lockOf({ 'a/x': entry() }),
+          frozen: true,
+        })
+      )
+    })
+
     test('PKU396 PROVIDER_LOCK_FROZEN, removed provider', () => {
       assert.equal(
         lockMessage(() =>

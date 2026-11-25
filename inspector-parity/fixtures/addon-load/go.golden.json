@@ -412,6 +412,26 @@
      "old"
     ]
    }
+  ],
+  [
+   "nullversion",
+   {
+    "package": "@acme/addon4",
+    "file": "<ROOT>/src/app.ts",
+    "providers": [
+     "old"
+    ]
+   }
+  ],
+  [
+   "objectversion",
+   {
+    "package": "@acme/addon5",
+    "file": "<ROOT>/src/app.ts",
+    "providers": [
+     "old"
+    ]
+   }
   ]
  ],
  "rpc.usedAddons": [
@@ -419,7 +439,9 @@
   "two",
   "three",
   "rem",
-  "stale"
+  "stale",
+  "nullversion",
+  "objectversion"
  ],
  "rpc.wireAddonFiles": [
   "<ROOT>/src/app.ts"
@@ -487,6 +509,24 @@
   {
    "level": "warn",
    "message": "wireAddon('stale') (declared in src/app.ts): @acme/addon3 is installed at <ROOT>/node_modules/@acme/addon3 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon3."
+  },
+  {
+   "level": "critical",
+   "code": "PKU374",
+   "message": "Addon '@acme/addon4' publishes provider meta version null; this CLI reads version 2. Run 'pikku all' in the addon with this CLI."
+  },
+  {
+   "level": "warn",
+   "message": "wireAddon('nullversion') (declared in src/app.ts): @acme/addon4 is installed at <ROOT>/node_modules/@acme/addon4 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon4."
+  },
+  {
+   "level": "critical",
+   "code": "PKU374",
+   "message": "Addon '@acme/addon5' publishes provider meta version [object Object]; this CLI reads version 2. Run 'pikku all' in the addon with this CLI."
+  },
+  {
+   "level": "warn",
+   "message": "wireAddon('objectversion') (declared in src/app.ts): @acme/addon5 is installed at <ROOT>/node_modules/@acme/addon5 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon5."
   }
  ]
 }

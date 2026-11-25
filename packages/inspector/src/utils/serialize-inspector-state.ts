@@ -174,7 +174,7 @@ export interface SerializableInspectorState {
           file?: string
           rpcEndpoint?: string
           remote?: boolean
-          local?: { package: string; ui?: boolean; services?: string[] }
+          local?: { package: string; ui?: boolean; providers?: string[] }
           hasAuth?: boolean
           authCredentialId?: string
           authSecretId?: string

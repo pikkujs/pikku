@@ -170,9 +170,13 @@ export const queue = defineProvider({
 - A project takes an addon's providers by name with
   `wireAddon({ name, package, providers: ['queue'] })`. Nothing is injected
   without that list. An addon provider's `env` holds only the names its addon
-  declares with `defineVariable` / `defineSecret`. Providers are in-process,
-  trusted code; `pikku-addons.lock` records each one's surface (PKU395 on a
-  change, `--approve-providers`; `--frozen`, implied by `CI=true`, PKU396).
+  declares with `defineVariable` / `defineSecret`, a needed `credentialService`
+  or `content` is scoped as for the addon's functions, and `onServerStart` sees
+  only its needs, what it provides and `logger`. Providers are in-process,
+  trusted code, not a sandbox (`process.env` stays global);
+  `pikku-addons.lock` records each one's surface (PKU395 on a change,
+  `--approve-providers`; `--frozen`, implied by `CI=true`, PKU396 for a surface
+  change, a new or a removed entry; a version bump alone passes).
   `wireRemoteAddon` takes none (PKU381).
 - A function that destructures a key nothing provides fails the build (PKU390).
 

@@ -9,12 +9,11 @@ const connect = (env: Record<string, unknown>) => {
       'The mysql kysely service needs DATABASE_URL, the connection string of the database.'
     )
   }
-  return {
-    kysely: new Kysely<any>({
-      dialect: new MysqlDialect({ pool: createPool(url) }),
-      plugins: [new CamelCasePlugin()],
-    }),
-  }
+  const db = new Kysely<any>({
+    dialect: new MysqlDialect({ pool: createPool(url) }),
+    plugins: [new CamelCasePlugin()],
+  })
+  return { kysely: Object.assign(db, { stop: () => db.destroy() }) }
 }
 
 /**
