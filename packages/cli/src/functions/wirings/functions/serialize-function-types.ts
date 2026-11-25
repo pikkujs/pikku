@@ -142,15 +142,7 @@ export type PikkuApprovalDescription<In = unknown, RequiredServices extends Secr
 /**
  * Factory function for creating approval description functions with tree-shaking support.
  *
- * @example
- * \`\`\`typescript
- * export const deleteTodoApproval = pikkuApprovalDescription(
- *   async ({ todoStore }, { id }) => {
- *     const todo = await todoStore.get(id)
- *     return \\\`Delete todo: "\${todo.title}"\\\`
- *   }
- * )
- * \`\`\`
+ * @example snippet: approvalDescription
  */
 export const pikkuApprovalDescription = <In = unknown, RequiredServices extends SecretlessServices<Services> = WiredServices>(
   fn: PikkuApprovalDescription<In, RequiredServices>
@@ -348,13 +340,14 @@ type PikkuMockSessionlessFunctionConfig<In, Out> = Omit<PikkuFunctionSessionless
   func?: PikkuFunctionSessionlessConfig<In, Out, 'session' | 'rpc'>['func'] & { readonly __mockHasNoBody: never }
 }
 
-/** Declares a function without a body: \`input\`, \`output\` and \`mock: true\`. */
+/** @hidden */
 export function pikkuFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuMockFunctionConfigWithSchema<InputSchema, OutputSchema>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+/** @hidden */
 export function pikkuFunc<In, Out = unknown>(
   config: PikkuMockFunctionConfig<In, Out>
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
@@ -484,13 +477,14 @@ type PikkuFunctionSessionlessConfigWithSchema<
     : never
 }
 
-/** Declares a function without a body: \`input\`, \`output\` and \`mock: true\`. */
+/** @hidden */
 export function pikkuSessionlessFunc<
   InputSchema extends StandardSchemaV1 | undefined = undefined,
   OutputSchema extends StandardSchemaV1 | undefined = undefined
 >(
   config: PikkuMockSessionlessFunctionConfigWithSchema<InputSchema, OutputSchema>
 ): PikkuFunctionConfig<InputSchema extends StandardSchemaV1 ? InferSchemaOutput<InputSchema> : unknown, OutputSchema extends StandardSchemaV1 ? InferSchemaOutput<OutputSchema> : unknown, 'session' | 'rpc'>
+/** @hidden */
 export function pikkuSessionlessFunc<In, Out = unknown>(
   config: PikkuMockSessionlessFunctionConfig<In, Out>
 ): PikkuFunctionConfig<In, Out, 'session' | 'rpc'>
