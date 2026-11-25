@@ -49,7 +49,7 @@ const required = (env: Env, name: string, why: string): string => {
   const value = env[name]
   if (!value) {
     throw new Error(
-      `The nats service needs ${name} (${why}). It never falls back to the in-memory queue: set ${name}, or remove 'nats' from wireAddon({ services }).`
+      `The nats service needs ${name} (${why}). It never falls back to the in-memory queue: set ${name}, or remove 'nats' from wireAddon({ providers }).`
     )
   }
   return value

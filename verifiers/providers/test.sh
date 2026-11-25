@@ -11,7 +11,7 @@ all_scenarios=(
   provides-nothing optional-absent default-initializer optional-cascade-bad optional-cascade
   typed function-needs function-needs-ghost no-variant dup protected-no-replaces
   protected-addon lock-hostile-replace collection-key-conflict optional-bad-array
-  collections-zero collections wire wire-lifetime wire-shadow wire-core-key runtime addon-cross
+  collections-zero collections wire wire-lifetime wire-shadow wire-core-key runtime stop-order addon-cross
   lock-new lock-drift lock-frozen providers-only unknown-provider remote-providers remote-local
   unused-services-param whole-services-param
 )
@@ -165,6 +165,13 @@ run_scenario() {
         pass "$s" "runtime enforcement"
       else
         fail "$s" "runtime enforcement: $(tail -n 3 <<<"$out" | tr '\n' ' ')"
+      fi
+      ;;
+    stop-order)
+      if out=$(cd "scenarios/$s" && npx tsx src/check-stop-order.ts 2>&1); then
+        pass "$s" "stop order"
+      else
+        fail "$s" "stop order: $(tail -n 3 <<<"$out" | tr '\n' ' ')"
       fi
       ;;
     addon-cross) expect_ok "$s" pikku_all "$s" --approve-providers ;;

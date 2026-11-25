@@ -82,6 +82,23 @@ export type ProviderMeta = Partial<
   Record<ProviderVariantName, ProviderVariantMeta>
 >
 
+/** What an addon's provider may read of the host's environment. */
+export interface ProviderAddonScope {
+  /** The `wireAddon` name: the namespace in the provider's name. */
+  namespace: string
+  /** The names the addon declares with `defineVariable`/`defineSecret`, plus the names a `wireAddon` override grants. */
+  env: readonly string[]
+  /** The host name behind a name the addon reads, from `variableOverrides` and `secretOverrides`. */
+  envRename?: Readonly<Record<string, string>>
+}
+
+/** What the build knows about a provider beyond what its variants read. */
+export interface ProviderRegistration {
+  kind: 'singleton' | 'wire'
+  /** Set for a provider opted in from an addon: it gets a scoped `env`, never the host's. */
+  addon?: ProviderAddonScope
+}
+
 /** One service picked for a target. */
 export interface ResolvedProvider {
   name: string
@@ -91,6 +108,7 @@ export interface ResolvedProvider {
   provides: readonly string[]
   optionalProvides: readonly string[]
   factory: ProviderFactory
+  addon?: ProviderAddonScope
   onServerStart?: (services: any) => void | Promise<void>
 }
 

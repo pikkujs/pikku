@@ -4,14 +4,20 @@ import type {
   ServerLifecycle,
 } from './types/core.types.js'
 import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
+import { readStopOrder } from './provider/stop-order.js'
 
 const stopService = async (
   logger: Logger,
   name: string,
-  service: any
+  service: any,
+  stopped?: WeakSet<object>
 ): Promise<void> => {
   const stop = service?.stop
   if (stop) {
+    if (stopped && typeof service === 'object') {
+      if (stopped.has(service)) return
+      stopped.add(service)
+    }
     logger.info(`Stopping singleton service: ${name}`)
     try {
       await stop.call(service)
@@ -23,7 +29,10 @@ const stopService = async (
 
 /**
  * Stops addon package services first, then the parent singleton services.
- * Within each group services stop in reverse of the order they were built.
+ * Addon package services stop in reverse of the order they were built. The
+ * parent's stop in the order the provider runner recorded (latest provider
+ * first), then the rest in reverse insertion order. An object held under two
+ * keys is stopped once.
  */
 export const stopSingletonServices = async (): Promise<void> => {
   const singletonServices = getSingletonServices()
@@ -47,8 +56,17 @@ export const stopSingletonServices = async (): Promise<void> => {
     }
   }
 
-  for (const [name, service] of Object.entries(singletonServices).reverse()) {
-    await stopService(logger, name, service)
+  const stopped = new WeakSet<object>()
+  const held = new Map(Object.entries(singletonServices))
+  const handled = new Set<string>()
+  for (const name of readStopOrder()) {
+    if (!held.has(name)) continue
+    handled.add(name)
+    await stopService(logger, name, held.get(name), stopped)
+  }
+  for (const [name, service] of [...held].reverse()) {
+    if (handled.has(name)) continue
+    await stopService(logger, name, service, stopped)
   }
 }
 

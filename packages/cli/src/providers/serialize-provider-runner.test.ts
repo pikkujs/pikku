@@ -38,13 +38,37 @@ describe('serializeProviderRunner', () => {
     )
     assert.match(
       source,
-      /registry\.add\("cache", service0, \{"common":\{"needs":\["kysely"\],"optional":\[\],"provides":\["cache"\],"optionalProvides":\[\]\}\}\)/
+      /registry\.add\("cache", service0, \{"common":\{"needs":\["kysely"\],"optional":\[\],"provides":\["cache"\],"optionalProvides":\[\]\}\}, \{"kind":"singleton"\}\)/
     )
     assert.match(source, /registry\.add\("clock", service1, \{"dev":/)
     assert.match(
       source,
       /runProviders\(registry, \{ target: "dev", services, env \}\)/
     )
+  })
+
+  test('an addon provider is registered with the env names its addon declares, and the stop order is recorded', () => {
+    const source = serializeProviderRunner({
+      target: 'deploy',
+      specifier,
+      services: [
+        resolved({
+          name: 'nats/nats',
+          provides: ['queueService'],
+          addon: {
+            namespace: 'nats',
+            env: ['NATS_URL'],
+            envRename: { NATS_URL: 'STAGE_NATS_URL' },
+          },
+        }),
+      ],
+    })
+    assert.match(
+      source,
+      /\{"kind":"singleton","addon":\{"namespace":"nats","env":\["NATS_URL"\],"envRename":\{"NATS_URL":"STAGE_NATS_URL"\}\}\}\)/
+    )
+    assert.match(source, /const \{ stopOrder \} = await runProviders/)
+    assert.match(source, /recordStopOrder\(stopOrder\)/)
   })
 
   test('a deploy profile is handed to the runner so it picks the variant it was resolved for', () => {

@@ -111,7 +111,7 @@ describe('writeUnitPlatformServices', () => {
     assert.match(source, /target: "deploy"/)
     assert.match(
       source,
-      /registry\.add\("mailer", service0, \{"deploy":\{"needs":\["logger"\],"optional":\[\],"provides":\["mailer"\],"optionalProvides":\[\]\}\}\)/
+      /registry\.add\("mailer", service0, \{"deploy":\{"needs":\["logger"\],"optional":\[\],"provides":\["mailer"\],"optionalProvides":\[\]\}\}, \{"kind":"singleton"\}\)/
     )
   })
 

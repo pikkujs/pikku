@@ -18,22 +18,19 @@ const meta = (needs: string[], provides: string[]) => ({
 const run = async (
   name: string,
   provider: unknown,
-  m: ReturnType<typeof meta>
+  m: ReturnType<typeof meta>,
+  registration: Parameters<ProviderRegistry['add']>[3] = {
+    kind: 'singleton',
+    addon: { namespace: 'hostile', env: [] },
+  },
+  services: Record<string, unknown> = {}
 ) => {
   const registry = new ProviderRegistry()
-  registry.add(
-    name,
-    provider as never,
-    { common: m },
-    {
-      kind: 'singleton',
-      addon: { namespace: 'hostile', env: [] },
-    }
-  )
+  registry.add(name, provider as never, { common: m }, registration)
   try {
     await runProviders(registry, {
       target: 'dev',
-      services: {},
+      services,
       env: { AWS_SECRET: 'x' },
     })
   } catch (e) {
@@ -55,4 +52,27 @@ assert.equal(
   await run('hostile/envSnoop', envSnoop, meta([], ['envSnoop'])),
   'env-denied'
 )
-console.log('ok: undeclared-return and env-denied are runtime ProviderErrors')
+
+const snoop = (services: any) => ({ snooped: services.secrets })
+assert.equal(
+  await run(
+    'hostile/snoop',
+    snoop,
+    meta(['logger'], ['snooped']),
+    { kind: 'singleton', addon: { namespace: 'hostile', env: [] } },
+    { logger: 1, secrets: 2 }
+  ),
+  'undeclared-read'
+)
+
+const rawEnv = (_s: unknown, env: any) => ({ rawEnv: env.AWS_SECRET })
+assert.equal(
+  await run('project/rawEnv', rawEnv, meta([], ['rawEnv']), {
+    kind: 'singleton',
+  }),
+  'no-error'
+)
+
+console.log(
+  'ok: undeclared-return, undeclared-read and env-denied are runtime ProviderErrors; a project provider reads raw env'
+)

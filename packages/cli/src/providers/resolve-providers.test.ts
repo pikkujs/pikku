@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
+  addonProviderScope,
   collectProviderSources,
   providedKeys,
   resolveAllTargets,
@@ -622,5 +623,65 @@ describe('resolveProviders', () => {
       ).sort(),
       ['a', 'b']
     )
+  })
+})
+
+describe('addonProviderScope', () => {
+  const addonDir = () => {
+    const dir = mkdtempSync(join(scratchRoot(), 'pikku-addon-scope-'))
+    const meta = join(dir, 'dist', '.pikku', 'addon')
+    mkdirSync(join(meta, 'variables'), { recursive: true })
+    mkdirSync(join(meta, 'secrets'), { recursive: true })
+    writeFileSync(
+      join(meta, 'variables', 'pikku-variables-meta.gen.json'),
+      JSON.stringify({ natsUrl: { variableId: 'NATS_URL' } })
+    )
+    writeFileSync(
+      join(meta, 'secrets', 'pikku-secrets-meta.gen.json'),
+      JSON.stringify({ natsPass: { secretId: 'NATS_PASSWORD' } })
+    )
+    return dir
+  }
+
+  test('allows what the addon declares, sorted', () => {
+    const dir = addonDir()
+    try {
+      assert.deepEqual(addonProviderScope('nats', dir), {
+        namespace: 'nats',
+        env: ['NATS_PASSWORD', 'NATS_URL'],
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('an override grants its name and maps it to the host name', () => {
+    const dir = addonDir()
+    try {
+      assert.deepEqual(
+        addonProviderScope('nats', dir, {
+          variableOverrides: { NATS_URL: 'STAGE_NATS_URL' },
+        }),
+        {
+          namespace: 'nats',
+          env: ['NATS_PASSWORD', 'NATS_URL'],
+          envRename: { NATS_URL: 'STAGE_NATS_URL' },
+        }
+      )
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('an addon that declares nothing, or was never built, may read nothing', () => {
+    const dir = mkdtempSync(join(scratchRoot(), 'pikku-addon-scope-'))
+    try {
+      assert.deepEqual(addonProviderScope('nats', dir), {
+        namespace: 'nats',
+        env: [],
+      })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

@@ -264,6 +264,8 @@ export interface PikkuPackageState {
       createWireServices?: CreateWireServices<any, any, any>
     } | null
     singletonServices: CoreSingletonServices | null
+    /** The keys the provider runner built, in the order `stopSingletonServices` stops them. */
+    providerStopOrder: string[] | null
     /** The pikkuBetterAuth factory, self-registered when auth.ts is evaluated.
      *  pikkuServices reads it to build and inject the `auth` singleton. */
     authFactory:
