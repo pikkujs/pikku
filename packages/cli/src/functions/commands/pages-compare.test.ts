@@ -294,7 +294,7 @@ describe('the capture of what a site relies on and does', () => {
 <style>nav a { color: rgb(0, 0, 0); transition: color 0.2s ease } nav a:hover { color: rgb(200, 0, 0) } #menu[hidden] { display: none }</style>
 </head><body><header><nav><a href="/">Home</a><a href="/about">About</a><a href="/feed">Feed</a><a href="/wp-json/pages">API</a><a href="/guide.pdf">Guide</a></nav>
 <button aria-expanded="false" onclick="this.setAttribute('aria-expanded','true');document.getElementById('menu').hidden=false">Menu</button>
-<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a><a href="${assets}/delayed">Enroll</a><a href="${assets}/forms/d/e/abc/viewform">here</a>` : ''}
+<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a><a href="${assets}/delayed">Enroll</a><a href="${assets}/forms/d/e/abc/viewform">here</a>` : ''}<a href="/buy/123:1">Buy now</a><button>Jetzt buchen</button>
 <button onclick="document.getElementById('login').hidden=false">Log In</button><form id="login" hidden><input type="email" name="email" aria-label="Email"><input type="password" name="password" aria-label="Password"><button type="submit">Go</button></form></header>
 <main><h1>Welcome</h1><div class="apply">
 <label for="email">Email</label><input id="email" name="email" type="email" required>
@@ -312,7 +312,7 @@ describe('the capture of what a site relies on and does', () => {
               location: `http://127.0.0.1:${host.split(':')[1]}/`,
             })
             .end()
-        else if (req.method === 'POST') {
+        else if (req.method === 'POST' && req.url !== '/formdata') {
           posts++
           res.end('{}')
         } else if (req.url === '/old')
@@ -338,11 +338,18 @@ describe('the capture of what a site relies on and does', () => {
                 ),
             3000
           )
+        else if (req.url === '/formdata')
+          // a hosted form reads its fields with a POST, as Google Forms and booking widgets do
+          res
+            .writeHead(200, { 'content-type': 'text/html' })
+            .end(
+              '<form><label for="p">Pronoun(s)</label><input id="p" name="pronouns" required><button type="submit">Submit</button></form>'
+            )
         else if (req.url === '/forms/d/e/abc/viewform')
           res
             .writeHead(200, { 'content-type': 'text/html' })
             .end(
-              `<!doctype html><title>Scholarship form</title><form><label for="p">Pronoun(s)</label><input id="p" name="pronouns" required><button type="submit">Submit</button></form>`
+              `<!doctype html><title>Scholarship form</title><main id="f"></main><script>fetch('/formdata',{method:'POST'}).then((r)=>r.text()).then((html)=>{document.getElementById('f').innerHTML=html})</script>`
             )
         else if (req.url === '/apply')
           res
@@ -485,6 +492,15 @@ describe('the capture of what a site relies on and does', () => {
       )
       assert.equal(hosted.text, 'here')
       assert.equal(hosted.step.forms[0].fields[0].name, 'pronouns')
+      // a cart or checkout link is never a page nor opened; German flow words start a flow
+      assert.ok(
+        !summary.actions.some((a: { href?: string }) =>
+          a.href?.includes('/buy/')
+        )
+      )
+      assert.ok(
+        summary.actions.some((a: { text: string }) => a.text === 'Jetzt buchen')
+      )
       const login = summary.actions.find(
         (a: { text: string }) => a.text === 'Log In'
       )
@@ -518,8 +534,69 @@ describe('the capture of what a site relies on and does', () => {
   )
 })
 
+describe('the site’s own other apps', () => {
+  test(
+    'a sub-domain the site links is recorded under siblings with its first page, read-only',
+    { timeout: 120_000, skip: !CHROMIUM && 'no chromium to capture with' },
+    async () => {
+      const site = (await loadSiteCapture()) as unknown as {
+        capture: (
+          out: string,
+          urls: string[],
+          widths: number[],
+          tiles: boolean,
+          jobs: number,
+          opts: Record<string, unknown>
+        ) => Promise<unknown>
+      }
+      const server = createServer((req, res) => {
+        res.writeHead(200, { 'content-type': 'text/html' })
+        if ((req.headers.host ?? '').startsWith('app.'))
+          res.end(
+            '<!doctype html><title>Salon login</title><h1>Log in</h1><form><input type="email" name="email" aria-label="Email"><input type="password" name="password" aria-label="Password"><button>Log in</button></form>'
+          )
+        else
+          res.end(
+            `<!doctype html><title>Site</title><h1>Home</h1><a href="http://app.site.localhost:${(server.address() as AddressInfo).port}/login">Salon finder</a><a href="https://elsewhere.example/">Other</a>`
+          )
+      })
+      await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok))
+      const port = (server.address() as AddressInfo).port
+      const out = mkdtempSync(join(tmpdir(), 'pages-siblings-'))
+      try {
+        await site.capture(
+          out,
+          [`http://site.localhost:${port}/`],
+          [1440],
+          false,
+          1,
+          { chromium: CHROMIUM, pictures: false, log: () => {} }
+        )
+      } finally {
+        server.close()
+      }
+      const { siblings } = JSON.parse(
+        readFileSync(join(out, 'behaviour.json'), 'utf8')
+      )
+      assert.deepEqual(siblings, [
+        {
+          host: 'app.site.localhost',
+          linkedAs: 'Salon finder',
+          from: ['index'],
+          url: `http://app.site.localhost:${port}/login`,
+          title: 'Salon login',
+          heading: 'Log in',
+          signIn: true,
+          shop: false,
+          forms: 1,
+        },
+      ])
+    }
+  )
+})
+
 describe('the pages a capture takes from a long page list', () => {
-  test('keeps every page outside a template and three of each template of many alike pages', async () => {
+  test('keeps every page outside a template and three of each template of twenty alike pages or more', async () => {
     const site = await loadSiteCapture()
     const b = 'https://site.example'
     const events = Array.from(
@@ -534,16 +611,20 @@ describe('the pages a capture takes from a long page list', () => {
       `${b}/post/two`,
     ]
     const got = site!.sampleTemplates!(urls)
-    assert.deepEqual(got.capture, [
-      `${b}/`,
-      `${b}/shows`,
-      ...events.slice(0, 3),
-      `${b}/post/one`,
-      `${b}/post/two`,
+    assert.deepEqual(got.capture, urls)
+    assert.deepEqual(got.templates, [])
+    // a template is a group of twenty pages or more; language versions and a CMS's own pages never are
+    const many = Array.from(
+      { length: 20 },
+      (_, i) => `${b}/event-info/show-${i}`
+    )
+    const pages = Array.from({ length: 20 }, (_, i) => `${b}/pages/page-${i}`)
+    const english = Array.from({ length: 20 }, (_, i) => `${b}/en/page-${i}`)
+    const all = site!.sampleTemplates!([...many, ...pages, ...english])
+    assert.deepEqual(all.templates, [
+      { pattern: '/event-info/*', count: 20, sampled: many.slice(0, 3) },
     ])
-    assert.deepEqual(got.templates, [
-      { pattern: '/event-info/*', count: 5, sampled: events.slice(0, 3) },
-    ])
+    assert.equal(all.capture.length, 43)
   })
 })
 
