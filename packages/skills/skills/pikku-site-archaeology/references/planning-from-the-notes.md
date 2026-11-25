@@ -37,8 +37,8 @@ rules of the `pikku-changes` skill, and these on top:
 - Every `frontend` change lists the pages it builds in `"pages"`, as route paths: `"pages": ["/", "/about"]`. At most 5 pages per
   change. `pikku changes done` compares exactly those pages with the original and refuses until each one matches.
 - Pages that share a template are one change, not one change each: every product page of a shop, every collection, every article,
-  every event. Write one change for the template, list two or three of its routes as `"pages"` to check it on, and say in the body how
-  many pages follow it. The catalogue (the products, the articles) belongs in the data change as records, not in pages. A plan of
+  every event. Write one change for the template, list two or three of its routes as `"pages"` to check it on, and name every
+  route that follows it in the body (language versions too): each page of `pages.txt` is named by its path in some change. The catalogue (the products, the articles) belongs in the data change as records, not in pages. A plan of
   dozens of changes with one page each is a plan nobody can build or review.
 - A page the original does not have (an owner screen, a sign-in, an admin list, a page that is new in the rebuilt site) cannot be
   compared: list it in `"newPages"`, not in `"pages"`, e.g. `"newPages": ["/app/calendar"]`. A change with only new pages is not
