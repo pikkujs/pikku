@@ -3,5 +3,5 @@ import { wireAddon } from '#pikku/addon'
 wireAddon({
   name: 'bad',
   package: '@verifier/svc-bad',
-  services: ['cycleA', 'cycleB'],
+  providers: ['cycleA', 'cycleB'],
 })

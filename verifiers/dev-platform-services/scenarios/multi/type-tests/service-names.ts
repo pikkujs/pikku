@@ -1,4 +1,4 @@
-// Type-level checks for the names `wireAddon({ services })` accepts. This
+// Type-level checks for the names `wireAddon({ providers })` accepts. This
 // file is compiled by tsc only (tsconfig.type-tests.json); it sits outside
 // the inspected source because the inspector would otherwise read the deliberately
 // wrong calls below and fail the build with PKU374, which is the backstop and
@@ -13,7 +13,7 @@ type Equal<A, B> =
 const assertType = <_T extends true>() => {}
 
 type NamesOf<Package extends string> = NonNullable<
-  Parameters<typeof wireAddon<Package>>[0]['services']
+  Parameters<typeof wireAddon<Package>>[0]['providers']
 >[number]
 
 // The union is exactly what the addon declares: nothing extra, nothing
@@ -29,27 +29,27 @@ assertType<Equal<string extends NamesOf<'@verifier/svc-notify'> ? 1 : 0, 0>>()
 wireAddon({
   name: 'select',
   package: '@verifier/svc-select',
-  services: ['store', 'queueNoop'],
+  providers: ['store', 'queueNoop'],
 })
 
 wireAddon({
   name: 'select',
   package: '@verifier/svc-select',
   // @ts-expect-error 'cacheMiss' is not declared by @verifier/svc-select
-  services: ['cacheMiss'],
+  providers: ['cacheMiss'],
 })
 
 wireAddon({
   name: 'notify',
   package: '@verifier/svc-notify',
-  // @ts-expect-error a service of @verifier/svc-select is not one of notify's
-  services: ['store'],
+  // @ts-expect-error a provider of @verifier/svc-select is not one of notify's
+  providers: ['store'],
 })
 
-// An addon whose services meta is not installed falls back to string, so the
+// An addon whose providers meta is not installed falls back to string, so the
 // build-time check is the only guard and the type does not block it.
 wireAddon({
   name: 'elsewhere',
   package: '@verifier/not-installed',
-  services: ['anything'],
+  providers: ['anything'],
 })

@@ -27,7 +27,7 @@ const generated = (scenario: string) =>
     verifier,
     'scenarios',
     scenario,
-    '.pikku/services/pikku-dev-services.gen.ts'
+    '.pikku/providers/pikku-dev-providers.gen.ts'
   )
 const store = createScriptContent(
   resolve(verifier, '.pikku-runtime/script-content')
@@ -45,14 +45,14 @@ const metaOf = async (addon: string) =>
       join(
         verifier,
         addon,
-        '.pikku/addon/services/pikku-services-meta.gen.json'
+        '.pikku/addon/providers/pikku-providers-meta.gen.json'
       )
     )
   )
 const metas: Record<string, any> = {}
 for (const addon of ['svc-notify', 'svc-select', 'svc-bad']) {
   metas[addon] = await metaOf(addon)
-  for (const [name, service] of Object.entries<any>(metas[addon].services)) {
+  for (const [name, service] of Object.entries<any>(metas[addon].providers)) {
     assert.match(
       service.module,
       /^src\/[\w-]+\.ts$/,
@@ -60,34 +60,44 @@ for (const addon of ['svc-notify', 'svc-select', 'svc-bad']) {
     )
   }
 }
-assert.deepEqual(metas['svc-notify'].services.notifier, {
+const variant = (needs: string[], provides: string[]) => ({
+  needs,
+  optional: [],
+  provides,
+  optionalProvides: [],
+})
+assert.equal(metas['svc-notify'].metaVersion, 2)
+assert.deepEqual(metas['svc-notify'].collections, {})
+assert.deepEqual(metas['svc-notify'].providers.notifier, {
+  kind: 'singleton',
   module: 'src/notifier.ts',
   export: 'notifier',
   variants: {
-    dev: { needs: ['logger'], provides: ['notifier'] },
-    deploy: { needs: ['logger'], provides: ['notifier'] },
+    dev: variant(['logger'], ['notifier']),
+    deploy: variant(['logger'], ['notifier']),
   },
 })
-assert.deepEqual(Object.keys(metas['svc-notify'].services.unused.variants), [
+assert.deepEqual(Object.keys(metas['svc-notify'].providers.unused.variants), [
   'dev',
 ])
-assert.deepEqual(metas['svc-notify'].services.blob, {
+assert.deepEqual(metas['svc-notify'].providers.blob, {
+  kind: 'singleton',
   module: 'src/blob.ts',
   export: 'blob',
   variants: {
-    common: { needs: ['cache', 'events'], provides: ['blob'] },
+    common: variant(['cache', 'events'], ['blob']),
   },
   onServerStart: true,
 })
 assert.deepEqual(
-  metas['svc-select'].services.queueReal.variants.dev,
-  { needs: ['queueService'], provides: ['queueClient'] },
+  metas['svc-select'].providers.queueReal.variants.dev,
+  variant(['queueService'], ['queueClient']),
   'the real queue needs the target queue and provides queueClient'
 )
 assert.deepEqual(
-  Object.keys(metas['svc-select'].services).sort(),
+  Object.keys(metas['svc-select'].providers).sort(),
   ['edgeQueue', 'kyselyFake', 'queueNoop', 'queueReal', 'store'],
-  'every exported pikkuService const is published, under its exported name'
+  'every exported defineProvider const is published, under its exported name'
 )
 
 // --- dev: several addons, opt-in, reachability, ordering -------------------
@@ -190,19 +200,19 @@ for (const [scenario, engine, adapter, queue] of [
 const scenarioDir = join(verifier, 'scenarios/multi')
 const optedIn = (addon: string, names: string[]) =>
   Object.fromEntries(
-    names.map((n) => [n, metas[addon].services[n] ?? assert.fail(n)])
+    names.map((n) => [n, metas[addon].providers[n] ?? assert.fail(n)])
   )
 const stateOf = (notify: string[], select: string[]) =>
   ({
-    pikkuServices: {},
-    optedInServices: {
+    providers: {},
+    optedInProviders: {
       notify: {
         packageName: '@verifier/svc-notify',
-        services: optedIn('svc-notify', notify),
+        providers: optedIn('svc-notify', notify),
       },
       select: {
         packageName: '@verifier/svc-select',
-        services: optedIn('svc-select', select),
+        providers: optedIn('svc-select', select),
       },
     },
     rpc: {
@@ -348,7 +358,7 @@ await assert.rejects(
     stateOf(['unused'], []),
     ['unused']
   ),
-  /Service 'notify\/unused' has no deploy variant and no common variant/
+  /Provider 'notify\/unused' has no deploy variant and no common variant/
 )
 const unreached = await generate(
   standalone,
@@ -410,7 +420,7 @@ await assert.rejects(
       pathToFileURL(join(boxCtx.unitDir, 'platform-services.gen.ts')).href
     )
   ).createPlatformServices({}, {}),
-  /Service 'select\/edgeQueue' failed to build: edgeQueue: the QUEUE binding is missing/
+  /Provider 'select\/edgeQueue' failed to build: edgeQueue: the QUEUE binding is missing/
 )
 
 // A Worker never runs the server lifecycle, so a service with `onServerStart`
@@ -425,7 +435,7 @@ await assert.rejects(
     ['blob']
   ),
   (error: Error) =>
-    /service 'notify\/blob' in unit 'edge-hooks'/.test(error.message) &&
+    /provider 'notify\/blob' in unit 'edge-hooks'/.test(error.message) &&
     /onServerStart would never be called/.test(error.message)
 )
 const containerCtx = await unitCtx('cloudflare', 'box-hooks', 'server')

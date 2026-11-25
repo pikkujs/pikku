@@ -1,16 +1,16 @@
-# Services
+# Providers
 
-A **service** is a factory that builds one or more of the services your functions use, for example a database client from a binding, a queue, or a mail client, and hands them to your `createSingletonServices`. Services are declared in code with `pikkuService`. A project opts in to an addon's services by name with `wireAddon`; nothing is injected into a project that did not ask for it.
+A **provider** is a factory that builds one or more of the services your functions use, for example a database client from a binding, a queue, or a mail client, and hands them to your `createSingletonServices`. Providers are declared in code with `defineProvider`. A project opts in to an addon's providers by name with `wireAddon`; nothing is injected into a project that did not ask for it.
 
-`pikkuService` is for **target-owned services**: services whose construction depends on where the app runs (`pikku dev`, a standalone bundle, a Cloudflare unit). Services every target builds the same way (`@pikku/kysely`, pg-boss) can stay explicit in your own `createSingletonServices`.
+`defineProvider` is for **target-owned providers**: providers whose construction depends on where the app runs (`pikku dev`, a standalone bundle, a Cloudflare unit). Services every target builds the same way (`@pikku/kysely`, pg-boss) can stay explicit in your own `createSingletonServices`.
 
-## Declare a service
+## Declare a provider
 
 ```ts
 // src/services/mailer.ts
-import { pikkuService } from '#pikku/service'
+import { defineProvider } from '#pikku/provider'
 
-export const mailer = pikkuService(async ({ logger }, env) => {
+export const mailer = defineProvider(async ({ logger }, env) => {
   if (!env.SMTP_URL) throw new Error('mailer: SMTP_URL is missing')
   return { mailer: makeMailer(env.SMTP_URL, logger) }
 })
@@ -27,7 +27,7 @@ The inspector reads needs and provides from the source, so a factory must be wri
 The same function applies on every target. For a different build per target, pass an object:
 
 ```ts
-export const queue = pikkuService({
+export const queue = defineProvider({
   dev: ({ logger }) => ({ queueService: new InMemoryQueueService(logger) }),
   deploy: async ({ logger }, env) => ({
     queueService: await connectQueue(env.QUEUE_URL, logger),
@@ -43,23 +43,23 @@ export const queue = pikkuService({
 `dev`, `deploy` and `common` may each be a reference to an exported const instead of an inline function:
 
 ```ts
-export const queue = pikkuService({ dev: queueDev, deploy: queueDeploy })
+export const queue = defineProvider({ dev: queueDev, deploy: queueDeploy })
 ```
 
 **Put each variant given by reference in its own module.** The build imports only the module that exports the selected variant. If `queueDev` and `queueDeploy` share a file, both reach every bundle, production included (PKU375).
 
-### Typed services: `#pikku/service`
+### Typed services: `#pikku/provider`
 
-`pikku all` generates `#pikku/service`. It holds `SingletonServices`: the type you declared plus every key a service provides, as required properties with no `any`. `pikkuService` imported from it is typed against that, so a destructured need is the real type. `SingletonServices` from `#pikku/function` is this merged type, so a function sees what a service provides without a cast.
+`pikku all` generates `#pikku/provider`. It holds `SingletonServices`: the type you declared plus every key a service provides, as required properties with no `any`. `defineProvider` imported from it is typed against that, so a destructured need is the real type. `SingletonServices` from `#pikku/function` is this merged type, so a function sees what a service provides without a cast.
 
-An addon has no services type of its own and authors against `@pikku/core/pikku-service`, where `services` is untyped.
+An addon has no services type of its own and authors against `@pikku/core/provider`, where `services` is untyped.
 
 ### Teardown and the server lifecycle
 
 - `onServerStart(services)` runs where the server lifecycle runs, after every service is built and before the app's `beforeStart`, in dependency order. A start hook that throws aborts startup with `Service 'x' failed in onServerStart: ...`.
 - Teardown is the service's own `stop()` on the value it provides. `stopSingletonServices` calls it in reverse of the order services were built, addon packages first. To make one service tear down before another, build the other first by having it need the first.
 
-`pikkuService` only constructs. Do not run SQL from a factory: schema comes from `pikku db generate`.
+`defineProvider` only constructs. Do not run SQL from a factory: schema comes from `pikku db generate`.
 
 ### Failing closed
 
@@ -78,7 +78,7 @@ The build reads the services your project declares and the ones it opted in to, 
 - **Unmet needs and cycles** are build errors that name the services.
 - **No variant.** A selected service with no variant for a target is an error, unless every key it provides is already in that target's baseline, in which case the target simply does not run it.
 
-## Opt in to an addon's services
+## Opt in to an addon's providers
 
 A project takes services from an addon it wires, by name. The list is an array of string literals; the default is none.
 
@@ -86,35 +86,35 @@ A project takes services from an addon it wires, by name. The list is an array o
 wireAddon({
   name: 'jobs',
   package: '@my-org/addon-jobs',
-  services: ['queue', 'audit'],
+  providers: ['queue', 'audit'],
 })
 ```
 
-The names are typed. `pikku all` reads the services meta each wired addon published (`.pikku/services/pikku-services-meta.gen.json`) and writes the union of its names into `#pikku/addon`, so an editor completes the valid names and `tsc` rejects one the addon does not declare. A name the addon does not declare is also a build error (PKU374) that lists the names it does. An addon whose meta is not installed (a remote addon, or one that has not run `pikku all` yet) types its names as plain `string`. A list the inspector cannot read statically is PKU373.
+The names are typed. `pikku all` reads the providers meta each wired addon published (`.pikku/providers/pikku-providers-meta.gen.json`) and writes the union of its names into `#pikku/addon`, so an editor completes the valid names and `tsc` rejects one the addon does not declare. A name the addon does not declare is also a build error (PKU374) that lists the names it does. An addon whose meta is not installed (a remote addon, or one that has not run `pikku all` yet) types its names as plain `string`. A list the inspector cannot read statically is PKU373.
 
-A remote addon takes them from the installed package that supplies its screens: `wireRemoteAddon({ ..., local: { package, services: ['queue'] } })`.
+A remote addon takes them from the installed package that supplies its screens: `wireRemoteAddon({ ..., local: { package, providers: ['queue'] } })`.
 
 The services reach your app as the second argument of `createSingletonServices(config, existingServices)`, so read them from `existingServices` and put them on the object you return.
 
-An addon publishes its services by exporting `pikkuService` consts and running `pikku all`, which writes the meta. Ship `.pikku` in the package's `files` and export `./.pikku/services/*`, as for any addon metadata.
+An addon publishes its providers by exporting `defineProvider` consts and running `pikku all`, which writes the meta. Ship `.pikku` in the package's `files` and export `./.pikku/providers/*`, as for any addon metadata.
 
 ### Hosts that inject an addon
 
-A host that adds an addon on the project's behalf (CI, Pikku Studio) writes a host-owned, gitignored wiring file in the project's source tree containing `wireAddon({ name, package, services })`. There is no config-file route for services: a config cannot carry source.
+A host that adds an addon on the project's behalf (CI, Pikku Studio) writes a host-owned, gitignored wiring file in the project's source tree containing `wireAddon({ name, package, providers })`. There is no config-file route for providers: a config cannot carry source.
 
 ## What runs where
 
-| Target                                                | `dev` variant | `deploy` variant | `onServerStart`                                                                           |
-| ----------------------------------------------------- | :-----------: | :--------------: | ----------------------------------------------------------------------------------------- |
-| `pikku dev`                                           |      yes      |        -         | runs                                                                                      |
-| `pikku serve`                                         |      yes      |        -         | runs                                                                                      |
-| Generic server entry (provider-agnostic)              |       -       |       yes        | runs                                                                                      |
-| Standalone (`@pikku/deploy-standalone`)               |       -       |       yes        | runs                                                                                      |
-| Cloudflare container (`target: 'server'`)             |       -       |       yes        | runs                                                                                      |
-| Cloudflare Worker                                     |       -       |       yes        | build error                                                                               |
-| Other providers (`deploy-serverless`, `deploy-azure`) |       -       |        no        | a provider without `serviceSupport` fails the build when the project declares a service  |
+| Target                                                | `dev` variant | `deploy` variant | `onServerStart`                                                                         |
+| ----------------------------------------------------- | :-----------: | :--------------: | --------------------------------------------------------------------------------------- |
+| `pikku dev`                                           |      yes      |        -         | runs                                                                                    |
+| `pikku serve`                                         |      yes      |        -         | runs                                                                                    |
+| Generic server entry (provider-agnostic)              |       -       |       yes        | runs                                                                                    |
+| Standalone (`@pikku/deploy-standalone`)               |       -       |       yes        | runs                                                                                    |
+| Cloudflare container (`target: 'server'`)             |       -       |       yes        | runs                                                                                    |
+| Cloudflare Worker                                     |       -       |       yes        | build error                                                                             |
+| Other providers (`deploy-serverless`, `deploy-azure`) |       -       |        no        | a provider without `serviceSupport` fails the build when the project declares a service |
 
-`pikku dev` and `pikku serve` load `.pikku/services/pikku-dev-services.gen.ts`, written by `pikku all`, and spread what it builds over the local services before `createSingletonServices` runs, so a provided service beats the local one. Both skip it when `NODE_ENV=production`. A service may need only a key the dev baseline holds (no `variables`, `schema` or `secrets`) or a key another service provides. A service with only a `deploy` variant is an error on dev unless it provides only keys the dev baseline already holds.
+`pikku dev` and `pikku serve` load `.pikku/providers/pikku-dev-providers.gen.ts`, written by `pikku all`, and spread what it builds over the local services before `createSingletonServices` runs, so a provided service beats the local one. Both skip it when `NODE_ENV=production`. A service may need only a key the dev baseline holds (no `variables`, `schema` or `secrets`) or a key another service provides. A service with only a `deploy` variant is an error on dev unless it provides only keys the dev baseline already holds.
 
 A Worker (or any handler that is not a long-running server) never runs the server lifecycle. A selected service with `onServerStart` there would silently never start, so it is a build error naming the service and the unit.
 
@@ -147,19 +147,19 @@ When the app has a coercion map (from `pikku db generate`) and a service provide
 
 ## Errors at a glance
 
-| You wrote                                                              | The build says                                                       |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| A `pikkuService` the inspector cannot read                             | PKU369                                                               |
-| A destructure with a rest element, a computed key or no destructure    | PKU371                                                               |
-| A return type that is not an object with known keys                    | PKU372                                                               |
-| `wireAddon({ services })` with a non-literal list                      | PKU373                                                               |
-| An opt-in name the addon does not declare                              | PKU374                                                               |
-| `dev` and `deploy` variants exported from one module                   | PKU375                                                               |
-| The same exported service name twice                                   | PKU376                                                               |
-| Any `wire*` call inside a function                                     | PKU367                                                               |
-| `dev.contributors` or `deploy.contributors` in `pikku.config.json`      | the CLI refuses to load the config, naming the key                   |
-| Two services providing one key                                         | a build error naming both                                            |
-| A need nothing provides                                                | a build error naming the service and the baseline                    |
-| `provides` and `needs` forming a loop, including a self-loop           | a build error naming the services                                    |
-| `onServerStart` on a Worker unit                                       | `... does not run the server lifecycle`                              |
-| A service on a provider without `serviceSupport`                       | `... cannot run the services the project declares ...`               |
+| You wrote                                                           | The build says                                         |
+| ------------------------------------------------------------------- | ------------------------------------------------------ |
+| A `defineProvider` the inspector cannot read                        | PKU369                                                 |
+| A destructure with a rest element, a computed key or no destructure | PKU371                                                 |
+| A return type that is not an object with known keys                 | PKU372                                                 |
+| `wireAddon({ providers })` with a non-literal list                  | PKU373                                                 |
+| An opt-in name the addon does not declare                           | PKU374                                                 |
+| `dev` and `deploy` variants exported from one module                | PKU375                                                 |
+| The same exported provider name twice                               | PKU376                                                 |
+| Any `wire*` call inside a function                                  | PKU367                                                 |
+| `dev.contributors` or `deploy.contributors` in `pikku.config.json`  | the CLI refuses to load the config, naming the key     |
+| Two services providing one key                                      | a build error naming both                              |
+| A need nothing provides                                             | a build error naming the service and the baseline      |
+| `provides` and `needs` forming a loop, including a self-loop        | a build error naming the services                      |
+| `onServerStart` on a Worker unit                                    | `... does not run the server lifecycle`                |
+| A service on a provider without `serviceSupport`                    | `... cannot run the services the project declares ...` |

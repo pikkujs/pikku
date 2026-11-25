@@ -639,7 +639,7 @@ export async function runSharedProjectChecks(
   const dbEngine = pikkuConfig?.db?.engine ?? 'sqlite'
 
   // A database on disk (or in createConfig) with no `db` in the pikku config
-  // builds no kysely, and a pikkuService that needs it then fails.
+  // builds no kysely, and a defineProvider that needs it then fails.
   // Reuses the detection every host uses, so the rules are not restated here.
   if (pikkuConfig && !pikkuConfig.db) {
     const declared = await detectDatabaseDialect(
@@ -652,7 +652,7 @@ export async function runSharedProjectChecks(
       findings.push({
         id: 'pikku-config-no-db',
         severity: 'critical',
-        message: `${dbConfigMismatch(declared)}, so a pikkuService that needs it fails to build`,
+        message: `${dbConfigMismatch(declared)}, so a defineProvider that needs it fails to build`,
         path: pikkuConfigPath,
         fixHint: lines(
           'Declare the engine in pikku.config.json:',

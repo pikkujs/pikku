@@ -4,7 +4,7 @@
 
 - [Before You Start](#before-you-start)
 - [API Reference](#api-reference)
-- [`pikkuService` and the generated `SingletonServices`](#pikkuservice-and-the-generated-singletonservices)
+- [`defineProvider` and the generated `SingletonServices`](#defineprovider-and-the-generated-singletonservices)
 - [Usage Patterns](#usage-patterns)
 - [Complete Example](#complete-example)
 
@@ -110,23 +110,23 @@ export type RequiredSingletonServices = Pick<
   Partial<Omit<SingletonServices, 'database' | 'audit' | 'jwt'>>
 ```
 
-## `pikkuService` and the generated `SingletonServices`
+## `defineProvider` and the generated `SingletonServices`
 
-`pikkuService` declares a target-owned service: one whose construction depends on
+`defineProvider` declares a target-owned service: one whose construction depends on
 where the app runs (`pikku dev`, a standalone bundle, a Cloudflare unit). Services
 every target builds the same way stay in `createSingletonServices`.
 
 ```typescript
-import { pikkuService } from '#pikku/service'
+import { defineProvider } from '#pikku/provider'
 
 // The same on every target.
-export const mailer = pikkuService(async ({ logger }, env) => {
+export const mailer = defineProvider(async ({ logger }, env) => {
   if (!env.SMTP_URL) throw new Error('mailer: SMTP_URL is missing')
   return { mailer: makeMailer(env.SMTP_URL, logger) }
 })
 
 // Per target. `common` applies where there is no variant of the target's own.
-export const queue = pikkuService({
+export const queue = defineProvider({
   dev: ({ logger }) => ({ queueService: new InMemoryQueueService(logger) }),
   deploy: async ({ logger }, env) => ({
     queueService: await connectQueue(env.QUEUE_URL, logger),
@@ -151,10 +151,10 @@ export const queue = pikkuService({
   both reach every bundle (PKU375).
 - Fail closed: throw from the factory when a binding is missing.
 - A project takes an addon's services by name with
-  `wireAddon({ name, package, services: ['queue'] })`. Nothing is injected
+  `wireAddon({ name, package, providers: ['queue'] })`. Nothing is injected
   without that list.
 
-`pikku all` generates `#pikku/service`. Its `SingletonServices` is the type you
+`pikku all` generates `#pikku/provider`. Its `SingletonServices` is the type you
 declared plus every key a service provides, as required properties with no `any`,
 and `SingletonServices` from `#pikku/function` is the same merged type. A function
 therefore sees `services.mailer` without a cast or a null check. `pikku dev` and

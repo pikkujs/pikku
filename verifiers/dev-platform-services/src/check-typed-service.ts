@@ -1,4 +1,4 @@
-// `#pikku/service` is generated for a project, not for an addon, and at runtime
+// `#pikku/provider` is generated for a project, not for an addon, and at runtime
 // it is only core's helper: bundling a project service that imports it must not
 // pull the project's function types, services or any other `#pikku/*` module
 // into a Worker or standalone bundle.
@@ -19,20 +19,20 @@ const store = createScriptContent(
 const exists = (file: string) => existsOnDisk(store, file)
 
 const typed = join(verifier, 'scenarios/typed')
-const leaf = join(typed, '.pikku/service/pikku-service-types.gen.ts')
-assert.ok(await exists(leaf), 'the project got a #pikku/service leaf')
+const leaf = join(typed, '.pikku/provider/provider-types.gen.ts')
+assert.ok(await exists(leaf), 'the project got a #pikku/provider leaf')
 assert.ok(
-  await exists(join(typed, '.pikku/service/index.ts')),
-  '#pikku/service resolves to an index'
+  await exists(join(typed, '.pikku/provider/index.ts')),
+  '#pikku/provider resolves to an index'
 )
 
 // Not generated for an addon: it has no singleton services type of its own.
 for (const addon of ['svc-notify', 'svc-select', 'svc-bad']) {
-  for (const file of ['index.ts', 'pikku-service-types.gen.ts']) {
+  for (const file of ['index.ts', 'provider-types.gen.ts']) {
     assert.equal(
       await exists(join(verifier, addon, '.pikku/addon/service', file)),
       false,
-      `${addon} must not get a #pikku/service leaf (${file})`
+      `${addon} must not get a #pikku/provider leaf (${file})`
     )
   }
 }
@@ -43,7 +43,7 @@ const runtimeImports = [...generated.matchAll(/^import (?!type)[^\n]*$/gm)].map(
   (m) => m[0]
 )
 assert.deepEqual(runtimeImports, [
-  "import { pikkuService as corePikkuService } from '@pikku/core/pikku-service'",
+  "import { defineProvider as coreProvider } from '@pikku/core/provider'",
 ])
 assert.match(
   generated,

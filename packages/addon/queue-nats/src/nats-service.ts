@@ -1,4 +1,4 @@
-import { pikkuService } from '@pikku/core/pikku-service'
+import { defineProvider } from '@pikku/core/provider'
 import type { Logger } from '@pikku/core/services'
 import type { NatsQueueService } from './nats-queue-service.js'
 import type { NatsSchedulerService } from './nats-scheduler-service.js'
@@ -156,13 +156,13 @@ const devNatsLifecycle: NatsLifecycle = {
 /**
  * Standalone deploys put a stage on its own JetStream stream. `pikku dev` keeps
  * its in-memory queue; an app opts in with
- * `wireAddon({ services: ['nats'] })` and builds it for a target that runs the
+ * `wireAddon({ providers: ['nats'] })` and builds it for a target that runs the
  * server lifecycle.
  *
  * Queue workers register once the server starts. Teardown is
  * `natsLifecycle.stop()`.
  */
-export const nats = pikkuService({
+export const nats = defineProvider({
   dev: () => ({ natsLifecycle: devNatsLifecycle }),
   deploy: async ({ logger }, env) => connectNats(logger, env),
   async onServerStart(services) {

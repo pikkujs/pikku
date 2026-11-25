@@ -1,6 +1,6 @@
-import { pikkuService } from '@pikku/core/pikku-service'
+import { defineProvider } from '@pikku/core/provider'
 
-export const notifier = pikkuService({
+export const notifier = defineProvider({
   dev: ({ logger }, env) => ({
     notifier: {
       label: 'dev',

@@ -216,16 +216,16 @@ describe('core import checks', () => {
     assert.deepEqual(hints, ["Import the same names from '#pikku/addon/error'"])
   })
 
-  test('points a project at #pikku/service for the typed helper', async () => {
+  test('points a project at #pikku/provider for the typed helper', async () => {
     const root = await project()
     await write(
       root,
       'src/a.ts',
-      `import { pikkuService } from '@pikku/core/pikku-service'\n`
+      `import { defineProvider } from '@pikku/core/provider'\n`
     )
 
     const hints = (await runCoreImportChecks(root)).map((f) => f.fixHint)
-    assert.deepEqual(hints, ["Import the same names from '#pikku/service'"])
+    assert.deepEqual(hints, ["Import the same names from '#pikku/provider'"])
   })
 
   test('lets an addon author services against core, which has no such leaf for it', async () => {
@@ -233,7 +233,7 @@ describe('core import checks', () => {
     await write(
       root,
       'src/a.ts',
-      `import { pikkuService } from '@pikku/core/pikku-service'\n`
+      `import { defineProvider } from '@pikku/core/provider'\n`
     )
 
     assert.deepEqual(await runCoreImportChecks(root), [])

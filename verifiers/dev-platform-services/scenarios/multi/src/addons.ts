@@ -4,7 +4,7 @@ import { wireAddon } from '#pikku/addon'
 wireAddon({
   name: 'notify',
   package: '@verifier/svc-notify',
-  services: ['notifier', 'loggerPrefix', 'cache', 'blob'],
+  providers: ['notifier', 'loggerPrefix', 'cache', 'blob'],
 })
 
 // `queueReal` and `queueNoop` provide different keys, and this project reaches
@@ -13,5 +13,5 @@ wireAddon({
 wireAddon({
   name: 'select',
   package: '@verifier/svc-select',
-  services: ['store', 'queueReal', 'queueNoop'],
+  providers: ['store', 'queueReal', 'queueNoop'],
 })

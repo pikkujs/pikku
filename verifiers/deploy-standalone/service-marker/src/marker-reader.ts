@@ -1,8 +1,8 @@
-import { pikkuService } from '@pikku/core/pikku-service'
+import { defineProvider } from '@pikku/core/provider'
 
 /** Needs what `marker` provides, so it runs after it. */
-export const markerReader = pikkuService({
+export const markerReader = defineProvider({
   common: ({ platformMarker }) => ({
-    platformMarkerSeen: platformMarker.from === 'wireAddon.services',
+    platformMarkerSeen: platformMarker.from === 'wireAddon.providers',
   }),
 })

@@ -65,7 +65,7 @@ export type WireRemoteAddonConfig = {
    * package. Read at build time, never at runtime. `ui` mounts its screens;
    * `services` opts in to the ones it declares.
    */
-  local?: { package: string; ui?: boolean; services?: string[] }
+  local?: { package: string; ui?: boolean; providers?: string[] }
   /** Milliseconds a call may take before it is aborted. Defaults to {@link DEFAULT_REMOTE_ADDON_TIMEOUT_MS}. */
   timeoutMs?: number
   /** Extra headers for every call to the host. Cannot replace the auth, trace or contract headers. */

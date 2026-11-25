@@ -44,7 +44,7 @@ const LEAF_FOR_SUBPATH = new Map<string, string>([
   ['@pikku/core/analytics', 'analytics'],
   ['@pikku/core/channel', 'channel'],
   ['@pikku/core/cli', 'cli'],
-  ['@pikku/core/pikku-service', 'service'],
+  ['@pikku/core/provider', 'provider'],
   ['@pikku/core/credential', 'credentials'],
   ['@pikku/core/keypair', 'keypairs'],
   ['@pikku/core/errors', 'error'],
@@ -134,10 +134,9 @@ export const runCoreImportChecks = async (
   for (const [index, { fileName: file }] of sources.entries()) {
     for (const specifier of specifiersOf[index]!) {
       if (!isCoreImport(specifier) || isAllowed(specifier)) continue
-      // An addon has no `#pikku/service`, because it has no singleton services
+      // An addon has no `#pikku/provider`, because it has no singleton services
       // type of its own to merge into: it authors against core's helper.
-      if (pikkuConfig?.addon && specifier === '@pikku/core/pikku-service')
-        continue
+      if (pikkuConfig?.addon && specifier === '@pikku/core/provider') continue
 
       const leaf = LEAF_FOR_SUBPATH.get(specifier)
       const alias = SCENARIO_SUBPATHS.has(specifier)

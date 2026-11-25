@@ -1,4 +1,4 @@
-import { pikkuService } from '@pikku/core/pikku-service'
+import { defineProvider } from '@pikku/core/provider'
 
 /**
  * Provides a `kysely` so the generated runner has one to wrap with column
@@ -6,7 +6,7 @@ import { pikkuService } from '@pikku/core/pikku-service'
  * the stand-in never has to be a real database. It has a `deploy` variant only:
  * `pikku dev` already holds a `kysely`, so it simply does not run it there.
  */
-export const kyselyStandIn = pikkuService({
+export const kyselyStandIn = defineProvider({
   deploy: () => {
     const kysely = { withPlugin: (_plugin: unknown) => kysely }
     return { kysely }

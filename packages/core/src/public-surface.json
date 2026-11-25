@@ -690,11 +690,11 @@
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],
-  "./pikku-service": [
-    "PikkuServiceError",
-    "ServiceRegistry",
-    "pikkuService",
-    "runPikkuServices"
+  "./provider": [
+    "ProviderError",
+    "ProviderRegistry",
+    "defineProvider",
+    "runProviders"
   ],
   "./telemetry-store": [],
   "./telemetry-store/testing": ["MemoryTelemetryStore", "conformance"],

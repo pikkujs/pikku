@@ -805,7 +805,7 @@
             "contentGrants": {
               "images": "read"
             },
-            "services": [
+            "providers": [
               "inbox",
               "cache",
               "mailer"
@@ -1799,7 +1799,7 @@
         ]
       }
     },
-    "pikkuServices": {
+    "providers": {
       "cache": {
         "module": "<fixture>/src/services.ts",
         "export": "cache",
@@ -1887,11 +1887,12 @@
         }
       }
     },
-    "optedInServices": {
+    "optedInProviders": {
       "shop": {
         "packageName": "@fixture/shop-addon",
-        "services": {
+        "providers": {
           "inbox": {
+            "kind": "singleton",
             "module": "src/services/inbox.ts",
             "export": "inbox",
             "variants": {
@@ -1899,23 +1900,28 @@
                 "needs": [
                   "logger"
                 ],
+                "optional": [],
                 "provides": [
                   "inbox"
-                ]
+                ],
+                "optionalProvides": []
               },
               "deploy": {
                 "needs": [
                   "kysely",
                   "logger"
                 ],
+                "optional": [],
                 "provides": [
                   "inbox",
                   "inboxMetrics"
-                ]
+                ],
+                "optionalProvides": []
               }
             }
           },
           "cache": {
+            "kind": "singleton",
             "module": "src/services.ts",
             "export": "cache",
             "variants": {
@@ -1923,9 +1929,11 @@
                 "needs": [
                   "kysely"
                 ],
+                "optional": [],
                 "provides": [
                   "cache"
-                ]
+                ],
+                "optionalProvides": []
               }
             }
           }
@@ -2016,7 +2024,7 @@
     {
       "level": "critical",
       "code": "PKU373",
-      "message": "wireAddon's services must be an array of string literals, got: someList"
+      "message": "wireAddon's providers must be an array of string literals, got: someList"
     },
     {
       "level": "critical",
@@ -2126,62 +2134,62 @@
     {
       "level": "critical",
       "code": "PKU375",
-      "message": "Service 'twin': dev and deploy are both exported from <fixture>/src/services/twin-variants.ts. Each variant lives in its own module, so a build imports only the variant it runs."
+      "message": "Provider 'twin': dev and deploy are both exported from <fixture>/src/services/twin-variants.ts. Each variant lives in its own module, so a build imports only the variant it runs."
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Service 'hidden': 'hidden' is not exported by <fixture>/src/services.ts, so a host cannot import it"
+      "message": "Provider 'hidden': 'hidden' is not exported by <fixture>/src/services.ts, so a host cannot import it"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Service 'fromDynamic': pikkuService takes a factory function or an object with dev, deploy or common, got: dynamic"
+      "message": "Provider 'fromDynamic': defineProvider takes a factory function or an object with dev, deploy or common, got: dynamic"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Service 'neither': an object declares none of dev, deploy or common"
+      "message": "Provider 'neither': an object declares none of dev, deploy or common"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Service 'stray': pikkuService takes only dev, deploy, common and onServerStart, got: prod"
+      "message": "Provider 'stray': defineProvider takes only dev, deploy, common and onServerStart, got: prod"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Service 'byReference': dev 'someFactory' is not exported by <fixture>/src/services.ts, so a host cannot import it"
+      "message": "Provider 'byReference': dev 'someFactory' is not exported by <fixture>/src/services.ts, so a host cannot import it"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "pikkuService must be assigned to an exported const so a host can import it, got: pikkuService(() => ({ loose: 1 }))"
+      "message": "defineProvider must be assigned to an exported const so a host can import it, got: defineProvider(() => ({ loose: 1 }))"
     },
     {
       "level": "critical",
       "code": "PKU371",
-      "message": "Service 'whole' common must destructure its services parameter, so the build can read what it depends on, got: services"
+      "message": "Provider 'whole' common must destructure its services parameter, so the build can read what it depends on, got: services"
     },
     {
       "level": "critical",
       "code": "PKU371",
-      "message": "Service 'rest' common cannot collect services with a rest element, got: ...others"
+      "message": "Provider 'rest' common cannot collect services with a rest element, got: ...others"
     },
     {
       "level": "critical",
       "code": "PKU372",
-      "message": "Service 'untyped' common must return an object type with known keys, so the build can read what it provides, got: any"
+      "message": "Provider 'untyped' common must return an object type with known keys, so the build can read what it provides, got: any"
     },
     {
       "level": "critical",
       "code": "PKU372",
-      "message": "Service 'either' common must return an object type with known keys, so the build can read what it provides, got: { a: number; b?: undefined; } | { b: number; a?: undefined; }"
+      "message": "Provider 'either' common must return an object type with known keys, so the build can read what it provides, got: { a: number; b?: undefined; } | { b: number; a?: undefined; }"
     },
     {
       "level": "critical",
       "code": "PKU376",
-      "message": "Service 'inbox' is declared twice. A service name belongs to one pikkuService export."
+      "message": "Provider 'inbox' is declared twice. A provider name belongs to one export."
     },
     {
       "level": "critical",
@@ -2191,7 +2199,7 @@
     {
       "level": "critical",
       "code": "PKU374",
-      "message": "wireAddon('shop') opts in to service 'mailer', but @fixture/shop-addon declares no such service. It declares: inbox, cache."
+      "message": "wireAddon('shop') opts in to provider 'mailer', but @fixture/shop-addon declares no such provider. It declares: inbox, cache."
     },
     {
       "level": "critical",

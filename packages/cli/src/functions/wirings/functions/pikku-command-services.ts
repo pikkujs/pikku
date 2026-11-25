@@ -5,11 +5,11 @@ import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { writeLocalServices } from '../cli/write-local-services.js'
-import { writeDevPikkuServices } from '../cli/write-dev-pikku-services.js'
+import { writeDevProviders } from '../cli/write-dev-providers.js'
 import {
   providedServiceKeys,
   singletonServicesTypeRef,
-} from '../../../pikku-services/service-types-source.js'
+} from '../../../providers/provider-types-source.js'
 
 export const serializeServicesMap = (
   allSingletonServices: string[],
@@ -210,7 +210,7 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
     await writeLocalServices(logger, config, visitState)
-    await writeDevPikkuServices(logger, config, visitState)
+    await writeDevProviders(logger, config, visitState)
   },
   middleware: [
     logCommandInfoAndTime({

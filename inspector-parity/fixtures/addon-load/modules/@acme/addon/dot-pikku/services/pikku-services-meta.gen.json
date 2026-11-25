@@ -1,1 +1,0 @@
-{"services":{"c1":{"module":"src/services/c1.ts","export":"c1","variants":{"common":{"needs":[],"provides":["c1"]}}},"c2":{"module":"src/services/c2.ts","export":"c2","variants":{"common":{"needs":[],"provides":["c2"]}}}}}
