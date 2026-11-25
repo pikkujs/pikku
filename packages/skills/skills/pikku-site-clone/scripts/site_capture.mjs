@@ -460,8 +460,31 @@ const changed = (a, b) => (a && b ? Object.fromEntries(Object.keys(a).filter((k)
 /** A link or button that starts a visitor's flow: booking, tickets, buying, enrolling, applying, signing in or up. */
 const ACTION = /^(book( now| a| your)?|enrol+( now)?|get tickets?|tickets?|buy( now)?|register|sign ?up|sign ?in|log ?in|apply( here| now)?|subscribe|join( now)?|checkout|reserve)\b/i
 
+/** A link to a hosted form service starts a flow whatever its words say. */
+const FORM_LINK = /(^|\.)(forms\.gle|typeform\.com|tally\.so|jotform\.com|forms\.office\.com|form\.jotform\.com)$|^docs\.google\.com$/i
+const FORM_PATH = /\/(viewform|formResponse)\b/i
+
+/**
+ * Waits for a step, page or frame, to finish rendering: the network quiet (a page), then its text length and number of
+ * fields the same across two polls half a second apart. Bounded by `maxMs`, so a page that never stops changing is
+ * read as it is then.
+ */
+async function settleStep(target, maxMs = 10000) {
+  const until = Date.now() + maxMs
+  if (target.waitForLoadState) await target.waitForLoadState('networkidle', { timeout: Math.min(5000, maxMs) }).catch(() => {})
+  const look = () => target.evaluate(() => `${document.body?.innerText.length ?? 0}|${document.querySelectorAll('input, select, textarea, [role=combobox]').length}`).catch(() => '')
+  let last = await look(), same = 0
+  while (Date.now() < until && same < 2) {
+    await new Promise((r) => setTimeout(r, 500))
+    const now = await look()
+    same = now === last && now !== '' ? same + 1 : 0
+    last = now
+  }
+}
+
 /** Where a flow's first step lands and what it asks for: address, title, text, choices, forms and frames. */
 const describeStep = async (p) => {
+  await settleStep(p)
   const step = { url: p.url(), ...(await p.evaluate(extractFrameInPage).catch(() => ({}))) }
   step.forms = ((await p.evaluate(extractBehaviourInPage).catch(() => null))?.forms || []).map(({ index, ...f }) => f)
   step.frames = p.frames().filter((f) => f !== p.mainFrame() && /^https?:/.test(f.url())).map((f) => f.url().slice(0, 200)).slice(0, 6)
@@ -476,20 +499,22 @@ const describeStep = async (p) => {
  */
 async function probeActions(page, seen) {
   const ctx = page.context()
-  const marked = await page.evaluate((rx) => {
-    const ACTION = new RegExp(rx, 'i')
+  const marked = await page.evaluate(([rx, formHost, formPath]) => {
+    const ACTION = new RegExp(rx, 'i'), FORM_HOST = new RegExp(formHost, 'i'), FORM_URL = new RegExp(formPath, 'i')
+    const formLink = (e) => { try { const u = new URL(e.href); return FORM_HOST.test(u.hostname) || FORM_URL.test(u.pathname) } catch { return false } }
     const text = (e) => (e.innerText || e.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim()
     const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 }
     const out = []
     for (const e of document.querySelectorAll('a, button, [role=button]')) {
       const t = text(e)
-      if (out.length >= 4 || !t || t.length > 40 || !ACTION.test(t) || !vis(e)) continue
+      const form = e.tagName === 'A' && formLink(e)
+      if (out.length >= 4 || !vis(e) || !(form || (t && t.length <= 40 && ACTION.test(t)))) continue
       const n = out.length
       e.setAttribute('data-capture-action', String(n))
-      out.push({ n, text: t, href: e.tagName === 'A' ? e.href : '' })
+      out.push({ n, text: t.slice(0, 80), href: e.tagName === 'A' ? e.href : '' })
     }
     return out
-  }, ACTION.source).catch(() => [])
+  }, [ACTION.source, FORM_LINK.source, FORM_PATH.source]).catch(() => [])
   const hold = (route) => (route.request().method() === 'GET' ? route.continue() : route.abort())
   const found = []
   for (const m of marked) {
@@ -503,7 +528,6 @@ async function probeActions(page, seen) {
         await other.route('**/*', hold)
         try {
           await other.goto(m.href, { waitUntil: 'load', timeout: 30000 })
-          await other.waitForTimeout(2000)
           row.step = await describeStep(other)
         } finally { await other.close().catch(() => {}) }
       } else {
@@ -511,7 +535,6 @@ async function probeActions(page, seen) {
         const url = page.url(), before = await page.evaluate(() => document.body.innerText.length).catch(() => 0)
         try {
           await page.locator(`[data-capture-action="${m.n}"]`).click({ timeout: 3000 })
-          await page.waitForTimeout(2000)
           row.step = await describeStep(page)
           row.step.textAdded = (await page.evaluate(() => document.body.innerText.length).catch(() => 0)) - before
           if (page.url() !== url) await page.goBack({ timeout: 15000 }).catch(() => {})
@@ -637,6 +660,7 @@ async function captureFrames(page, requests) {
     if (out.length >= 6) break
     const f = { src: frame.url().slice(0, 300) }
     try {
+      await settleStep(frame)
       Object.assign(f, await frame.evaluate(extractFrameInPage))
       const inner = await frame.evaluate(extractBehaviourInPage).catch(() => null)
       f.forms = inner?.forms || []

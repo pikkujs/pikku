@@ -294,7 +294,7 @@ describe('the capture of what a site relies on and does', () => {
 <style>nav a { color: rgb(0, 0, 0); transition: color 0.2s ease } nav a:hover { color: rgb(200, 0, 0) } #menu[hidden] { display: none }</style>
 </head><body><header><nav><a href="/">Home</a><a href="/about">About</a><a href="/feed">Feed</a><a href="/wp-json/pages">API</a><a href="/guide.pdf">Guide</a></nav>
 <button aria-expanded="false" onclick="this.setAttribute('aria-expanded','true');document.getElementById('menu').hidden=false">Menu</button>
-<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a>` : ''}
+<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a><a href="${assets}/delayed">Enroll</a><a href="${assets}/forms/d/e/abc/viewform">here</a>` : ''}
 <button onclick="document.getElementById('login').hidden=false">Log In</button><form id="login" hidden><input type="email" name="email" aria-label="Email"><input type="password" name="password" aria-label="Password"><button type="submit">Go</button></form></header>
 <main><h1>Welcome</h1><div class="apply">
 <label for="email">Email</label><input id="email" name="email" type="email" required>
@@ -321,6 +321,29 @@ describe('the capture of what a site relies on and does', () => {
           res
             .writeHead(200, { 'content-type': 'text/css' })
             .end('body{margin:0}')
+        else if (req.url === '/delayed')
+          res
+            .writeHead(200, { 'content-type': 'text/html' })
+            .end(
+              `<!doctype html><title>Booking</title><main id="m">Loading</main><script>fetch('/slots').then((r)=>r.text()).then((html)=>{document.getElementById('m').innerHTML=html})</script>`
+            )
+        else if (req.url === '/slots')
+          // the booking step's fields come from a slow request, as a booking widget's do
+          setTimeout(
+            () =>
+              res
+                .writeHead(200, { 'content-type': 'text/html' })
+                .end(
+                  '<form><label for="seat">Seat</label><select id="seat" name="seat"><option>Front</option><option>Back</option></select><input name="name" aria-label="Name" required><button type="submit">Book</button></form>'
+                ),
+            3000
+          )
+        else if (req.url === '/forms/d/e/abc/viewform')
+          res
+            .writeHead(200, { 'content-type': 'text/html' })
+            .end(
+              `<!doctype html><title>Scholarship form</title><form><label for="p">Pronoun(s)</label><input id="p" name="pronouns" required><button type="submit">Submit</button></form>`
+            )
         else if (req.url === '/apply')
           res
             .writeHead(200, { 'content-type': 'text/html' })
@@ -448,6 +471,20 @@ describe('the capture of what a site relies on and does', () => {
         'Level 1',
         'Level 2',
       ])
+      // a step that renders its fields late is read once it has settled
+      const enroll = summary.actions.find(
+        (a: { text: string }) => a.text === 'Enroll'
+      )
+      assert.deepEqual(enroll.step.forms[0].fields[0].options, [
+        'Front',
+        'Back',
+      ])
+      // a link to a hosted form starts a flow whatever its words say
+      const hosted = summary.actions.find((a: { href?: string }) =>
+        a.href?.endsWith('/viewform')
+      )
+      assert.equal(hosted.text, 'here')
+      assert.equal(hosted.step.forms[0].fields[0].name, 'pronouns')
       const login = summary.actions.find(
         (a: { text: string }) => a.text === 'Log In'
       )
