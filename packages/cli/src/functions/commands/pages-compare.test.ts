@@ -292,7 +292,7 @@ describe('the capture of what a site relies on and does', () => {
       const page = (assets: string) => `<!doctype html><html lang="en"><head>
 <link rel="stylesheet" href="${assets}/site.css"><script src="${assets}/tracker.js"></script>
 <style>nav a { color: rgb(0, 0, 0); transition: color 0.2s ease } nav a:hover { color: rgb(200, 0, 0) } #menu[hidden] { display: none }</style>
-</head><body><header><nav><a href="/">Home</a><a href="/about">About</a></nav>
+</head><body><header><nav><a href="/">Home</a><a href="/about">About</a><a href="/feed">Feed</a><a href="/wp-json/pages">API</a><a href="/guide.pdf">Guide</a></nav>
 <button aria-expanded="false" onclick="this.setAttribute('aria-expanded','true');document.getElementById('menu').hidden=false">Menu</button>
 <div id="menu" hidden>Workshops and circles and events</div></header>
 <main><h1>Welcome</h1><div class="apply">
@@ -314,6 +314,16 @@ describe('the capture of what a site relies on and does', () => {
           res
             .writeHead(200, { 'content-type': 'text/css' })
             .end('body{margin:0}')
+        else if (req.url === '/feed')
+          res
+            .writeHead(200, { 'content-type': 'application/rss+xml' })
+            .end('<rss/>')
+        else if (req.url === '/wp-json/pages')
+          res.writeHead(200, { 'content-type': 'application/json' }).end('[]')
+        else if (req.url === '/guide.pdf')
+          res
+            .writeHead(200, { 'content-type': 'application/pdf' })
+            .end('%PDF-1.4')
         else if (req.url === '/tracker.js')
           res
             .writeHead(200, { 'content-type': 'text/javascript' })
@@ -329,6 +339,10 @@ describe('the capture of what a site relies on and does', () => {
       await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok))
       const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
       const out = mkdtempSync(join(tmpdir(), 'pages-behaviour-'))
+      const listed = await (
+        site as unknown as { pages: (root: string) => Promise<string[]> }
+      ).pages(`${base}/`)
+      assert.deepEqual(listed, [`${base}/`, `${base}/about`])
       try {
         await site.capture(out, [`${base}/old|home`], [1440], false, 1, {
           chromium,
@@ -392,6 +406,10 @@ describe('the capture of what a site relies on and does', () => {
         )
       )
       assert.match(page1.accessibility, /button "Menu"/)
+      assert.deepEqual(
+        summary.downloads.map((d: { href: string }) => d.href),
+        [`${base}/guide.pdf`]
+      )
     }
   )
 })

@@ -34,7 +34,8 @@ there is no browser, fetch each page with `curl -sL` and read the text.
 - Every **form**: its fields with their type, whether required, their options and any control beside them (a country
   code picker), its button, where an empty submit would send and what the page says about it, and what the visitor sees
   after sending it (a thank-you page, an email, nothing).
-- Every other thing a visitor can do: book, apply, register, log in, search, filter, pay, download.
+- Every other thing a visitor can do: book, apply, register, log in, search, filter, pay, download (the files a page
+  links to are in `behaviour.json` `downloads`).
 - Prices, and the currency they are written in. The language of the page.
 - How the page behaves: menus and sections that open, hover and focus states, a header that changes on scroll,
   transitions and animations, a language switch.

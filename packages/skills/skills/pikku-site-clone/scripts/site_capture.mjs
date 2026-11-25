@@ -50,13 +50,19 @@ export async function pages(root) {
     const x = await get(m)
     for (const l of x.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) (l[1].endsWith('.xml') ? maps : { push: add }).push(l[1])
   }
-  // the sitemap is the list; internal links catch what it misses
-  const queue = [base + '/', ...out]
+  // the sitemap is the list; internal links catch what it misses. Only what answers with HTML is a page: a feed, an API
+  // answer, a redirect off the site or a download linked from a page is not captured as one.
+  const queue = [base + '/', ...out], notPages = new Set()
   for (let i = 0; i < queue.length && i < 200; i++) {
-    const html = await get(queue[i])
+    let html = ''
+    try {
+      const r = await fetch(queue[i], { headers: { 'user-agent': UA } })
+      if (!r.ok || !/text\/html/i.test(r.headers.get('content-type') || '') || new URL(r.url).origin !== base) { notPages.add(queue[i]); continue }
+      html = await r.text()
+    } catch { notPages.add(queue[i]); continue }
     for (const h of html.matchAll(/href="([^"#]+)/g)) { const before = out.length; add(h[1].replace(/&amp;/g, '&')); if (out.length > before) queue.push(out[out.length - 1]) }
   }
-  return out
+  return out.filter((u) => !notPages.has(u))
 }
 
 // ---------------------------------------------------------------- in-page extraction (runs in the browser)
@@ -407,6 +413,7 @@ export function extractBehaviourInPage() {
   const keys = (s) => { try { return Object.keys(s).slice(0, 30) } catch { return [] } }
   const fonts = [...document.fonts].filter((f) => f.status === 'loaded').map((f) => `${f.family.replace(/["']/g, '')} ${f.weight} ${f.style}`)
   const LANG = /^(en|de|fr|es|it|nl|pl|english|deutsch|français|español|italiano|nederlands|polski)$/i
+  const FILE = /\.(pdf|docx?|xlsx?|pptx?|odt|ods|csv|zip|ics|mp3|mp4|epub)$/i
   return {
     lang: document.documentElement.lang || '',
     fonts: [...new Set(fonts)].slice(0, 30),
@@ -414,6 +421,7 @@ export function extractBehaviourInPage() {
     forms,
     motion: [...motion.values()],
     storage: { local: keys(localStorage), session: keys(sessionStorage) },
+    downloads: [...document.querySelectorAll('a[href]')].filter((a) => a.hasAttribute('download') || FILE.test(a.pathname)).slice(0, 20).map((a) => ({ text: text(a).slice(0, 80), href: a.href })),
     languageLinks: [...document.querySelectorAll('a[hreflang], link[rel=alternate][hreflang], a')].filter((a) => a.hreflang || LANG.test(text(a))).slice(0, 10).map((a) => ({ text: text(a), hreflang: a.hreflang || '', href: a.href })),
   }
 }
@@ -567,13 +575,14 @@ export async function summariseBehaviour(out, root, recs) {
   const base = new URL(root).origin
   let robots = ''
   try { const r = await fetch(`${base}/robots.txt`, { headers: { 'user-agent': UA } }); if (r.ok) robots = (await r.text()).slice(0, 3000) } catch {}
-  const hosts = {}, cookies = {}, fonts = new Set(), media = new Set(), langs = new Map()
+  const hosts = {}, cookies = {}, fonts = new Set(), media = new Set(), langs = new Map(), downloads = new Map()
   for (const r of recs) {
     for (const [h, e] of Object.entries(r.hosts || {})) { const s = (hosts[h] ||= { thirdParty: e.thirdParty, pages: [], types: {} }); s.pages.push(r.id); for (const [t, n] of Object.entries(e.types)) s.types[t] = (s.types[t] || 0) + n }
     for (const c of r.cookies || []) cookies[`${c.name}@${c.domain}`] = c
     for (const f of r.fonts || []) fonts.add(f)
     for (const m of r.media || []) media.add(`${m.tag} ${m.src}`)
     for (const l of r.languageLinks || []) langs.set(l.href, l)
+    for (const d of r.downloads || []) downloads.set(d.href, { ...d, pages: [...(downloads.get(d.href)?.pages || []), r.id].slice(0, 6) })
   }
   const summary = {
     site: base,
@@ -585,6 +594,7 @@ export async function summariseBehaviour(out, root, recs) {
     fonts: [...fonts],
     media: [...media],
     languageLinks: [...langs.values()],
+    downloads: [...downloads.values()],
     interactions: recs.flatMap((r) => (r.interactions || []).filter((i) => i.error || Object.keys(i.changes || {}).length || i.kind === 'open').map((i) => ({ page: r.id, ...i }))),
     motion: [...new Map(recs.flatMap((r) => r.motion || []).map((m) => [`${m.transition}|${m.animation}`, m])).values()].slice(0, 25),
     scriptErrors: recs.filter((r) => r.scriptErrors?.length).map((r) => ({ page: r.id, errors: r.scriptErrors.slice(0, 3) })),
