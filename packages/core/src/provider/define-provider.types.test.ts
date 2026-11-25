@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { defineProvider } from './define-provider.js'
+import { defineProvider, defineWireProvider } from './define-provider.js'
 import type { WithOptional } from './provider.types.js'
 
 type Services = { logger: { info(): void }; queueService: { send(): void } }
@@ -24,5 +24,19 @@ describe('defineProvider optional needs', () => {
       }),
     })
     assert.deepEqual(provider.optional, ['queueService'])
+  })
+
+  test('a wire provider takes the singletons and the wire, and optional needs are listed', () => {
+    const provider = defineWireProvider({
+      optional: ['auditLog'],
+      common: (services: { auditLog?: { write(): void } }, wire) => ({
+        events: services.auditLog !== undefined && wire.session === undefined,
+      }),
+    })
+    assert.deepEqual(provider.optional, ['auditLog'])
+    // @ts-expect-error a wire provider has no onServerStart
+    defineWireProvider({ onServerStart: () => {}, common: () => ({ a: 1 }) })
+    // @ts-expect-error a wire provider cannot add to a collection
+    defineWireProvider({ addTo: {}, common: () => ({ a: 1 }) })
   })
 })

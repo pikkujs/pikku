@@ -7,6 +7,8 @@ export interface SerializeProviderRunnerOptions {
   profile?: ProviderProfile
   /** In run order, as `resolveProviders` returned them. */
   services: readonly ResolvedProviderImport[]
+  /** The per-request providers, in the order a request builds them, as `resolveProviders` returned them. */
+  wire?: readonly ResolvedProviderImport[]
   /** The collections the target holds, as `resolveProviders` returned them: each is a list a reader always finds. */
   collections?: readonly string[]
   /** The import specifier for a module, from the generated file. */
@@ -54,6 +56,7 @@ export const serializeProviderRunner = ({
   target,
   profile,
   services,
+  wire = [],
   collections = [],
   specifier,
   coercionMap,
@@ -66,7 +69,14 @@ export const serializeProviderRunner = ({
     Object.keys(coercionMap).length > 0 &&
     services.some((service) => service.provides.includes('kysely'))
 
-  services.forEach((service, index) => {
+  const wireAdds: string[] = []
+  const emit = (
+    service: ResolvedProviderImport,
+    index: number,
+    kind: 'singleton' | 'wire',
+    registryName: string,
+    out: string[]
+  ) => {
     const meta = JSON.stringify({
       [service.variant]: {
         needs: service.needs,
@@ -77,7 +87,7 @@ export const serializeProviderRunner = ({
     })
     const name = JSON.stringify(service.name)
     const registration = JSON.stringify({
-      kind: 'singleton',
+      kind,
       ...(service.addTo ? { addTo: service.addTo } : {}),
       ...(service.addon ? { addon: service.addon } : {}),
     })
@@ -95,20 +105,28 @@ export const serializeProviderRunner = ({
           specifier(service.variantRef.module)
         )
       )
-      adds.push(
-        `registry.add(${name}, ${wrap(`{ ${JSON.stringify(service.variant)}: ${local} }`)}, ${meta}, ${registration})`
+      out.push(
+        `${registryName}.add(${name}, ${wrap(`{ ${JSON.stringify(service.variant)}: ${local} }`)}, ${meta}, ${registration})`
       )
       return
     }
     const local = `service${index}`
     imports.push(importLine(service.export, local, specifier(service.module)))
-    adds.push(`registry.add(${name}, ${wrap(local)}, ${meta}, ${registration})`)
+    out.push(
+      `${registryName}.add(${name}, ${wrap(local)}, ${meta}, ${registration})`
+    )
     if (service.onServerStart) {
       hooks.push(
         `  { name: ${name}, run: (services) => ${local}.onServerStart!(services) },`
       )
     }
-  })
+  }
+  services.forEach((service, index) =>
+    emit(service, index, 'singleton', 'registry', adds)
+  )
+  wire.forEach((service, index) =>
+    emit(service, services.length + index, 'wire', 'wireRegistry', wireAdds)
+  )
 
   const coercion = coerce
     ? [
@@ -134,7 +152,10 @@ export const serializeProviderRunner = ({
     : []
 
   return [
-    `import { ProviderRegistry, recordStopOrder, runProviders } from '@pikku/core/provider'`,
+    `import { ProviderRegistry, ${wire.length > 0 ? 'WireProviders, ' : ''}recordStopOrder, runProviders } from '@pikku/core/provider'`,
+    ...(wire.length > 0
+      ? [`import { pikkuState } from '@pikku/core/state'`]
+      : []),
     ...(coerce ? [`import { createCoercionPlugin } from '@pikku/kysely'`] : []),
     ...imports,
     ``,
@@ -144,6 +165,16 @@ export const serializeProviderRunner = ({
     ...collections.map(
       (name) => `registry.collection(${JSON.stringify(name)})`
     ),
+    ...(wire.length > 0
+      ? [
+          `const wireRegistry = new ProviderRegistry()`,
+          ...wireAdds,
+          `const wireProviders = new WireProviders(wireRegistry, { target: ${JSON.stringify(target)},${profile ? ` profile: ${JSON.stringify(profile)},` : ''} })`,
+          ``,
+          `export const createProviderWireServices = (singletons: object, wire: any, options?: { needs?: readonly string[], held?: Record<string, unknown> }) =>`,
+          `  wireProviders.run(singletons, wire, options)`,
+        ]
+      : []),
     ``,
     `export const createPlatformServices = async (`,
     `  env: Record<string, string | undefined>,`,
@@ -152,6 +183,11 @@ export const serializeProviderRunner = ({
     `  const services: Record<string, unknown> = { ...runtime }`,
     `  const { stopOrder } = await runProviders(registry, { target: ${JSON.stringify(target)},${profile ? ` profile: ${JSON.stringify(profile)},` : ''} services, env })`,
     `  recordStopOrder(stopOrder)`,
+    ...(wire.length > 0
+      ? [
+          `  pikkuState(null, 'package', 'wireProviders', createProviderWireServices)`,
+        ]
+      : []),
     `  return services`,
     `}`,
     ``,

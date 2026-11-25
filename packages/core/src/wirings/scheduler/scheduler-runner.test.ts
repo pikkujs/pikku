@@ -537,7 +537,7 @@ describe('runScheduledTask', () => {
     let closeCalled = false
     const mockWireService = {
       custom: {
-        close: async () => {
+        stop: async () => {
           closeCalled = true
         },
       },
@@ -584,7 +584,7 @@ describe('runScheduledTask', () => {
     let closeCalled = false
     const mockWireService = {
       custom: {
-        close: async () => {
+        stop: async () => {
           closeCalled = true
         },
       },

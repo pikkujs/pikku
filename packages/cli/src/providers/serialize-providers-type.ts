@@ -21,6 +21,8 @@ export interface SerializeSingletonServicesTypeOptions {
   /** `import type { X as BaseSingletonServices } from '...'`, written by the caller. */
   baseImport: string
   services: readonly ServiceTypeSource[]
+  /** The per-request providers: their keys make up the merged `WireServices` type. */
+  wireServices?: readonly ServiceTypeSource[]
   /** Each is a key of the merged type: the label-sorted entries its providers add. */
   collections?: readonly CollectionTypeSource[]
 }
@@ -48,6 +50,7 @@ const typeOf = ({ specifier, export: exported }: ServiceTypeSource) =>
 export const serializeProvidersType = ({
   baseImport,
   services,
+  wireServices = [],
   collections = [],
 }: SerializeSingletonServicesTypeOptions): string => {
   const keys = new Map<string, ServiceTypeSource>()
@@ -60,6 +63,27 @@ export const serializeProvidersType = ({
   }
   const collected = new Map(collections.map((c) => [c.name, c]))
   const provided = [...new Set([...keys.keys(), ...collected.keys()])].sort()
+  const wireKeys = new Map<string, ServiceTypeSource>()
+  const optionalWireKeys = new Set<string>()
+  for (const service of wireServices) {
+    for (const key of service.provides) {
+      if (!wireKeys.has(key)) wireKeys.set(key, service)
+    }
+    for (const key of service.optionalProvides ?? []) optionalWireKeys.add(key)
+  }
+  const wireProvided = [...wireKeys.keys()].sort()
+
+  const wire =
+    wireProvided.length === 0
+      ? `export type WireServices = Record<never, never>`
+      : [
+          `export type WireServices = {`,
+          ...wireProvided.map(
+            (key) =>
+              `  ${JSON.stringify(key)}${optionalWireKeys.has(key) ? '?' : ''}: Provided<${typeOf(wireKeys.get(key)!)}, ${JSON.stringify(key)}>`
+          ),
+          `}`,
+        ].join('\n')
 
   const merged =
     provided.length === 0
@@ -77,7 +101,7 @@ export const serializeProvidersType = ({
         ].join('\n')
 
   const helpers =
-    provided.length === 0
+    provided.length === 0 && wireProvided.length === 0
       ? ''
       : `type IsAny<T> = 0 extends 1 & T ? true : false
 
@@ -116,7 +140,10 @@ type Provided<Service, Key extends string> =
       : never
     : never
 
-/**
+${
+  provided.length === 0
+    ? ''
+    : `/**
  * A key the project's own type declares keeps that type and gains what the
  * provider returns, so a provider that wraps or extends a core service still
  * satisfies what core expects of it.
@@ -128,16 +155,19 @@ type Merged<Key extends string, Value> = Key extends keyof BaseSingletonServices
   : Value
 
 `
+}`
 
   return `/**
  * Singleton services, with what every defineProvider provides
  */
 
-import { defineProvider as coreProvider } from '@pikku/core/provider'
+import { defineProvider as coreProvider, defineWireProvider as coreWireProvider } from '@pikku/core/provider'
 import type {
 ${collections.length === 0 ? '' : '  ProviderCollectionEntry,\n'}  ProviderCollection,
   ProviderFactory,
   ProviderVariants,
+  WireProviderFactory,
+  WireProviderVariants,
   WithOptional,
 } from '@pikku/core/provider'
 ${baseImport}
@@ -148,6 +178,12 @@ export type {
 } from '@pikku/core/provider'
 
 ${helpers}${merged}
+
+/**
+ * The services built per request: what each \`defineWireProvider\` provides, and
+ * nothing else. A key a provider returns only sometimes is optional.
+ */
+${wire}
 
 /**
  * The keys other providers (and the project) inject into the services before
@@ -198,5 +234,35 @@ type DefineProvider = {
  * in \`optional\`.
  */
 export const defineProvider = coreProvider as unknown as DefineProvider
+
+type RequestServices = SingletonServices & WireServices
+
+type DefineWireProvider = {
+  <TProvides extends object>(
+    factory: WireProviderFactory<RequestServices, TProvides>
+  ): WireProviderFactory<RequestServices, TProvides>
+  <
+    TProvides extends object,
+    const TOptional extends keyof RequestServices & string = never,
+  >(
+    variants: WireProviderVariants<
+      WithOptional<RequestServices, TOptional>,
+      TProvides,
+      TOptional
+    >
+  ): WireProviderVariants<
+    WithOptional<RequestServices, TOptional>,
+    TProvides,
+    TOptional
+  >
+}
+
+/**
+ * Declares a provider built once per invocation: a factory that destructures
+ * the singleton services and the wire services built before it from
+ * \`services\`, takes the invocation's \`wire\`, and returns what it provides.
+ * Needs that may be absent, such as \`auditLog\`, are listed in \`optional\`.
+ */
+export const defineWireProvider = coreWireProvider as unknown as DefineWireProvider
 `
 }

@@ -262,5 +262,104 @@ export const n: number = services.bad
       assert.equal(found.length, 1)
       assert.match(found[0]!, /ProviderKeyIsAny<"bad">/)
     })
+
+    describe('per-request providers', () => {
+      const wireLeaf = serializeProvidersType({
+        baseImport,
+        services: [
+          { name: 'a', provides: ['a'], specifier: './a.js', export: 'a' },
+        ],
+        wireServices: [
+          {
+            name: 'scope',
+            provides: ['requestScope'],
+            specifier: './w.js',
+            export: 'scope',
+          },
+          {
+            name: 'audited',
+            provides: ['auditLog'],
+            optionalProvides: ['auditLog'],
+            specifier: './w.js',
+            export: 'audited',
+          },
+          {
+            name: 'events',
+            provides: ['events'],
+            specifier: './w.js',
+            export: 'events',
+          },
+        ],
+      })
+      const wireFiles = {
+        'base.ts': `export interface SingletonServices {
+  logger: { info(message: string): void }
+  audit?: { write(line: string): void }
+}
+`,
+        'leaf.ts': wireLeaf,
+        'a.ts': `import { defineProvider } from './leaf.js'
+export const a = defineProvider(() => ({ a: { n: 1 } }))
+`,
+        'w.ts': `import { defineWireProvider } from './leaf.js'
+
+export const scope = defineWireProvider(({ logger, a }, wire) => {
+  logger.info(String(a.n))
+  return { requestScope: { id: wire.session } }
+})
+
+export const audited = defineWireProvider({
+  optional: ['audit'],
+  common: ({ audit }) => (audit ? { auditLog: { write: audit.write } } : {}),
+})
+
+export const events = defineWireProvider({
+  optional: ['auditLog'],
+  common: ({ requestScope, auditLog }) => {
+    // @ts-expect-error auditLog is optional in the merged type
+    auditLog.write('x')
+    auditLog?.write('x')
+    return { events: { scope: requestScope } }
+  },
+})
+`,
+        'use.ts': `import type { SingletonServices, WireServices } from './leaf.js'
+declare const wire: WireServices
+declare const singletons: SingletonServices
+export const scope: { id: unknown } = wire.requestScope
+export const optional: boolean = wire.auditLog === undefined
+export const events: { scope: unknown } = wire.events
+// @ts-expect-error a per-request key is not a singleton key
+export const leaked = singletons.requestScope
+// @ts-expect-error a singleton key is not a per-request key
+export const wrong = wire.a
+`,
+      }
+
+      test('WireServices holds exactly the keys the wire providers provide, optional where returned only sometimes', () => {
+        assert.deepEqual(diagnostics(wireFiles), [])
+      })
+
+      test('a wire provider cannot destructure a key nothing provides', () => {
+        const found = diagnostics({
+          ...wireFiles,
+          'w.ts': `import { defineWireProvider } from './leaf.js'
+export const scope = defineWireProvider(({ ghost }) => ({ requestScope: ghost }))
+export const audited = defineWireProvider(() => ({}))
+export const events = defineWireProvider(() => ({}))
+`,
+          'use.ts': '',
+        })
+        assert.equal(found.length > 0, true)
+        assert.match(found.join('\n'), /ghost/)
+      })
+
+      test('with no wire providers WireServices is empty', () => {
+        assert.match(
+          serializeProvidersType({ baseImport, services: [] }),
+          /export type WireServices = Record<never, never>/
+        )
+      })
+    })
   })
 })

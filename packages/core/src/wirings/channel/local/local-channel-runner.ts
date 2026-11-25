@@ -1,6 +1,6 @@
 import { openChannel } from '../channel-runner.js'
 import { createHTTPWire } from '../../http/http-runner.js'
-import { closeWireServices } from '../../../utils.js'
+import { stopWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import type { CoreChannel, RunChannelOptions } from '../channel.types.js'
 import { PikkuLocalChannelHandler } from './local-channel-handler.js'
@@ -160,7 +160,7 @@ export const runLocalChannel = async ({
           return
         }
         closedWireServices = true
-        await closeWireServices(singletonServices.logger, wireServices)
+        await stopWireServices(singletonServices.logger, wireServices)
       }
 
       const services = { ...singletonServices, ...wireServices }
@@ -289,7 +289,7 @@ export const runLocalChannel = async ({
     } finally {
       if (!channelHandler && wireServices && !closedWireServices) {
         closedWireServices = true
-        await closeWireServices(singletonServices.logger, wireServices)
+        await stopWireServices(singletonServices.logger, wireServices)
       }
     }
   }

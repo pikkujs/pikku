@@ -35,11 +35,16 @@ describe('resolveProviders', () => {
 
   const service = (
     variants: Record<string, Variant>,
-    extra: { onServerStart?: boolean; module?: string } = {}
+    extra: {
+      onServerStart?: boolean
+      module?: string
+      kind?: 'wire' | 'singleton'
+    } = {}
   ) => ({
     module: join(root, extra.module ?? 'src/services.ts'),
     export: 'svc',
     variants,
+    ...(extra.kind ? { kind: extra.kind } : {}),
     ...(extra.onServerStart ? { onServerStart: true } : {}),
   })
 
@@ -89,6 +94,106 @@ describe('resolveProviders', () => {
       requiredServices: allProvided(st),
       ...extra,
     })
+
+  describe('per-request providers', () => {
+    const wire = (variants: Record<string, Variant>) =>
+      service(variants, { kind: 'wire' })
+
+    test('a wire provider is resolved apart from the singletons, after the keys it needs', () => {
+      const { ordered, wire: wired } = resolve(
+        state({
+          mailer: service({ common: { needs: [], provides: ['mailer'] } }),
+          scope: wire({ common: { needs: ['mailer'], provides: ['scope'] } }),
+          events: wire({ common: { needs: ['scope'], provides: ['events'] } }),
+        })
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['mailer']
+      )
+      assert.deepEqual(
+        wired.map((s) => s.name),
+        ['scope', 'events']
+      )
+    })
+
+    test('a request builds only what its functions reach: a wire provider nothing reaches is left out', () => {
+      const { wire: wired } = resolveProviders({
+        state: state({
+          scope: wire({ common: { needs: [], provides: ['scope'] } }),
+          other: wire({ common: { needs: [], provides: ['other'] } }),
+        }),
+        rootDir: root,
+        target: 'dev',
+        baseline: ['logger'],
+        requiredServices: ['scope'],
+      })
+      assert.deepEqual(
+        wired.map((s) => s.name),
+        ['scope']
+      )
+    })
+
+    test('the singletons a wire provider needs are reached too', () => {
+      const { ordered } = resolveProviders({
+        state: state({
+          mailer: service({ common: { needs: [], provides: ['mailer'] } }),
+          scope: wire({ common: { needs: ['mailer'], provides: ['scope'] } }),
+        }),
+        rootDir: root,
+        target: 'dev',
+        baseline: ['logger'],
+        requiredServices: ['scope'],
+      })
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['mailer']
+      )
+    })
+
+    test('a wire provider may need core auditLog when it lists it as optional', () => {
+      const { wire: wired } = resolve(
+        state({
+          events: wire({
+            common: {
+              needs: ['auditLog'],
+              optional: ['auditLog'],
+              provides: ['events'],
+            },
+          }),
+        })
+      )
+      assert.deepEqual(
+        wired.map((s) => s.name),
+        ['events']
+      )
+    })
+
+    test('a wire provider with no variant for the target fails', () => {
+      assert.throws(
+        () =>
+          resolve(
+            state({ scope: wire({ dev: { needs: [], provides: ['scope'] } }) }),
+            'deploy'
+          ),
+        /PKU388/
+      )
+    })
+
+    test('a wire need nothing provides is PKU386', () => {
+      assert.throws(
+        () =>
+          resolve(
+            state({
+              scope: wire({
+                common: { needs: ['ghost'], provides: ['scope'] },
+              }),
+            })
+          ),
+        /PKU386.*'ghost'/
+      )
+    })
+  })
 
   test('orders a service after the services it needs', () => {
     const { ordered } = resolve(

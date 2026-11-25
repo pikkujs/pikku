@@ -7,6 +7,7 @@ import {
   type ProviderMeta as CoreProviderMeta,
   type ProviderProfile,
   type ProviderTarget,
+  type ResolvedProvider,
   type ProviderVariants,
   type ProviderVariantName,
 } from '@pikku/core/provider'
@@ -54,6 +55,8 @@ export interface ResolvedProviders {
   baseline: readonly string[]
   /** The collections the target holds: every one a selected provider reads or adds to. */
   collections: readonly string[]
+  /** The per-request providers the target reaches, in the order a request builds them. */
+  wire: ResolvedProviderImport[]
 }
 
 /** The collections core declares, which any project's providers may add to. */
@@ -68,6 +71,7 @@ export const CORE_COLLECTIONS: Readonly<Record<string, string>> = {
  */
 export const runsNothing = (resolved: ResolvedProviders): boolean =>
   resolved.ordered.length === 0 &&
+  resolved.wire.length === 0 &&
   resolved.collections.every((name) => name in CORE_COLLECTIONS)
 
 /** Every collection name the build knows, with the module that declares it. */
@@ -368,6 +372,12 @@ export const CORE_PER_REQUEST_KEYS = [
   'userSession',
 ] as const
 
+/** What the PKU399 message lists: the keys core builds for every invocation. */
+const CORE_WIRE_KEY_NAMES = 'auditLog, analytics, session, rpc'
+
+/** The keys a per-request provider may find already built by core, sometimes. */
+const CORE_HELD_WIRE_KEYS = ['auditLog'] as const
+
 /** One function and the services it destructures, for the per-unit needs check. */
 export interface FunctionNeeds {
   name: string
@@ -456,7 +466,9 @@ export const resolveProviders = (options: {
   const where = options.unitLabel
     ? `${targetLabel} (${options.unitLabel})`
     : targetLabel
-  const sources = collectProviderSources(options.state, options.rootDir)
+  const allSources = collectProviderSources(options.state, options.rootDir)
+  const sources = allSources.filter((source) => source.meta.kind !== 'wire')
+  const wireSources = allSources.filter((source) => source.meta.kind === 'wire')
   const baselineKeys = new Set(baseline)
   const looked = variantOrder(target, profile)
 
@@ -491,6 +503,16 @@ export const resolveProviders = (options: {
     }
   }
 
+  const wireOwners = checkLifetimes({
+    state: options.state,
+    singletons: sources,
+    wire: wireSources,
+    singletonOwners: owners,
+    baseline: baselineKeys,
+    collections,
+    where,
+  })
+
   const reached = new Set<string>([
     ...options.requiredServices,
     ...(options.factoryServices ?? []),
@@ -498,11 +520,13 @@ export const resolveProviders = (options: {
   const selected = new Set<ProviderSource>()
   for (let grew = true; grew;) {
     grew = false
-    for (const source of sources) {
+    for (const source of allSources) {
       if (selected.has(source)) continue
       const joins = source.meta.addTo
         ? reached.has(source.meta.addTo)
-        : keysOf(source).some((key) => reached.has(key))
+        : source.meta.kind === 'wire'
+          ? providedKeys(source.meta).some((key) => reached.has(key))
+          : keysOf(source).some((key) => reached.has(key))
       if (!joins) continue
       selected.add(source)
       grew = true
@@ -512,6 +536,7 @@ export const resolveProviders = (options: {
         if (
           read!.optional?.includes(need) &&
           !owners.has(need) &&
+          !wireOwners.has(need) &&
           !collections.has(need)
         )
           continue
@@ -550,7 +575,7 @@ export const resolveProviders = (options: {
       ...(source.meta.onServerStart ? { onServerStart: noop } : {}),
     } as ProviderVariants
     registry.add(source.name, definition, meta, {
-      kind: source.meta.kind ?? 'singleton',
+      kind: 'singleton',
       ...(source.meta.addTo ? { addTo: source.meta.addTo } : {}),
       ...(source.addonScope ? { addon: source.addonScope } : {}),
     })
@@ -584,39 +609,231 @@ export const resolveProviders = (options: {
     }
   }
 
+  const wireResolved = resolveWireProviders({
+    sources: wireSources.filter((source) => selected.has(source)),
+    state: options.state,
+    target,
+    profile,
+    held: [
+      ...baselineKeys,
+      ...resolved.flatMap((service) => service.provides),
+      ...reachedCollections,
+    ],
+    where,
+    targetLabel,
+    looked,
+  })
+
   if (options.functions) {
     checkFunctionNeeds({
       functions: options.functions,
       state: options.state,
       baseline: baselineKeys,
       resolved,
+      wireProvided: wireSources.map((source) => source.meta),
       where,
     })
   }
+
+  const importOf = (
+    service: { name: string; variant: ProviderVariantName } & Pick<
+      ResolvedProviderImport,
+      'needs' | 'optional' | 'provides' | 'optionalProvides' | 'addon' | 'addTo'
+    > & { onServerStart?: unknown },
+    source: ProviderSource
+  ): ResolvedProviderImport => ({
+    name: service.name,
+    variant: service.variant,
+    needs: service.needs,
+    optional: service.optional,
+    provides: service.provides,
+    optionalProvides: service.optionalProvides,
+    module: source.module,
+    export: source.export,
+    ...(source.variantModules[service.variant]
+      ? { variantRef: source.variantModules[service.variant] }
+      : {}),
+    ...(service.addon ? { addon: service.addon } : {}),
+    ...(service.addTo ? { addTo: service.addTo } : {}),
+    onServerStart: Boolean(service.onServerStart),
+  })
 
   return {
     target,
     baseline,
     collections: reachedCollections,
-    ordered: resolved.map((service) => {
-      const source = byName.get(service.name)!
-      return {
-        name: service.name,
-        variant: service.variant,
-        needs: service.needs,
-        optional: service.optional,
-        provides: service.provides,
-        optionalProvides: service.optionalProvides,
-        module: source.module,
-        export: source.export,
-        ...(source.variantModules[service.variant]
-          ? { variantRef: source.variantModules[service.variant] }
-          : {}),
-        ...(service.addon ? { addon: service.addon } : {}),
-        ...(service.addTo ? { addTo: service.addTo } : {}),
-        onServerStart: Boolean(service.onServerStart),
+    ordered: resolved.map((service) =>
+      importOf(service, byName.get(service.name)!)
+    ),
+    wire: wireResolved.map(({ service, source }) => importOf(service, source)),
+  }
+}
+
+/**
+ * The lifetime rules, checked on every provider whether a target reaches it or
+ * not: a singleton never needs a key built per request (PKU392), a per-request
+ * key is never one a singleton holds (PKU393), and core builds some keys for
+ * every invocation, which no wire provider may provide (PKU399). Returns the
+ * wire providers' keys with the provider that owns each.
+ */
+const checkLifetimes = ({
+  state,
+  singletons,
+  wire,
+  singletonOwners,
+  baseline,
+  collections,
+  where,
+}: {
+  state: ProvidersState
+  singletons: readonly ProviderSource[]
+  wire: readonly ProviderSource[]
+  singletonOwners: ReadonlyMap<string, ProviderSource>
+  baseline: ReadonlySet<string>
+  collections: ReadonlyMap<string, string>
+  where: string
+}): Map<string, ProviderSource> => {
+  const wireOwners = new Map<string, ProviderSource>()
+  const allKeys = (source: ProviderSource) => providedKeys(source.meta)
+  const heldBySingleton = (key: string): string | undefined => {
+    const owner = [...singletons].find((source) =>
+      allKeys(source).includes(key)
+    )
+    if (owner) return owner.name
+    if (state.projectServicesProvided?.keys.includes(key))
+      return 'pikkuServices'
+    if (baseline.has(key)) return 'the baseline'
+    return undefined
+  }
+  for (const source of wire) {
+    for (const key of allKeys(source)) {
+      if ((CORE_PER_REQUEST_KEYS as readonly string[]).includes(key)) {
+        throw new ProviderBuildError(
+          ErrorCode.CORE_WIRE_KEY_PROVIDED,
+          `Wire provider '${source.name}' provides '${key}', which core builds for every invocation (${CORE_WIRE_KEY_NAMES}).`
+        )
       }
-    }),
+      const holder = heldBySingleton(key)
+      if (holder !== undefined) {
+        throw new ProviderBuildError(
+          ErrorCode.WIRE_KEY_SHADOWS_SINGLETON,
+          `Wire provider '${source.name}' provides '${key}', which '${holder}' already holds as a singleton on ${where}. A key has one lifetime.`
+        )
+      }
+      if (collections.has(key)) {
+        throw new ProviderBuildError(
+          ErrorCode.COLLECTION_KEY_CONFLICT,
+          `'${key}' is the provider collection declared in ${collections.get(key)}; provider '${source.name}' cannot also provide it as a key.`
+        )
+      }
+      const owner = wireOwners.get(key)
+      if (owner && owner !== source) {
+        throw new ProviderBuildError(
+          ErrorCode.PROVIDER_KEY_DUPLICATED,
+          `Providers '${owner.name}' and '${source.name}' both provide '${key}' on ${where}. Each key has one provider.`
+        )
+      }
+      wireOwners.set(key, source)
+    }
+  }
+  for (const key of state.projectWireServicesProvided?.keys ?? []) {
+    const holder = singletons.find((source) => allKeys(source).includes(key))
+    if (holder) {
+      throw new ProviderBuildError(
+        ErrorCode.WIRE_KEY_SHADOWS_SINGLETON,
+        `Wire provider 'createWireServices' provides '${key}', which '${holder.name}' already holds as a singleton on ${where}. A key has one lifetime.`
+      )
+    }
+  }
+  for (const source of singletons) {
+    for (const variant of Object.values(source.meta.variants)) {
+      for (const need of variant?.needs ?? []) {
+        const builder = wireOwners.get(need)
+        if (builder && !singletonOwners.has(need)) {
+          throw new ProviderBuildError(
+            ErrorCode.SINGLETON_NEEDS_WIRE_KEY,
+            `Provider '${source.name}' is a singleton but needs '${need}', which wire provider '${builder.name}' builds per request. Make '${source.name}' a defineWireProvider, or stop needing '${need}'.`
+          )
+        }
+      }
+    }
+  }
+  return wireOwners
+}
+
+/**
+ * Picks each per-request provider's variant and orders them, with core's own
+ * per-request keys and every singleton the target holds as what they may need.
+ */
+const resolveWireProviders = ({
+  sources,
+  state,
+  target,
+  profile,
+  held,
+  where,
+  targetLabel,
+  looked,
+}: {
+  sources: readonly ProviderSource[]
+  state: ProvidersState
+  target: ProviderTarget
+  profile: ProviderProfile | undefined
+  held: readonly string[]
+  where: string
+  targetLabel: string
+  looked: readonly ProviderVariantName[]
+}): { service: ResolvedProvider; source: ProviderSource }[] => {
+  if (sources.length === 0) return []
+  const registry = new ProviderRegistry()
+  const byName = new Map<string, ProviderSource>()
+  for (const source of sources) {
+    const variant = variantFor(source.meta, target, profile)
+    if (!variant) {
+      throw new ProviderBuildError(
+        ErrorCode.PROVIDER_NO_VARIANT,
+        `Provider '${source.name}' has no variant for ${where} (looked for ${looked.join(', ')}), so it would run without ${providedKeys(
+          source.meta
+        )
+          .map((key) => `'${key}'`)
+          .join(
+            ', '
+          )}. Give it one of those, or leave it out of ${targetLabel}.`
+      )
+    }
+    const read = source.meta.variants[variant]!
+    for (const key of CORE_HELD_WIRE_KEYS) {
+      if (read.needs.includes(key) && !read.optional?.includes(key)) {
+        throw new ProviderBuildError(
+          ErrorCode.PROVIDER_NEEDS_OPTIONAL_KEY,
+          `Provider '${source.name}' needs '${key}', which 'core' provides only sometimes. Add '${key}' to its optional list.`
+        )
+      }
+    }
+    registry.add(
+      source.name,
+      { [variant]: noop } as ProviderVariants,
+      { [variant]: read } as CoreProviderMeta,
+      { kind: 'wire' }
+    )
+    byName.set(source.name, source)
+  }
+  const singletonKeys = new Set<string>([
+    ...held,
+    ...CORE_HELD_WIRE_KEYS,
+    ...(state.projectServicesProvided?.keys ?? []),
+    ...(state.serviceTypes?.singletonServices ?? []),
+  ])
+  try {
+    return registry
+      .resolve(target, {
+        baseline: [...singletonKeys],
+        profile,
+        where,
+      })
+      .map((service) => ({ service, source: byName.get(service.name)! }))
+  } catch (error) {
+    throw toBuildError(error)
   }
 }
 
@@ -630,6 +847,7 @@ const checkFunctionNeeds = ({
   state,
   baseline,
   resolved,
+  wireProvided,
   where,
 }: {
   functions: readonly FunctionNeeds[]
@@ -639,6 +857,8 @@ const checkFunctionNeeds = ({
     provides: readonly string[]
     optionalProvides: readonly string[]
   }[]
+  /** Every per-request provider the project declares or opts in to. */
+  wireProvided: readonly ProviderMeta[]
   where: string
 }): void => {
   const held = new Set<string>([...baseline, ...CORE_PER_REQUEST_KEYS])
@@ -647,8 +867,7 @@ const checkFunctionNeeds = ({
     for (const key of service.provides) held.add(key)
     for (const key of service.optionalProvides) soft.add(key)
   }
-  for (const source of Object.values(state.providers ?? {})) {
-    if (source.kind !== 'wire') continue
+  for (const source of wireProvided) {
     for (const variant of Object.values(source.variants)) {
       for (const key of variant?.provides ?? []) held.add(key)
       for (const key of variant?.optionalProvides ?? []) soft.add(key)

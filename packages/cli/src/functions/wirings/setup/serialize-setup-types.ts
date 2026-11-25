@@ -14,7 +14,12 @@ export const serializeSetupTypes = (
   {
     addon = false,
     injectedKeys = [],
-  }: { addon?: boolean; injectedKeys?: readonly string[] } = {}
+    providerWireServicesImport,
+  }: {
+    addon?: boolean
+    injectedKeys?: readonly string[]
+    providerWireServicesImport?: string
+  } = {}
 ) => {
   return `/**
  * Config and service factory definitions, declared once per application
@@ -25,6 +30,7 @@ import { CreateWireServices${addon ? '' : ', ServerLifecycle'} } from '@pikku/co
 import type { SingletonServices } from '${functionTypesImportPath}'
 ${configTypeImport}
 ${requiredServicesTypeImport}
+${providerWireServicesImport ?? ''}
 /**
  * The singleton services a provider injects before \`pikkuServices\` runs. Each
  * is present in \`existingServices\` by type, so a factory that needs one is
@@ -120,7 +126,7 @@ export const pikkuServices = (
  */
 export const pikkuWireServices = (
   func: (
-    services: SingletonServices,
+    services: SingletonServices${providerWireServicesImport ? ' & ProviderWireServices' : ''},
     wire: any
   ) => Promise<RequiredWireServices>
 ): CreateWireServices => {

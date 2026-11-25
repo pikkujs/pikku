@@ -8,12 +8,14 @@ export { ProviderError } from './provider-error.js'
 export { ProviderRegistry, variantOrder } from './provider-registry.js'
 export type { ProviderResolveOptions } from './provider-registry.js'
 export { runProviders } from './run-providers.js'
+export { WireProviders } from './run-wire-providers.js'
 export { scopedEnv } from './scoped-env.js'
 export { recordStopOrder } from './stop-order.js'
 export type { ProviderStopEntry } from './stop-order.js'
 export type { ProviderErrorKind } from './provider-error.js'
 export type { ProviderStartHook } from './run-providers.js'
 export type {
+  CreateProviderWireServices,
   ProviderCollection,
   ProviderCollectionEntry,
   ProviderCollectionItem,
@@ -32,5 +34,7 @@ export type {
   ResolvedProvider,
   WithOptional,
   WireProviderFactory,
+  WireProviderRun,
+  WireProviderRunOptions,
   WireProviderVariants,
 } from './provider.types.js'

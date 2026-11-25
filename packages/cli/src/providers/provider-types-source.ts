@@ -36,6 +36,14 @@ export const providerTypesSource = (
   }
   const leaf = config.providerTypesFile
   const mappings = config.packageMappings
+  const sources = collectProviderSources(state, config.rootDir)
+  const typeSource = (source: (typeof sources)[number]) => ({
+    name: source.name,
+    provides: providedKeys(source.meta),
+    optionalProvides: optionalProvidedKeys(source.meta),
+    specifier: getFileImportRelativePath(leaf, source.module, mappings),
+    export: source.export,
+  })
   return serializeProvidersType({
     collections: collectProviderCollections(state, config.rootDir).map(
       ({ name, module, export: exported }) => ({
@@ -45,13 +53,12 @@ export const providerTypesSource = (
       })
     ),
     baseImport: `import type { ${base.type} as BaseSingletonServices } from '${getFileImportRelativePath(leaf, base.typePath, mappings)}'`,
-    services: collectProviderSources(state, config.rootDir).map((source) => ({
-      name: source.name,
-      provides: providedKeys(source.meta),
-      optionalProvides: optionalProvidedKeys(source.meta),
-      specifier: getFileImportRelativePath(leaf, source.module, mappings),
-      export: source.export,
-    })),
+    services: sources
+      .filter((source) => source.meta.kind !== 'wire')
+      .map(typeSource),
+    wireServices: sources
+      .filter((source) => source.meta.kind === 'wire')
+      .map(typeSource),
   })
 }
 
@@ -78,15 +85,27 @@ export const singletonServicesTypeRef = (
   }
 }
 
-/** Every key any service the project runs provides, and every collection it declares, so the services map names them. */
+/** Every key any singleton provider the project runs provides, and every collection it declares, so the services map names them. */
 export const providedServiceKeys = (
   state: Parameters<typeof collectProviderSources>[0],
   rootDir: string
 ): string[] => [
   ...new Set([
-    ...collectProviderSources(state, rootDir).flatMap((source) =>
-      providedKeys(source.meta)
-    ),
+    ...collectProviderSources(state, rootDir)
+      .filter((source) => source.meta.kind !== 'wire')
+      .flatMap((source) => providedKeys(source.meta)),
     ...collectProviderCollections(state, rootDir).map(({ name }) => name),
   ]),
+]
+
+/** Every key any per-request provider the project runs provides. */
+export const providedWireServiceKeys = (
+  state: Parameters<typeof collectProviderSources>[0],
+  rootDir: string
+): string[] => [
+  ...new Set(
+    collectProviderSources(state, rootDir)
+      .filter((source) => source.meta.kind === 'wire')
+      .flatMap((source) => providedKeys(source.meta))
+  ),
 ]

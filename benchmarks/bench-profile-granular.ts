@@ -8,7 +8,7 @@ import { UWSPikkuHTTPResponse } from '../packages/runtimes/uws-handler/src/uws-p
 // Profiling reaches past the package entry points on purpose: these are the hot
 // paths, and none of them is public API. Relative paths rather than
 // `@pikku/core/src/...`, which the package's `exports` map correctly refuses.
-import { createWeakUID, closeWireServices } from '../packages/core/src/utils.js'
+import { createWeakUID, stopWireServices } from '../packages/core/src/utils.js'
 import { combineChannelMiddleware } from '../packages/core/src/channel-middleware-runner.js'
 import { combineMiddleware } from '../packages/core/src/middleware-runner.js'
 import { runPermissions } from '../packages/core/src/permissions.js'
@@ -116,8 +116,8 @@ async function main() {
     await createWireServices()
   })
 
-  results['09. closeWireServices({})'] = await timeAsync(async () => {
-    await closeWireServices(noopLogger as any, {})
+  results['09. stopWireServices({})'] = await timeAsync(async () => {
+    await stopWireServices(noopLogger as any, {})
   })
 
   results['10. Object.keys({}).length > 0'] = timeSync(() => {

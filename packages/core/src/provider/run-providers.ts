@@ -17,7 +17,7 @@ export interface ProviderStartHook {
   run: (services: any) => void | Promise<void>
 }
 
-const describe = (error: unknown) =>
+export const describeError = (error: unknown) =>
   error instanceof Error ? error.message : String(error)
 
 const hasKey = (value: object, key: string) =>
@@ -47,18 +47,21 @@ const call = async (
     if (error instanceof ProviderError) throw error
     throw new ProviderError(
       'factory-failed',
-      `Provider '${provider.name}' failed to build: ${describe(error)}`,
+      `Provider '${provider.name}' failed to build: ${describeError(error)}`,
       { cause: error }
     )
   }
 }
 
-const build = async (
+/**
+ * Checks what a provider returned against what the inspector read it to
+ * provide, and returns the keys it provides. A key outside `provides` is
+ * `undeclared-return`; a required key it left out is `missing-return`.
+ */
+export const checkProvided = (
   provider: ResolvedProvider,
-  services: Record<string, any>,
-  env: ProviderEnv
-): Promise<Record<string, unknown>> => {
-  const returned = await call(provider, services, env)
+  returned: unknown
+): Record<string, unknown> => {
   const provided: Record<string, unknown> = {}
   const result = (
     returned !== null && typeof returned === 'object' ? returned : {}
@@ -84,6 +87,13 @@ const build = async (
   }
   return provided
 }
+
+const build = async (
+  provider: ResolvedProvider,
+  services: Record<string, any>,
+  env: ProviderEnv
+): Promise<Record<string, unknown>> =>
+  checkProvided(provider, await call(provider, services, env))
 
 /**
  * The keys to stop, first to last: what the providers provided, latest

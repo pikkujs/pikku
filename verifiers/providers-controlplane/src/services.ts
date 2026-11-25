@@ -11,17 +11,18 @@ export const createConfig = pikkuConfig(async () => {
   return {}
 })
 
+// Checks existingServices.kysely and spreads existingServices.
 export const createSingletonServices = pikkuServices(
-  async (
-    config,
-    { kysely, aiProviders, analyticsSinks }
-  ): Promise<RequiredSingletonServices> => {
+  async (config, existingServices): Promise<RequiredSingletonServices> => {
+    const { aiProviders, analyticsSinks } = existingServices
+    const kysely = existingServices.kysely ?? { driver: 'own' }
     const variables = new LocalVariablesService()
     const secrets = new LocalSecretService(variables)
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
 
     return {
+      ...existingServices,
       config,
       secrets,
       logger,
@@ -30,10 +31,9 @@ export const createSingletonServices = pikkuServices(
       kysely,
       aiProviders,
       analyticsSinks,
-    } as RequiredSingletonServices
+    } as unknown as RequiredSingletonServices
   }
 )
 
-export const createWireServices = pikkuWireServices(async () => {
-  return {}
-})
+// A per-request factory that shadows nothing.
+export const createWireServices = pikkuWireServices(async () => ({}))

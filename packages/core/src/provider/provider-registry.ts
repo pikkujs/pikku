@@ -7,6 +7,7 @@ import type {
   ProviderRegistration,
   ProviderTarget,
   ProviderVariantName,
+  ProviderVariants,
   ResolvedProvider,
 } from './provider.types.js'
 
@@ -36,11 +37,11 @@ const variantFor = (
 ): { variant: ProviderVariantName; factory: ProviderFactory } | undefined => {
   const { definition } = entry
   if (typeof definition === 'function') {
-    return { variant: 'common', factory: definition }
+    return { variant: 'common', factory: definition as ProviderFactory }
   }
   for (const variant of variantOrder(target, profile)) {
     const factory = definition[variant]
-    if (factory) return { variant, factory }
+    if (factory) return { variant, factory: factory as ProviderFactory }
   }
   return undefined
 }
@@ -58,6 +59,12 @@ export interface ProviderResolveOptions {
   entryOwned?: readonly string[]
   /** Names the build in errors: `pikku dev`, `the standalone deploy`. Defaults to the target. */
   where?: string
+  /**
+   * A need nothing in the registry provides is left to the caller instead of
+   * being an error. Per-request providers use it: their singleton needs are
+   * held by the services the runner is handed.
+   */
+  openNeeds?: boolean
 }
 
 /**
@@ -108,7 +115,9 @@ export class ProviderRegistry {
     }
     const addTo =
       registration.addTo ??
-      (typeof definition === 'function' ? undefined : definition.addTo?.name)
+      (typeof definition === 'function'
+        ? undefined
+        : (definition as ProviderVariants).addTo?.name)
     this.entries.push({ name, definition, meta, registration, addTo })
     return this
   }
@@ -158,7 +167,7 @@ export class ProviderRegistry {
         onServerStart:
           typeof definition === 'function'
             ? undefined
-            : definition.onServerStart,
+            : (definition as ProviderVariants).onServerStart,
       })
     }
 
@@ -217,7 +226,7 @@ export class ProviderRegistry {
             )
           }
           set.add(owner)
-        } else if (!baseline.has(need) && !optional) {
+        } else if (!baseline.has(need) && !optional && !options.openNeeds) {
           const hint = owner
             ? ` It provides '${need}' itself, which is not available to its own factory.`
             : baseline.size > 0

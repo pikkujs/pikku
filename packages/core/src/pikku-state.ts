@@ -190,6 +190,7 @@ const createEmptyPackageState = (): PikkuPackageState => ({
     factories: null,
     singletonServices: null,
     providerStopOrder: null,
+    wireProviders: null,
     authFactory: null,
     credentialsMeta: null,
     requiredParentServices: null,

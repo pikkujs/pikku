@@ -21,7 +21,10 @@ export const serializeFunctionTypes = (
   credentialsTypeImport?: string,
   flagsTypeImport?: string,
   middlewareTypesImportPath = '../middleware/pikku-middleware-types.gen.js',
-  { addon = false }: { addon?: boolean } = {}
+  {
+    addon = false,
+    providerWireServicesImport,
+  }: { addon?: boolean; providerWireServicesImport?: string } = {}
 ) => {
   const nodeCategoryType = nodeCategories?.length
     ? nodeCategories.map((c) => `'${c}'`).join(' | ')
@@ -71,6 +74,7 @@ import {
 ${userSessionTypeImport}
 ${singletonServicesTypeImport}
 ${wireServicesTypeImport}
+${providerWireServicesImport ?? ''}
 ${rpcMapTypeImport}
 ${requiredServicesTypeImport}
 ${workflowImport}
@@ -85,7 +89,7 @@ ${singletonServicesTypeName !== 'SingletonServices' ? `export type SingletonServ
  * plus whatever is built per request. This is the type to widen when you add a
  * service.
  */
-${wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
+${providerWireServicesImport ? `export type Services = ${wireServicesTypeName} & ProviderWireServices` : wireServicesTypeName !== 'Services' ? `export type Services = ${wireServicesTypeName}` : `export type { ${wireServicesTypeName} as Services }`}
 /**
  * The signed-in user as this project defines it. Reached on the wire as
  * \`session\`, and replaced with \`setSession\`.

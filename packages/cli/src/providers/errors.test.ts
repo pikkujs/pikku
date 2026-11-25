@@ -12,8 +12,10 @@ type Variants = Record<
   }
 >
 
+type Provider = { variants: Variants; onServerStart?: boolean; kind?: 'wire' }
+
 const state = (
-  providers: Record<string, { variants: Variants; onServerStart?: boolean }>,
+  providers: Record<string, Provider>,
   extra: Record<string, unknown> = {}
 ) =>
   ({
@@ -29,7 +31,7 @@ const state = (
   }) as never
 
 const message = (
-  providers: Record<string, { variants: Variants; onServerStart?: boolean }>,
+  providers: Record<string, Provider>,
   options: Partial<Parameters<typeof resolveProviders>[0]> = {},
   extra: Record<string, unknown> = {}
 ): string => {
@@ -60,6 +62,12 @@ const common = (
 ): { variants: Variants } => ({
   variants: { common: { needs, provides, ...extra } },
 })
+
+const wire = (
+  needs: string[],
+  provides: string[],
+  extra: { optional?: string[]; optionalProvides?: string[] } = {}
+): Provider => ({ ...common(needs, provides, extra), kind: 'wire' })
 
 describe('provider build errors, one exact message per code', () => {
   test('PKU385 PROVIDER_KEY_DUPLICATED', () => {
@@ -119,6 +127,52 @@ describe('provider build errors, one exact message per code', () => {
         consumer: common(['sometimes'], ['consumer']),
       }),
       "[PKU391] Provider 'consumer' needs 'sometimes', which 'maybe' provides only sometimes. Add 'sometimes' to its optional list."
+    )
+  })
+
+  test('PKU392 SINGLETON_NEEDS_WIRE_KEY', () => {
+    assert.equal(
+      message({
+        perRequest: wire([], ['requestScope']),
+        bad: common(['requestScope'], ['bad']),
+      }),
+      "[PKU392] Provider 'bad' is a singleton but needs 'requestScope', which wire provider 'perRequest' builds per request. Make 'bad' a defineWireProvider, or stop needing 'requestScope'."
+    )
+  })
+
+  test('PKU393 WIRE_KEY_SHADOWS_SINGLETON', () => {
+    assert.equal(
+      message({
+        held: common([], ['held']),
+        shadow: wire([], ['held']),
+      }),
+      "[PKU393] Wire provider 'shadow' provides 'held', which 'held' already holds as a singleton on the standalone deploy. A key has one lifetime."
+    )
+    assert.equal(
+      message({ shadow: wire([], ['logger']) }),
+      "[PKU393] Wire provider 'shadow' provides 'logger', which 'the baseline' already holds as a singleton on the standalone deploy. A key has one lifetime."
+    )
+    assert.equal(
+      message(
+        { held: common([], ['kysely']) },
+        {},
+        { projectWireServicesProvided: { keys: ['kysely'], optional: [] } }
+      ),
+      "[PKU393] Wire provider 'createWireServices' provides 'kysely', which 'held' already holds as a singleton on the standalone deploy. A key has one lifetime."
+    )
+  })
+
+  test('PKU399 CORE_WIRE_KEY_PROVIDED', () => {
+    assert.equal(
+      message({ audit: wire([], ['auditLog']) }),
+      "[PKU399] Wire provider 'audit' provides 'auditLog', which core builds for every invocation (auditLog, analytics, session, rpc)."
+    )
+  })
+
+  test('a wire provider needing core auditLog must list it as optional (PKU391)', () => {
+    assert.equal(
+      message({ events: wire(['auditLog'], ['events']) }),
+      "[PKU391] Provider 'events' needs 'auditLog', which 'core' provides only sometimes. Add 'auditLog' to its optional list."
     )
   })
 
