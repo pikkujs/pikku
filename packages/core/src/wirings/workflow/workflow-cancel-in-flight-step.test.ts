@@ -11,6 +11,9 @@
  * undo them afterwards, but only for steps that declare `compensate`, and only
  * after the late write has already been visible.
  *
+ * The run itself is safe: its `cancelled` status holds after the late step
+ * returns or throws. What is missing is only a way for step code to stop early.
+ *
  * Fixture provenance: derived from a production-shaped run in a downstream app,
  * anonymized. Shape kept (times relative to run creation): a queued, non-inline
  * two-step run; step 1 succeeded at +0.5s; step 2 started at +0.6s; the run was
