@@ -3,6 +3,8 @@ export type ProviderErrorKind =
   | 'duplicate-provider'
   | 'unsatisfied-need'
   | 'cycle'
+  | 'optional-key-needed'
+  | 'entry-owned'
   | 'factory-failed'
   | 'start-failed'
 

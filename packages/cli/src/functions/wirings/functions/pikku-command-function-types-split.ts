@@ -12,7 +12,10 @@ import {
 import { serializeMiddlewareTypes } from '../middleware/serialize-middleware-types.js'
 import { serializeSetupTypes } from '../setup/serialize-setup-types.js'
 import { serializeAuthGuards } from '../auth/serialize-auth-guards.js'
-import { providerTypesSource } from '../../../providers/provider-types-source.js'
+import {
+  providedServiceKeys,
+  providerTypesSource,
+} from '../../../providers/provider-types-source.js'
 
 export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
   { bootstrap?: boolean },
@@ -126,7 +129,12 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
         pikkuConfigType?.type,
         `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(setupTypesFile, servicesFile, packageMappings)}'`,
         config.allowShadowedServices,
-        { addon: !!config.addon }
+        {
+          addon: !!config.addon,
+          injectedKeys: config.addon
+            ? []
+            : providedServiceKeys(visitState, config.rootDir).sort(),
+        }
       )
     )
 

@@ -49,6 +49,7 @@ describe('writeUnitPlatformServices', () => {
         ])
       ),
       optedInProviders: {},
+      functions: { meta: {} },
       rpc: { wireAddonDeclarations: new Map() },
     }) as never
 
@@ -62,6 +63,8 @@ describe('writeUnitPlatformServices', () => {
         : {
             serviceSupport: () => ({
               baseline: options.baseline ?? ['logger'],
+              profile: 'standalone',
+              entryOwned: [],
               runsServerLifecycle: options.runsServerLifecycle ?? true,
             }),
           }),
@@ -108,7 +111,7 @@ describe('writeUnitPlatformServices', () => {
     assert.match(source, /target: "deploy"/)
     assert.match(
       source,
-      /registry\.add\("mailer", service0, \{"deploy":\{"needs":\["logger"\],"provides":\["mailer"\]\}\}\)/
+      /registry\.add\("mailer", service0, \{"deploy":\{"needs":\["logger"\],"optional":\[\],"provides":\["mailer"\],"optionalProvides":\[\]\}\}\)/
     )
   })
 
@@ -140,7 +143,7 @@ describe('writeUnitPlatformServices', () => {
           mailer: { variants: { dev: { needs: [], provides: ['mailer'] } } },
         })
       ),
-      /no deploy variant and no common variant.*'mailer'/s
+      /\[PKU388\].*no variant for the fake deploy \(unit 'api'\) \(looked for deploy:standalone, deploy, common\).*'mailer'/s
     )
   })
 
@@ -154,7 +157,7 @@ describe('writeUnitPlatformServices', () => {
           },
         })
       ),
-      /'mailer' needs 'kysely' on deploy/
+      /\[PKU386\].*'mailer' needs 'kysely' on the fake deploy \(unit 'api'\)/
     )
   })
 
@@ -189,6 +192,7 @@ describe('writeUnitPlatformServices', () => {
     const none = {
       providers: {},
       optedInProviders: {},
+      functions: { meta: {} },
       rpc: { wireAddonDeclarations: new Map() },
     } as never
     assert.equal(await run('api', none), undefined)
@@ -207,7 +211,7 @@ describe('writeUnitPlatformServices', () => {
     test('onServerStart where the target runs no server lifecycle is a build error naming service and unit', async () => {
       await assert.rejects(
         run('worker-unit', starts(), provider({ runsServerLifecycle: false })),
-        /onServerStart would never be called: provider 'queue' in unit 'worker-unit'/
+        /\[PKU389\].*onServerStart would never be called: provider 'queue' in unit 'worker-unit'/
       )
     })
 
@@ -231,6 +235,8 @@ describe('writeUnitPlatformServices', () => {
       assert.ok(result)
       assert.deepEqual(genericServerEntrySupport(), {
         baseline: [],
+        profile: 'server',
+        entryOwned: [],
         runsServerLifecycle: true,
       })
     })
@@ -239,6 +245,7 @@ describe('writeUnitPlatformServices', () => {
       const none = {
         providers: {},
         optedInProviders: {},
+        functions: { meta: {} },
         rpc: { wireAddonDeclarations: new Map() },
       } as never
       assert.equal(

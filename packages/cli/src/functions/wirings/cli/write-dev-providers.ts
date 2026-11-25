@@ -2,8 +2,12 @@ import type { InspectorState } from '@pikku/inspector'
 import { removeFileInDir, writeFileInDir } from '../../../utils/file-writer.js'
 import type { Config } from '../../../../types/application-types.js'
 import type { CLILogger } from '../../../services/cli-logger.service.js'
-import { resolveProviders } from '../../../providers/resolve-providers.js'
+import {
+  functionNeedsOf,
+  resolveProviders,
+} from '../../../providers/resolve-providers.js'
 import { serializeProviderRunner } from '../../../providers/serialize-provider-runner.js'
+import { withoutScenarios } from '../scenarios/scenario-partition.js'
 import { devBaselineServices, localSpecifier } from './dev-specifier.js'
 
 /**
@@ -26,7 +30,7 @@ export const devBaselineFor = (
 
 /**
  * Writes the dev runner for the services the project declares with
- * `defineProvider` and opted in to with `wireAddon({ services })`, and removes a
+ * `defineProvider` and opted in to with `wireAddon({ providers })`, and removes a
  * stale one when there are none. `loadDevProviders` runs it.
  */
 export const writeDevProviders = async (
@@ -49,8 +53,10 @@ export const writeDevProviders = async (
     rootDir: config.rootDir,
     target: 'dev',
     baseline: devBaselineFor(config, visitState),
+    entryOwned: config.db !== undefined ? ['kysely'] : [],
     requiredServices: visitState.serviceAggregation.requiredServices,
     factoryServices: visitState.projectServicesRead,
+    functions: functionNeedsOf(withoutScenarios(visitState.functions.meta)),
     targetLabel: 'pikku dev',
   })
   if (ordered.length === 0) {

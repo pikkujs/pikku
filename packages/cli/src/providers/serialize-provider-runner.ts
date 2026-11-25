@@ -1,8 +1,10 @@
-import type { ProviderTarget } from '@pikku/core/provider'
+import type { ProviderProfile, ProviderTarget } from '@pikku/core/provider'
 import type { ResolvedProviderImport } from './resolve-providers.js'
 
 export interface SerializeProviderRunnerOptions {
   target: ProviderTarget
+  /** The deploy runtime the file is generated for, which picks a `deploy:<profile>` variant at run time. */
+  profile?: ProviderProfile
   /** In run order, as `resolveProviders` returned them. */
   services: readonly ResolvedProviderImport[]
   /** The import specifier for a module, from the generated file. */
@@ -41,6 +43,7 @@ const importLine = (exported: string, local: string, from: string) =>
  */
 export const serializeProviderRunner = ({
   target,
+  profile,
   services,
   specifier,
   coercionMap,
@@ -55,7 +58,12 @@ export const serializeProviderRunner = ({
 
   services.forEach((service, index) => {
     const meta = JSON.stringify({
-      [service.variant]: { needs: service.needs, provides: service.provides },
+      [service.variant]: {
+        needs: service.needs,
+        optional: service.optional,
+        provides: service.provides,
+        optionalProvides: service.optionalProvides,
+      },
     })
     const name = JSON.stringify(service.name)
     const coerced = coerce && service.provides.includes('kysely')
@@ -101,8 +109,8 @@ export const serializeProviderRunner = ({
         `  }`,
         `  if (typeof definition === 'function') return wrap(definition)`,
         `  const wrapped = { ...definition }`,
-        `  for (const variant of ['dev', 'deploy', 'common']) {`,
-        `    if (definition[variant]) wrapped[variant] = wrap(definition[variant])`,
+        `  for (const [variant, factory] of Object.entries(definition)) {`,
+        `    if (typeof factory === 'function' && variant !== 'onServerStart') wrapped[variant] = wrap(factory as Factory)`,
         `  }`,
         `  return wrapped`,
         `}`,
@@ -124,7 +132,7 @@ export const serializeProviderRunner = ({
     `  runtime: Record<string, unknown> = {}`,
     `): Promise<Record<string, unknown>> => {`,
     `  const services: Record<string, unknown> = { ...runtime }`,
-    `  await runProviders(registry, { target: ${JSON.stringify(target)}, services, env })`,
+    `  await runProviders(registry, { target: ${JSON.stringify(target)},${profile ? ` profile: ${JSON.stringify(profile)},` : ''} services, env })`,
     `  return services`,
     `}`,
     ``,

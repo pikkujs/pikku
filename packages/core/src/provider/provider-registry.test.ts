@@ -303,3 +303,162 @@ describe('runProviders', () => {
     )
   })
 })
+
+describe('ProviderRegistry.resolve profiles', () => {
+  const variantMeta = (provides: string[]) => ({ needs: [], provides })
+
+  test('a deploy profile variant beats deploy, and deploy beats common', () => {
+    const worker = () => ({ db: 'worker' })
+    const plain = () => ({ db: 'deploy' })
+    const common = () => ({ db: 'common' })
+    const registry = new ProviderRegistry().add(
+      'db',
+      defineProvider({
+        'deploy:cloudflare-worker': worker,
+        deploy: plain,
+        common,
+      }),
+      {
+        'deploy:cloudflare-worker': variantMeta(['db']),
+        deploy: variantMeta(['db']),
+        common: variantMeta(['db']),
+      }
+    )
+    const pick = (profile?: 'cloudflare-worker' | 'standalone') =>
+      registry.resolve('deploy', { profile })[0]!
+    assert.equal(pick('cloudflare-worker').variant, 'deploy:cloudflare-worker')
+    assert.equal(pick('cloudflare-worker').factory, worker)
+    assert.equal(pick('standalone').variant, 'deploy')
+    assert.equal(pick().variant, 'deploy')
+    assert.equal(registry.resolve('dev')[0]!.variant, 'common')
+  })
+
+  test('a profile variant is not used on dev', () => {
+    const registry = new ProviderRegistry().add(
+      'db',
+      defineProvider({ 'deploy:standalone': () => ({ db: 1 }) }),
+      { 'deploy:standalone': variantMeta(['db']) }
+    )
+    assert.deepEqual(names(registry, 'dev'), [])
+  })
+})
+
+describe('ProviderRegistry.resolve optional needs', () => {
+  const optionalMeta = (
+    needs: string[],
+    optional: string[],
+    provides: string[],
+    optionalProvides: string[] = []
+  ) => ({ common: { needs, optional, provides, optionalProvides } })
+
+  test('an optional need nothing provides is skipped', () => {
+    const registry = new ProviderRegistry().add(
+      'a',
+      defineProvider(({ queueService }: any) => ({ a: queueService })),
+      optionalMeta(['queueService'], ['queueService'], ['a'])
+    )
+    assert.deepEqual(names(registry, 'dev'), ['a'])
+  })
+
+  test('an optional need something provides orders the needer after it', () => {
+    const registry = new ProviderRegistry()
+      .add(
+        'a',
+        defineProvider(({ q }: any) => ({ a: q })),
+        optionalMeta(['q'], ['q'], ['a'])
+      )
+      .add(
+        'q',
+        defineProvider(() => ({ q: 1 })),
+        optionalMeta([], [], ['q'])
+      )
+    assert.deepEqual(names(registry, 'dev'), ['q', 'a'])
+  })
+
+  test('a need that is not optional still fails, with a hint to list it', () => {
+    const registry = new ProviderRegistry().add(
+      'a',
+      defineProvider(({ q }: any) => ({ a: q })),
+      optionalMeta(['q'], [], ['a'])
+    )
+    assert.throws(
+      () => registry.resolve('dev', { where: 'pikku dev' }),
+      (e: any) =>
+        e.kind === 'unsatisfied-need' &&
+        /needs 'q' on pikku dev/.test(e.message) &&
+        /List it in optional/.test(e.message)
+    )
+  })
+
+  test('a need on a key provided only sometimes has to be optional', () => {
+    const registry = new ProviderRegistry()
+      .add(
+        'maybe',
+        defineProvider(() => ({})),
+        optionalMeta([], [], ['sometimes'], ['sometimes'])
+      )
+      .add(
+        'consumer',
+        defineProvider(({ sometimes }: any) => ({ consumer: sometimes })),
+        optionalMeta(['sometimes'], [], ['consumer'])
+      )
+    assert.throws(
+      () => registry.resolve('dev'),
+      (e: any) =>
+        e.kind === 'optional-key-needed' &&
+        /'maybe' provides only sometimes/.test(e.message)
+    )
+  })
+
+  test('the optional chain a -> b -> c resolves in order', () => {
+    const registry = new ProviderRegistry()
+      .add(
+        'c',
+        defineProvider(({ z }: any) => ({ c: z })),
+        optionalMeta(['z'], ['z'], ['c'])
+      )
+      .add(
+        'b',
+        defineProvider(({ y }: any) => ({ z: y })),
+        optionalMeta(['y'], ['y'], ['z'], ['z'])
+      )
+      .add(
+        'a',
+        defineProvider(({ x }: any) => ({ y: x })),
+        optionalMeta(['x'], ['x'], ['y'], ['y'])
+      )
+    assert.deepEqual(names(registry, 'dev'), ['a', 'b', 'c'])
+  })
+})
+
+describe('ProviderRegistry.resolve entry-owned keys', () => {
+  test('a provider of a key the entry owns is refused', () => {
+    const registry = new ProviderRegistry().add(
+      'db',
+      defineProvider({ deploy: () => ({ kysely: 1 }) }),
+      { deploy: { needs: [], provides: ['kysely'] } }
+    )
+    assert.throws(
+      () =>
+        registry.resolve('deploy', {
+          baseline: ['kysely'],
+          entryOwned: ['kysely'],
+          where: 'the standalone deploy',
+        }),
+      (e: any) =>
+        e.kind === 'entry-owned' &&
+        /The standalone deploy opens its own 'kysely'; provider 'db' cannot replace it/.test(
+          e.message
+        )
+    )
+  })
+
+  test('a baseline key the entry does not own may still be replaced once', () => {
+    const registry = new ProviderRegistry().add(
+      'db',
+      defineProvider({ deploy: () => ({ kysely: 1 }) }),
+      { deploy: { needs: [], provides: ['kysely'] } }
+    )
+    assert.deepEqual(names(registry, 'deploy', ['kysely']), ['db'])
+  })
+})

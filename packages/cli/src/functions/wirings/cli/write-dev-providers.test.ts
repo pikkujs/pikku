@@ -40,6 +40,7 @@ describe('writeDevProviders', () => {
       providers,
       optedInProviders,
       agents: { agentsMeta: {} },
+      functions: { meta: {} },
       serviceAggregation: {
         requiredServices: new Set(
           [
@@ -106,7 +107,7 @@ describe('writeDevProviders', () => {
           }),
         })
       ),
-      /'cache' needs 'kysely' on dev/
+      /'cache' needs 'kysely' on pikku dev/
     )
   })
 
@@ -119,7 +120,7 @@ describe('writeDevProviders', () => {
           cache: service({ deploy: { needs: [], provides: ['cache'] } }),
         })
       ),
-      /no dev variant and no common variant/
+      /no variant for pikku dev \(looked for dev, common\)/
     )
   })
 

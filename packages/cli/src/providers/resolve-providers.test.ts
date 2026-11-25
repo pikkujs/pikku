@@ -17,7 +17,9 @@ const scratchRoot = () => {
 
 type Variant = {
   needs: string[]
+  optional?: string[]
   provides: string[]
+  optionalProvides?: string[]
   module?: string
   export?: string
 }
@@ -141,7 +143,7 @@ describe('resolveProviders', () => {
             b: service({ common: { needs: [], provides: ['logger'] } }),
           })
         ),
-      /both provide 'logger'/
+      /\[PKU385\].*both provide 'logger'/
     )
   })
 
@@ -153,7 +155,7 @@ describe('resolveProviders', () => {
             a: service({ common: { needs: ['kysely'], provides: ['a'] } }),
           })
         ),
-      /'a' needs 'kysely' on dev.*baseline only has: logger/s
+      /\[PKU386\].*'a' needs 'kysely' on the dev target.*baseline only has: logger.*List it in optional/s
     )
   })
 
@@ -179,7 +181,7 @@ describe('resolveProviders', () => {
     test('a service with no variant for the target is an error', () => {
       assert.throws(
         () => resolve(deployOnlyServices(), 'dev'),
-        /no dev variant and no common variant.*'queueService'/s
+        /\[PKU388\].*no variant for the dev target \(looked for dev, common\).*'queueService'/s
       )
     })
 
@@ -199,7 +201,7 @@ describe('resolveProviders', () => {
             requiredServices: ['queueService'],
             baseline: { dev: ['logger'], deploy: ['logger'] },
           }),
-        /no dev variant/
+        /no variant for the dev target/
       )
       const both = resolveAllTargets({
         state: deployOnlyServices(),
@@ -227,9 +229,9 @@ describe('resolveProviders', () => {
           resolve(startingServices(), 'deploy', [], {
             runsServerLifecycle: false,
             unitLabel: "unit 'api'",
-            targetLabel: 'The cloudflare deploy',
+            targetLabel: 'the cloudflare deploy',
           }),
-        /The cloudflare deploy does not run the server lifecycle.*provider 'q' in unit 'api'/s
+        /\[PKU389\].*The cloudflare deploy does not run the server lifecycle.*provider 'q' in unit 'api'/s
       )
     })
 
@@ -386,6 +388,227 @@ describe('resolveProviders', () => {
         () => resolve(st, 'deploy', [], { ...by(['q']), ...worker }),
         /does not run the server lifecycle.*provider 'q'/s
       )
+    })
+  })
+
+  describe('profiles', () => {
+    const db = () =>
+      state({
+        db: service({
+          'deploy:cloudflare-worker': { needs: [], provides: ['kysely'] },
+          deploy: { needs: ['logger'], provides: ['kysely'] },
+        }),
+      })
+
+    test('a deploy:<profile> variant beats deploy for that profile only', () => {
+      const worker = resolve(db(), 'deploy', ['logger'], {
+        profile: 'cloudflare-worker',
+      }).ordered[0]!
+      const standalone = resolve(db(), 'deploy', ['logger'], {
+        profile: 'standalone',
+      }).ordered[0]!
+      assert.equal(worker.variant, 'deploy:cloudflare-worker')
+      assert.equal(standalone.variant, 'deploy')
+    })
+
+    test('a provider with only another profile has no variant, naming what was looked for', () => {
+      const only = state({
+        db: service({
+          'deploy:cloudflare-worker': { needs: [], provides: ['kysely'] },
+        }),
+      })
+      assert.throws(
+        () => resolve(only, 'deploy', ['logger'], { profile: 'standalone' }),
+        /\[PKU388\].*looked for deploy:standalone, deploy, common/s
+      )
+    })
+
+    test('a provider with no variant for a key the baseline holds is not run', () => {
+      const only = state({
+        db: service({
+          'deploy:cloudflare-worker': { needs: [], provides: ['kysely'] },
+        }),
+      })
+      const { ordered } = resolve(only, 'deploy', ['logger', 'kysely'], {
+        profile: 'standalone',
+      })
+      assert.deepEqual(ordered, [])
+    })
+  })
+
+  describe('entry-owned keys', () => {
+    const plainDeploy = () =>
+      state({
+        db: service({ deploy: { needs: [], provides: ['kysely'] } }),
+      })
+
+    test('a deploy variant providing a key the entry opens is PKU397', () => {
+      assert.throws(
+        () =>
+          resolve(plainDeploy(), 'deploy', ['logger', 'kysely'], {
+            entryOwned: ['kysely'],
+            targetLabel: 'the standalone deploy',
+          }),
+        /\[PKU397\] The standalone deploy opens its own 'kysely'; provider 'db' cannot replace it/
+      )
+    })
+
+    test('the same provider is a replacement where the entry owns nothing', () => {
+      const { ordered } = resolve(plainDeploy(), 'deploy', ['logger', 'kysely'])
+      assert.equal(ordered[0]!.name, 'db')
+    })
+  })
+
+  describe('optional needs and optional provides', () => {
+    test('an optional need nothing provides is built without it', () => {
+      const { ordered } = resolve(
+        state({
+          a: service({
+            common: {
+              needs: ['kysely'],
+              optional: ['kysely'],
+              provides: ['a'],
+            },
+          }),
+        })
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['a']
+      )
+      assert.deepEqual(ordered[0]!.optional, ['kysely'])
+    })
+
+    test('an optional need a provider provides pulls that provider in, ahead of the needer', () => {
+      const { ordered } = resolve(
+        state({
+          a: service({
+            common: { needs: ['y'], optional: ['y'], provides: ['a'] },
+          }),
+          b: service({ common: { needs: [], provides: ['y'] } }),
+        }),
+        'dev',
+        ['logger'],
+        { requiredServices: ['a'] }
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['b', 'a']
+      )
+    })
+
+    test('a need on a key provided only sometimes has to be listed in optional (PKU391)', () => {
+      assert.throws(
+        () =>
+          resolve(
+            state({
+              maybe: service({
+                common: {
+                  needs: [],
+                  provides: ['sometimes'],
+                  optionalProvides: ['sometimes'],
+                },
+              }),
+              consumer: service({
+                common: { needs: ['sometimes'], provides: ['consumer'] },
+              }),
+            })
+          ),
+        /\[PKU391\] Provider 'consumer' needs 'sometimes', which 'maybe' provides only sometimes\. Add 'sometimes' to its optional list\./
+      )
+    })
+
+    test('an optional chain a -> b -> c resolves in order', () => {
+      const { ordered } = resolve(
+        state({
+          c: service({
+            common: { needs: ['z'], optional: ['z'], provides: ['c'] },
+          }),
+          b: service({
+            common: {
+              needs: ['y'],
+              optional: ['y'],
+              provides: ['z'],
+              optionalProvides: ['z'],
+            },
+          }),
+          a: service({
+            common: {
+              needs: ['x'],
+              optional: ['x'],
+              provides: ['y'],
+              optionalProvides: ['y'],
+            },
+          }),
+        }),
+        'dev',
+        ['logger'],
+        { requiredServices: ['c'] }
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['a', 'b', 'c']
+      )
+    })
+  })
+
+  describe('function needs', () => {
+    const factoryState = (extra: Record<string, unknown> = {}) =>
+      ({
+        ...(state({
+          probe: service({ common: { needs: [], provides: ['probe'] } }),
+        }) as object),
+        projectServicesProvided: { keys: ['logger', 'config'], optional: [] },
+        projectWireServicesProvided: { keys: [], optional: [] },
+        serviceTypes: { singletonOptional: ['jwt'] },
+        ...extra,
+      }) as never
+    const needs = (name: string, ...keys: string[]) => ({ name, needs: keys })
+
+    test('a key nothing provides is PKU390 naming the function and where', () => {
+      assert.throws(
+        () =>
+          resolve(factoryState(), 'dev', ['logger'], {
+            functions: [needs('useNeeds', 'ghost')],
+            targetLabel: 'pikku dev',
+          }),
+        /\[PKU390\] Function 'useNeeds' needs 'ghost' in pikku dev, which nothing provides/
+      )
+    })
+
+    test('a provider key, a baseline key, a factory key and a core per-request key all pass', () => {
+      resolve(factoryState(), 'dev', ['logger', 'queueService'], {
+        functions: [
+          needs(
+            'f',
+            'probe',
+            'queueService',
+            'config',
+            'auditLog',
+            'analytics'
+          ),
+        ],
+      })
+    })
+
+    test('a key that may be absent is not required', () => {
+      resolve(factoryState(), 'dev', ['logger'], {
+        functions: [needs('f', 'jwt')],
+      })
+      resolve(
+        factoryState({
+          projectServicesProvided: { keys: ['maybe'], optional: ['maybe'] },
+        }),
+        'dev',
+        ['logger'],
+        { functions: [needs('f', 'maybe')] }
+      )
+    })
+
+    test('only the functions given are checked, so a unit lacking a function does not fail on it', () => {
+      resolve(factoryState(), 'dev', ['logger'], {
+        functions: [needs('inThisUnit', 'probe')],
+      })
     })
   })
 

@@ -3,6 +3,8 @@ export interface ServiceTypeSource {
   name: string
   /** Every key any variant of the service provides. */
   provides: readonly string[]
+  /** The keys some variant returns only sometimes: optional in the merged type. */
+  optionalProvides?: readonly string[]
   /** The import specifier of the module exporting the service, from the generated file. */
   specifier: string
   export: string
@@ -39,10 +41,12 @@ export const serializeProvidersType = ({
   services,
 }: SerializeSingletonServicesTypeOptions): string => {
   const keys = new Map<string, ServiceTypeSource>()
+  const optionalKeys = new Set<string>()
   for (const service of services) {
     for (const key of service.provides) {
       if (!keys.has(key)) keys.set(key, service)
     }
+    for (const key of service.optionalProvides ?? []) optionalKeys.add(key)
   }
   const provided = [...keys.keys()].sort()
 
@@ -53,7 +57,7 @@ export const serializeProvidersType = ({
           `export type SingletonServices = Omit<BaseSingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}> & {`,
           ...provided.map(
             (key) =>
-              `  ${JSON.stringify(key)}: Provided<${typeOf(keys.get(key)!)}, ${JSON.stringify(key)}>`
+              `  ${JSON.stringify(key)}${optionalKeys.has(key) ? '?' : ''}: Merged<${JSON.stringify(key)}, Provided<${typeOf(keys.get(key)!)}, ${JSON.stringify(key)}>>`
           ),
           `}`,
         ].join('\n')
@@ -70,8 +74,11 @@ export type ProviderKeyIsAny<Key extends string> = {
 
 type Factory<Service> = Service extends (...args: never[]) => unknown
   ? Service
-  : Service extends { dev?: infer D; deploy?: infer P; common?: infer C }
-    ? Extract<D | P | C, (...args: never[]) => unknown>
+  : Service extends object
+    ? Extract<
+        Service[Exclude<keyof Service, 'optional' | 'replaces' | 'addTo' | 'onServerStart'>],
+        (...args: never[]) => unknown
+      >
     : never
 
 type Built<Service> =
@@ -86,6 +93,17 @@ type Provided<Service, Key extends string> =
       : never
     : never
 
+/**
+ * A key the project's own type declares keeps that type and gains what the
+ * provider returns, so a provider that wraps or extends a core service still
+ * satisfies what core expects of it.
+ */
+type Merged<Key extends string, Value> = Key extends keyof BaseSingletonServices
+  ? IsAny<BaseSingletonServices[Key]> extends true
+    ? Value
+    : NonNullable<BaseSingletonServices[Key]> & Value
+  : Value
+
 `
 
   return `/**
@@ -96,24 +114,45 @@ import { defineProvider as coreProvider } from '@pikku/core/provider'
 import type {
   ProviderFactory,
   ProviderVariants,
+  WithOptional,
 } from '@pikku/core/provider'
 ${baseImport}
 
 ${helpers}${merged}
 
 /**
- * Declares a service: a factory that destructures what it needs from
- * \`services\` and returns what it provides, the same on every target, or an
- * object with a \`dev\`, \`deploy\` or \`common\` factory. A target's own variant
- * overrides \`common\`.
+ * The keys other providers (and the project) inject into the services before
+ * \`pikkuServices\` runs.
  */
-export const defineProvider: {
+export type InjectedServices = ${provided.length === 0 ? 'Record<never, never>' : `Pick<SingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}>`}
+
+type DefineProvider = {
   <TProvides extends object>(
     factory: ProviderFactory<SingletonServices, TProvides>
   ): ProviderFactory<SingletonServices, TProvides>
-  <TProvides extends object>(
-    variants: ProviderVariants<SingletonServices, TProvides>
-  ): ProviderVariants<SingletonServices, TProvides>
-} = coreProvider
+  <
+    TProvides extends object,
+    const TOptional extends keyof SingletonServices & string = never,
+  >(
+    variants: ProviderVariants<
+      WithOptional<SingletonServices, TOptional>,
+      TProvides,
+      TOptional
+    >
+  ): ProviderVariants<
+    WithOptional<SingletonServices, TOptional>,
+    TProvides,
+    TOptional
+  >
+}
+
+/**
+ * Declares a provider: a factory that destructures what it needs from
+ * \`services\` and returns what it provides, the same on every target, or an
+ * object with a \`dev\`, \`deploy\`, \`deploy:<profile>\` or \`common\` factory. A
+ * target's own variant overrides \`common\`. Needs that may be absent are listed
+ * in \`optional\`.
+ */
+export const defineProvider = coreProvider as unknown as DefineProvider
 `
 }

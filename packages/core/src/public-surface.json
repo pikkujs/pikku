@@ -691,12 +691,14 @@
     "stopSingletonServices"
   ],
   "./provider": [
+    "PROVIDER_PROFILES",
     "ProviderError",
     "ProviderRegistry",
     "defineProvider",
     "defineProviderCollection",
     "defineWireProvider",
-    "runProviders"
+    "runProviders",
+    "variantOrder"
   ],
   "./telemetry-store": [],
   "./telemetry-store/testing": ["MemoryTelemetryStore", "conformance"],

@@ -1,6 +1,10 @@
 import { ProviderError } from './provider-error.js'
 import type { ProviderRegistry } from './provider-registry.js'
-import type { ProviderEnv, ProviderTarget } from './provider.types.js'
+import type {
+  ProviderEnv,
+  ProviderProfile,
+  ProviderTarget,
+} from './provider.types.js'
 
 /** A service's `onServerStart`, named for the lifecycle that runs it. */
 export interface ProviderStartHook {
@@ -20,6 +24,8 @@ export const runProviders = async (
   registry: ProviderRegistry,
   options: {
     target: ProviderTarget
+    /** The deploy runtime, which picks a `deploy:<profile>` variant. */
+    profile?: ProviderProfile
     services: Record<string, any>
     env?: ProviderEnv
     /** Keys held before any service runs. Defaults to the keys already on `services`. */
@@ -30,6 +36,7 @@ export const runProviders = async (
   const env = options.env ?? {}
   const resolved = registry.resolve(target, {
     baseline: options.baseline ?? Object.keys(services),
+    profile: options.profile,
   })
   for (const service of resolved) {
     try {

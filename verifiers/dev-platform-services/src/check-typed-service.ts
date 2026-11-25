@@ -51,7 +51,7 @@ assert.match(
 )
 assert.match(
   generated,
-  /"ledger": Provided<typeof import\("[^"]*ledger[^"]*"\)\.ledger, "ledger">/,
+  /"ledger": Merged<"ledger", Provided<typeof import\("[^"]*ledger[^"]*"\)\.ledger, "ledger">>/,
   'what a service provides is looked up in the service itself'
 )
 
