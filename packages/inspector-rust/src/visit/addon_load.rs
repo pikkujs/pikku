@@ -540,6 +540,7 @@ impl Loader<'_> {
     /// service and would otherwise build without it.
     fn record_opted_in_providers(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) {
         let mut registered = OJson::new_object();
+        let mut collections = OJson::new_object();
         let via = format!("wireAddon('{ns}')");
         if let Some(path) = resolve_addon_meta(req, &decl.pkg, "providers/pikku-providers-meta") {
             match read_json_file(&path) {
@@ -551,8 +552,29 @@ impl Loader<'_> {
                     return;
                 }
                 Ok(meta) => {
+                    if !matches!(meta.get("metaVersion"), Some(OJson::Num(v)) if *v == 2.0) {
+                        let published = match meta.get("metaVersion") {
+                            Some(OJson::Num(v)) => format!("{v}"),
+                            Some(OJson::Str(v)) => v.clone(),
+                            Some(OJson::Bool(v)) => v.to_string(),
+                            Some(OJson::Null) => "null".to_string(),
+                            Some(_) => "[object Object]".to_string(),
+                            None => "none".to_string(),
+                        };
+                        self.log.critical(
+                            codes::ADDON_PROVIDER_UNKNOWN,
+                            format!(
+                                "Addon '{}' publishes provider meta version {published}; this CLI reads version 2. Run 'pikku all' in the addon with this CLI.",
+                                decl.pkg
+                            ),
+                        );
+                        return;
+                    }
                     if let Some(c) = meta.get("providers").filter(|c| c.is_object()) {
                         registered = c.clone();
+                    }
+                    if let Some(c) = meta.get("collections").filter(|c| c.is_object()) {
+                        collections = c.clone();
                     }
                 }
             }
@@ -584,6 +606,7 @@ impl Loader<'_> {
         let mut entry = OJson::new_object();
         entry.set("packageName", OJson::string(&decl.pkg));
         entry.set("providers", selected);
+        entry.set("collections", collections);
 
         let mut all = OJson::new_object();
         if let Some(existing) = ojson_of_raw(&self.state.opted_in_providers)

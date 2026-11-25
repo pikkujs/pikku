@@ -72,6 +72,7 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 // the project asked for a provider and would otherwise build without it.
 func (s *Context) recordOptedInProviders(ns string, decl *addonDecl, req addonResolver) {
 	registered := newOObject()
+	collections := newOObject()
 	via := "wireAddon('" + ns + "')"
 	if path := resolveAddonMeta(req, decl.pkg, "providers/pikku-providers-meta"); path != "" {
 		meta, err := readJSONFile(path)
@@ -80,8 +81,20 @@ func (s *Context) recordOptedInProviders(ns string, decl *addonDecl, req addonRe
 				"%s opts in to providers, but the providers manifest of %s could not be read: %s", via, decl.pkg, err.Error()))
 			return
 		}
+		if version, _ := meta.get("metaVersion").scalar.(float64); version != 2 {
+			published := "none"
+			if meta.has("metaVersion") {
+				published = fmt.Sprint(meta.get("metaVersion").scalar)
+			}
+			s.Log.Critical(diag.AddonProviderUnknown, fmt.Sprintf(
+				"Addon '%s' publishes provider meta version %s; this CLI reads version 2. Run 'pikku all' in the addon with this CLI.", decl.pkg, published))
+			return
+		}
 		if meta.get("providers").isObject() {
 			registered = meta.get("providers")
+		}
+		if meta.get("collections").isObject() {
+			collections = meta.get("collections")
 		}
 	}
 	selected := newOObject()
@@ -105,6 +118,7 @@ func (s *Context) recordOptedInProviders(ns string, decl *addonDecl, req addonRe
 	entry := newOObject()
 	entry.set("packageName", ojsonString(decl.pkg))
 	entry.set("providers", selected)
+	entry.set("collections", collections)
 
 	all := newOObject()
 	if len(s.State.OptedInProviders) > 0 && string(s.State.OptedInProviders) != "null" {

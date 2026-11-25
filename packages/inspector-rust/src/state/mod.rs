@@ -103,16 +103,25 @@ pub struct State {
     pub studio: Raw,
     #[serde(skip_serializing_if = "Raw::is_empty")]
     pub addon_studio: Raw,
-    /// What defineProvider declares.
+    /// What defineProvider and defineWireProvider declare.
     #[serde(skip_serializing_if = "Raw::is_empty")]
     pub providers: Raw,
-    /// What `wireAddon({ services })` selected from each addon's manifest.
+    /// What defineProviderCollection declares.
+    #[serde(skip_serializing_if = "Raw::is_empty")]
+    pub provider_collections: Raw,
+    /// What `wireAddon({ providers })` selected from each addon's manifest.
     #[serde(skip_serializing_if = "Raw::is_empty")]
     pub opted_in_providers: Raw,
     /// The top-level names the project's pikkuServices factory destructures
     /// from its second parameter, sorted and unique.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub project_services_read: Strings,
+    /// The keys the project's pikkuServices and pikkuWireServices factories
+    /// return, and the subset of them that may be absent: `{ keys, optional }`.
+    #[serde(skip_serializing_if = "Raw::is_empty")]
+    pub project_services_provided: Raw,
+    #[serde(skip_serializing_if = "Raw::is_empty")]
+    pub project_wire_services_provided: Raw,
     pub exported_contracts: ExportedContracts,
 
     /// Replaces the live `typesLookup` entries for the core interfaces
@@ -382,6 +391,8 @@ pub struct ServiceAggregation {
 pub struct ServiceTypes {
     /// Sorted; `None` (JSON null) when the type is unresolved.
     pub singleton_services: Option<Strings>,
+    /// Sorted names of the SingletonServices properties declared optional.
+    pub singleton_optional: Strings,
     /// Unfiltered, in property order; `None` when unresolved.
     pub services: Option<Strings>,
     pub secret_aliases: Strings,

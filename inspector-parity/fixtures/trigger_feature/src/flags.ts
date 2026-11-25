@@ -75,8 +75,8 @@ declare const dynamic: any
 export const queue = defineProvider({ dev: devVariant, deploy: deployVariant })
 // One factory is the same on every target; needs are the destructured names.
 export const aliased = defineProvider(({ kysely: db, logger }) => {
-  void db
   logger.info('aliased')
+  return { aliased: db }
 })
 export const clock = defineProvider({
   common: () => ({ clock: () => 0 }),

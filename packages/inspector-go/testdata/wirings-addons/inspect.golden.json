@@ -1277,6 +1277,7 @@
     },
     "serviceTypes": {
       "singletonServices": null,
+      "singletonOptional": [],
       "services": null,
       "secretAliases": []
     },
@@ -1801,6 +1802,7 @@
     },
     "providers": {
       "cache": {
+        "kind": "singleton",
         "module": "<fixture>/src/services.ts",
         "export": "cache",
         "variants": {
@@ -1808,34 +1810,42 @@
             "needs": [
               "kysely"
             ],
+            "optional": [],
             "provides": [
               "cache"
-            ]
+            ],
+            "optionalProvides": []
           }
         }
       },
       "clock": {
+        "kind": "singleton",
         "module": "<fixture>/src/services.ts",
         "export": "clock",
         "variants": {
           "common": {
             "needs": [],
+            "optional": [],
             "provides": [
               "clock"
-            ]
+            ],
+            "optionalProvides": []
           },
           "dev": {
             "needs": [
               "logger"
             ],
+            "optional": [],
             "provides": [
               "clock"
-            ]
+            ],
+            "optionalProvides": []
           }
         },
         "onServerStart": true
       },
       "billing": {
+        "kind": "singleton",
         "module": "<fixture>/src/services.ts",
         "export": "billing",
         "variants": {
@@ -1843,9 +1853,11 @@
             "needs": [
               "logger"
             ],
+            "optional": [],
             "provides": [
               "billing"
             ],
+            "optionalProvides": [],
             "module": "<fixture>/src/services/billing-dev.ts",
             "export": "billingDev"
           },
@@ -1853,15 +1865,18 @@
             "needs": [
               "kysely"
             ],
+            "optional": [],
             "provides": [
               "billing"
             ],
+            "optionalProvides": [],
             "module": "<fixture>/src/services/billing-deploy.ts",
             "export": "billingDeploy"
           }
         }
       },
       "aliased": {
+        "kind": "singleton",
         "module": "<fixture>/src/services.ts",
         "export": "aliased",
         "variants": {
@@ -1870,19 +1885,45 @@
               "kysely",
               "logger"
             ],
-            "provides": []
+            "optional": [],
+            "provides": [
+              "aliased"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "either": {
+        "kind": "singleton",
+        "module": "<fixture>/src/services.ts",
+        "export": "either",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "a",
+              "b"
+            ],
+            "optionalProvides": [
+              "a",
+              "b"
+            ]
           }
         }
       },
       "inbox": {
+        "kind": "singleton",
         "module": "<fixture>/src/services.ts",
         "export": "inbox",
         "variants": {
           "common": {
             "needs": [],
+            "optional": [],
             "provides": [
               "inbox"
-            ]
+            ],
+            "optionalProvides": []
           }
         }
       }
@@ -1937,7 +1978,8 @@
               }
             }
           }
-        }
+        },
+        "collections": {}
       }
     },
     "exportedContracts": {
@@ -2138,23 +2180,28 @@
     },
     {
       "level": "critical",
+      "code": "PKU380",
+      "message": "Provider 'nothing' common provides no key and adds to no collection, so nothing could ever select it. Return an object of the keys it provides, or give it addTo."
+    },
+    {
+      "level": "critical",
       "code": "PKU369",
       "message": "Provider 'hidden': 'hidden' is not exported by <fixture>/src/services.ts, so a host cannot import it"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Provider 'fromDynamic': defineProvider takes a factory function or an object with dev, deploy or common, got: dynamic"
+      "message": "Provider 'fromDynamic': defineProvider takes a factory function or an object with a variant, got: dynamic"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Provider 'neither': an object declares none of dev, deploy or common"
+      "message": "Provider 'neither': an object declares no variant"
     },
     {
       "level": "critical",
       "code": "PKU369",
-      "message": "Provider 'stray': defineProvider takes only dev, deploy, common and onServerStart, got: prod"
+      "message": "Provider 'stray': defineProvider takes only dev, deploy, deploy:<profile>, common, optional, replaces, addTo and onServerStart, got: prod"
     },
     {
       "level": "critical",
@@ -2179,12 +2226,7 @@
     {
       "level": "critical",
       "code": "PKU372",
-      "message": "Provider 'untyped' common must return an object type with known keys, so the build can read what it provides, got: any"
-    },
-    {
-      "level": "critical",
-      "code": "PKU372",
-      "message": "Provider 'either' common must return an object type with known keys, so the build can read what it provides, got: { a: number; b?: undefined; } | { b: number; a?: undefined; }"
+      "message": "Provider 'untyped' common must return an object type with known keys (or a union of them), so the build can read what it provides, got: any"
     },
     {
       "level": "critical",

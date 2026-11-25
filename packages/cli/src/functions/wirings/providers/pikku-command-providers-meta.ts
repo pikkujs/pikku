@@ -13,8 +13,11 @@ export const providersMeta = pikkuSessionlessFunc<void, boolean>({
     const { providersMetaJsonFile, rootDir } = config
     if (!providersMetaJsonFile) return false
 
-    const { providers } = await getInspectorState()
-    if (!providers || Object.keys(providers).length === 0) {
+    const { providers, providerCollections } = await getInspectorState()
+    if (
+      Object.keys(providers ?? {}).length === 0 &&
+      Object.keys(providerCollections ?? {}).length === 0
+    ) {
       await removeFileInDir(logger, providersMetaJsonFile, {
         logRemove: false,
       })
@@ -23,7 +26,7 @@ export const providersMeta = pikkuSessionlessFunc<void, boolean>({
     await writeFileInDir(
       logger,
       providersMetaJsonFile,
-      serializeProvidersMeta(providers, rootDir)
+      serializeProvidersMeta(providers ?? {}, rootDir, providerCollections)
     )
     return true
   },

@@ -30,11 +30,15 @@ export const billing = defineProvider({
 // PKU375: both variants are exported from the same module.
 export const twin = defineProvider({ dev: twinDev, deploy: twinDeploy })
 
-// Needs are the destructured names, not the local aliases; a factory that
-// returns nothing provides nothing.
+// Needs are the destructured names, not the local aliases.
 export const aliased = defineProvider(({ kysely: db, logger }) => {
-  void db
   logger.info('aliased')
+  return { aliased: db }
+})
+
+// PKU380: a factory that returns nothing provides nothing.
+export const nothing = defineProvider(({ logger }) => {
+  logger.info('nothing')
 })
 
 // PKU369: not exported, so a host cannot import it.
@@ -56,6 +60,7 @@ export const whole = defineProvider((services) => ({ whole: services }))
 export const rest = defineProvider(({ logger, ...others }) => ({ logger, others }))
 // PKU372: the return type has to be an object with known keys.
 export const untyped = defineProvider(() => dynamic)
+// A union of objects is read: both keys, each optional.
 export const either = defineProvider(() => (dynamic ? { a: 1 } : { b: 2 }))
 // PKU376: the exported name inbox is already taken by ./services/inbox.ts.
 export const inbox = defineProvider(() => ({ inbox: 1 }))

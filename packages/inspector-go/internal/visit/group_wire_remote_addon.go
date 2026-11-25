@@ -19,7 +19,11 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 		return
 	}
 	args := node.Arguments()
-	if len(args) == 0 || !ast.IsObjectLiteralExpression(args[0]) {
+	if len(args) == 0 {
+		return
+	}
+	options := tsutil.UnwrapAs(args[0])
+	if !ast.IsObjectLiteralExpression(options) {
 		return
 	}
 	var name, pkg string
@@ -30,7 +34,7 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 	var local *addonLocal
 	var localProviders []string
 	haveLocalProviders := false
-	for _, p := range args[0].Properties() {
+	for _, p := range options.Properties() {
 		if !ast.IsPropertyAssignment(p) || !ast.IsIdentifier(p.Name()) {
 			continue
 		}
@@ -75,6 +79,12 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 			} else {
 				s.Log.Critical(diag.RemoteAddonPackageNotStatic, "wireRemoteAddon's local.package must be a string literal, got: "+tsutil.NodeText(init))
 			}
+		case key == "providers":
+			label := "…"
+			if name != "" {
+				label = "'" + name + "'"
+			}
+			s.Log.Critical(diag.RemoteAddonProviders, "wireRemoteAddon("+label+") takes no providers: providers run in this process, and a remote addon runs elsewhere. Put an in-process package in local: { package, providers }.")
 		case key == "auth" && ast.IsObjectLiteralExpression(init):
 			hasAuth = true
 			for _, ap := range init.Properties() {

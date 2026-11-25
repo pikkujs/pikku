@@ -1,0 +1,843 @@
+{
+  "state": {
+    "rootDir": "<fixture>",
+    "singletonServicesTypeImportMap": [
+      [
+        "<fixture>/src/services.ts",
+        [
+          {
+            "variable": "SingletonServices",
+            "type": "SingletonServices",
+            "typePath": "<fixture>/src/services.ts"
+          }
+        ]
+      ]
+    ],
+    "wireServicesTypeImportMap": [],
+    "userSessionTypeImportMap": [],
+    "configTypeImportMap": [],
+    "singletonServicesFactories": [
+      [
+        "<fixture>/src/services.ts",
+        [
+          {
+            "variable": "createSingletonServices",
+            "type": "CreateSingletonServices",
+            "typePath": "<fixture>/src/services.ts"
+          }
+        ]
+      ]
+    ],
+    "wireServicesFactories": [
+      [
+        "<fixture>/src/services.ts",
+        [
+          {
+            "variable": "createWireServices",
+            "type": "CreateWireServices",
+            "typePath": "<fixture>/src/services.ts"
+          }
+        ]
+      ]
+    ],
+    "wireServicesMeta": [
+      [
+        "createWireServices",
+        []
+      ]
+    ],
+    "addonRequiredParentServices": [],
+    "addonCreatedServices": [],
+    "addonServicesFactorySeen": false,
+    "addonServerlessIncompatible": [],
+    "configFactories": [],
+    "serverLifecycleFactories": [],
+    "filesAndMethods": {
+      "singletonServicesType": {
+        "file": "<fixture>/src/services.ts",
+        "type": "SingletonServices",
+        "variable": "SingletonServices",
+        "typePath": "<fixture>/src/services.ts"
+      },
+      "singletonServicesFactory": {
+        "file": "<fixture>/src/services.ts",
+        "type": "CreateSingletonServices",
+        "variable": "createSingletonServices",
+        "typePath": "<fixture>/src/services.ts"
+      },
+      "wireServicesFactory": {
+        "file": "<fixture>/src/services.ts",
+        "type": "CreateWireServices",
+        "variable": "createWireServices",
+        "typePath": "<fixture>/src/services.ts"
+      }
+    },
+    "filesAndMethodsErrors": [
+      [
+        "No CoreUserSession found",
+        []
+      ],
+      [
+        "No CoreServices found",
+        []
+      ],
+      [
+        "No CoreConfig found. Make sure you have exported a createConfig function in your codebase:\n\nexport const createConfig = pikkuConfig(async () => {\n  return {}\n})\n\nPossible issues:\n- the directories pikku.config.json inspects don't include the file with the createConfig method",
+        []
+      ]
+    ],
+    "schemaLookup": [],
+    "schemas": {},
+    "functions": {
+      "typesMap": {
+        "map": [],
+        "customTypes": []
+      },
+      "meta": {},
+      "files": [],
+      "approvalDescriptions": {},
+      "dynamicImportIds": []
+    },
+    "http": {
+      "metaInputTypes": [],
+      "meta": {
+        "get": {},
+        "post": {},
+        "put": {},
+        "delete": {},
+        "head": {},
+        "patch": {},
+        "options": {}
+      },
+      "files": [],
+      "routeMiddleware": []
+    },
+    "channels": {
+      "files": [],
+      "meta": {}
+    },
+    "gateways": {
+      "meta": {},
+      "files": []
+    },
+    "triggers": {
+      "meta": {},
+      "sourceMeta": {},
+      "webhookSourceMeta": {},
+      "files": []
+    },
+    "scheduledTasks": {
+      "meta": {},
+      "files": []
+    },
+    "queueWorkers": {
+      "meta": {},
+      "files": []
+    },
+    "workflows": {
+      "meta": {},
+      "files": [],
+      "graphMeta": {},
+      "graphFiles": [],
+      "featureFiles": [],
+      "invokedWorkflows": []
+    },
+    "rpc": {
+      "internalMeta": {},
+      "internalFiles": [],
+      "exposedMeta": {},
+      "exposedFiles": [],
+      "remoteMeta": {},
+      "remoteFiles": [],
+      "invokedFunctions": [],
+      "invokedFunctionsByFile": [],
+      "usedAddons": [],
+      "wireAddonDeclarations": [],
+      "wireAddonFiles": []
+    },
+    "mcpEndpoints": {
+      "resourcesMeta": {},
+      "toolsMeta": {},
+      "promptsMeta": {},
+      "files": [],
+      "surfaces": {}
+    },
+    "agents": {
+      "agentsMeta": {},
+      "files": [],
+      "invokedAgentsByFile": []
+    },
+    "scorers": {
+      "scorersMeta": {},
+      "files": []
+    },
+    "cli": {
+      "meta": {
+        "programs": {},
+        "renderers": {}
+      },
+      "files": []
+    },
+    "nodes": {
+      "meta": {},
+      "files": []
+    },
+    "auth": {
+      "providers": [],
+      "plugins": [],
+      "files": [],
+      "definition": null
+    },
+    "secrets": {
+      "definitions": [],
+      "files": [],
+      "usage": {}
+    },
+    "surfaceUsage": {},
+    "credentials": {
+      "definitions": [],
+      "files": []
+    },
+    "keyPairs": {
+      "definitions": [],
+      "files": []
+    },
+    "scopes": {
+      "definitions": [],
+      "files": []
+    },
+    "systemRoles": {
+      "definitions": [],
+      "files": []
+    },
+    "featureFlags": {
+      "definitions": [],
+      "files": []
+    },
+    "virtualUsers": {
+      "definitions": [],
+      "files": []
+    },
+    "variables": {
+      "definitions": [],
+      "files": []
+    },
+    "manifest": {
+      "initial": null,
+      "current": {
+        "manifestVersion": 1,
+        "contracts": {}
+      },
+      "errors": []
+    },
+    "middleware": {
+      "definitions": {},
+      "instances": {},
+      "globalFiles": [],
+      "tagMiddleware": []
+    },
+    "channelMiddleware": {
+      "definitions": {},
+      "instances": {},
+      "tagMiddleware": []
+    },
+    "agentMiddleware": {
+      "definitions": {}
+    },
+    "permissions": {
+      "definitions": {},
+      "instances": {},
+      "global": []
+    },
+    "serviceAggregation": {
+      "requiredServices": [],
+      "usedFunctions": [],
+      "usedMiddleware": [],
+      "usedPermissions": [],
+      "allSingletonServices": [
+        "agentRunService",
+        "agentRunState",
+        "agentRunner",
+        "agentStorage",
+        "aiEmbedding",
+        "analytics",
+        "analyticsIdentity",
+        "analyticsSinks",
+        "audit",
+        "auditLog",
+        "auth",
+        "cache",
+        "config",
+        "content",
+        "coverageService",
+        "credentialService",
+        "deploymentService",
+        "emailService",
+        "eventHub",
+        "eventHubRegistry",
+        "featureFlags",
+        "incomingWebhookService",
+        "jwt",
+        "leaseService",
+        "logger",
+        "metaService",
+        "otlpSinks",
+        "queueService",
+        "rateLimitService",
+        "schedulerService",
+        "schema",
+        "scopeService",
+        "secrets",
+        "sessionStore",
+        "tracer",
+        "triggerSourceStore",
+        "variables",
+        "virtualUserRunStore",
+        "virtualUserScheduleStore",
+        "webhookService",
+        "workflowRunService",
+        "workflowService"
+      ],
+      "allWireServices": []
+    },
+    "serviceTypes": {
+      "singletonServices": [
+        "agentRunService",
+        "agentRunState",
+        "agentRunner",
+        "agentStorage",
+        "aiEmbedding",
+        "analytics",
+        "analyticsIdentity",
+        "analyticsSinks",
+        "audit",
+        "auditLog",
+        "auth",
+        "cache",
+        "config",
+        "content",
+        "coverageService",
+        "credentialService",
+        "deploymentService",
+        "emailService",
+        "eventHub",
+        "eventHubRegistry",
+        "featureFlags",
+        "incomingWebhookService",
+        "jwt",
+        "leaseService",
+        "logger",
+        "metaService",
+        "otlpSinks",
+        "queueService",
+        "rateLimitService",
+        "schedulerService",
+        "schema",
+        "scopeService",
+        "secrets",
+        "sessionStore",
+        "tracer",
+        "triggerSourceStore",
+        "variables",
+        "virtualUserRunStore",
+        "virtualUserScheduleStore",
+        "webhookService",
+        "workflowRunService",
+        "workflowService"
+      ],
+      "singletonOptional": [
+        "agentRunService",
+        "agentRunState",
+        "agentRunner",
+        "agentStorage",
+        "aiEmbedding",
+        "analytics",
+        "analyticsIdentity",
+        "analyticsSinks",
+        "audit",
+        "auditLog",
+        "auth",
+        "content",
+        "coverageService",
+        "credentialService",
+        "deploymentService",
+        "emailService",
+        "eventHub",
+        "eventHubRegistry",
+        "featureFlags",
+        "incomingWebhookService",
+        "jwt",
+        "leaseService",
+        "metaService",
+        "otlpSinks",
+        "queueService",
+        "rateLimitService",
+        "schedulerService",
+        "schema",
+        "scopeService",
+        "sessionStore",
+        "tracer",
+        "triggerSourceStore",
+        "virtualUserRunStore",
+        "virtualUserScheduleStore",
+        "webhookService",
+        "workflowRunService",
+        "workflowService"
+      ],
+      "services": null,
+      "secretAliases": []
+    },
+    "resolvedIOTypes": {},
+    "middlewareGroupsMeta": {
+      "definitions": {},
+      "instances": {},
+      "httpGroups": {},
+      "tagGroups": {},
+      "channelMiddleware": {
+        "definitions": {},
+        "instances": {},
+        "tagGroups": {}
+      }
+    },
+    "permissionsGroupsMeta": {
+      "definitions": {}
+    },
+    "requiredSchemas": [],
+    "openAPISpec": null,
+    "diagnostics": [],
+    "addonFunctions": {},
+    "providers": {
+      "factoryForm": {
+        "kind": "singleton",
+        "module": "<fixture>/src/basic.ts",
+        "export": "factoryForm",
+        "variants": {
+          "common": {
+            "needs": [
+              "logger"
+            ],
+            "optional": [],
+            "provides": [
+              "cache"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "objectForm": {
+        "kind": "singleton",
+        "module": "<fixture>/src/basic.ts",
+        "export": "objectForm",
+        "variants": {
+          "dev": {
+            "needs": [
+              "logger",
+              "queueService"
+            ],
+            "optional": [
+              "queueService"
+            ],
+            "provides": [
+              "store"
+            ],
+            "optionalProvides": []
+          },
+          "deploy:cloudflare-worker": {
+            "needs": [
+              "logger"
+            ],
+            "optional": [],
+            "provides": [
+              "store"
+            ],
+            "optionalProvides": []
+          },
+          "common": {
+            "needs": [
+              "logger"
+            ],
+            "optional": [],
+            "provides": [
+              "store"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "byReference": {
+        "kind": "singleton",
+        "module": "<fixture>/src/basic.ts",
+        "export": "byReference",
+        "variants": {
+          "deploy": {
+            "needs": [
+              "logger"
+            ],
+            "optional": [],
+            "provides": [
+              "viaRef"
+            ],
+            "optionalProvides": [],
+            "module": "<fixture>/src/basic.ts",
+            "export": "deployVariant"
+          }
+        }
+      },
+      "pino": {
+        "kind": "singleton",
+        "module": "<fixture>/src/basic.ts",
+        "export": "pino",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "logger"
+            ],
+            "optionalProvides": []
+          }
+        },
+        "replaces": [
+          "logger"
+        ]
+      },
+      "q": {
+        "kind": "singleton",
+        "module": "<fixture>/src/basic.ts",
+        "export": "q",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "aliased"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "item": {
+        "kind": "singleton",
+        "module": "<fixture>/src/collections.ts",
+        "export": "item",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [],
+            "optionalProvides": []
+          }
+        },
+        "addTo": "things"
+      },
+      "reader": {
+        "kind": "singleton",
+        "module": "<fixture>/src/collections.ts",
+        "export": "reader",
+        "variants": {
+          "common": {
+            "needs": [
+              "things"
+            ],
+            "optional": [],
+            "provides": [
+              "reader"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "unusedParam": {
+        "kind": "singleton",
+        "module": "<fixture>/src/no-needs.ts",
+        "export": "unusedParam",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "fromEnv"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "noParam": {
+        "kind": "singleton",
+        "module": "<fixture>/src/no-needs.ts",
+        "export": "noParam",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "plain"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "emptyPattern": {
+        "kind": "singleton",
+        "module": "<fixture>/src/no-needs.ts",
+        "export": "emptyPattern",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "empty"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "unionProvider": {
+        "kind": "singleton",
+        "module": "<fixture>/src/union.ts",
+        "export": "unionProvider",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "a",
+              "b"
+            ],
+            "optionalProvides": [
+              "a",
+              "b"
+            ]
+          }
+        }
+      },
+      "requiredUndefined": {
+        "kind": "singleton",
+        "module": "<fixture>/src/union.ts",
+        "export": "requiredUndefined",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "c"
+            ],
+            "optionalProvides": []
+          }
+        }
+      },
+      "conditionalSpread": {
+        "kind": "singleton",
+        "module": "<fixture>/src/union.ts",
+        "export": "conditionalSpread",
+        "variants": {
+          "common": {
+            "needs": [],
+            "optional": [],
+            "provides": [
+              "k"
+            ],
+            "optionalProvides": [
+              "k"
+            ]
+          }
+        }
+      },
+      "perRequest": {
+        "kind": "wire",
+        "module": "<fixture>/src/wire.ts",
+        "export": "perRequest",
+        "variants": {
+          "common": {
+            "needs": [
+              "logger"
+            ],
+            "optional": [],
+            "provides": [
+              "scope"
+            ],
+            "optionalProvides": []
+          }
+        }
+      }
+    },
+    "providerCollections": {
+      "things": {
+        "name": "things",
+        "module": "<fixture>/src/collections.ts",
+        "export": "things"
+      },
+      "dup": {
+        "name": "dup",
+        "module": "<fixture>/src/refuse-collection.ts",
+        "export": "a"
+      }
+    },
+    "projectServicesProvided": {
+      "keys": [
+        "cache",
+        "existing",
+        "queueService"
+      ],
+      "optional": [
+        "queueService"
+      ]
+    },
+    "projectWireServicesProvided": {
+      "keys": [
+        "requestId"
+      ],
+      "optional": []
+    },
+    "exportedContracts": {
+      "http": {},
+      "cli": {},
+      "channel": {},
+      "addonHttp": {},
+      "addonCli": {},
+      "addonChannel": {}
+    },
+    "coreTypeProperties": {
+      "SingletonServices": [
+        "agentRunService",
+        "agentRunState",
+        "agentRunner",
+        "agentStorage",
+        "aiEmbedding",
+        "analytics",
+        "analyticsIdentity",
+        "analyticsSinks",
+        "audit",
+        "auditLog",
+        "auth",
+        "cache",
+        "config",
+        "content",
+        "coverageService",
+        "credentialService",
+        "deploymentService",
+        "emailService",
+        "eventHub",
+        "eventHubRegistry",
+        "featureFlags",
+        "incomingWebhookService",
+        "jwt",
+        "leaseService",
+        "logger",
+        "metaService",
+        "otlpSinks",
+        "queueService",
+        "rateLimitService",
+        "schedulerService",
+        "schema",
+        "scopeService",
+        "secrets",
+        "sessionStore",
+        "tracer",
+        "triggerSourceStore",
+        "variables",
+        "virtualUserRunStore",
+        "virtualUserScheduleStore",
+        "webhookService",
+        "workflowRunService",
+        "workflowService"
+      ]
+    }
+  },
+  "diagnostics": [
+    {
+      "level": "critical",
+      "code": "PKU372",
+      "message": "Provider 'anyReturn' common must return an object type with known keys (or a union of them), so the build can read what it provides, got: any"
+    },
+    {
+      "level": "critical",
+      "code": "PKU372",
+      "message": "Provider 'indexReturn' common must return an object type with known keys (or a union of them), so the build can read what it provides, got: Record<string, number>"
+    },
+    {
+      "level": "critical",
+      "code": "PKU379",
+      "message": "Collection 'dup' is declared twice: <fixture>/src/refuse-collection.ts and <fixture>/src/refuse-collection.ts"
+    },
+    {
+      "level": "critical",
+      "code": "PKU379",
+      "message": "Provider 'bad': addTo must be a collection declared with defineProviderCollection, got: { name: string; }"
+    },
+    {
+      "level": "critical",
+      "code": "PKU376",
+      "message": "Provider 'factoryForm' is declared twice. A provider name belongs to one export."
+    },
+    {
+      "level": "critical",
+      "code": "PKU371",
+      "message": "Provider 'whole' common must destructure its services parameter, so the build can read what it depends on, got: services"
+    },
+    {
+      "level": "critical",
+      "code": "PKU369",
+      "message": "defineProvider must be assigned to an exported const so a host can import it, got: defineProvider(() => ({ lost: 1 }))"
+    },
+    {
+      "level": "critical",
+      "code": "PKU372",
+      "message": "Provider 'nullable' common must return an object type with known keys (or a union of them), so the build can read what it provides, got: { a: number; } | null"
+    },
+    {
+      "level": "critical",
+      "code": "PKU378",
+      "message": "Provider 'dynamicOptional': optional must be an array of string literals, got: optional: keys"
+    },
+    {
+      "level": "critical",
+      "code": "PKU378",
+      "message": "Provider 'unusedOptional': optional lists 'ghost', which no variant destructures"
+    },
+    {
+      "level": "critical",
+      "code": "PKU380",
+      "message": "Provider 'nothing' common provides no key and adds to no collection, so nothing could ever select it. Return an object of the keys it provides, or give it addTo."
+    },
+    {
+      "level": "critical",
+      "code": "PKU381",
+      "message": "wireRemoteAddon('remote') takes no providers: providers run in this process, and a remote addon runs elsewhere. Put an in-process package in local: { package, providers }."
+    },
+    {
+      "level": "critical",
+      "code": "PKU382",
+      "message": "Provider 'wrongReplaces': replaces lists 'x', which no variant provides"
+    },
+    {
+      "level": "critical",
+      "code": "PKU375",
+      "message": "Provider 'twoVariants': dev and deploy are both exported from <fixture>/src/refuse-shared-module.ts. Each variant lives in its own module, so a build imports only the variant it runs."
+    },
+    {
+      "level": "critical",
+      "code": "PKU369",
+      "message": "Provider 'staged': defineProvider takes only dev, deploy, deploy:<profile>, common, optional, replaces, addTo and onServerStart, got: stage"
+    },
+    {
+      "level": "critical",
+      "code": "PKU377",
+      "message": "Provider 'fly': 'deploy:fly' is not a variant. Variants: dev, deploy, deploy:standalone, deploy:cloudflare-worker, deploy:cloudflare-container, deploy:server, common."
+    },
+    {
+      "level": "critical",
+      "code": "PKU383",
+      "message": "Wire provider 'wireItem' cannot addTo a collection: collections are built once, per process."
+    },
+    {
+      "level": "critical",
+      "code": "PKU369",
+      "message": "Provider 'wireStart': defineWireProvider takes no onServerStart"
+    }
+  ],
+  "validationPass": {
+    "start": 18,
+    "end": 18
+  }
+}

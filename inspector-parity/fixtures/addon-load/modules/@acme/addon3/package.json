@@ -1,0 +1,8 @@
+{
+  "name": "@acme/addon3",
+  "private": true,
+  "version": "1.0.0",
+  "exports": {
+    "./.pikku/*": "./.pikku/*"
+  }
+}

@@ -694,6 +694,8 @@
     "ProviderError",
     "ProviderRegistry",
     "defineProvider",
+    "defineProviderCollection",
+    "defineWireProvider",
     "runProviders"
   ],
   "./telemetry-store": [],

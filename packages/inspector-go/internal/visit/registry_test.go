@@ -26,7 +26,7 @@ func TestRegisteredGroups(t *testing.T) {
 			"addFileWithFactory CreateSingletonServices", "addFileWithFactory CreateWireServices",
 			"addFileWithFactory CreateConfig", "addFileWithFactory ServerLifecycle", "checkHiddenFactory",
 			"addAnalytics", "addOutgoingWebhook",
-			"addRPCInvocations", "addWireAddon", "addPikkuStudio", "addProvider", "addWireRemoteAddon", "addMiddleware", "addPermission", "checkIndirectRegistrations",
+			"addRPCInvocations", "addWireAddon", "addPikkuStudio", "addProviderCollection", "addProvider", "addWireRemoteAddon", "addMiddleware", "addPermission", "checkIndirectRegistrations",
 			"addApprovalDescription", "addWorkflow",
 		},
 		PhaseFunctions: {"addFunctions"},

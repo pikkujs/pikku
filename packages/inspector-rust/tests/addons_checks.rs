@@ -265,7 +265,7 @@ fn defer_provider_provides_skips_pku372() {
             .filter(|d| d.code.as_deref() == Some("PKU372"))
             .count()
     };
-    assert_eq!(count(false), 2);
+    assert_eq!(count(false), 1);
     assert_eq!(count(true), 0);
 }
 

@@ -21,6 +21,7 @@ const (
 	OrderAddRPCInvocations          = 100
 	OrderAddWireAddon               = 110
 	OrderAddPikkuStudio             = 120
+	OrderAddProviderCollection      = 124
 	OrderAddProvider                = 125
 	OrderAddWireRemoteAddon         = 130
 	OrderAddMiddleware              = 140

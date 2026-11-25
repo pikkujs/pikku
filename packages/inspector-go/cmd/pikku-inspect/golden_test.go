@@ -191,8 +191,8 @@ func TestDeferProviderProvidesSkipsPKU372(t *testing.T) {
 		}
 		return n
 	}
-	if got := count(false); got != 2 {
-		t.Fatalf("PKU372 without deferral = %d, want 2", got)
+	if got := count(false); got != 1 {
+		t.Fatalf("PKU372 without deferral = %d, want 1", got)
 	}
 	if got := count(true); got != 0 {
 		t.Fatalf("PKU372 with deferral = %d, want 0", got)
