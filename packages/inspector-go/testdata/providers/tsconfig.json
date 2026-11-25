@@ -8,7 +8,12 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@pikku/core/provider": [
+        "./pikku-core-provider.d.ts"
+      ]
+    }
   },
   "include": [
     "src/**/*"
