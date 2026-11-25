@@ -494,8 +494,9 @@ const describeStep = async (p) => {
 /**
  * The first step of each flow a page offers (up to four links or buttons whose words start one: Book, Enroll, Get
  * Tickets, Buy, Apply, Log In, Subscribe...), opened read-only: a link is opened in a page of its own, on or off the
- * site (a hosted form), a button is clicked where it is (a sign-in or checkout dialog). Every request that is not a GET
- * is held back, nothing is filled in or sent, and a flow already opened from an earlier page is not opened again.
+ * site (a hosted form), a button is clicked where it is (a sign-in or checkout dialog). While a button is clicked every
+ * request that is not a GET is held back; nothing is filled in or sent, and a flow already opened from an earlier page
+ * is not opened again.
  */
 async function probeActions(page, seen) {
   const ctx = page.context()
@@ -524,10 +525,10 @@ async function probeActions(page, seen) {
     const row = { text: m.text, ...(m.href ? { href: m.href } : {}) }
     try {
       if (m.href && /^https?:/.test(m.href) && new URL(m.href).hash === '') {
+        // opening a link fills in and sends nothing, and the step's own reads may be POSTs (a booking widget's): not held
         const other = await ctx.newPage()
-        await other.route('**/*', hold)
         try {
-          await other.goto(m.href, { waitUntil: 'load', timeout: 30000 })
+          await other.goto(m.href, { waitUntil: 'domcontentloaded', timeout: 30000 })
           row.step = await describeStep(other)
         } finally { await other.close().catch(() => {}) }
       } else {
