@@ -17,9 +17,7 @@ import type {
   PikkuAttentionFunc,
 } from './attention-func.types.js'
 
-const registerHelper = (name: string, func: (...args: any[]) => any) => {
-  addFunction(name, { func } as never)
-  pikkuState(null, 'rpc', 'meta')[name] = name
+const registerHelperMeta = (name: string) => {
   pikkuState(null, 'function', 'meta')[name] = {
     name,
     pikkuFuncId: name,
@@ -29,6 +27,12 @@ const registerHelper = (name: string, func: (...args: any[]) => any) => {
     inputSchemaName: null,
     outputSchemaName: null,
   } as never
+}
+
+const registerHelper = (name: string, func: (...args: any[]) => any) => {
+  addFunction(name, { func } as never)
+  pikkuState(null, 'rpc', 'meta')[name] = name
+  registerHelperMeta(name)
 }
 
 /**
@@ -111,6 +115,7 @@ export const addAttentionFunc = (
     pikkuFuncId: task,
     schedule: meta.schedule,
   } as never
+  registerHelperMeta(task)
   wireScheduler({
     name: task,
     schedule: meta.schedule,

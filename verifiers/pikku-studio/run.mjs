@@ -48,7 +48,9 @@
  *                              carries widget, every and the schedule;
  *                              #pikku/attention is typed with the project's
  *                              services, and loading the bootstrap registers
- *                              the func, its workflow and its schedule
+ *                              the func, its workflow and its schedule, and
+ *                              the scheduled task runs and starts the
+ *                              workflow for each watched project
  *  19. an attention widget on
  *      a screen or slot the
  *      plugin does not arrange → an error naming the plugin, and the build
@@ -552,11 +554,27 @@ const registered = spawnSync(
     '-e',
     `await import('./.pikku/addon/pikku-bootstrap.gen.ts')
 const { pikkuState } = await import('@pikku/core/state')
-const { getAttentionFuncs } = await import('@pikku/core/attention-func')
+const { getAttentionFuncs, InMemoryAttentionResultStore } = await import('@pikku/core/attention-func')
+const { runScheduledTask } = await import('@pikku/core/scheduler')
+const attentionResults = new InMemoryAttentionResultStore()
+await attentionResults.watch('p1', 'health.verdict')
+const started = []
+pikkuState(null, 'package', 'singletonServices', {
+  logger: { info() {}, warn() {}, error() {}, debug() {} },
+  attentionResults,
+  workflowService: {
+    startWorkflow: async (name, input) => {
+      started.push(name + ':' + input.projectKey)
+      return { runId: 'r1' }
+    },
+  },
+})
+await runScheduledTask({ name: 'attention.health.verdict.refresh' })
 console.log(JSON.stringify({
   funcs: [...getAttentionFuncs().keys()],
   workflow: pikkuState(null, 'workflows', 'meta')['attention.health.verdict']?.name ?? null,
   schedule: pikkuState(null, 'scheduler', 'tasks').get('attention.health.verdict.refresh')?.schedule ?? null,
+  refreshed: started,
 }))`,
   ],
   { cwd: here, encoding: 'utf8' }
@@ -569,15 +587,16 @@ if (
       funcs: ['health.verdict'],
       workflow: 'attention.health.verdict',
       schedule: '*/1 * * * *',
+      refreshed: ['attention.health.verdict:p1'],
     })
 ) {
   fail(
-    'loading the bootstrap did not register the attention func, its workflow and its schedule',
+    'loading the bootstrap did not register the attention func, its workflow and a schedule that runs',
     `${registered.stdout}${registered.stderr}`
   )
 }
 console.log(
-  '✓ #pikku/attention is typed, and the bootstrap registers the workflow and its schedule'
+  '✓ #pikku/attention is typed, and the bootstrap registers the workflow and a schedule that runs'
 )
 
 const expectAttentionError = (pattern, message) => {

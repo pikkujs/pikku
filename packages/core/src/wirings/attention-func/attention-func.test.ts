@@ -6,6 +6,7 @@ import { InMemoryWorkflowService } from '../workflow/in-memory-workflow-service.
 import { QueuedWorkflowHarness } from '../../testing/service-tests/queued-workflow-harness.js'
 import { pikkuAttentionFunc, attentionSchedule } from './attention-func.js'
 import { addAttentionFunc } from './attention-func-registry.js'
+import { runScheduledTask } from '../scheduler/scheduler-runner.js'
 import {
   getAttention,
   refreshAttention,
@@ -202,6 +203,19 @@ describe('an attention func as a workflow', () => {
       'attention.health.verdict.refresh'
     )
     assert.equal(task?.schedule, '*/1 * * * *')
+  })
+
+  test('the scheduled task runs through the scheduler and stores a result', async () => {
+    declare(async (_s, data) => ({ score: 0.6, reason: data.projectKey }))
+    await store.watch('p1', 'health.verdict')
+    await runScheduledTask({ name: 'attention.health.verdict.refresh' })
+    await h.pump()
+    const stored = await getAttention(services(), {
+      projectKey: 'p1',
+      widget: 'health.verdict',
+    })
+    assert.equal(stored?.status, 'attention')
+    assert.deepEqual(stored?.score, { score: 0.6, reason: 'p1' })
   })
 
   test('a widget with no registered func cannot be read or refreshed', async () => {
