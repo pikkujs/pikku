@@ -43,7 +43,10 @@ export async function pages(root) {
   const seen = new Set(), out = []
   // a shop's cart and checkout links start an order when opened: never a page to capture
   const ORDER = /^\/(buy|checkouts?|cart\/(add|change|update|clear))(\/|$)/i
-  const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !ORDER.test(x.pathname) && !/\.(jpe?g|png|gif|webp|svg|pdf|css|js|xml|json|ico|txt)$/i.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
+  // a CMS's own machinery (its API, feeds, uploads and admin) and files of any kind are not pages
+  const MACHINERY = /^\/(wp-json|wp-admin|wp-content|wp-includes|xmlrpc\.php|feed|comments\/feed|cdn-cgi)(\/|$)|\/feed\/?$/i
+  const FILE = /\.(jpe?g|png|gif|webp|avif|svg|ico|pdf|css|js|mjs|map|xml|json|txt|webmanifest|woff2?|ttf|otf|eot|mp3|m4a|wav|ogg|mp4|webm|mov|zip|docx?|xlsx?|pptx?|csv|ics|epub)$/i
+  const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !ORDER.test(x.pathname) && !MACHINERY.test(x.pathname) && !FILE.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
   const get = async (u) => { try { return await (await fetch(u, { headers: { 'user-agent': UA } })).text() } catch { return '' } }
   const maps = [`${base}/sitemap.xml`]
   const robots = await get(`${base}/robots.txt`)
@@ -445,6 +448,7 @@ export function extractBehaviourInPage() {
   const keys = (store) => { try { return Object.keys(store()).slice(0, 30) } catch { return [] } }
   const fonts = [...document.fonts].filter((f) => f.status === 'loaded').map((f) => `${f.family.replace(/["']/g, '')} ${f.weight} ${f.style}`)
   const LANG = /^(en|de|fr|es|it|nl|pl|english|deutsch|français|español|italiano|nederlands|polski)$/i
+  const PAYMENT_HOST = /(^|\.)(stripe\.com|paypal\.(com|me)|squareup\.com|square\.link|sumup\.(com|io)|mollie\.com|klarna\.com|gocardless\.com|paddle\.com|lemonsqueezy\.com|gumroad\.com|thrivecart\.com|eventbrite\.[a-z.]+|shop\.app|myshopify\.com)$/i
   const FILE = /\.(pdf|docx?|xlsx?|pptx?|odt|ods|csv|zip|ics|mp3|mp4|epub)$/i
   return {
     lang: document.documentElement.lang || '',
@@ -454,6 +458,7 @@ export function extractBehaviourInPage() {
     motion: [...motion.values()],
     storage: { local: keys(() => localStorage), session: keys(() => sessionStorage) },
     // links to the site's own other hosts (app., info., shop. of the same registrable domain)
+    paymentLinks: [...document.querySelectorAll('a[href]')].map((a) => { try { return { host: new URL(a.href).hostname, href: a.href.slice(0, 200), text: (a.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60) } } catch { return null } }).filter((l) => l && PAYMENT_HOST.test(l.host)).slice(0, 20),
     siblingLinks: (() => {
       const base = (h) => { const p = h.replace(/^www\./, '').split('.'); return p.slice(/\.(co|com|org|net|ac|gov)\.[a-z]{2}$/.test(h) ? -3 : -2).join('.') }
       const own = location.hostname.replace(/^www\./, '')
@@ -710,7 +715,7 @@ export async function captureBehaviour(browser, out, entry, seen = new Set(), op
   const ctx = await newCaptureContext(browser, 1440, opts)
   const page = await ctx.newPage()
   const requests = [], consoleLines = [], errors = []
-  page.on('request', (r) => requests.push({ url: r.url(), type: r.resourceType(), method: r.method(), frame: (() => { try { return r.frame() } catch { return null } })() }))
+  page.on('request', (r) => { const frame = (() => { try { return r.frame() } catch { return null } })(); requests.push({ url: r.url(), type: r.resourceType(), method: r.method(), frame, main: frame === page.mainFrame() }) })
   page.on('console', (m) => { if (consoleLines.length < 30 && m.type() !== 'debug') consoleLines.push(`${m.type()}: ${m.text().slice(0, 200)}`) })
   page.on('pageerror', (e) => { if (errors.length < 20) errors.push(String(e.message || e).slice(0, 200)) })
   const rec = { id, url }
@@ -735,7 +740,7 @@ export async function captureBehaviour(browser, out, entry, seen = new Set(), op
   await ctx.close()
   const own = new URL(url).hostname.replace(/^www\./, '')
   const hosts = {}
-  for (const r of requests) { let h; try { h = new URL(r.url).hostname } catch { continue } if (!/^https?:/.test(r.url)) continue; const e = (hosts[h] ||= { requests: 0, types: {}, thirdParty: h.replace(/^www\./, '') !== own && !h.endsWith(`.${own}`) }); e.requests++; e.types[r.type] = (e.types[r.type] || 0) + 1 }
+  for (const r of requests) { let h; try { h = new URL(r.url).hostname } catch { continue } if (!/^https?:/.test(r.url)) continue; const e = (hosts[h] ||= { requests: 0, types: {}, thirdParty: h.replace(/^www\./, '') !== own && !h.endsWith(`.${own}`) }); e.requests++; e.types[r.type] = (e.types[r.type] || 0) + 1; if (r.main) e.page = true }
   rec.hosts = hosts
   rec.console = consoleLines
   rec.scriptErrors = errors
@@ -781,6 +786,29 @@ async function captureSiblings(browser, recs, opts = {}) {
   return out
 }
 
+/** Payment providers by the hosts they use. */
+const PAYMENT_PROVIDERS = [
+  ['Stripe', /(^|\.)stripe\.(com|network)$/i], ['PayPal', /(^|\.)(paypal\.(com|me)|paypalobjects\.com)$/i], ['Square', /(^|\.)(squareup\.com|square\.link|squarecdn\.com)$/i],
+  ['SumUp', /(^|\.)sumup\.(com|io)$/i], ['Mollie', /(^|\.)mollie\.com$/i], ['Klarna', /(^|\.)klarna(cdn)?\.(com|net)$/i], ['GoCardless', /(^|\.)gocardless\.com$/i],
+  ['Paddle', /(^|\.)paddle\.(com|net)$/i], ['Lemon Squeezy', /(^|\.)lemonsqueezy\.com$/i], ['Gumroad', /(^|\.)gumroad\.com$/i], ['ThriveCart', /(^|\.)thrivecart\.com$/i],
+  ['Eventbrite', /(^|\.)eventbrite\.[a-z.]+$/i], ['Shopify', /(^|\.)(shop\.app|myshopify\.com|shopify\.com)$/i],
+]
+
+/**
+ * The payment providers the site's own pages use: a provider's links on a page, or its scripts and requests from the
+ * page itself. A provider that only loads inside another provider's embedded frame (Stripe inside a booking tool) is not
+ * listed: the site does not take that payment itself.
+ */
+export function paymentsOf(recs) {
+  const found = new Map()
+  const note = (provider, page, what) => { const p = found.get(provider) || { provider, hosts: [], links: [], pages: [] }; found.set(provider, p); if (!p.pages.includes(page) && p.pages.length < 6) p.pages.push(page); what(p) }
+  for (const r of recs) {
+    for (const [h, e] of Object.entries(r.hosts || {})) if (e.page) for (const [name, rx] of PAYMENT_PROVIDERS) if (rx.test(h)) note(name, r.id, (p) => { if (!p.hosts.includes(h)) p.hosts.push(h) })
+    for (const l of r.paymentLinks || []) for (const [name, rx] of PAYMENT_PROVIDERS) if (rx.test(l.host)) note(name, r.id, (p) => { if (p.links.length < 5 && !p.links.some((x) => x.href === l.href)) p.links.push({ href: l.href, text: l.text }) })
+  }
+  return [...found.values()]
+}
+
 export async function summariseBehaviour(out, root, recs, siblings = []) {
   const base = new URL(root).origin
   let robots = ''
@@ -813,6 +841,7 @@ export async function summariseBehaviour(out, root, recs, siblings = []) {
     languageLinks: [...langs.values()],
     downloads: [...downloads.values()],
     siblings,
+    payments: paymentsOf(recs),
     actions: recs.flatMap((r) => (r.actions || []).map((a) => ({ page: r.id, ...a }))),
     interactions: recs.flatMap((r) => (r.interactions || []).filter((i) => i.error || Object.keys(i.changes || {}).length || i.kind === 'open').map((i) => ({ page: r.id, ...i }))),
     motion: [...new Map(recs.flatMap((r) => r.motion || []).map((m) => [`${m.transition}|${m.animation}`, m])).values()].slice(0, 25),
