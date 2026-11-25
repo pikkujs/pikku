@@ -6,7 +6,7 @@ import {
   pikkuState,
 } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import { closeWireServices } from '../../utils.js'
+import { stopWireServices } from '../../utils.js'
 import { PikkuError, addError } from '../../errors/error-handler.js'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { runScheduledTask } from '../scheduler/scheduler-runner.js'
@@ -655,7 +655,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       throw new ScenarioHookError(scenarioName, phase, error)
     } finally {
       if (wireServices && Object.keys(wireServices).length > 0) {
-        await closeWireServices(singletonServices.logger, wireServices)
+        await stopWireServices(singletonServices.logger, wireServices)
       }
     }
   }

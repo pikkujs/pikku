@@ -18,9 +18,9 @@ import { serializeProviderRunner } from '../providers/serialize-provider-runner.
 export const PLATFORM_SERVICES_FILE = 'platform-services.gen.ts'
 
 /**
- * The services a unit's own generated `pikku-services.gen.ts` marks as
- * required: what the functions, middleware and permissions it bundles
- * destructure. Empty when the file is missing.
+ * The services (singleton and per-request) a unit's own generated
+ * `pikku-services.gen.ts` marks as required: what the functions, middleware and
+ * permissions it bundles destructure. Empty when the file is missing.
  */
 export const readUnitRequiredServices = async (
   pikkuDir: string
@@ -31,12 +31,14 @@ export const readUnitRequiredServices = async (
       join(pikkuDir, 'pikku-services.gen.ts'),
       'utf-8'
     )
-    const block = content.match(
-      /export const requiredSingletonServices = \{([^}]+)\}/
-    )
-    for (const line of block?.[1]!.split('\n') ?? []) {
-      const kv = line.match(/'([^']+)':\s*true/)
-      if (kv) required.add(kv[1]!)
+    for (const map of ['requiredSingletonServices', 'requiredWireServices']) {
+      const block = content.match(
+        new RegExp(`export const ${map} = \\{([^}]+)\\}`)
+      )
+      for (const line of block?.[1]!.split('\n') ?? []) {
+        const kv = line.match(/'([^']+)':\s*true/)
+        if (kv) required.add(kv[1]!)
+      }
     }
   } catch {
     // No services map: the unit reaches nothing.
@@ -126,6 +128,7 @@ export async function writeUnitPlatformServices(options: {
       target: 'deploy',
       profile: support.profile,
       services: resolved.ordered,
+      wire: resolved.wire,
       collections: resolved.collections,
       specifier: (module) => module.replace(/\\/g, '/'),
       coercionMap: ctx.coercionMap,

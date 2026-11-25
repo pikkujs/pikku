@@ -31,7 +31,8 @@ build() { # engine package
     npx pikku deploy plan --provider cloudflare --result-file .deploy/cloudflare/plan-result.json 2>&1
 }
 marker_in_bundles() { grep -rlF "$1" .deploy --include=bundle.js >/dev/null 2>&1; }
-trap 'sed -i "s#@verifier/prov-db-[a-z]*#@verifier/prov-db-pg#" src/addons.ts' EXIT
+services_backup=../../.tmp/controlplane-services.bak
+trap '[ ! -f "$services_backup" ] || cp "$services_backup" src/services.ts; sed -i "s#@verifier/prov-db-[a-z]*#@verifier/prov-db-pg#" src/addons.ts' EXIT
 
 echo "--- one addon line picks the kysely engine ---"
 for engine in pg sqlite; do
@@ -48,14 +49,18 @@ done
 echo "--- per-request auditLog and events ---"
 if out=$(cd . && npx tsx src/check-audit.ts 2>&1); then pass "auditLog/events"; else fail "auditLog/events: $(tail -n 3 <<<"$out" | tr '\n' ' ')"; fi
 
-echo "--- the two real factory examples compile and run; the audited kysely per request is PKU393 ---"
-if out=$(npx pikku all --approve-providers 2>&1); then
+echo "--- the singleton example builds; the audited kysely per request is PKU393 ---"
+if out=$(rm -rf .pikku && npx pikku all 2>&1); then pass "createSingletonServices checks existingServices.kysely and spreads existingServices"; else fail "factory examples: $(tail -n 3 <<<"$out" | tr '\n' ' ')"; fi
+cp src/services.ts "$services_backup"
+cp cases/audited-wire-services.ts src/services.ts
+if out=$(npx pikku all 2>&1); then
   fail "audited kysely per request was accepted, expected PKU393"
 elif grep -qF PKU393 <<<"$out"; then
   pass "audited kysely per request: PKU393"
 else
   fail "audited kysely per request failed without PKU393: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
 fi
+cp "$services_backup" src/services.ts
 
 echo "=== $passed passed, ${#failures[@]} failed ==="
 for f in "${failures[@]}"; do echo "  x $f"; done

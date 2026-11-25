@@ -672,7 +672,6 @@
     "unsafeAsWrapped"
   ],
   "./utils": [
-    "closeWireServices",
     "createWeakUID",
     "formatVersionedId",
     "freezeDedupe",
@@ -687,12 +686,14 @@
     "parseJson",
     "parseVersionedId",
     "pikkuServerLifecycle",
-    "stopSingletonServices"
+    "stopSingletonServices",
+    "stopWireServices"
   ],
   "./provider": [
     "PROVIDER_PROFILES",
     "ProviderError",
     "ProviderRegistry",
+    "WireProviders",
     "defineProvider",
     "defineProviderCollection",
     "defineWireProvider",

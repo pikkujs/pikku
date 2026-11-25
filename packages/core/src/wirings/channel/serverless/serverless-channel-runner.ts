@@ -3,7 +3,7 @@ import type {
   PikkuRawWire,
   WireServices,
 } from '../../../types/core.types.js'
-import { closeWireServices } from '../../../utils.js'
+import { stopWireServices } from '../../../utils.js'
 import { processMessageHandlers } from '../channel-handler.js'
 import { openChannel } from '../channel-runner.js'
 import type {
@@ -211,7 +211,7 @@ export const runChannelConnect = async ({
     )
   } finally {
     if (wireServices) {
-      await closeWireServices(singletonServices.logger, wireServices)
+      await stopWireServices(singletonServices.logger, wireServices)
     }
   }
 }
@@ -301,7 +301,7 @@ export const runChannelDisconnect = async ({
   }
   await channelStore.removeChannels([channel.channelId])
   if (wireServices) {
-    await closeWireServices(singletonServices.logger, wireServices)
+    await stopWireServices(singletonServices.logger, wireServices)
   }
 }
 
@@ -387,7 +387,7 @@ export const runChannelMessage = async (
     }
   } finally {
     if (wireServices) {
-      await closeWireServices(singletonServices.logger, wireServices)
+      await stopWireServices(singletonServices.logger, wireServices)
     }
   }
   return response

@@ -71,6 +71,7 @@ export const writeDevProviders = async (
     serializeProviderRunner({
       target: 'dev',
       services: resolved.ordered,
+      wire: resolved.wire,
       collections: resolved.collections,
       specifier: (module) => localSpecifier(module, target),
     })

@@ -49,7 +49,10 @@ export interface ProviderVariants<
 }
 
 export type ProviderDefinition =
-  ProviderFactory<any, any> | ProviderVariants<any, any>
+  | ProviderFactory<any, any>
+  | ProviderVariants<any, any>
+  | WireProviderFactory<any, any>
+  | WireProviderVariants<any, any>
 
 /** A variant a service may declare: one target, one deploy profile, or every target. */
 export type ProviderVariantName =
@@ -145,6 +148,7 @@ export type ProviderCollectionItem<TCollection> =
 export type WireProviderVariants<
   TNeeds = any,
   TProvides extends object = Record<string, unknown>,
+  TOptional extends string = string,
 > = {
   [
     V in Exclude<
@@ -152,10 +156,38 @@ export type WireProviderVariants<
       'onServerStart' | 'addTo' | 'optional' | 'replaces'
     >
   ]?: WireProviderFactory<TNeeds, TProvides>
-} & Pick<ProviderVariants, 'optional' | 'replaces'>
+} & {
+  /** Needs that may be absent: string literals, read statically. */
+  optional?: readonly TOptional[]
+  /** Protected keys this provider deliberately provides: string literals, read statically. */
+  replaces?: readonly string[]
+}
 
 /** Builds a per-request service. `wire` is the invocation's wire, unchanged. */
 export type WireProviderFactory<
   TNeeds = any,
   TProvides extends object = Record<string, unknown>,
 > = (services: TNeeds, wire: PikkuWire) => TProvides | Promise<TProvides>
+
+/** What the runner passes `WireProviders.run` besides the services and the wire. */
+export interface WireProviderRunOptions {
+  /** The keys the function destructures. Every provider is built when absent. */
+  needs?: readonly string[]
+  /** Keys the runner builds itself, readable by a provider that declares them. */
+  held?: Record<string, unknown>
+}
+
+/** What the generated provider runner registers: builds one invocation's per-request services. */
+export type CreateProviderWireServices = (
+  singletons: object,
+  wire: PikkuWire,
+  options?: WireProviderRunOptions
+) => Promise<WireProviderRun>
+
+/** What `WireProviders.run` hands the runner for one invocation. */
+export interface WireProviderRun {
+  /** The keys the wire providers built. */
+  services: Record<string, unknown>
+  /** Stops what was built, latest provider first. A failing `stop()` is logged and does not stop the others. */
+  stop(): Promise<void>
+}

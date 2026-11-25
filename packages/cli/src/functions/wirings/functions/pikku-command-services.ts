@@ -8,6 +8,7 @@ import { writeLocalServices } from '../cli/write-local-services.js'
 import { writeDevProviders } from '../cli/write-dev-providers.js'
 import {
   providedServiceKeys,
+  providedWireServiceKeys,
   singletonServicesTypeRef,
 } from '../../../providers/provider-types-source.js'
 
@@ -20,7 +21,8 @@ export const serializeServicesMap = (
   wireServicesImport: string,
   addonRequiredParentServices: string[] = [],
   authInjected: boolean = false,
-  agentScaffoldEnabled: boolean = false
+  agentScaffoldEnabled: boolean = false,
+  providerWireKeys: readonly string[] = []
 ): string => {
   // Use pre-aggregated services from inspector state
   // This includes services from:
@@ -98,8 +100,10 @@ export const serializeServicesMap = (
   const requiredSingletonServiceNames = Object.keys(singletonServicesMap)
     .filter((key) => singletonServicesMap[key])
     .sort()
+  // What the project's own `createWireServices` has to return. A key a wire
+  // provider builds is not its to return.
   const requiredWireServiceNames = Object.keys(wireServicesMap)
-    .filter((key) => wireServicesMap[key])
+    .filter((key) => wireServicesMap[key] && !providerWireKeys.includes(key))
     .sort()
 
   const code = [
@@ -207,7 +211,8 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       Boolean(
         config.scaffold?.agent &&
         Object.keys(visitState.agents?.agentsMeta ?? {}).length > 0
-      )
+      ),
+      config.addon ? [] : providedWireServiceKeys(visitState, config.rootDir)
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
     await writeLocalServices(logger, config, visitState)

@@ -495,8 +495,8 @@ export type CreateSingletonServices<
 
 /**
  * Your `createWireServices` factory: builds the services scoped to one
- * invocation. A returned service with a `close()` is closed by the runner when
- * the invocation ends.
+ * invocation. A returned service with a `stop()` is stopped by the runner when
+ * the invocation ends, last built first.
  */
 export type CreateWireServices<
   SingletonServices extends CoreSingletonServices = CoreSingletonServices,
@@ -506,7 +506,7 @@ export type CreateWireServices<
 > = (
   services: SingletonServices,
   wire: PikkuRawWire
-) => Promise<WireServices<Services, SingletonServices>>
+) => Promise<WireServices<SingletonServices, Services>>
 
 /**
  * Your `createConfig` factory: builds the app config, typically reading from

@@ -163,7 +163,14 @@ run_scenario() {
         fail "$s" "runtime: $(tail -n 3 <<<"$out" | tr '\n' ' ')"
       fi
       ;;
-    wire) expect_ok "$s" ;;
+    wire)
+      expect_ok "$s"
+      if out=$(cd "scenarios/$s" && npx tsx src/check-wire.ts 2>&1); then
+        pass "$s" "per-request providers from the generated runner"
+      else
+        fail "$s" "per-request providers: $(tail -n 3 <<<"$out" | tr '\n' ' ')"
+      fi
+      ;;
     wire-lifetime) expect_failure "$s" PKU392 "builds per request" ;;
     wire-shadow) expect_failure "$s" PKU393 "A key has one lifetime" ;;
     wire-core-key) expect_failure "$s" PKU399 "core builds for every invocation" ;;

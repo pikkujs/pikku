@@ -367,4 +367,44 @@ export const inbox = {
       )
     })
   })
+
+  test('per-request providers get their own registry, and the runner registers how to build them', () => {
+    const source = serializeProviderRunner({
+      target: 'deploy',
+      profile: 'standalone',
+      specifier,
+      services: [resolved({ name: 'cache', provides: ['cache'] })],
+      wire: [
+        resolved({
+          name: 'scope',
+          needs: ['cache'],
+          provides: ['requestScope'],
+        }),
+      ],
+    })
+    assert.match(source, /WireProviders/)
+    assert.match(
+      source,
+      /wireRegistry\.add\("scope", service1, \{"common":\{"needs":\["cache"\],"optional":\[\],"provides":\["requestScope"\],"optionalProvides":\[\]\}\}, \{"kind":"wire"\}\)/
+    )
+    assert.match(
+      source,
+      /new WireProviders\(wireRegistry, \{ target: "deploy", profile: "standalone", \}\)/
+    )
+    assert.match(source, /export const createProviderWireServices/)
+    assert.match(
+      source,
+      /pikkuState\(null, 'package', 'wireProviders', createProviderWireServices\)/
+    )
+    assert.doesNotMatch(source, /registry\.add\("scope"/)
+  })
+
+  test('a runner with no per-request providers registers none', () => {
+    const source = serializeProviderRunner({
+      target: 'dev',
+      specifier,
+      services: [resolved({ name: 'cache', provides: ['cache'] })],
+    })
+    assert.doesNotMatch(source, /WireProviders|wireProviders/)
+  })
 })

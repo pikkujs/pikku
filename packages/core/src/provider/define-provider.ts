@@ -49,9 +49,13 @@ export function defineProvider(definition: unknown): unknown {
 export function defineWireProvider<TNeeds, TProvides extends object>(
   factory: WireProviderFactory<TNeeds, TProvides>
 ): WireProviderFactory<TNeeds, TProvides>
-export function defineWireProvider<TNeeds, TProvides extends object>(
-  variants: WireProviderVariants<TNeeds, TProvides>
-): WireProviderVariants<TNeeds, TProvides>
+export function defineWireProvider<
+  TNeeds,
+  TProvides extends object,
+  const TOptional extends string = never,
+>(
+  variants: WireProviderVariants<TNeeds, TProvides, TOptional>
+): WireProviderVariants<TNeeds, TProvides, TOptional>
 export function defineWireProvider(definition: unknown): unknown {
   return definition
 }

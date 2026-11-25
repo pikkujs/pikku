@@ -43,7 +43,7 @@ const runtimeImports = [...generated.matchAll(/^import (?!type)[^\n]*$/gm)].map(
   (m) => m[0]
 )
 assert.deepEqual(runtimeImports, [
-  "import { defineProvider as coreProvider } from '@pikku/core/provider'",
+  "import { defineProvider as coreProvider, defineWireProvider as coreWireProvider } from '@pikku/core/provider'",
 ])
 assert.match(
   generated,

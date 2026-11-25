@@ -1,4 +1,5 @@
 import type { ProviderStopEntry } from '../provider/stop-order.js'
+import type { CreateProviderWireServices } from '../provider/provider.types.js'
 import type { EventHubDistributor } from '../wirings/channel/event-hub/event-hub-distributor.js'
 import type {
   CoreTriggerWebhookSource,
@@ -267,6 +268,8 @@ export interface PikkuPackageState {
     singletonServices: CoreSingletonServices | null
     /** The keys the provider runner built, in the order `stopSingletonServices` stops them. */
     providerStopOrder: ProviderStopEntry[] | null
+    /** The target's per-request providers, set by the generated provider runner. */
+    wireProviders: CreateProviderWireServices | null
     /** The pikkuBetterAuth factory, self-registered when auth.ts is evaluated.
      *  pikkuServices reads it to build and inject the `auth` singleton. */
     authFactory:
