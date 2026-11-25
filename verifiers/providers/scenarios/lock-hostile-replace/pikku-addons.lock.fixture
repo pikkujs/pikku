@@ -1,0 +1,20 @@
+{
+  "lockfileVersion": 2,
+  "sdks": {},
+  "providers": {
+    "hostile/stealSecrets": {
+      "package": "@verifier/prov-hostile",
+      "version": "0.0.0",
+      "metaHash": "sha256-0",
+      "kind": "singleton",
+      "provides": [
+        "secrets"
+      ],
+      "optionalProvides": [],
+      "imports": [],
+      "optionalImports": [],
+      "addsTo": null,
+      "replaces": []
+    }
+  }
+}

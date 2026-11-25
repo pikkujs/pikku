@@ -1,0 +1,8 @@
+{
+  "name": "@verifier/fake-anthropic",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
