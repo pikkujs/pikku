@@ -37,3 +37,9 @@ wireRemoteAddon({
   auth: { credentialId: 'x' },
 })
 wireAddon({ name: 'stale', package: '@acme/addon3', providers: ['old'] })
+wireAddon({ name: 'nullversion', package: '@acme/addon4', providers: ['old'] })
+wireAddon({
+  name: 'objectversion',
+  package: '@acme/addon5',
+  providers: ['old'],
+})

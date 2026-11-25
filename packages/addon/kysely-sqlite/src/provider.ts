@@ -11,15 +11,14 @@ const connect = (env: Record<string, unknown>) => {
     )
   }
   const authToken = env.LIBSQL_AUTH_TOKEN
-  return {
-    kysely: new Kysely<any>({
-      dialect: new LibsqlWebDialect({
-        url,
-        authToken: typeof authToken === 'string' ? authToken : undefined,
-      }),
-      plugins: [new CamelCasePlugin()],
+  const db = new Kysely<any>({
+    dialect: new LibsqlWebDialect({
+      url,
+      authToken: typeof authToken === 'string' ? authToken : undefined,
     }),
-  }
+    plugins: [new CamelCasePlugin()],
+  })
+  return { kysely: Object.assign(db, { stop: () => db.destroy() }) }
 }
 
 /**

@@ -177,17 +177,14 @@ describe('checkProviderLock', () => {
     assert.deepEqual(recorded, [])
   })
 
-  test('frozen: a version bump with the same surface is PKU396', () => {
-    assert.match(
-      codeOf(() =>
-        checkProviderLock({
-          current: { 'a/x': entry({ version: '1.1.0' }) },
-          lock: lockOf({ 'a/x': entry() }),
-          frozen: true,
-        })
-      ),
-      /^PKU396 .*'a\/x' changed\./
-    )
+  test('frozen: a version bump with the same surface is accepted and the approved entry is kept', () => {
+    const { providers } = checkProviderLock({
+      current: { 'a/x': entry({ version: '1.1.0', metaHash: 'sha256-b' }) },
+      lock: lockOf({ 'a/x': entry() }),
+      frozen: true,
+    })
+    assert.equal(providers['a/x']!.version, '1.0.0')
+    assert.equal(providers['a/x']!.metaHash, 'sha256-a')
   })
 
   test('a provider no longer opted in is dropped, and frozen it is PKU396', () => {
@@ -319,6 +316,55 @@ describe('syncProvidersLock', () => {
     assert.equal(lock.lockfileVersion, 2)
     assert.deepEqual(Object.keys(lock.sdks), ['@r/a'])
     assert.deepEqual(Object.keys(lock.providers), ['a/x'])
+  })
+
+  test('frozen: a version bump with the same surface writes nothing and passes', async () => {
+    const rootDir = project()
+    await syncProvidersLock({
+      state: state(['x']),
+      rootDir,
+      frozen: false,
+      log: () => {},
+    })
+    const before = readFileSync(join(rootDir, 'pikku-addons.lock'), 'utf8')
+    mkdirSync(join(rootDir, 'node_modules/@acme/addon'), { recursive: true })
+    writeFileSync(
+      join(rootDir, 'node_modules/@acme/addon/package.json'),
+      JSON.stringify({ name: '@acme/addon', version: '9.9.9' })
+    )
+    await syncProvidersLock({
+      state: state(['x']),
+      rootDir,
+      frozen: true,
+      log: () => {},
+    })
+    assert.equal(
+      readFileSync(join(rootDir, 'pikku-addons.lock'), 'utf8'),
+      before
+    )
+  })
+
+  test('a version 1 lock with no addon providers is not rewritten or refused, frozen or not', async () => {
+    const rootDir = project()
+    const v1 = JSON.stringify({
+      lockfileVersion: 1,
+      sdks: {
+        '@r/a': { range: '^1', version: '1.0.0', integrity: 'sha512-x' },
+      },
+    })
+    writeFileSync(join(rootDir, 'pikku-addons.lock'), v1)
+    for (const frozen of [true, false]) {
+      await syncProvidersLock({
+        state: {
+          optedInProviders: {},
+          rpc: { wireAddonDeclarations: new Map() },
+        } as never,
+        rootDir,
+        frozen,
+        log: () => {},
+      })
+      assert.equal(readFileSync(join(rootDir, 'pikku-addons.lock'), 'utf8'), v1)
+    }
   })
 
   test('frozen refuses to write a lock a provider would change', async () => {

@@ -415,8 +415,16 @@ export const syncRemoteAddonSdks = async ({
   const lockPath = join(rootDir, ADDONS_LOCK_FILE)
   const current = existsSync(lockPath) ? readFileSync(lockPath, 'utf-8') : null
   // No versioned addons and no lock: write nothing, not an empty lock.
+  // A version 1 lock has no `providers`, which reads as an empty section: it
+  // is the same lock until a pin changes.
+  const sameAsVersion1 =
+    current !== null &&
+    isVersion1Lock(current) &&
+    serializeAddonsLock(readAddonsLock(rootDir)) === next
   const lockChanged =
-    current !== next && !(current === null && specs.length === 0)
+    current !== next &&
+    !sameAsVersion1 &&
+    !(current === null && specs.length === 0)
   if (lockChanged && frozen) {
     throw new RemoteAddonSyncError(
       ErrorCode.PROVIDER_LOCK_FROZEN,
@@ -427,6 +435,14 @@ export const syncRemoteAddonSdks = async ({
     await writeFile(lockPath, next)
   }
   return { sdks, lock, lockChanged }
+}
+
+const isVersion1Lock = (text: string): boolean => {
+  try {
+    return JSON.parse(text)?.lockfileVersion === 1
+  } catch {
+    return false
+  }
 }
 
 export type AddonSyncConfig = {

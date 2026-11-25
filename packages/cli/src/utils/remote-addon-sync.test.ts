@@ -266,6 +266,37 @@ describe('remote addon SDK sync', () => {
     }
   })
 
+  test('frozen accepts a version 1 lock that pins what the project asks for, and leaves it as it is', async () => {
+    const project = makeProject('^1.4.0')
+    try {
+      const registry = fakeRegistry(PUBLISHED)
+      await sync(project, registry)
+      const { sdks } = readLock(project.rootDir)
+      const v1 = JSON.stringify({ lockfileVersion: 1, sdks }, null, 2) + '\n'
+      writeFileSync(join(project.rootDir, 'pikku-addons.lock'), v1)
+      const specs = await collectRemoteAddonSdkSpecs({
+        ...project.config,
+        ignoreFiles: [],
+      })
+      const { lockChanged } = await syncRemoteAddonSdks({
+        rootDir: project.rootDir,
+        specs,
+        resolveSdk: registry.resolveSdk,
+        download: registry.download,
+        logger: silentLogger().logger,
+        coreVersion: '0.12.5',
+        frozen: true,
+      })
+      assert.equal(lockChanged, false)
+      assert.equal(
+        readFileSync(join(project.rootDir, 'pikku-addons.lock'), 'utf8'),
+        v1
+      )
+    } finally {
+      rmSync(project.rootDir, { recursive: true, force: true })
+    }
+  })
+
   test('a lock miss resolves the range, extracts the SDK and writes the lock', async () => {
     const project = makeProject('^1.4.0')
     try {

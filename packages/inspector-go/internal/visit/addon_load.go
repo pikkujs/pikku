@@ -67,6 +67,14 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
+// declaredScalar is the scalar a JSON value holds, nil for null or an absent value.
+func declaredScalar(v *ojson) any {
+	if v == nil {
+		return nil
+	}
+	return v.scalar
+}
+
 // recordOptedInProviders resolves wireAddon({ providers }) against what the
 // addon declared. A name it does not declare is an error rather than a skip:
 // the project asked for a provider and would otherwise build without it.
@@ -81,10 +89,17 @@ func (s *Context) recordOptedInProviders(ns string, decl *addonDecl, req addonRe
 				"%s opts in to providers, but the providers manifest of %s could not be read: %s", via, decl.pkg, err.Error()))
 			return
 		}
-		if version, _ := meta.get("metaVersion").scalar.(float64); version != 2 {
+		declared := meta.get("metaVersion")
+		if version, _ := declaredScalar(declared).(float64); version != 2 {
 			published := "none"
 			if meta.has("metaVersion") {
-				published = fmt.Sprint(meta.get("metaVersion").scalar)
+				if declared.isJSObject() {
+					published = "[object Object]"
+				} else if declaredScalar(declared) == nil {
+					published = "null"
+				} else {
+					published = fmt.Sprint(declaredScalar(declared))
+				}
 			}
 			s.Log.Critical(diag.AddonProviderUnknown, fmt.Sprintf(
 				"Addon '%s' publishes provider meta version %s; this CLI reads version 2. Run 'pikku all' in the addon with this CLI.", decl.pkg, published))

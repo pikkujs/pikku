@@ -911,6 +911,8 @@ describe('addonProviderScope', () => {
       assert.deepEqual(addonProviderScope('nats', dir), {
         namespace: 'nats',
         env: ['NATS_PASSWORD', 'NATS_URL'],
+        credentials: [],
+        content: { bucket: 'nats' },
       })
     } finally {
       rmSync(dir, { recursive: true, force: true })
@@ -928,6 +930,8 @@ describe('addonProviderScope', () => {
           namespace: 'nats',
           env: ['NATS_PASSWORD', 'NATS_URL'],
           envRename: { NATS_URL: 'STAGE_NATS_URL' },
+          credentials: [],
+          content: { bucket: 'nats' },
         }
       )
     } finally {
@@ -941,7 +945,44 @@ describe('addonProviderScope', () => {
       assert.deepEqual(addonProviderScope('nats', dir), {
         namespace: 'nats',
         env: [],
+        credentials: [],
+        content: { bucket: 'nats' },
       })
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('credentials and content are narrowed like the addon functions: declared plus lent, own bucket plus grants, global opts out', () => {
+    const dir = addonDir()
+    mkdirSync(join(dir, 'dist', '.pikku', 'addon', 'credentials'))
+    writeFileSync(
+      join(
+        dir,
+        'dist',
+        '.pikku',
+        'addon',
+        'credentials',
+        'pikku-credentials-meta.gen.json'
+      ),
+      JSON.stringify({ natsToken: {} })
+    )
+    try {
+      assert.deepEqual(
+        addonProviderScope('nats', dir, {
+          credentialGrants: ['extra'],
+          contentBucket: 'files',
+          contentGrants: { shared: 'read' },
+          globalContent: 'needs the host store',
+        }),
+        {
+          namespace: 'nats',
+          env: ['NATS_PASSWORD', 'NATS_URL'],
+          credentials: ['extra', 'natsToken'],
+          content: { bucket: 'files', grants: { shared: 'read' } },
+          globalContent: true,
+        }
+      )
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

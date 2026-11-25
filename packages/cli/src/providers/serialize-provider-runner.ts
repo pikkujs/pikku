@@ -136,9 +136,9 @@ export const serializeProviderRunner = ({
         `const withKyselyCoercion = (definition: any): any => {`,
         `  const wrap = (factory: Factory): Factory => async (services, env) => {`,
         `    const provided = await factory(services, env)`,
-        `    return provided?.kysely`,
-        `      ? { ...provided, kysely: provided.kysely.withPlugin(createCoercionPlugin({ map: coercionMap as any })) }`,
-        `      : provided`,
+        `    if (!provided?.kysely) return provided`,
+        `    const coerced = provided.kysely.withPlugin(createCoercionPlugin({ map: coercionMap as any }))`,
+        `    return { ...provided, kysely: Object.assign(coerced, { stop: () => coerced.destroy() }) }`,
         `  }`,
         `  if (typeof definition === 'function') return wrap(definition)`,
         `  const wrapped = { ...definition }`,
@@ -184,7 +184,7 @@ export const serializeProviderRunner = ({
     `): Promise<Record<string, unknown>> => {`,
     `  const services: Record<string, unknown> = { ...runtime }`,
     `  const { stopOrder } = await runProviders(registry, { target: ${JSON.stringify(target)},${profile ? ` profile: ${JSON.stringify(profile)},` : ''} services, env })`,
-    `  recordStopOrder(stopOrder)`,
+    `  recordStopOrder(stopOrder, Object.keys(services))`,
     ...(wire.length > 0
       ? [
           `  pikkuState(null, 'package', 'wireProviders', createProviderWireServices)`,

@@ -90,7 +90,7 @@ describe('composeServerLifecycle', () => {
     })
     await assert.rejects(
       lifecycle.beforeStart!({} as any),
-      /Service 'start:b' failed in onServerStart: start:b broke/
+      /Provider 'start:b' failed in onServerStart: start:b broke/
     )
     assert.deepStrictEqual(events, ['start:a', 'start:b'])
   })
@@ -108,6 +108,7 @@ describe('stopSingletonServices', () => {
   ) => {
     const previous = pikkuState(null, 'package', 'singletonServices')
     const previousOrder = pikkuState(null, 'package', 'providerStopOrder')
+    const previousHeld = pikkuState(null, 'package', 'providerHeldKeys')
     pikkuState(null, 'package', 'singletonServices', {
       logger: { info() {}, error() {}, warn() {}, debug() {} },
       ...services,
@@ -117,6 +118,7 @@ describe('stopSingletonServices', () => {
     } finally {
       pikkuState(null, 'package', 'singletonServices', previous as any)
       pikkuState(null, 'package', 'providerStopOrder', previousOrder)
+      pikkuState(null, 'package', 'providerHeldKeys', previousHeld)
     }
   }
 
@@ -138,6 +140,19 @@ describe('stopSingletonServices', () => {
     recordStopOrder(['queueService', 'cache'])
     await withServices(services, () => stopSingletonServices())
     assert.deepStrictEqual(log, ['queueService', 'cache', 'db'])
+  })
+
+  test('a service the project built on a provider key stops before the provider keys', async () => {
+    const log: string[] = []
+    const services: Record<string | symbol, unknown> = {
+      queueService: stopping(log, 'queueService'),
+      db: stopping(log, 'db'),
+      jobs: stopping(log, 'jobs'),
+      mailer: stopping(log, 'mailer'),
+    }
+    recordStopOrder(['queueService'], ['queueService', 'db'])
+    await withServices(services, () => stopSingletonServices())
+    assert.deepStrictEqual(log, ['mailer', 'jobs', 'queueService', 'db'])
   })
 
   test('an object held under two keys is stopped once', async () => {

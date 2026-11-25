@@ -1024,9 +1024,9 @@ export interface InspectorState {
         /**
          * wireRemoteAddon: a package installed in this project that carries the
          * screens and services for this name, when they live apart from the
-         * contract package. `ui` and `services` are read from it.
+         * contract package. `ui` and `providers` are read from it.
          */
-        local?: { package: string; ui?: boolean; services?: string[] }
+        local?: { package: string; ui?: boolean; providers?: string[] }
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
         /**
@@ -1065,8 +1065,6 @@ export interface InspectorState {
          * `ContentService` instead of one scoped to its own folder.
          */
         globalContent?: string
-        /** The addon service names this project opted in to, as `wireAddon({ services })` listed them. */
-        services?: string[]
       }
     >
     wireAddonFiles: Set<string>

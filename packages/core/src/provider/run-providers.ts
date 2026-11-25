@@ -2,8 +2,11 @@ import { frozenView } from './frozen-view.js'
 import { ProviderError } from './provider-error.js'
 import type { ProviderRegistry } from './provider-registry.js'
 import { scopedEnv } from './scoped-env.js'
+import { ScopedContentService } from '../services/scoped-content-service.js'
+import { ScopedCredentialService } from '../services/scoped-credential-service.js'
 import type { ProviderStopEntry } from './stop-order.js'
 import type {
+  ProviderAddonScope,
   ProviderCollectionEntry,
   ProviderEnv,
   ProviderProfile,
@@ -24,6 +27,36 @@ const hasKey = (value: object, key: string) =>
   Object.prototype.hasOwnProperty.call(value, key)
 
 /**
+ * The services an addon's provider reads from: the host's, with
+ * `credentialService` and `content` narrowed to what the addon declares and
+ * the host lends it, as they are for the addon's own functions.
+ */
+const addonServices = (
+  services: Record<string, any>,
+  scope: ProviderAddonScope
+): Record<string, any> => {
+  const scoped = { ...services }
+  if (
+    services.credentialService &&
+    scope.credentials &&
+    !scope.globalCredentials
+  ) {
+    scoped.credentialService = new ScopedCredentialService(
+      services.credentialService,
+      new Set(scope.credentials)
+    )
+  }
+  if (services.content && scope.content && !scope.globalContent) {
+    scoped.content = new ScopedContentService(
+      services.content,
+      scope.content.bucket,
+      { ...scope.content.grants }
+    )
+  }
+  return scoped
+}
+
+/**
  * Builds one provider: hands its factory a frozen view of its declared needs
  * (and a scoped `env` for an addon's), then checks what it returned against
  * what the inspector read it to provide.
@@ -34,7 +67,7 @@ const call = async (
   env: ProviderEnv
 ): Promise<unknown> => {
   const view = frozenView(
-    services,
+    provider.addon ? addonServices(services, provider.addon) : services,
     [...new Set([...provider.needs, ...provider.optional])],
     provider.name
   )
@@ -201,7 +234,24 @@ export const runProviders = async (
     if (onServerStart) {
       start.push({
         name: provider.name,
-        run: (s) => onServerStart.call(undefined, s),
+        run: (s) =>
+          onServerStart.call(
+            undefined,
+            provider.addon
+              ? frozenView(
+                  addonServices(s, provider.addon),
+                  [
+                    ...new Set([
+                      ...provider.needs,
+                      ...provider.optional,
+                      ...provider.provides,
+                      'logger',
+                    ]),
+                  ],
+                  provider.name
+                )
+              : s
+          ),
       })
     }
   }

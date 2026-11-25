@@ -20,9 +20,9 @@ describe('CreateWireServices', () => {
     const built: Built = { requestScope: { id: 'r1' } }
     // @ts-expect-error a wire service is required
     const missing: Built = {}
-    // @ts-expect-error a singleton key is not a wire service
     const shadowed: Built = {
       requestScope: { id: 'r1' },
+      // @ts-expect-error a singleton key is not a wire service
       kysely: { driver: 'x' },
     }
     assert.ok(built && missing && shadowed)

@@ -11,7 +11,8 @@ const connect = async (logger: Logger, env: Record<string, unknown>) => {
   }
   const database = new PikkuKysely<any>(logger, url)
   await database.init()
-  return { kysely: database.kysely }
+  const db = database.kysely
+  return { kysely: Object.assign(db, { stop: () => db.destroy() }) }
 }
 
 /**

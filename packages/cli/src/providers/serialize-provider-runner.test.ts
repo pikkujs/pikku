@@ -79,7 +79,10 @@ describe('serializeProviderRunner', () => {
       /\{"kind":"singleton","addon":\{"namespace":"nats","env":\["NATS_URL"\],"envRename":\{"NATS_URL":"STAGE_NATS_URL"\}\}\}\)/
     )
     assert.match(source, /const \{ stopOrder \} = await runProviders/)
-    assert.match(source, /recordStopOrder\(stopOrder\)/)
+    assert.match(
+      source,
+      /recordStopOrder\(stopOrder, Object.keys\(services\)\)/
+    )
   })
 
   test('a deploy profile is handed to the runner so it picks the variant it was resolved for', () => {
@@ -244,7 +247,7 @@ describe('serializeProviderRunner', () => {
         writeFileSync(
           join(dir, 'services.ts'),
           `export const db = {
-  deploy: () => ({ kysely: { plugins: [], withPlugin(p) { return { ...this, plugins: [...this.plugins, p] } } } }),
+  deploy: () => ({ kysely: { plugins: [], destroyed: 0, destroy() { this.destroyed++ }, withPlugin(p) { return { ...this, plugins: [...this.plugins, p] } } } }),
 }
 export const cache = ({ kysely }) => ({ cache: { plugins: kysely.plugins.length } })
 `
@@ -275,6 +278,8 @@ export const cache = ({ kysely }) => ({ cache: { plugins: kysely.plugins.length 
         const services = await runner.createPlatformServices({}, {})
         assert.deepEqual(services.kysely.plugins, [{ map }])
         assert.deepEqual(services.cache, { plugins: 1 })
+        await services.kysely.stop()
+        assert.equal(services.kysely.destroyed, 1)
       } finally {
         rmSync(dir, { recursive: true, force: true })
       }

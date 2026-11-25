@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { addFunction, runPikkuFunc } from './function-runner.js'
 import { resetPikkuState, pikkuState } from '../pikku-state.js'
 import { ProviderRegistry, WireProviders } from '../provider/index.js'
+import { createInvocationAudit } from '../services/audit-service.js'
 import type { ProviderError } from '../provider/index.js'
 
 beforeEach(() => {
@@ -165,6 +166,43 @@ describe('runPikkuFunc with wire providers', () => {
       true
     )
     assert.equal(await call('audited'), false)
+  })
+
+  test('audit rows a wire provider wrote are flushed when the project createWireServices returns its own auditLog', async () => {
+    const written: any[] = []
+    register(
+      new ProviderRegistry().add(
+        'events',
+        (({ auditLog }: any) => {
+          void auditLog.write({ type: 'provider.event', source: 'explicit' })
+          return { events: 1 }
+        }) as never,
+        meta(['auditLog'], ['events']),
+        { kind: 'wire' }
+      )
+    )
+    addFunction('audited', {
+      func: async ({ events }: any) => events,
+      audit: true,
+    } as any)
+    pikkuState(null, 'function', 'meta').audited = {
+      pikkuFuncId: 'audited',
+      inputSchemaName: null,
+      outputSchemaName: null,
+      sessionless: true,
+      services: { optimized: true, services: ['events'] },
+    } as any
+    const audit = { audit: async (event: unknown) => written.push(event) }
+    await call('audited', {
+      singletonServices: { logger, audit },
+      createWireServices: async (services: any, wire: any) => ({
+        auditLog: createInvocationAudit(services.audit, wire),
+      }),
+    })
+    assert.deepEqual(
+      written.map((event) => event.type),
+      ['provider.event']
+    )
   })
 
   test('the project createWireServices receives the provided keys, and may not return one of them', async () => {
