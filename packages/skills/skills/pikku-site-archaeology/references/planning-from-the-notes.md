@@ -17,6 +17,10 @@ rules of the `pikku-changes` skill, and these on top:
   `pikku ui pages capture <url> --out artifacts/references/<site>`, done when every page on the list has its screenshots and
   style.json there and the pictures are in its `pictures/` folder), then a frame change (`frontend`: header, footer, theme;
   depends on the capture). Every page change depends on the frame change, so no page is built before the capture and the frame exist.
+- The frame change carries the shared behaviour of `interactions.md` (the menu that opens, the header on scroll, hover and
+  focus states, transitions, the language switch), and a page change the behaviour of its own pages. A change that builds a
+  form lists every field with its type, whether required, its options and any control beside it, and the validation and
+  receipt the original shows.
 - Every `frontend` change lists the pages it builds in `"pages"`, as route paths: `"pages": ["/", "/about"]`. At most 5 pages per
   change. `pikku changes done` compares exactly those pages with the original and refuses until each one matches.
 - Pages that share a template are one change, not one change each: every product page of a shop, every collection, every article,

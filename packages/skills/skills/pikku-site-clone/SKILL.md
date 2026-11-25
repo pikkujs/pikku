@@ -30,7 +30,9 @@ mkdir -p $REF && pikku ui pages capture https://the-site.example/ --out $REF > $
 ```
 
 It finds every page (robots.txt, the sitemaps, then same-site links) and writes the list to `$REF/pages.txt`. That list
-is your to-do list. Then, for every page, it writes into `$REF/`: `<page>.html` (as served), `<page>.json` (title,
+is your to-do list. First it writes `$REF/behaviour.json` (what the site relies on and does: outside hosts, forms and
+their fields, menus that open, hover, focus and scroll states, transitions; per page in `<page>.behaviour.json`, with
+pictures before and after an opener in `$REF/interactions/`): build those behaviours too. Then, for every page, it writes into `$REF/`: `<page>.html` (as served), `<page>.json` (title,
 description, menu in order, headings with computed sizes, text, colours by use, fonts by use, CSS breakpoints, pictures),
 `<page>-<width>.layout.json` (the layout, see `references/layout.md`), `<page>-<width>.style.json` (colours and fonts of
 the page background, header, headings, first paragraph and button), `<page>-<width>.jpg` (the full-page screenshot) and
