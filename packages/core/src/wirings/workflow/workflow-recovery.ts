@@ -188,7 +188,7 @@ export const sweepStalledRuns = async (
  * A store opts in by overriding `findUndispatchedSteps`, and needs an atomic
  * `claimStepForExecution` first: the relay makes duplicate dispatch routine, and
  * the claim is what keeps a duplicate from becoming a second execution. Every
- * `@pikku/kysely` dialect qualifies on its status-guarded claim, `mongodb` on
+ * `@pikku/addon-kysely` dialect qualifies on its status-guarded claim, `mongodb` on
  * the same claim as a single-document update, `in-memory` on being inline and
  * single-process.
  */

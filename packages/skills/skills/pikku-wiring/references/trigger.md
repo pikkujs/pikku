@@ -168,7 +168,7 @@ subscribe to its events as `<source>:<event>`:
   `incomingWebhookService: new IncomingWebhookService(queueService)` in your
   singleton services. The event `id` becomes the job id.
 - With a database, use `KyselyIncomingWebhookService(queueService, db)` from
-  `@pikku/kysely` instead (and `await service.init()`). It keeps a receipt per
+  `@pikku/addon-kysely` instead (and `await service.init()`). It keeps a receipt per
   event, so a provider's redelivery of an event already accepted is dropped
   even on queues that ignore job ids, and records each attempt and its last
   error. Its `webhookReceipt` table comes from `pikku db generate`; `pikku dev`

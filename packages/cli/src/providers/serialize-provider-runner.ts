@@ -16,7 +16,7 @@ export interface SerializeProviderRunnerOptions {
   /**
    * The app's column coercion map. When it is non-empty and a service provides
    * `kysely`, that service's factory is wrapped so the `kysely` it returns
-   * carries `createCoercionPlugin` from `@pikku/kysely`, before any service
+   * carries `createCoercionPlugin` from `@pikku/addon-kysely`, before any service
    * that needs `kysely` runs. A baseline `kysely` is the entry's own and is not
    * touched here.
    */
@@ -156,7 +156,9 @@ export const serializeProviderRunner = ({
     ...(wire.length > 0
       ? [`import { pikkuState } from '@pikku/core/state'`]
       : []),
-    ...(coerce ? [`import { createCoercionPlugin } from '@pikku/kysely'`] : []),
+    ...(coerce
+      ? [`import { createCoercionPlugin } from '@pikku/addon-kysely'`]
+      : []),
     ...imports,
     ``,
     ...coercion,

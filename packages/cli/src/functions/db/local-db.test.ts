@@ -1515,7 +1515,7 @@ describe('db.schema', () => {
  * The case the option was added for.
  *
  * A project whose migrations already create the runtime tables but are a column
- * short — what upgrading `@pikku/kysely` looks like — gets a delta rather than
+ * short — what upgrading `@pikku/addon-kysely` looks like — gets a delta rather than
  * the whole schema. The delta is written from bare introspected names, so it is
  * the one output that does not inherit the qualification from the compiled SQL
  * and has to be given it. Unqualified, `ALTER TABLE workflow_step` resolves

@@ -1,17 +1,17 @@
 ---
 type: decision
 title: Standalone deploys get NATS from a service opted in with wireAddon
-description: '@pikku/queue-nats publishes a service that, on a deploy, puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
+description: '@pikku/addon-queue-nats publishes a service that, on a deploy, puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
 tags: [nats, provider, deploy, standalone, permissions]
 ---
 
 # Standalone deploys get NATS from a service opted in with wireAddon
 
-`@pikku/queue-nats` has no functions. It publishes one `defineProvider`, `nats`
+`@pikku/addon-queue-nats` has no functions. It publishes one `defineProvider`, `nats`
 (a deploy variant that connects, and a dev variant that provides only an inert
 `natsLifecycle`, so `pikku dev` keeps its in-memory queue). The package is built
 as an addon, so its service metadata ships under `./.pikku/*`. An app opts in at build time with
-`wireAddon({ name: 'nats', package: '@pikku/queue-nats', providers: ['nats'] })`.
+`wireAddon({ name: 'nats', package: '@pikku/addon-queue-nats', providers: ['nats'] })`.
 
 ## Which build applies it
 

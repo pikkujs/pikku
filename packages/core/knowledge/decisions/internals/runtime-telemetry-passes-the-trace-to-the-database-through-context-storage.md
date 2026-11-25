@@ -16,7 +16,7 @@ back out.
 The Kysely trace dialect calls `currentTrace()` once per query and opens a child
 span, so `db.select` lands under the function span in the same trace. Without a
 `contextStorage`, `currentTrace()` returns `undefined` and queries are not traced
-rather than parented wrongly. A test in `@pikku/kysely` drives a real
+rather than parented wrongly. A test in `@pikku/addon-kysely` drives a real
 `OtlpTracer` and decodes the export to prove the parenting.
 
 The same context is on the tracer itself as the optional

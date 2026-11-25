@@ -245,7 +245,7 @@ describe(`StandaloneProviderAdapter postgres wiring`, () => {
 
     assert.match(
       source,
-      /import \{ PikkuKysely \} from '@pikku\/kysely-postgres'/
+      /import \{ PikkuKysely \} from '@pikku\/addon-kysely-postgres'/
     )
     assert.match(source, /process\.env\.DATABASE_URL/)
   })
@@ -896,7 +896,7 @@ describe(`StandaloneProviderAdapter workflow service`, () => {
 
     assert.match(
       source,
-      /import \{ PgKyselyWorkflowService, PgKyselyWorkflowRunService \} from '@pikku\/kysely-postgres'/
+      /import \{ PgKyselyWorkflowService, PgKyselyWorkflowRunService \} from '@pikku\/addon-kysely-postgres'/
     )
     assert.match(source, /new PgKyselyWorkflowService\(kysely, \{ leaseService/)
     assert.match(source, /new PgKyselyWorkflowRunService\(kysely\)/)

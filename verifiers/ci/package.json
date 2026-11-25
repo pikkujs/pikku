@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "@pikku/addon-admin": "workspace:*",
+    "@pikku/addon-kysely": "workspace:*",
+    "@pikku/addon-kysely-bun-sqlite": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/bun-server": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
-    "@pikku/kysely-bun-sqlite": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/ws": "workspace:*",
     "better-auth": "^1.7.10",

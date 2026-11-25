@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/queue-nats": "workspace:*",
+    "@pikku/addon-queue-nats": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/bun-server": "workspace:*"

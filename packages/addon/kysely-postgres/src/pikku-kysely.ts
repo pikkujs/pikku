@@ -1,0 +1,103 @@
+import type { Logger } from '@pikku/core/services'
+import type { PostgresConfig } from '@pikku/core/types'
+import { CamelCasePlugin, Kysely } from 'kysely'
+import { traceDialect, type TraceDriverOptions } from '@pikku/addon-kysely'
+import { PostgresJSDialect } from 'kysely-postgres-js'
+import postgres from 'postgres'
+
+export class PikkuKysely<DB> {
+  public kysely: Kysely<DB>
+  private postgres: postgres.Sql<{}>
+  private ownsConnection: boolean
+
+  constructor(
+    private logger: Logger,
+    connectionOrConfig: postgres.Sql<{}> | postgres.Options<{}> | string,
+    defaultSchemaName?: string,
+    poolConfig?: PostgresConfig,
+    /**
+     * Record each statement as a `db.<operation>` client span (operation and
+     * first table; never parameters, never an error message). Needs both
+     * `tracer` and `currentTrace`, otherwise nothing is wrapped.
+     */
+    tracing?: Omit<TraceDriverOptions, 'system'>
+  ) {
+    // Map the runtime pool config to postgres.js options. Only set keys that
+    // were provided so postgres.js keeps its own defaults otherwise.
+    const poolOptions: postgres.Options<{}> = {}
+    if (poolConfig?.maxPool !== undefined) poolOptions.max = poolConfig.maxPool
+    if (poolConfig?.connectTimeout !== undefined)
+      poolOptions.connect_timeout = poolConfig.connectTimeout
+    if (poolConfig?.idleTimeout !== undefined)
+      poolOptions.idle_timeout = poolConfig.idleTimeout
+    if (poolConfig?.maxLifetime !== undefined)
+      poolOptions.max_lifetime = poolConfig.maxLifetime
+    if (poolConfig?.prepare !== undefined)
+      poolOptions.prepare = poolConfig.prepare
+    if (poolConfig?.statementTimeout !== undefined)
+      poolOptions.connection = {
+        statement_timeout: poolConfig.statementTimeout,
+      }
+
+    // Check if it's a postgres.Sql instance, a connection string, or config options
+    if (typeof connectionOrConfig === 'function') {
+      // It's a postgres.Sql instance — already constructed, pool options N/A
+      this.postgres = connectionOrConfig as postgres.Sql<{}>
+      this.ownsConnection = false
+    } else if (typeof connectionOrConfig === 'string') {
+      // It's a connection string URL
+      this.postgres = postgres(connectionOrConfig, poolOptions)
+      this.ownsConnection = true
+    } else {
+      // It's a config object
+      this.postgres = postgres({ ...connectionOrConfig, ...poolOptions })
+      this.ownsConnection = true
+    }
+
+    this.kysely = new Kysely<DB>({
+      dialect: traceDialect(
+        new PostgresJSDialect({
+          postgres: this.postgres,
+        }),
+        { ...tracing, system: 'postgresql' }
+      ),
+      plugins: [new CamelCasePlugin()],
+    })
+
+    if (defaultSchemaName) {
+      this.kysely = this.kysely.withSchema(defaultSchemaName)
+    }
+  }
+
+  /**
+   * The underlying postgres.js connection.
+   *
+   * Exposed for the work Kysely cannot express: applying a migration file, whose
+   * many statements need the simple protocol, on a single reserved connection.
+   * Ordinary queries go through {@link kysely}.
+   */
+  public get sql(): postgres.Sql<{}> {
+    return this.postgres
+  }
+
+  public async init() {
+    this.logger.info('Connecting to database...')
+
+    try {
+      const response = await this.postgres`SELECT version();`
+      const version = response[0]?.version
+      this.logger.info(version)
+    } catch (error) {
+      this.logger.error('Error connecting to database', error)
+      throw error
+    }
+  }
+
+  public async close() {
+    await this.kysely.destroy()
+    // Only end the connection if we created it
+    if (this.ownsConnection) {
+      await this.postgres.end()
+    }
+  }
+}

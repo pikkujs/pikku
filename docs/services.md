@@ -2,7 +2,7 @@
 
 A **provider** is a factory that builds one or more of the services your functions use, for example a database client from a binding, a queue, or a mail client, and hands them to your `createSingletonServices`. Providers are declared in code with `defineProvider`. A project opts in to an addon's providers by name with `wireAddon`; nothing is injected into a project that did not ask for it.
 
-`defineProvider` is for **target-owned providers**: providers whose construction depends on where the app runs (`pikku dev`, a standalone bundle, a Cloudflare unit). Services every target builds the same way (`@pikku/kysely`, pg-boss) can stay explicit in your own `createSingletonServices`.
+`defineProvider` is for **target-owned providers**: providers whose construction depends on where the app runs (`pikku dev`, a standalone bundle, a Cloudflare unit). Services every target builds the same way (`@pikku/addon-kysely`, pg-boss) can stay explicit in your own `createSingletonServices`.
 
 ## Declare a provider
 
@@ -143,7 +143,7 @@ interface ServiceSupport {
 
 ## Column coercion
 
-When the app has a coercion map (from `pikku db generate`) and a service provides `kysely`, the generated runner wraps that service so the `kysely` it returns carries `createCoercionPlugin` from `@pikku/kysely`, before any service that needs `kysely` runs. A deployed query then returns the same Date, boolean and parsed JSON values it does under `pikku dev`. No provider selects anything for this, and a baseline `kysely` is the entry's own and is not wrapped. See [`db-column-annotations.md`](./db-column-annotations.md).
+When the app has a coercion map (from `pikku db generate`) and a service provides `kysely`, the generated runner wraps that service so the `kysely` it returns carries `createCoercionPlugin` from `@pikku/addon-kysely`, before any service that needs `kysely` runs. A deployed query then returns the same Date, boolean and parsed JSON values it does under `pikku dev`. No provider selects anything for this, and a baseline `kysely` is the entry's own and is not wrapped. See [`db-column-annotations.md`](./db-column-annotations.md).
 
 ## Errors at a glance
 

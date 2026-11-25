@@ -29,7 +29,7 @@ project that declares one fails there.
 
 **Column coercion.** When the app has a coercion map and a service provides
 `kysely`, the runner wraps that service's factory so the `kysely` it returns
-carries `createCoercionPlugin` from `@pikku/kysely`. It is the generator's job,
+carries `createCoercionPlugin` from `@pikku/addon-kysely`. It is the generator's job,
 not each provider's, so every deploy target returns the same Date, boolean and
 parsed JSON values `pikku dev` does. A baseline `kysely` is the entry's own and
 is not wrapped.

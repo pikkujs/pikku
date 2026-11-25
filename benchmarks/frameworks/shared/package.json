@@ -4,8 +4,8 @@
   "private": true,
   "dependencies": {
     "@cfworker/json-schema": "^4.1.1",
-    "@pikku/kysely": "workspace:*",
-    "@pikku/kysely-node-sqlite": "workspace:*",
+    "@pikku/addon-kysely": "workspace:*",
+    "@pikku/addon-kysely-node-sqlite": "workspace:*",
     "better-auth": "1.7.7",
     "kysely": "0.29.6",
     "zod": "^4"

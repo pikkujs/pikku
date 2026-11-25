@@ -7,7 +7,7 @@ import {
   SerializePlugin,
   virtualUserSchema,
   virtualUserScheduleSchema,
-} from '@pikku/kysely'
+} from '@pikku/addon-kysely'
 
 import '../../.pikku/pikku-bootstrap.gen.js'
 import { createSingletonServices } from '../services.js'

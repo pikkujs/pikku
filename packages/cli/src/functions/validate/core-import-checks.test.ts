@@ -136,7 +136,7 @@ describe('core import checks', () => {
       root,
       'src/a.ts',
       `import { pikkuFunc } from '#pikku/function'\n` +
-        `import { Kysely } from '@pikku/kysely'\n`
+        `import { Kysely } from '@pikku/addon-kysely'\n`
     )
 
     assert.deepEqual(await runCoreImportChecks(root), [])

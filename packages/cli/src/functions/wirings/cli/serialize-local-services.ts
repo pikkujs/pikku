@@ -37,17 +37,17 @@ export type DatabaseEngine = 'sqlite' | 'postgres' | 'mysql'
 
 const ENGINE_WORKFLOW = {
   sqlite: {
-    pkg: '@pikku/kysely-sqlite',
+    pkg: '@pikku/addon-kysely-sqlite',
     service: 'SQLiteKyselyWorkflowService',
     runService: 'SQLiteKyselyWorkflowRunService',
   },
   postgres: {
-    pkg: '@pikku/kysely-postgres',
+    pkg: '@pikku/addon-kysely-postgres',
     service: 'PgKyselyWorkflowService',
     runService: 'PgKyselyWorkflowRunService',
   },
   mysql: {
-    pkg: '@pikku/kysely-mysql',
+    pkg: '@pikku/addon-kysely-mysql',
     service: 'MySQLKyselyWorkflowService',
     runService: 'MySQLKyselyWorkflowRunService',
   },
@@ -63,7 +63,7 @@ export interface SerializeLocalServicesOptions {
   /** The events the project declares with `defineAnalyticsEvents`: the map the local database sink is registered with. */
   analyticsEvents: string[]
   /**
-   * Whether the project has a database, which is what brings in `@pikku/kysely`
+   * Whether the project has a database, which is what brings in `@pikku/addon-kysely`
    * and the services backed by it. Without one the file imports from
    * `@pikku/core` alone.
    */
@@ -91,7 +91,7 @@ export const localServicesPackages = ({
   SerializeLocalServicesOptions,
   'database' | 'engine' | 'localCLI'
 >): string[] => [
-  ...(database ? ['@pikku/kysely'] : []),
+  ...(database ? ['@pikku/addon-kysely'] : []),
   ...(database && engine ? [ENGINE_WORKFLOW[engine].pkg] : []),
   ...(localCLI ? ['@pikku/schedule'] : []),
 ]
@@ -121,13 +121,13 @@ const sqliteOpener = (
       "This project's database is sqlite, and opening it under ${runtime} needs ${pkg}. Add it to the project's dependencies, or set DATABASE_URL to a database this process can open."
     )`
   const bun = drivers.bunSqlite
-    ? `const { createBunSqliteKysely } = await import('@pikku/kysely-bun-sqlite')
+    ? `const { createBunSqliteKysely } = await import('@pikku/addon-kysely-bun-sqlite')
     return createBunSqliteKysely<any>({ filename, plugins: ${plugins} })`
-    : missing('@pikku/kysely-bun-sqlite', 'bun')
+    : missing('@pikku/addon-kysely-bun-sqlite', 'bun')
   const node = drivers.nodeSqlite
-    ? `const { createNodeSqliteKysely } = await import('@pikku/kysely-node-sqlite')
+    ? `const { createNodeSqliteKysely } = await import('@pikku/addon-kysely-node-sqlite')
   return createNodeSqliteKysely<any>({ filename, plugins: ${plugins} })`
-    : missing('@pikku/kysely-node-sqlite', 'node')
+    : missing('@pikku/addon-kysely-node-sqlite', 'node')
   return `const openSqlite = async (filename: string): Promise<Kysely<any>> => {
   mkdirSync(dirname(filename), { recursive: true })
   if (typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined') {
@@ -273,7 +273,7 @@ const inMemoryBody = (
     // services are only emitted for a project codegen saw a database in.
     const warnLogger = options.logger ?? stderr
     warnLogger.warn(
-      'A database is configured, but pikku-local-services.gen.ts was generated for a project without one, so its services run in memory. Add db/sqlite or db/postgres, or declare @pikku/kysely, and regenerate.'
+      'A database is configured, but pikku-local-services.gen.ts was generated for a project without one, so its services run in memory. Add db/sqlite or db/postgres, or declare @pikku/addon-kysely, and regenerate.'
     )
   }
   const queueService = new InMemoryQueueService()
@@ -521,8 +521,8 @@ export const serializeLocalServices = ({
   if (database) {
     imports.push(
       opens && (drivers?.pg || drivers?.mysql)
-        ? `import { CamelCasePlugin, Kysely${drivers?.mysql ? ', MysqlDialect' : ''}${drivers?.pg ? ', PostgresDialect' : ''} } from '@pikku/kysely'`
-        : `import type { Kysely } from '@pikku/kysely'`
+        ? `import { CamelCasePlugin, Kysely${drivers?.mysql ? ', MysqlDialect' : ''}${drivers?.pg ? ', PostgresDialect' : ''} } from '@pikku/addon-kysely'`
+        : `import type { Kysely } from '@pikku/addon-kysely'`
     )
   }
   imports.push(
@@ -561,7 +561,7 @@ export const serializeLocalServices = ({
   KyselyScopeService,
   KyselyTriggerSourceStore,
   KyselyWebhookService,
-} from '@pikku/kysely'`)
+} from '@pikku/addon-kysely'`)
     if (engine) {
       const { pkg, service, runService } = ENGINE_WORKFLOW[engine]
       imports.push(`import { ${service}, ${runService} } from '${pkg}'`)

@@ -10,7 +10,7 @@ import { Kysely, MysqlDialect, SqliteDialect } from 'kysely'
 import { PostgresJSDialect } from 'kysely-postgres-js'
 import postgres from 'postgres'
 import { createPool } from 'mysql2'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import type { KyselyPikkuDB } from '@pikku/addon-kysely'
 import type { LabelsDB } from '@pikku/verifier-db-addon/types'
 
 import '../.pikku/pikku-bootstrap.gen.js'

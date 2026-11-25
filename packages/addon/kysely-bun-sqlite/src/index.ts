@@ -1,0 +1,20 @@
+export { kysely } from './provider.js'
+export {
+  BunSqliteDatabase,
+  openBunSqliteDatabase,
+} from './bun-sqlite-adapter.js'
+export {
+  createBunSqliteKysely,
+  type CreateBunSqliteKyselyOptions,
+} from './create-bun-sqlite-kysely.js'
+export { registerSqliteFunctions } from './register-functions.js'
+export {
+  SqliteFunctionsUnsupportedError,
+  type SqliteFunctionMap,
+} from '@pikku/addon-kysely-sqlite'
+export {
+  createCoercionPlugin,
+  type ColumnKind,
+  type CoercionMap,
+  type CreateCoercionPluginOptions,
+} from '@pikku/addon-kysely'

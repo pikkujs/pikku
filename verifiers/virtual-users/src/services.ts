@@ -6,7 +6,7 @@ import type { QueueService } from '@pikku/core/queue'
 import type {
   KyselyVirtualUserRunStore,
   KyselyVirtualUserScheduleStore,
-} from '@pikku/kysely'
+} from '@pikku/addon-kysely'
 
 export interface VerifierStores {
   virtualUserRunStore: KyselyVirtualUserRunStore

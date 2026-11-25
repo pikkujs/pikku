@@ -22,8 +22,8 @@ import { defineServiceTests } from '@pikku/core/testing'
 import {
   PgKyselyLeaseService,
   PgKyselyWorkflowService,
-} from '@pikku/kysely-postgres'
-import { MySQLKyselyLeaseService } from '@pikku/kysely-mysql'
+} from '@pikku/addon-kysely-postgres'
+import { MySQLKyselyLeaseService } from '@pikku/addon-kysely-mysql'
 import { RedisLeaseService } from '@pikku/redis'
 import { connectionString } from '../config.js'
 

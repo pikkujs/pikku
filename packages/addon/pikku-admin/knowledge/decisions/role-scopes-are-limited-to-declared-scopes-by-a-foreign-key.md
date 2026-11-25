@@ -13,10 +13,10 @@ checks nothing about the scope ids it receives. It passes them to
 (`scope-create-role.function.ts:12-13`).
 
 The database does so through the schema. The `pikkuRoleScopes` table references
-`pikkuScopes.name` for its `scope` column (`packages/services/kysely/src/schema/scope.schema.ts:61-64`),
+`pikkuScopes.name` for its `scope` column (`packages/addon/kysely/src/schema/scope.schema.ts:61-64`),
 and a foreign key on `scope` names the same target (`scope.schema.ts:68-72`).
 The Kysely scope service's class comment states the same rule
-(`packages/services/kysely/src/kysely-scope-service.ts:24-26`).
+(`packages/addon/kysely/src/kysely-scope-service.ts:24-26`).
 
 Declared scopes are upserted into that table and never deleted: a scope that is no
 longer declared is marked `declared = false` (`kysely-scope-service.ts:41-46`).

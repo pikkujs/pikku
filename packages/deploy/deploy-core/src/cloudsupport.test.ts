@@ -127,7 +127,7 @@ describe('the vendored cloudsupport data', () => {
   })
 
   it('keeps the other built-ins on the tiers they were verified at', () => {
-    assert.equal(tier('@pikku/kysely'), 'edge')
+    assert.equal(tier('@pikku/addon-kysely'), 'edge')
     assert.equal(tier('@pikku/better-auth'), 'serverless')
     assert.equal(tier('@pikku/modelcontextprotocol'), 'server')
     assert.equal(tier('@pikku/modelcontextprotocol', './fetch'), 'edge')

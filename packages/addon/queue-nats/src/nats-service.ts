@@ -164,7 +164,8 @@ const devNatsLifecycle: NatsLifecycle = {
  */
 export const nats = defineProvider({
   dev: () => ({ natsLifecycle: devNatsLifecycle }),
-  deploy: async ({ logger }, env) => connectNats(logger, env),
+  'deploy:standalone': async ({ logger }, env) => connectNats(logger, env),
+  'deploy:server': async ({ logger }, env) => connectNats(logger, env),
   async onServerStart(services) {
     const lifecycle: NatsLifecycle = services.natsLifecycle
     await lifecycle.registerQueues(services.logger)

@@ -117,7 +117,7 @@ async function setup(): Promise<Harness> {
   let probe: RunLeaseProbe
   if (backend === 'bullmq-mysql') {
     const { MySQLKyselyWorkflowService, MySQLKyselyLeaseService } =
-      await import('@pikku/kysely-mysql')
+      await import('@pikku/addon-kysely-mysql')
     const { createPool } = await import('mysql2')
     const db = new Kysely<any>({
       dialect: new MysqlDialect({
@@ -135,7 +135,7 @@ async function setup(): Promise<Harness> {
     workflowService = new (Service as any)(db, { leaseService: probe })
   } else {
     const { PgKyselyWorkflowService, PgKyselyLeaseService } =
-      await import('@pikku/kysely-postgres')
+      await import('@pikku/addon-kysely-postgres')
     const { PostgresJSDialect } = await import('kysely-postgres-js')
     const postgres = (await import('postgres')).default
     const pg = postgres(connectionString, { max: 20 })

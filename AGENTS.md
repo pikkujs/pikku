@@ -202,7 +202,7 @@ path needs `tsc6`: it stays installed only for the `typescript` alias.
   them with `--parallel`, so every file gets its own worker process, and
   `--coverage` writes an `lcov.info` at the package root. Three packages stay on
   node's runner because bun cannot host them — `@pikku/ws`, `@pikku/uws` and
-  `@pikku/kysely` — and each says why at the top of its own runner.
+  `@pikku/addon-kysely` — and each says why at the top of its own runner.
 - **Every change, branch, or PR needs verifier coverage following a TDD/BDD flow** — the verifier test fails before the code change and passes after.
 
 ### Testing templates

@@ -32,7 +32,7 @@ behind the interface. For uploading and reading files through `content`, use
 
 SQL is the third option for every store interface in that table —
 `KyselyChannelStore`, `KyselyWorkflowService`, `KyselySecretService` and friends
-live in `@pikku/kysely` and are covered by `pikku-kysely`, because using them
+live in `@pikku/addon-kysely` and are covered by `pikku-kysely`, because using them
 means writing queries.
 
 Per-package detail: `references/aws.md`, `references/backblaze.md`,

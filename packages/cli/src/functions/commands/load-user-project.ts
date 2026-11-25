@@ -101,7 +101,7 @@ export async function loadFreshUserModule(
  * `pikku dev` boot the app on top of, shared with its generated local CLI.
  *
  * Loaded from the project rather than bundled with the CLI, so the file
- * resolves `@pikku/core` and `@pikku/kysely` from the same place the app does.
+ * resolves `@pikku/core` and `@pikku/addon-kysely` from the same place the app does.
  */
 export async function loadCreateLocalServices(
   rootDir: string,

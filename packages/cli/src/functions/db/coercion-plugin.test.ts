@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createCoercionPlugin, type CoercionMap } from '@pikku/kysely'
+import { createCoercionPlugin, type CoercionMap } from '@pikku/addon-kysely'
 
 function selectFrom(table: string) {
   return {

@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "module": "Node18",
+    "outDir": "dist",
+    "target": "esnext",
+    "declaration": true,
+    "types": ["bun"],
+    "paths": {
+      "#pikku/*.js": ["./.pikku/*.ts"],
+      "#pikku/*": ["./.pikku/*/index.ts"]
+    },
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Node16"
+  },
+  "include": ["src/**/*.ts", "types/**/*.d.ts", ".pikku/**/*.ts"],
+  "exclude": ["**/*.test.ts", "node_modules", "dist", ".pikku/**/*.d.ts"]
+}

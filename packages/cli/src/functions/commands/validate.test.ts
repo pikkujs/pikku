@@ -376,7 +376,7 @@ describe('pikku validate', () => {
       await makeValidWorkspace(tmp)
       await writeJson(join(tmp, 'packages', 'functions', 'package.json'), {
         type: 'module',
-        dependencies: { '@pikku/kysely-postgres': '^1.0.0', zod: '^4' },
+        dependencies: { '@pikku/addon-kysely-postgres': '^1.0.0', zod: '^4' },
       })
       await writeFile(
         join(tmp, 'packages', 'functions', 'src', 'services.ts'),
@@ -735,7 +735,7 @@ describe('custom-server-bootstrap', () => {
       await setRootScripts(
         tmp,
         { start: 'node dist/start.js' },
-        { '@pikku/jose': '^1.0.0', '@pikku/kysely': '^1.0.0' }
+        { '@pikku/jose': '^1.0.0', '@pikku/addon-kysely': '^1.0.0' }
       )
       const result = await runProjectValidate(tmp, {
         skipTypecheck: true,

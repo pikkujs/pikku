@@ -6,8 +6,8 @@
 import {
   PgKyselyLeaseService,
   PgKyselyWorkflowService,
-} from '@pikku/kysely-postgres'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+} from '@pikku/addon-kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/addon-kysely'
 import { PgBossServiceFactory } from '@pikku/queue-pg-boss'
 import { pikkuState } from '@pikku/core/state'
 import { rpcService } from '@pikku/core/rpc'

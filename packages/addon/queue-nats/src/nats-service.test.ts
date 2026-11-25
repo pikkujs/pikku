@@ -39,7 +39,7 @@ const fakeFactory = () => {
 
 describe('nats service registration', () => {
   test('connects on a deploy and gives pikku dev only an inert lifecycle', async () => {
-    assert.equal(typeof nats.deploy, 'function')
+    assert.equal(typeof nats['deploy:standalone'], 'function')
     assert.equal(typeof nats.dev, 'function')
     assert.equal('common' in nats, false)
     const { natsLifecycle } = (nats.dev as () => { natsLifecycle: any })()
@@ -139,7 +139,7 @@ describe('nats service lifecycle', () => {
 
   test('the deploy variant builds from the logger and env', async () => {
     await assert.rejects(
-      nats.deploy!({ logger: undefined } as never, {}),
+      nats['deploy:standalone']!({ logger: undefined } as never, {}),
       /needs NATS_URL/
     )
   })

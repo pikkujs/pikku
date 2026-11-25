@@ -507,7 +507,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      # @pikku/queue-nats' integration suite skips itself when NATS_TEST_URL is
+      # @pikku/addon-queue-nats' integration suite skips itself when NATS_TEST_URL is
       # unset, so until this existed it reported pass without ever connecting.
       # Not a `services:` container: `-js` is a command argument and `services:`
       # has no `command:` key, so there is no way to enable JetStream there.
@@ -526,7 +526,7 @@ jobs:
           echo "NATS did not become ready" >&2
           docker logs pikku-nats >&2 || true
           exit 1
-      - run: bun run --filter @pikku/cli --filter @pikku/addon-changes-cli --filter @pikku/addon-cloud-cli --filter @pikku/kysely-postgres --filter @pikku/kysely --filter @pikku/mongodb --filter @pikku/queue-nats --filter @pikku/deploy-standalone --sequential test
+      - run: bun run --filter @pikku/cli --filter @pikku/addon-changes-cli --filter @pikku/addon-cloud-cli --filter @pikku/addon-kysely-postgres --filter @pikku/addon-kysely --filter @pikku/mongodb --filter @pikku/addon-queue-nats --filter @pikku/deploy-standalone --sequential test
         env:
           NATS_TEST_URL: nats://127.0.0.1:4222
 
@@ -538,7 +538,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/addon-changes-cli' --filter '!@pikku/addon-cloud-cli' --filter '!@pikku/kysely-postgres' --filter '!@pikku/kysely' --filter '!@pikku/mongodb' --filter '!@pikku/queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
+      - run: bun run --filter '*' --filter '!@pikku/templates-*' --filter '!@pikku/example-*' --filter '!@pikku/verifiers-*' --filter '!@pikku/e2e' --filter '!@pikku/cli' --filter '!@pikku/addon-changes-cli' --filter '!@pikku/addon-cloud-cli' --filter '!@pikku/addon-kysely-postgres' --filter '!@pikku/addon-kysely' --filter '!@pikku/mongodb' --filter '!@pikku/addon-queue-nats' --filter '!@pikku/deploy-standalone' --parallel test
 
   e2e:
     name: E2E Standard
@@ -707,7 +707,8 @@ jobs:
     name: Native desktop (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
-    needs: [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
+    needs:
+      [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
     continue-on-error: ${{ matrix.optional == true }}
     strategy:
@@ -844,7 +845,8 @@ jobs:
     name: Native iOS (simulator)
     runs-on: macos-latest
     timeout-minutes: 60
-    needs: [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
+    needs:
+      [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
     steps:
       - uses: actions/checkout@v7

@@ -268,7 +268,7 @@ Object.entries(all)
     done
 
     # --ignore-scripts: the @pikku/* packages go in as `file:` deps above, and a
-    # file: dependency brings its devDependencies with it — so @pikku/kysely's
+    # file: dependency brings its devDependencies with it — so @pikku/addon-kysely's
     # dev-only better-sqlite3 lands in the test app and gets compiled from source
     # through a `bunx node-gyp@latest` whose extraction races itself, failing on a
     # different half-written file every run. No template imports better-sqlite3,

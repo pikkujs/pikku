@@ -1,7 +1,7 @@
 ---
 name: pikku-kysely
 description: >-
-  Kysely queries in Pikku functions (joins, aggregates, transactions), collapsing sequential awaits, @pikku/kysely setup. A non-SQL store is pikku-service-backends; pagination is pikku-list-query.
+  Kysely queries in Pikku functions (joins, aggregates, transactions), collapsing sequential awaits, @pikku/addon-kysely setup. A non-SQL store is pikku-service-backends; pagination is pikku-list-query.
 installGroups: [core]
 ---
 
@@ -237,12 +237,12 @@ reads that only needed `Promise.all`.
 
 Pikku provides SQL database services through six packages:
 
-- `@pikku/kysely` — Base service implementations (database-agnostic), the serialize plugins, `createAuditedKysely` and the `pikkuSchemas` helpers
-- `@pikku/kysely-postgres` — PostgreSQL-specific implementations + the `PikkuKysely` connection wrapper
-- `@pikku/kysely-mysql` — MySQL-specific implementations
-- `@pikku/kysely-sqlite` — SQLite-specific implementations, `createSQLiteKysely`, and the `LibsqlWebDialect`
-- `@pikku/kysely-node-sqlite` — `createNodeSqliteKysely` over `node:sqlite`, plus user-defined SQL functions and the coercion plugin
-- `@pikku/kysely-bun-sqlite` — the same over `bun:sqlite`
+- `@pikku/addon-kysely` — Base service implementations (database-agnostic), the serialize plugins, `createAuditedKysely` and the `pikkuSchemas` helpers
+- `@pikku/addon-kysely-postgres` — PostgreSQL-specific implementations + the `PikkuKysely` connection wrapper
+- `@pikku/addon-kysely-mysql` — MySQL-specific implementations
+- `@pikku/addon-kysely-sqlite` — SQLite-specific implementations, `createSQLiteKysely`, and the `LibsqlWebDialect`
+- `@pikku/addon-kysely-node-sqlite` — `createNodeSqliteKysely` over `node:sqlite`, plus user-defined SQL functions and the coercion plugin
+- `@pikku/addon-kysely-bun-sqlite` — the same over `bun:sqlite`
 
 The last two are runtime adapters rather than service sets: they build the
 `Kysely<DB>` you inject into functions, while the dialect packages above supply
@@ -302,11 +302,11 @@ pikku db migrate    # applies it and regenerates the types
   the reason and nothing is written: declare a new column nullable or with a
   default.
 - **Rename a column with `renamedFrom`.** `caption: { type: 'text', renamedFrom:
-  'label' }` writes `RENAME COLUMN` and keeps the rows. Delete `renamedFrom` once
+'label' }` writes `RENAME COLUMN` and keeps the rows. Delete `renamedFrom` once
   the migration is applied. It is refused on a column in a key, an index or a
   reference.
 - **Rename a table with `renamedFrom`.** `dashboard: { renamedFrom: 'desk',
-  columns: {...} }` writes `ALTER TABLE ... RENAME TO ...` and keeps the rows,
+columns: {...} }` writes `ALTER TABLE ... RENAME TO ...` and keeps the rows,
   renames the indexes, keys and triggers the engine named after the table, and a
   foreign key in another table follows (declare it `references: 'dashboard.id'`).
   No drop, no approval. Delete `renamedFrom` once the migration is applied. It is
@@ -358,7 +358,7 @@ pikku db migrate    # applies it and regenerates the types
   (`..._<8 hex>_<kind>_check`) the declaration no longer wants under that exact
   name is dropped (add first, then drop, so a bound is never unenforced), which
   is what removes the old rule after you rename a table or column by hand; `db
-  check` reports it, a check with a name of your own is left alone. Aurora MySQL 3.x is
+check` reports it, a check with a name of your own is left alone. Aurora MySQL 3.x is
   accepted, MariaDB, Aurora 2.x and 5.7 are refused. **SQLite gets no CHECK at all**:
   validation only, and `db generate`/`db check` print one notice with the
   `CHECK` SQL to add by hand (constraints a hand-written check in the migrations
@@ -391,11 +391,11 @@ pikku db migrate    # applies it and regenerates the types
 
 ```bash
 # Pick your database
-yarn add @pikku/kysely @pikku/kysely-postgres     # PostgreSQL
-yarn add @pikku/kysely @pikku/kysely-mysql        # MySQL
-yarn add @pikku/kysely @pikku/kysely-sqlite       # SQLite (stores)
-yarn add @pikku/kysely-node-sqlite                # SQLite on Node
-yarn add @pikku/kysely-bun-sqlite                 # SQLite on Bun
+yarn add @pikku/addon-kysely @pikku/addon-kysely-postgres     # PostgreSQL
+yarn add @pikku/addon-kysely @pikku/addon-kysely-mysql        # MySQL
+yarn add @pikku/addon-kysely @pikku/addon-kysely-sqlite       # SQLite (stores)
+yarn add @pikku/addon-kysely-node-sqlite                # SQLite on Node
+yarn add @pikku/addon-kysely-bun-sqlite                 # SQLite on Bun
 ```
 
 ## API Reference
@@ -403,7 +403,7 @@ yarn add @pikku/kysely-bun-sqlite                 # SQLite on Bun
 ### PostgreSQL Connection — `PikkuKysely`
 
 ```typescript
-import { PikkuKysely } from '@pikku/kysely-postgres'
+import { PikkuKysely } from '@pikku/addon-kysely-postgres'
 
 const db = new PikkuKysely<DB>(
   logger: Logger,
@@ -426,7 +426,7 @@ an already-constructed connection.
 ### SQLite factories
 
 ```typescript
-import { createNodeSqliteKysely } from '@pikku/kysely-node-sqlite'
+import { createNodeSqliteKysely } from '@pikku/addon-kysely-node-sqlite'
 
 // Your application DB — CamelCasePlugin on by default
 const kysely = createNodeSqliteKysely<DB>({
@@ -438,7 +438,7 @@ const kysely = createNodeSqliteKysely<DB>({
 ```
 
 ```typescript
-import { createSQLiteKysely } from '@pikku/kysely-sqlite'
+import { createSQLiteKysely } from '@pikku/addon-kysely-sqlite'
 
 // Pikku's own tables — returns Kysely<KyselyPikkuDB>, not your DB
 const pikkuDb = createSQLiteKysely(
@@ -488,7 +488,7 @@ Each database variant exports these services with a prefix (`Pg`, `MySQL`, `SQLi
 | `*SecretService`       | `SecretService`                             | Encrypted secret storage (envelope encryption) |
 
 A handful more live only on the base package — there is no `Pg`/`MySQL`/`SQLite`
-variant to reach for, you import them from `@pikku/kysely` whatever the engine:
+variant to reach for, you import them from `@pikku/addon-kysely` whatever the engine:
 
 | Service                      | Purpose                                                             |
 | ---------------------------- | ------------------------------------------------------------------- |
@@ -511,7 +511,7 @@ current one and returns the new version, and it throws if no `previousKey` is
 configured.
 
 ```typescript
-import { PgKyselySecretService } from '@pikku/kysely-postgres'
+import { PgKyselySecretService } from '@pikku/addon-kysely-postgres'
 
 const secrets = new PgKyselySecretService(db.kysely, {
   key: 'your-key-encryption-passphrase',
@@ -543,7 +543,7 @@ import {
   PgKyselyChannelStore,
   PgKyselyLeaseService,
   PgKyselyWorkflowService,
-} from '@pikku/kysely-postgres'
+} from '@pikku/addon-kysely-postgres'
 
 const createSingletonServices = pikkuServices(async (config) => {
   const logger = new PinoLogger()
@@ -578,7 +578,7 @@ const createSingletonServices = pikkuServices(async (config) => {
 import {
   createSQLiteKysely,
   SQLiteKyselyChannelStore,
-} from '@pikku/kysely-sqlite'
+} from '@pikku/addon-kysely-sqlite'
 import Database from 'better-sqlite3'
 
 const kysely = createSQLiteKysely(new Database('app.db'))
@@ -592,7 +592,7 @@ await channelStore.init()
 import {
   MySQLKyselyLeaseService,
   MySQLKyselyWorkflowService,
-} from '@pikku/kysely-mysql'
+} from '@pikku/addon-kysely-mysql'
 
 const leaseService = new MySQLKyselyLeaseService(kyselyInstance)
 await leaseService.init()

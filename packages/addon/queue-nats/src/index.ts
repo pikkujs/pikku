@@ -1,5 +1,5 @@
 /**
- * @module @pikku/queue-nats
+ * @module @pikku/addon-queue-nats
  *
  * NATS JetStream queue service for Pikku.
  *

@@ -8,17 +8,17 @@
  */
 
 import { CamelCasePlugin, Kysely, type KyselyPlugin } from 'kysely'
-import { SerializePlugin } from '@pikku/kysely'
+import { SerializePlugin } from '@pikku/addon-kysely'
 import { D1Dialect } from 'kysely-d1'
 import type { D1Database } from '@cloudflare/workers-types'
-import type { KyselyPikkuDB } from '@pikku/kysely'
+import type { KyselyPikkuDB } from '@pikku/addon-kysely'
 import type { WorkflowServiceOptions } from '@pikku/core/workflow'
 import {
   KyselyWorkflowService,
   KyselyAgentStorageService,
   KyselyAgentRunService,
   KyselyAgentRunStateService,
-} from '@pikku/kysely'
+} from '@pikku/addon-kysely'
 
 export interface CreateD1KyselyOptions {
   /** Extra plugins to layer on, ahead of the always-last SerializePlugin. */

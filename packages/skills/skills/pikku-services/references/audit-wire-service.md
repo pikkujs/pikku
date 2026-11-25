@@ -7,7 +7,7 @@ Pair with `createAuditedKysely` to auto-capture every Kysely query as an audit e
 ```typescript
 // services.ts
 import { createInvocationAudit } from '@pikku/core/services'
-import { createAuditedKysely } from '@pikku/kysely'
+import { createAuditedKysely } from '@pikku/addon-kysely'
 
 export const createWireServices = pikkuWireServices(
   async (singletonServices, wire) => {

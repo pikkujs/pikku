@@ -1,7 +1,7 @@
 {
   "name": "@pikku/addon-altcha",
   "version": "0.0.1",
-  "description": "ALTCHA proof-of-work captcha for Pikku — a signed single-use challenge and a verify that refuses reuse and expiry, as ordinary RPCs",
+  "description": "ALTCHA proof-of-work captcha for Pikku \u2014 a signed single-use challenge and a verify that refuses reuse and expiry, as ordinary RPCs",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -37,13 +37,13 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo"
   },
   "dependencies": {
-    "@pikku/kysely": "^0.13.47",
+    "@pikku/addon-kysely": "^0.13.47",
     "altcha-lib": "^2.9.0"
   },
   "devDependencies": {
+    "@pikku/addon-kysely-bun-sqlite": "*",
     "@pikku/cli": "^0.12.215",
     "@pikku/core": "*",
-    "@pikku/kysely-bun-sqlite": "*",
     "@standard-schema/spec": "^1.1.0",
     "kysely": "^0.29.6",
     "zod": "^4"

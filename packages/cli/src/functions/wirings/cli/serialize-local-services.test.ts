@@ -54,10 +54,10 @@ describe('what the file imports', () => {
     assert.doesNotMatch(code, /import\(/)
   })
 
-  test('a database brings in @pikku/kysely, and only a CLI opens one', () => {
+  test('a database brings in @pikku/addon-kysely, and only a CLI opens one', () => {
     const code = emit({ localCLI: undefined })
-    assert.ok(importedModules(code).includes('@pikku/kysely'))
-    assert.match(code, /import type \{ Kysely \} from '@pikku\/kysely'/)
+    assert.ok(importedModules(code).includes('@pikku/addon-kysely'))
+    assert.match(code, /import type \{ Kysely \} from '@pikku\/addon-kysely'/)
     assert.doesNotMatch(code, /openLocalDatabase/)
     assert.doesNotMatch(code, /node:/)
     assert.doesNotMatch(code, /@pikku\/schedule/)
@@ -67,14 +67,14 @@ describe('what the file imports', () => {
     const code = emit({ database: false })
     assert.ok(importedModules(code).includes('@pikku/schedule'))
     assert.match(code, /metaService: new LocalMetaService/)
-    assert.ok(!importedModules(code).includes('@pikku/kysely'))
+    assert.ok(!importedModules(code).includes('@pikku/addon-kysely'))
     assert.doesNotMatch(code, /openLocalDatabase/)
   })
 
   test('declares exactly the packages it imports', () => {
     assert.deepStrictEqual(localServicesPackages({ database: false }), [])
     assert.deepStrictEqual(localServicesPackages({ database: true }), [
-      '@pikku/kysely',
+      '@pikku/addon-kysely',
     ])
     assert.deepStrictEqual(
       localServicesPackages({ database: false, localCLI: withCLI() }),
@@ -87,19 +87,19 @@ describe('the workflow services', () => {
   const engines = [
     [
       'sqlite',
-      '@pikku/kysely-sqlite',
+      '@pikku/addon-kysely-sqlite',
       'SQLiteKyselyWorkflowService',
       'SQLiteKyselyWorkflowRunService',
     ],
     [
       'postgres',
-      '@pikku/kysely-postgres',
+      '@pikku/addon-kysely-postgres',
       'PgKyselyWorkflowService',
       'PgKyselyWorkflowRunService',
     ],
     [
       'mysql',
-      '@pikku/kysely-mysql',
+      '@pikku/addon-kysely-mysql',
       'MySQLKyselyWorkflowService',
       'MySQLKyselyWorkflowRunService',
     ],
@@ -120,7 +120,7 @@ describe('the workflow services', () => {
       assert.match(code, /\n    workflowService,\n    workflowRunService,\n/)
       assert.deepStrictEqual(
         localServicesPackages({ database: true, engine }),
-        ['@pikku/kysely', pkg]
+        ['@pikku/addon-kysely', pkg]
       )
     })
   }
@@ -143,7 +143,7 @@ describe('the workflow services', () => {
       /const workflowService = new InMemoryWorkflowService\(\)/
     )
     assert.match(code, /workflowRunService: workflowService,/)
-    assert.doesNotMatch(code, /from '@pikku\/kysely/)
+    assert.doesNotMatch(code, /from '@pikku\/addon-kysely/)
   })
 
   test('a database of unknown engine keeps runs in memory', () => {
@@ -153,7 +153,7 @@ describe('the workflow services', () => {
       /const workflowService = new InMemoryWorkflowService\(\)/
     )
     assert.deepStrictEqual(localServicesPackages({ database: true }), [
-      '@pikku/kysely',
+      '@pikku/addon-kysely',
     ])
   })
 })
@@ -240,9 +240,12 @@ describe('the database openers', () => {
     const code = emit({
       localCLI: withCLI({ drivers: { ...noDrivers, nodeSqlite: true } }),
     })
-    assert.match(code, /await import\('@pikku\/kysely-node-sqlite'\)/)
-    assert.doesNotMatch(code, /await import\('@pikku\/kysely-bun-sqlite'\)/)
-    assert.match(code, /needs @pikku\/kysely-bun-sqlite/)
+    assert.match(code, /await import\('@pikku\/addon-kysely-node-sqlite'\)/)
+    assert.doesNotMatch(
+      code,
+      /await import\('@pikku\/addon-kysely-bun-sqlite'\)/
+    )
+    assert.match(code, /needs @pikku\/addon-kysely-bun-sqlite/)
   })
 
   test('opens postgres through pg only when it is declared', () => {
@@ -269,7 +272,7 @@ describe('the database openers', () => {
     assert.match(code, /await import\('mysql2'\)/)
     assert.match(
       code,
-      /import \{[^}]*MysqlDialect[^}]*\} from '@pikku\/kysely'/
+      /import \{[^}]*MysqlDialect[^}]*\} from '@pikku\/addon-kysely'/
     )
     assert.match(code, /if \(\/\^mysql:/)
     assert.match(code, /return \{ mysqlUrl: url \}/)
@@ -418,7 +421,7 @@ describe('the generated createLocalServices', async () => {
     try {
       await assert.rejects(
         createLocalServices({}),
-        /needs @pikku\/kysely-(bun|node)-sqlite/
+        /needs @pikku\/addon-kysely-(bun|node)-sqlite/
       )
     } finally {
       if (previous === undefined) delete process.env.DATABASE_URL

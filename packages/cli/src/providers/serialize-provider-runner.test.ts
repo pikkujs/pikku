@@ -171,7 +171,7 @@ describe('serializeProviderRunner', () => {
       })
       assert.match(
         source,
-        /import \{ createCoercionPlugin \} from '@pikku\/kysely'/
+        /import \{ createCoercionPlugin \} from '@pikku\/addon-kysely'/
       )
       assert.match(
         source,
@@ -221,7 +221,7 @@ describe('serializeProviderRunner', () => {
           specifier,
           ...options,
         })
-        assert.doesNotMatch(source, /Coercion|@pikku\/kysely/)
+        assert.doesNotMatch(source, /Coercion|@pikku\/addon-kysely/)
       }
     })
 
@@ -231,11 +231,11 @@ describe('serializeProviderRunner', () => {
       const dir = mkdtempSync(join(base, 'coercion-'))
       try {
         // The package is not needed to prove the wrap: stand in for the plugin.
-        const stub = join(dir, 'node_modules', '@pikku', 'kysely')
+        const stub = join(dir, 'node_modules', '@pikku', 'addon-kysely')
         mkdirSync(stub, { recursive: true })
         writeFileSync(
           join(stub, 'package.json'),
-          '{"name":"@pikku/kysely","type":"module","main":"index.js"}'
+          '{"name":"@pikku/addon-kysely","type":"module","main":"index.js"}'
         )
         writeFileSync(
           join(stub, 'index.js'),

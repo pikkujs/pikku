@@ -7,10 +7,10 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
+    "@pikku/addon-kysely": "workspace:*",
+    "@pikku/addon-kysely-bun-sqlite": "workspace:*",
+    "@pikku/addon-kysely-sqlite": "workspace:*",
     "@pikku/core": "workspace:*",
-    "@pikku/kysely": "workspace:*",
-    "@pikku/kysely-bun-sqlite": "workspace:*",
-    "@pikku/kysely-sqlite": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*"
   },
   "devDependencies": {

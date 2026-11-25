@@ -136,6 +136,10 @@ for _stale in .pikku .pikku/backends/cli; do
   sed -i -e "/^import { createAnalyticsSinks } from '@pikku\/core\/analytics'$/d" -e 's/ ?? createAnalyticsSinks()//' "$_stale/pikku-local-services.gen.ts"
 done
 
+# The published CLI also generates imports of the kysely packages under their old names,
+# which no longer exist in the workspace.
+find .pikku -path .pikku/remote -prune -o -name '*.ts' -print0 | xargs -0 -r sed -i -E "s#'@pikku/kysely(-[a-z-]+)?'#'@pikku/addon-kysely\1'#g"
+
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
 npx tsc -b || true

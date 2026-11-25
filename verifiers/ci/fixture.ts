@@ -15,7 +15,7 @@ import { promisify } from 'node:util'
 const exec = promisify(execFile)
 const here = import.meta.dirname
 const packages = join(here, '..', '..', 'packages')
-const VENDORED = ['core', 'services/kysely', 'services/kysely-sqlite']
+const VENDORED = ['core', 'addon/kysely', 'addon/kysely-sqlite']
 
 /**
  * A stub workspace member for a Pikku package: installs stay inside it, and its

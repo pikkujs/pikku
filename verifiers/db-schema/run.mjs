@@ -2,7 +2,7 @@
  * End-to-end verifier for the schema-source registry, on either dialect.
  *
  * Every source `pikku db generate` knows about is present and real: Better Auth
- * configured with plugins that add tables *and* columns, the `@pikku/kysely`
+ * configured with plugins that add tables *and* columns, the `@pikku/addon-kysely`
  * runtime declaration, and an addon that declares a table in `db/tables.ts` and
  * publishes the declaration with `pikku db export`. Nothing is stubbed — the CLI binary runs against a real
  * database, and the assertions read the migrations it wrote and the database it
