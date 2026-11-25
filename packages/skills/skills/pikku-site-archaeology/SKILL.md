@@ -72,7 +72,16 @@ Write plain notes in `knowledge/site/` (follow the pikku-knowledge skill for the
 Say which page each fact comes from. Write "not seen" for anything you could not see. Never guess a price, a currency
 or a field.
 
-## 4. Then plan from it
+## 4. Ask about the site's other apps first
+
+When the site links to its own sub-domains or sibling apps (the same registrable domain on another host, such as
+`app.<site>` or `info.<site>`, in `behaviour.json` `outsideHosts`, `actions` or the pages' links), do not file yet. End
+this turn with one short question to the person: list each host with what the capture saw of it (its first page's title,
+and whether it has a sign-in, a shop or forms) and say the default: out of scope, kept as a link and an open question.
+File after the answer. A host they plan in is captured with `pikku ui pages capture <its url>` and planned like the main
+site; the others stay links with an open question.
+
+## 5. Then plan from it
 
 Do not build. Go back to the pikku-changes skill and file the plan from your notes, following
 `references/planning-from-the-notes.md` (what a plan for a site holds: the capture and frame changes, pages, new pages, templates, the starter's defaults). Finish with

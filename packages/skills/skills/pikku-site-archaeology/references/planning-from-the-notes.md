@@ -29,10 +29,13 @@ rules of the `pikku-changes` skill, and these on top:
   replaces it (a hosted form becomes the app's own form and table, a tracker or error reporter is removed, fonts and pictures
   are served by the app, the page builder's hosting is the rebuilt app), or one that keeps it, in the body of the change that
   links to it: "Decision: keep <service>: <why>". Before filing, check each one against the plan's bodies.
+- The site's own sub-domains and sibling apps are planned only as the person answered when asked (see the skill's step 4):
+  one left out is a link and an "Open question: ..." in the change that links to it.
 - Moving the domain (DNS, registrar, mail records, the old host's shutdown) is the owner's operation, not app code: it is an
   "Open question: ..." in the data change, never a change of its own.
 - A clone needs its look first. The capture is already in `artifacts/references/<site>/` (with `behaviour.json`): file no
-  capture change, only an `artifacts` change for pages the capture missed or that failed, by name. Then a frame change
+  capture or "complete the reference" change. A step or page the capture could not reach is an "Open question: ..." in the
+  change that needs it. Then a frame change
   (`frontend`: header, footer, theme). Every page change depends on the frame change, so no page is built before the frame exists.
 - The frame change carries the shared behaviour of `interactions.md` (the menu that opens, the header on scroll, hover and
   focus states, transitions, the language switch), and a page change the behaviour of its own pages. A change that builds a

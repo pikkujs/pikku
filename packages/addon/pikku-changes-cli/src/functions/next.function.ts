@@ -398,7 +398,7 @@ Read the knowledge base for what the app already is, then file the whole request
 [{ "ref": "data", "title": "<one line>", "body": "<what is built>. Done when you can <what the person sees>.", "specialist": "build", "dependsOn": [] }]
 \`\`\`
 
-The first change is the data change, and every other change depends on it. When the plan has screens, the first change's body lists the functions they call (name, input, output) declared \`mock: true\`. Each change is one commit's worth, in the app's own words; \`specialist\` is one of ${SPECIALISTS.join(', ')}. Where the request leaves something open, write "Decision: ..." in the body; do not ask. The command names every problem in a plan it refuses: fix them and run it again. When it says filing is complete, stop; another agent builds them.
+The first change is the data change, and every other change depends on it. When the plan has screens, the first change's body lists the functions they call (name, input, output) declared \`mock: true\`. Each change is one commit's worth, in the app's own words; \`specialist\` is one of ${SPECIALISTS.join(', ')}. Where the request leaves something open, write "Decision: ..." in the body; do not ask, except the one question the site study asks about a site's own sub-domains or sibling apps before it files. The command names every problem in a plan it refuses: fix them and run it again. When it says filing is complete, stop; another agent builds them.
 `,
 })
 
