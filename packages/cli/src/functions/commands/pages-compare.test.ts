@@ -305,7 +305,13 @@ describe('the capture of what a site relies on and does', () => {
         const assets = host.startsWith('127.0.0.1')
           ? `http://localhost:${host.split(':')[1]}`
           : ''
-        if (req.method === 'POST') {
+        if (host.startsWith('localhost') && req.url === '/moved')
+          res
+            .writeHead(301, {
+              location: `http://127.0.0.1:${host.split(':')[1]}/`,
+            })
+            .end()
+        else if (req.method === 'POST') {
           posts++
           res.end('{}')
         } else if (req.url === '/old')
@@ -343,6 +349,14 @@ describe('the capture of what a site relies on and does', () => {
         site as unknown as { pages: (root: string) => Promise<string[]> }
       ).pages(`${base}/`)
       assert.deepEqual(listed, [`${base}/`, `${base}/about`])
+      // an address that moves to another host of the site (a bare domain to www) is listed on the host it lands on
+      const port = (server.address() as AddressInfo).port
+      assert.deepEqual(
+        await (
+          site as unknown as { pages: (root: string) => Promise<string[]> }
+        ).pages(`http://localhost:${port}/moved`),
+        [`${base}/`, `${base}/about`]
+      )
       try {
         await site.capture(out, [`${base}/old|home`], [1440], false, 1, {
           chromium,

@@ -35,9 +35,11 @@ const idOf = (url) => { const p = new URL(url).pathname.replace(/^\/+|\/+$/g, ''
 const UA = 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 
 // ---------------------------------------------------------------- pages
-/** The site's page list: sitemap(s), then same-site links. */
+/** The site's page list: sitemap(s), then same-site links, on the host the address lands on (a bare domain that moves to www). */
 export async function pages(root) {
-  const base = new URL(root).origin
+  let landed = root
+  try { landed = (await fetch(root, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) })).url || root } catch {}
+  const base = new URL(landed).origin
   const seen = new Set(), out = []
   const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !/\.(jpe?g|png|gif|webp|svg|pdf|css|js|xml|json|ico|txt)$/i.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
   const get = async (u) => { try { return await (await fetch(u, { headers: { 'user-agent': UA } })).text() } catch { return '' } }
@@ -53,7 +55,8 @@ export async function pages(root) {
   // the sitemap is the list; internal links catch what it misses. Only what answers with HTML is a page: a feed, an API
   // answer, a redirect off the site or a download linked from a page is not captured as one.
   // Eight at a time: the page list is what the capture writes first, and a site of a hundred links is read in seconds.
-  const queue = [base + '/', ...out], notPages = new Set()
+  add(landed)
+  const queue = [...new Set([base + '/', ...out])], notPages = new Set()
   let next = 0
   const visit = async (u) => {
     let html = ''
