@@ -294,7 +294,7 @@ describe('the capture of what a site relies on and does', () => {
 <style>nav a { color: rgb(0, 0, 0); transition: color 0.2s ease } nav a:hover { color: rgb(200, 0, 0) } #menu[hidden] { display: none }</style>
 </head><body><header><nav><a href="/">Home</a><a href="/about">About</a><a href="/feed">Feed</a><a href="/wp-json/pages">API</a><a href="/guide.pdf">Guide</a></nav>
 <button aria-expanded="false" onclick="this.setAttribute('aria-expanded','true');document.getElementById('menu').hidden=false">Menu</button>
-<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a><a href="${assets}/delayed">Enroll</a><a href="${assets}/forms/d/e/abc/viewform">here</a>` : ''}<a href="/buy/123:1">Buy now</a><button>Jetzt buchen</button>
+<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a><a href="${assets}/delayed">Enroll</a><a href="${assets}/forms/d/e/abc/viewform">here</a>` : ''}<a href="/buy/123:1">Buy now</a><button>Jetzt buchen</button><a href="https://buy.stripe.com/test_abc">Pay by card</a><a href="/wp-json/wp/v2/pages/1">api</a><a href="/wp-content/uploads/talk.mp3">talk</a><a href="/fonts/a.woff2">font</a>
 <button onclick="document.getElementById('login').hidden=false">Log In</button><form id="login" hidden><input type="email" name="email" aria-label="Email"><input type="password" name="password" aria-label="Password"><button type="submit">Go</button></form></header>
 <main><h1>Welcome</h1><div class="apply">
 <label for="email">Email</label><input id="email" name="email" type="email" required>
@@ -361,7 +361,7 @@ describe('the capture of what a site relies on and does', () => {
           res
             .writeHead(200, { 'content-type': 'text/html' })
             .end(
-              `<!doctype html><title>Book a session</title><h2>Choose a session</h2><div class="intake"><label for="type">Session</label><select id="type" name="type" required><option>First session 90 min</option><option>Follow-up 80 min</option></select><label for="who">Name</label><input id="who" name="who" required><button onclick="fetch('/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'',who:''})})">Book</button></div>`
+              `<!doctype html><title>Book a session</title><h2>Choose a session</h2><div class="intake"><label for="type">Session</label><select id="type" name="type" required><option>First session 90 min</option><option>Follow-up 80 min</option></select><label for="who">Name</label><input id="who" name="who" required><a href="https://www.paypal.com/checkout">PayPal</a><button onclick="fetch('/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({type:'',who:''})})">Book</button></div>`
             )
         else if (req.url === '/feed')
           res
@@ -513,6 +513,17 @@ describe('the capture of what a site relies on and does', () => {
           .fields.map((x: { type: string }) => x.type),
         ['email', 'password']
       )
+      // a payment provider linked from the site's own page is listed; one only inside an embedded frame is not
+      assert.deepEqual(summary.payments, [
+        {
+          provider: 'Stripe',
+          hosts: [],
+          links: [
+            { href: 'https://buy.stripe.com/test_abc', text: 'Pay by card' },
+          ],
+          pages: ['home'],
+        },
+      ])
       const [frame] = summary.frames
       assert.equal(frame.src, `http://localhost:${port}/embed`)
       assert.equal(frame.title, 'Book a session')
@@ -528,7 +539,7 @@ describe('the capture of what a site relies on and does', () => {
       assert.deepEqual(Object.keys(frame.hosts), ['localhost'])
       assert.deepEqual(
         summary.downloads.map((d: { href: string }) => d.href),
-        [`${base}/guide.pdf`]
+        [`${base}/guide.pdf`, `${base}/wp-content/uploads/talk.mp3`]
       )
     }
   )
