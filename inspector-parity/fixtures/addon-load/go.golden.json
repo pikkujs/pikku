@@ -89,7 +89,8 @@
       }
      }
     }
-   }
+   },
+   "collections": {}
   },
   "rem": {
    "packageName": "@acme/addon",
@@ -109,7 +110,8 @@
       }
      }
     }
-   }
+   },
+   "collections": {}
   }
  },
  "secrets": {
@@ -400,13 +402,24 @@
      ]
     }
    }
+  ],
+  [
+   "stale",
+   {
+    "package": "@acme/addon3",
+    "file": "<ROOT>/src/app.ts",
+    "providers": [
+     "old"
+    ]
+   }
   ]
  ],
  "rpc.usedAddons": [
   "ext",
   "two",
   "three",
-  "rem"
+  "rem",
+  "stale"
  ],
  "rpc.wireAddonFiles": [
   "<ROOT>/src/app.ts"
@@ -465,6 +478,15 @@
   {
    "level": "warn",
    "message": "wireAddon('three') (declared in src/app.ts) names @acme/missing, which is not installed where it can be resolved \u2014 tried <ROOT>. Add \"@acme/missing\": \"workspace:*\" (or a version) to the dependencies of <ROOT>/package.json and run install."
+  },
+  {
+   "level": "critical",
+   "code": "PKU374",
+   "message": "Addon '@acme/addon3' publishes provider meta version 1; this CLI reads version 2. Run 'pikku all' in the addon with this CLI."
+  },
+  {
+   "level": "warn",
+   "message": "wireAddon('stale') (declared in src/app.ts): @acme/addon3 is installed at <ROOT>/node_modules/@acme/addon3 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon3."
   }
  ]
 }

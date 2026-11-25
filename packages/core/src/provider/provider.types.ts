@@ -1,3 +1,5 @@
+import type { PikkuWire } from '../types/core.types.js'
+
 /** The build a service is resolved for: `pikku dev`, or a deploy. */
 export type ProviderTarget = 'dev' | 'deploy'
 
@@ -20,8 +22,18 @@ export interface ProviderVariants<
 > {
   dev?: ProviderFactory<TNeeds, TProvides>
   deploy?: ProviderFactory<TNeeds, TProvides>
+  'deploy:standalone'?: ProviderFactory<TNeeds, TProvides>
+  'deploy:cloudflare-worker'?: ProviderFactory<TNeeds, TProvides>
+  'deploy:cloudflare-container'?: ProviderFactory<TNeeds, TProvides>
+  'deploy:server'?: ProviderFactory<TNeeds, TProvides>
   /** Used on every target that has no variant of its own. */
   common?: ProviderFactory<TNeeds, TProvides>
+  /** Needs that may be absent: string literals, read statically. */
+  optional?: readonly string[]
+  /** Protected keys this provider deliberately provides: string literals, read statically. */
+  replaces?: readonly string[]
+  /** The collection this provider adds one item to; its factories return that item. */
+  addTo?: ProviderCollection<string, any>
   /** Runtime setup, called where the server lifecycle runs once every service is built. */
   onServerStart?(services: any): void | Promise<void>
 }
@@ -54,3 +66,30 @@ export interface ResolvedProvider {
   factory: ProviderFactory
   onServerStart?: (services: any) => void | Promise<void>
 }
+
+declare const collectionBrand: unique symbol
+
+/** A list providers add to. The name is the services key readers destructure. */
+export interface ProviderCollection<TName extends string, TItem> {
+  readonly name: TName
+  readonly [collectionBrand]?: { item: TItem }
+}
+
+/** The per-target forms of one per-request service. */
+export type WireProviderVariants<
+  TNeeds = any,
+  TProvides extends object = Record<string, unknown>,
+> = {
+  [
+    V in Exclude<
+      keyof ProviderVariants,
+      'onServerStart' | 'addTo' | 'optional' | 'replaces'
+    >
+  ]?: WireProviderFactory<TNeeds, TProvides>
+} & Pick<ProviderVariants, 'optional' | 'replaces'>
+
+/** Builds a per-request service. `wire` is the invocation's wire, unchanged. */
+export type WireProviderFactory<
+  TNeeds = any,
+  TProvides extends object = Record<string, unknown>,
+> = (services: TNeeds, wire: PikkuWire) => TProvides | Promise<TProvides>

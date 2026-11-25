@@ -483,17 +483,17 @@
   {
    "level": "critical",
    "code": "PKU369",
-   "message": "Provider 'fromDynamic': defineProvider takes a factory function or an object with dev, deploy or common, got: dynamic"
+   "message": "Provider 'fromDynamic': defineProvider takes a factory function or an object with a variant, got: dynamic"
   },
   {
    "level": "critical",
    "code": "PKU369",
-   "message": "Provider 'neither': an object declares none of dev, deploy or common"
+   "message": "Provider 'neither': an object declares no variant"
   },
   {
    "level": "critical",
    "code": "PKU369",
-   "message": "Provider 'stray': defineProvider takes only dev, deploy, common and onServerStart, got: prod"
+   "message": "Provider 'stray': defineProvider takes only dev, deploy, deploy:<profile>, common, optional, replaces, addTo and onServerStart, got: prod"
   },
   {
    "level": "critical",
@@ -508,7 +508,7 @@
   {
    "level": "critical",
    "code": "PKU369",
-   "message": "Provider 'shorthand': defineProvider takes only dev, deploy, common and onServerStart as plain entries, got: deploy"
+   "message": "Provider 'shorthand': defineProvider takes only variants, optional, replaces, addTo and onServerStart as plain entries, got: deploy"
   },
   {
    "level": "critical",
@@ -528,7 +528,7 @@
   {
    "level": "critical",
    "code": "PKU372",
-   "message": "Provider 'untyped' common must return an object type with known keys, so the build can read what it provides, got: any"
+   "message": "Provider 'untyped' common must return an object type with known keys (or a union of them), so the build can read what it provides, got: any"
   },
   {
    "level": "critical",

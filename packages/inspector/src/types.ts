@@ -774,7 +774,16 @@ export type StudioMeta = {
   scopes?: string[]
 }
 
-export type ProviderVariantName = 'dev' | 'deploy' | 'common'
+export const PROVIDER_PROFILES = [
+  'standalone',
+  'cloudflare-worker',
+  'cloudflare-container',
+  'server',
+] as const
+export type ProviderProfile = (typeof PROVIDER_PROFILES)[number]
+
+export type ProviderVariantName =
+  'dev' | 'deploy' | `deploy:${ProviderProfile}` | 'common'
 
 /**
  * What the inspector read of one `defineProvider` variant: the keys its factory
@@ -807,6 +816,10 @@ export type ProviderMeta = {
   module: string
   export: string
   variants: Partial<Record<ProviderVariantName, ProviderVariantMeta>>
+  /** The collection an item provider adds to; its variants provide no key. */
+  addTo?: string
+  /** Protected keys this provider deliberately provides, sorted. */
+  replaces?: string[]
   /** True when the object form carries an `onServerStart`. */
   onServerStart?: boolean
 }
@@ -829,11 +842,17 @@ export type OptedInProvidersMeta = {
   packageName: string
   /** Each opted-in name with what the addon recorded; `module` is relative to the addon package. */
   providers: Record<string, ProviderMeta>
+  /** The collections the addon declares, by name. */
+  collections: Record<string, ProviderCollectionMeta>
 }
+
+export type ProjectFactoryKeys = { keys: string[]; optional: string[] }
 
 export interface InspectorServiceTypes {
   /** Property names of the project's SingletonServices type, sorted. */
   singletonServices: string[] | null
+  /** The SingletonServices properties declared optional, sorted. */
+  singletonOptional: string[]
   /** Property names of the project's Services type, unfiltered. */
   services: string[] | null
   /** Singleton services that are a `SecretService` under another name. */
@@ -849,6 +868,12 @@ export interface InspectorState {
   providers?: Record<string, ProviderMeta>
   /** Per wired addon namespace, the providers `wireAddon({ providers })` opted in to. */
   optedInProviders?: Record<string, OptedInProvidersMeta>
+  /** The provider collections this package declares with `defineProviderCollection`, by name. */
+  providerCollections?: Record<string, ProviderCollectionMeta>
+  /** The keys the project's `pikkuServices` factory returns, and which of them may be absent. */
+  projectServicesProvided?: ProjectFactoryKeys
+  /** The keys the project's `pikkuWireServices` factory returns, and which of them may be absent. */
+  projectWireServicesProvided?: ProjectFactoryKeys
   /** The services the project's `pikkuServices` factory destructures from `existingServices`, sorted. */
   projectServicesRead?: string[]
   rootDir: string // Root directory inferred from source files

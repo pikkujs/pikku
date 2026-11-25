@@ -36,3 +36,4 @@ wireRemoteAddon({
   local: { package: '@acme/addon', ui: true, providers: ['c1'] },
   auth: { credentialId: 'x' },
 })
+wireAddon({ name: 'stale', package: '@acme/addon3', providers: ['old'] })

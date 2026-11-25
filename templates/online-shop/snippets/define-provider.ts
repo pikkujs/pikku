@@ -1,4 +1,8 @@
-import { defineProvider } from '@pikku/core/provider'
+import {
+  defineProvider,
+  defineProviderCollection,
+  defineWireProvider,
+} from '@pikku/core/provider'
 
 /*
  * Outside `src/`, so `pikku all` does not read it as a real service: the shop's
@@ -18,3 +22,18 @@ export const jobsQueue = defineProvider({
   }),
 })
 // @snippet end defineProvider
+
+// @snippet start defineWireProvider
+export const requestId = defineWireProvider(
+  ({ logger }: { logger: object }, wire) => ({
+    requestId: { logger, wire },
+  })
+)
+// @snippet end defineWireProvider
+
+// @snippet start defineProviderCollection
+export const exportSinks = defineProviderCollection<
+  'exportSinks',
+  { name: string }
+>('exportSinks')
+// @snippet end defineProviderCollection

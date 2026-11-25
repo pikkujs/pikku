@@ -13,6 +13,7 @@ all_scenarios=(
   protected-addon lock-hostile-replace collection-key-conflict optional-bad-array
   collections-zero collections wire wire-lifetime wire-shadow wire-core-key runtime addon-cross
   lock-new lock-drift lock-frozen providers-only unknown-provider remote-providers remote-local
+  unused-services-param whole-services-param
 )
 
 fail() { # scenario, message
@@ -128,6 +129,8 @@ run_scenario() {
   reset_lock "$s"
   case "$s" in
     provides-nothing) expect_failure "$s" PKU380 "provides no key and adds to no collection" ;;
+    unused-services-param) expect_ok "$s" ;;
+    whole-services-param) expect_failure "$s" PKU371 "must destructure its services parameter" ;;
     optional-absent) expect_ok "$s" ;;
     default-initializer) expect_failure "$s" PKU386 "List it in optional" ;;
     optional-cascade-bad) expect_failure "$s" PKU391 "provides only sometimes" ;;

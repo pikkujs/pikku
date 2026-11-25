@@ -319,8 +319,11 @@ export interface SerializableInspectorState {
   studio?: InspectorState['studio']
   addonStudio?: InspectorState['addonStudio']
   providers?: InspectorState['providers']
+  providerCollections?: InspectorState['providerCollections']
   optedInProviders?: InspectorState['optedInProviders']
   projectServicesRead?: InspectorState['projectServicesRead']
+  projectServicesProvided?: InspectorState['projectServicesProvided']
+  projectWireServicesProvided?: InspectorState['projectWireServicesProvided']
   exportedContracts: InspectorState['exportedContracts']
 }
 
@@ -565,8 +568,11 @@ export function serializeInspectorState(
     studio: state.studio,
     addonStudio: state.addonStudio,
     providers: state.providers,
+    providerCollections: state.providerCollections,
     optedInProviders: state.optedInProviders,
     projectServicesRead: state.projectServicesRead,
+    projectServicesProvided: state.projectServicesProvided,
+    projectWireServicesProvided: state.projectWireServicesProvided,
     exportedContracts: state.exportedContracts,
   }
 }
@@ -814,8 +820,11 @@ export function deserializeInspectorState(
     studio: data.studio,
     addonStudio: data.addonStudio,
     providers: data.providers,
+    providerCollections: data.providerCollections,
     optedInProviders: data.optedInProviders,
     projectServicesRead: data.projectServicesRead,
+    projectServicesProvided: data.projectServicesProvided,
+    projectWireServicesProvided: data.projectWireServicesProvided,
     exportedContracts: data.exportedContracts || {
       http: {},
       cli: {},

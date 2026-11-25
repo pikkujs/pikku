@@ -1,5 +1,18 @@
 import { relative, sep } from 'node:path'
-import type { ProviderMeta, ProvidersManifest } from '@pikku/inspector'
+import {
+  PROVIDER_PROFILES,
+  type ProviderCollectionMeta,
+  type ProviderMeta,
+  type ProviderVariantName,
+  type ProvidersManifest,
+} from '@pikku/inspector'
+
+const VARIANT_ORDER: readonly ProviderVariantName[] = [
+  'dev',
+  'deploy',
+  ...PROVIDER_PROFILES.map((p) => `deploy:${p}` as const),
+  'common',
+]
 
 const relativeToPackage = (rootDir: string, file: string): string =>
   relative(rootDir, file).split(sep).join('/')
@@ -13,12 +26,13 @@ const relativeToPackage = (rootDir: string, file: string): string =>
  */
 export const serializeProvidersMeta = (
   providers: Record<string, ProviderMeta>,
-  rootDir: string
+  rootDir: string,
+  collections: Record<string, ProviderCollectionMeta> = {}
 ): string => {
   const published: ProvidersManifest['providers'] = {}
   for (const [name, meta] of Object.entries(providers)) {
     const variants: ProviderMeta['variants'] = {}
-    for (const variant of ['dev', 'deploy', 'common'] as const) {
+    for (const variant of VARIANT_ORDER) {
       const read = meta.variants[variant]
       if (!read) continue
       variants[variant] = {
@@ -39,13 +53,23 @@ export const serializeProvidersMeta = (
       module: relativeToPackage(rootDir, meta.module),
       export: meta.export,
       variants,
+      ...(meta.addTo ? { addTo: meta.addTo } : {}),
+      ...(meta.replaces?.length ? { replaces: meta.replaces } : {}),
       ...(meta.onServerStart ? { onServerStart: true } : {}),
+    }
+  }
+  const publishedCollections: ProvidersManifest['collections'] = {}
+  for (const [name, collection] of Object.entries(collections)) {
+    publishedCollections[name] = {
+      name: collection.name,
+      module: relativeToPackage(rootDir, collection.module),
+      export: collection.export,
     }
   }
   const manifest: ProvidersManifest = {
     metaVersion: 2,
     providers: published,
-    collections: {},
+    collections: publishedCollections,
   }
   return JSON.stringify(manifest, null, 2) + '\n'
 }

@@ -12,6 +12,7 @@ use super::order;
 use super::{Context, Phase, Registry, Visitor};
 use crate::diag::codes;
 use crate::remotesdk;
+use crate::tsutil;
 
 pub fn register(r: &mut Registry) {
     r.register(Visitor {
@@ -35,7 +36,7 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
         return;
     }
     let args = node.arguments();
-    let Some(first) = args.first().copied().filter(|a| is_object_literal(*a)) else { return };
+    let Some(first) = args.first().copied().map(tsutil::unwrap_as).filter(|a| is_object_literal(*a)) else { return };
     let mut name = String::new();
     let mut pkg = String::new();
     let mut pkg_node: Option<P<Node>> = None;
@@ -103,6 +104,15 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
                         format!("wireRemoteAddon's local.package must be a string literal, got: {}", node_text(init)),
                     );
                 }
+            }
+            "providers" => {
+                let label = if name.is_empty() { "…".to_string() } else { format!("'{name}'") };
+                ctx.log.critical(
+                    codes::REMOTE_ADDON_PROVIDERS,
+                    format!(
+                        "wireRemoteAddon({label}) takes no providers: providers run in this process, and a remote addon runs elsewhere. Put an in-process package in local: {{ package, providers }}."
+                    ),
+                );
             }
             "auth" if is_object_literal(init) => {
                 has_auth = true;
