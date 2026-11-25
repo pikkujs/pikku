@@ -95,6 +95,8 @@ export interface ProviderAddonScope {
 /** What the build knows about a provider beyond what its variants read. */
 export interface ProviderRegistration {
   kind: 'singleton' | 'wire'
+  /** The collection this provider adds one item to. Read from the definition when not given. */
+  addTo?: string
   /** Set for a provider opted in from an addon: it gets a scoped `env`, never the host's. */
   addon?: ProviderAddonScope
 }
@@ -109,6 +111,8 @@ export interface ResolvedProvider {
   optionalProvides: readonly string[]
   factory: ProviderFactory
   addon?: ProviderAddonScope
+  /** The collection this provider adds one item to; it provides no key. */
+  addTo?: string
   onServerStart?: (services: any) => void | Promise<void>
 }
 
@@ -116,9 +120,26 @@ declare const collectionBrand: unique symbol
 
 /** A list providers add to. The name is the services key readers destructure. */
 export interface ProviderCollection<TName extends string, TItem> {
+  /** The services key readers destructure. */
   readonly name: TName
   readonly [collectionBrand]?: { item: TItem }
 }
+
+/** One item a provider added to a collection, under the provider's name. */
+export interface ProviderCollectionEntry<TItem> {
+  /** The contributing provider's name: `<namespace>/<export>` or `<export>`. */
+  readonly label: string
+  /** What the provider returned for the collection. */
+  readonly item: TItem
+}
+
+/** The collection's key in the services holds the entries, sorted by label. */
+export type ProviderCollectionValue<TItem> =
+  readonly ProviderCollectionEntry<TItem>[]
+
+/** The item type of a collection. */
+export type ProviderCollectionItem<TCollection> =
+  TCollection extends ProviderCollection<string, infer TItem> ? TItem : never
 
 /** The per-target forms of one per-request service. */
 export type WireProviderVariants<

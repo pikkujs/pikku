@@ -17,6 +17,7 @@ interface Entry {
   definition: ProviderDefinition
   meta: ProviderMeta
   registration: ProviderRegistration
+  addTo?: string
 }
 
 /** The variants a target looks for, most specific first. */
@@ -67,6 +68,26 @@ export interface ProviderResolveOptions {
  */
 export class ProviderRegistry {
   private readonly entries: Entry[] = []
+  private readonly declaredCollections = new Set<string>()
+
+  /**
+   * Declares a collection, so a reader always finds it (an empty list when
+   * nothing adds to it). A collection a provider adds to is declared by that.
+   */
+  collection(name: string): this {
+    this.declaredCollections.add(name)
+    return this
+  }
+
+  /** Every collection the registry knows: declared, or added to by a provider. */
+  get collectionNames(): string[] {
+    return [
+      ...new Set([
+        ...this.declaredCollections,
+        ...this.entries.flatMap((entry) => (entry.addTo ? [entry.addTo] : [])),
+      ]),
+    ].sort()
+  }
 
   /**
    * Registers one provider. `meta` is the inspector's reading of each variant
@@ -85,7 +106,10 @@ export class ProviderRegistry {
         `Provider '${name}' is registered more than once.`
       )
     }
-    this.entries.push({ name, definition, meta, registration })
+    const addTo =
+      registration.addTo ??
+      (typeof definition === 'function' ? undefined : definition.addTo?.name)
+    this.entries.push({ name, definition, meta, registration, addTo })
     return this
   }
 
@@ -130,6 +154,7 @@ export class ProviderRegistry {
         optionalProvides: meta.optionalProvides ?? [],
         factory: chosen.factory,
         addon: entry.registration.addon,
+        addTo: entry.addTo,
         onServerStart:
           typeof definition === 'function'
             ? undefined
@@ -137,9 +162,25 @@ export class ProviderRegistry {
       })
     }
 
+    const collections = new Set(this.collectionNames)
+    const contributors = new Map<string, ResolvedProvider[]>()
+    for (const service of picked) {
+      if (!service.addTo) continue
+      contributors.set(service.addTo, [
+        ...(contributors.get(service.addTo) ?? []),
+        service,
+      ])
+    }
+
     const owners = new Map<string, ResolvedProvider>()
     for (const service of picked) {
       for (const key of service.provides) {
+        if (collections.has(key)) {
+          throw new ProviderError(
+            'collection-key-conflict',
+            `'${key}' is a provider collection; provider '${service.name}' cannot also provide it as a key.`
+          )
+        }
         const owner = owners.get(key)
         if (owner && owner !== service) {
           throw new ProviderError(
@@ -161,6 +202,11 @@ export class ProviderRegistry {
     for (const service of picked) {
       const set = new Set<ResolvedProvider>()
       for (const need of service.needs) {
+        if (collections.has(need)) {
+          for (const contributor of contributors.get(need) ?? [])
+            set.add(contributor)
+          continue
+        }
         const owner = owners.get(need)
         const optional = service.optional.includes(need)
         if (owner && owner !== service) {

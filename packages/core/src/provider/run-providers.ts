@@ -2,7 +2,9 @@ import { frozenView } from './frozen-view.js'
 import { ProviderError } from './provider-error.js'
 import type { ProviderRegistry } from './provider-registry.js'
 import { scopedEnv } from './scoped-env.js'
+import type { ProviderStopEntry } from './stop-order.js'
 import type {
+  ProviderCollectionEntry,
   ProviderEnv,
   ProviderProfile,
   ProviderTarget,
@@ -26,11 +28,11 @@ const hasKey = (value: object, key: string) =>
  * (and a scoped `env` for an addon's), then checks what it returned against
  * what the inspector read it to provide.
  */
-const build = async (
+const call = async (
   provider: ResolvedProvider,
   services: Record<string, any>,
   env: ProviderEnv
-): Promise<Record<string, unknown>> => {
+): Promise<unknown> => {
   const view = frozenView(
     services,
     [...new Set([...provider.needs, ...provider.optional])],
@@ -39,9 +41,8 @@ const build = async (
   const providerEnv = provider.addon
     ? scopedEnv(env, provider.addon, provider.name)
     : env
-  let returned: unknown
   try {
-    returned = await provider.factory(view, providerEnv)
+    return await provider.factory(view, providerEnv)
   } catch (error) {
     if (error instanceof ProviderError) throw error
     throw new ProviderError(
@@ -50,6 +51,14 @@ const build = async (
       { cause: error }
     )
   }
+}
+
+const build = async (
+  provider: ResolvedProvider,
+  services: Record<string, any>,
+  env: ProviderEnv
+): Promise<Record<string, unknown>> => {
+  const returned = await call(provider, services, env)
   const provided: Record<string, unknown> = {}
   const result = (
     returned !== null && typeof returned === 'object' ? returned : {}
@@ -83,10 +92,14 @@ const build = async (
 const stopOrderOf = (
   resolved: readonly ResolvedProvider[],
   services: Record<string, any>
-): string[] => {
+): ProviderStopEntry[] => {
   const seen = new Set<unknown>()
-  const order: string[] = []
+  const order: ProviderStopEntry[] = []
   for (const provider of [...resolved].reverse()) {
+    if (provider.addTo) {
+      order.push({ collection: provider.addTo, label: provider.name })
+      continue
+    }
     for (const key of [...provider.provides].reverse()) {
       const value = services[key]
       if (value === undefined || seen.has(value)) continue
@@ -96,6 +109,19 @@ const stopOrderOf = (
   }
   return order
 }
+
+const byLabel = (
+  a: ProviderCollectionEntry<unknown>,
+  b: ProviderCollectionEntry<unknown>
+) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0)
+
+/** The collection's value: its entries sorted by label, frozen, entries too. */
+const collectionValue = (
+  entries: readonly ProviderCollectionEntry<unknown>[]
+): readonly ProviderCollectionEntry<unknown>[] =>
+  Object.freeze(
+    [...entries].sort(byLabel).map((entry) => Object.freeze({ ...entry }))
+  )
 
 /**
  * Builds every service the registry has for `target`, in dependency order, onto
@@ -123,7 +149,7 @@ export const runProviders = async (
 ): Promise<{
   order: string[]
   start: ProviderStartHook[]
-  stopOrder: string[]
+  stopOrder: ProviderStopEntry[]
 }> => {
   const { services, target } = options
   const env = options.env ?? {}
@@ -131,8 +157,33 @@ export const runProviders = async (
     baseline: options.baseline ?? Object.keys(services),
     profile: options.profile,
   })
+  const collections = new Map<string, ProviderCollectionEntry<unknown>[]>()
+  for (const name of registry.collectionNames) {
+    const held = services[name]
+    collections.set(name, Array.isArray(held) ? [...held] : [])
+    services[name] = collectionValue(collections.get(name)!)
+  }
   for (const provider of resolved) {
-    Object.assign(services, await build(provider, services, env))
+    if (!provider.addTo) {
+      Object.assign(services, await build(provider, services, env))
+      continue
+    }
+    const item = await call(provider, services, env)
+    if (item === undefined || item === null) {
+      throw new ProviderError(
+        'missing-return',
+        `Provider '${provider.name}' returned no item for collection '${provider.addTo}'.`
+      )
+    }
+    const entries = collections.get(provider.addTo)!
+    if (entries.some((entry) => entry.label === provider.name)) {
+      throw new ProviderError(
+        'duplicate-name',
+        `Collection '${provider.addTo}' already has an item labelled '${provider.name}'.`
+      )
+    }
+    entries.push({ label: provider.name, item })
+    services[provider.addTo] = collectionValue(entries)
   }
   const start: ProviderStartHook[] = []
   for (const provider of resolved) {

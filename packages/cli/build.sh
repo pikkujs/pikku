@@ -128,6 +128,14 @@ rm -rf "$_bootstrap_dir"
 test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
 rm -rf -- .pikku/contributor .pikku/backends/cli/contributor
 
+# It also names `createAnalyticsSinks` and `AnalyticsSinkRegistry` in the analytics leaf and
+# the local services, which @pikku/core does not export. The local CLI rewrites all four
+# files below; until then they only have to load, so those names are dropped.
+for _stale in .pikku .pikku/backends/cli; do
+  sed -i -e '/^  createAnalyticsSinks,$/d' -e '/^  AnalyticsSinkRegistry,$/d' "$_stale/analytics/pikku-analytics-types.gen.ts"
+  sed -i -e "/^import { createAnalyticsSinks } from '@pikku\/core\/analytics'$/d" -e 's/ ?? createAnalyticsSinks()//' "$_stale/pikku-local-services.gen.ts"
+done
+
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
 npx tsc -b || true

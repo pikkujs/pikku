@@ -27,7 +27,6 @@ export const devBaselineServices = (options: {
   'agentRunService',
   'agentRunState',
   'agentStorage',
-  'analyticsSinks',
   'content',
   'emailService',
   'eventHub',

@@ -154,7 +154,15 @@ run_scenario() {
     lock-hostile-replace) expect_failure "$s" PKU395 "+ replaces secrets" ;;
     collection-key-conflict) expect_failure "$s" PKU398 "cannot also provide it as a key" ;;
     optional-bad-array) expect_failure "$s" PKU378 "array of string literals" ;;
-    collections-zero | collections) expect_ok "$s" ;;
+    collections-zero) expect_ok "$s" ;;
+    collections)
+      expect_ok "$s"
+      if out=$(cd "scenarios/$s" && npx tsx src/check-collections.ts 2>&1); then
+        pass "$s" "label-sorted frozen entries at runtime"
+      else
+        fail "$s" "runtime: $(tail -n 3 <<<"$out" | tr '\n' ' ')"
+      fi
+      ;;
     wire) expect_ok "$s" ;;
     wire-lifetime) expect_failure "$s" PKU392 "builds per request" ;;
     wire-shadow) expect_failure "$s" PKU393 "A key has one lifetime" ;;

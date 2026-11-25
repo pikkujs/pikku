@@ -1,9 +1,8 @@
 import { defineProvider } from '@pikku/core/provider'
-import { MARKER as PG } from '@verifier/fake-pg'
-import { MARKER as SQLITE } from '@verifier/fake-sqlite'
+import { containerKysely } from './kysely-container.js'
+import { workerKysely } from './kysely-worker.js'
 
 export const kysely = defineProvider({
-  dev: () => ({ kysely: { driver: SQLITE } }),
-  'deploy:cloudflare-worker': () => ({ kysely: { driver: SQLITE } }),
-  'deploy:cloudflare-container': () => ({ kysely: { driver: PG } }),
+  'deploy:cloudflare-worker': workerKysely,
+  'deploy:cloudflare-container': containerKysely,
 })

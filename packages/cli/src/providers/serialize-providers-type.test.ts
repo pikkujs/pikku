@@ -35,6 +35,20 @@ describe('serializeProvidersType', () => {
     )
   })
 
+  test('a collection is a required key holding the entries of its item type', () => {
+    const source = serializeProvidersType({
+      baseImport,
+      services: [],
+      collections: [{ name: 'things', specifier: './c.js', export: 'things' }],
+    })
+    assert.match(source, /Omit<BaseSingletonServices, "things"> & \{/)
+    assert.match(
+      source,
+      /readonly "things": CollectionEntries<typeof import\("\.\/c\.js"\)\.things>/
+    )
+    assert.match(source, /readonly ProviderCollectionEntry<Item>\[\]/)
+  })
+
   test('never writes `any`', () => {
     const source = serializeProvidersType({
       baseImport,

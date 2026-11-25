@@ -11,6 +11,7 @@ import {
   collectProviderSources,
   functionNeedsOf,
   resolveProviders,
+  runsNothing,
 } from '../providers/resolve-providers.js'
 import { serializeProviderRunner } from '../providers/serialize-provider-runner.js'
 
@@ -100,7 +101,7 @@ export async function writeUnitPlatformServices(options: {
     return undefined
   }
 
-  const { ordered } = resolveProviders({
+  const resolved = resolveProviders({
     state,
     rootDir: projectDir,
     target: 'deploy',
@@ -114,7 +115,7 @@ export async function writeUnitPlatformServices(options: {
     targetLabel: `the ${provider.name} deploy`,
     unitLabel: `unit '${ctx.unit.name}'`,
   })
-  if (ordered.length === 0) {
+  if (runsNothing(resolved)) {
     await remove()
     return undefined
   }
@@ -124,7 +125,8 @@ export async function writeUnitPlatformServices(options: {
     serializeProviderRunner({
       target: 'deploy',
       profile: support.profile,
-      services: ordered,
+      services: resolved.ordered,
+      collections: resolved.collections,
       specifier: (module) => module.replace(/\\/g, '/'),
       coercionMap: ctx.coercionMap,
     }),

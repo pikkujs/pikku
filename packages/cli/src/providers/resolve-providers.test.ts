@@ -460,6 +460,154 @@ describe('resolveProviders', () => {
     })
   })
 
+  describe('collections', () => {
+    const withCollections = (
+      services: Record<string, ReturnType<typeof service>>,
+      collections: Record<
+        string,
+        { name: string; module: string; export: string }
+      > = {}
+    ) =>
+      ({
+        ...(state(services) as object),
+        providerCollections: collections,
+      }) as never
+
+    const collection = (name: string) => ({
+      [name]: { name, module: 'src/services.ts', export: name },
+    })
+    const item = (
+      addTo: string,
+      variants: Record<string, Variant> = {
+        common: { needs: [], provides: [] },
+      }
+    ) => ({
+      ...service(variants),
+      addTo,
+    })
+
+    test('a contributor is ordered before the reader of its collection', () => {
+      const { ordered, collections } = resolve(
+        withCollections(
+          {
+            reader: service({
+              common: { needs: ['things'], provides: ['reader'] },
+            }),
+            one: item('things'),
+          },
+          collection('things')
+        ),
+        'dev',
+        ['logger'],
+        { requiredServices: ['reader'] }
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['one', 'reader']
+      )
+      assert.equal(ordered[0]!.addTo, 'things')
+      assert.deepEqual(collections, ['things'])
+    })
+
+    test('a reader of a collection nothing adds to is met', () => {
+      const { ordered, collections } = resolve(
+        withCollections(
+          {
+            reader: service({
+              common: { needs: ['things'], provides: ['reader'] },
+            }),
+          },
+          collection('things')
+        )
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['reader']
+      )
+      assert.deepEqual(collections, ['things'])
+    })
+
+    test('a contributor with no variant for the target adds nothing and is not an error', () => {
+      const { ordered } = resolve(
+        withCollections(
+          {
+            reader: service({
+              common: { needs: ['things'], provides: ['reader'] },
+            }),
+            devOnly: item('things', { dev: { needs: [], provides: [] } }),
+          },
+          collection('things')
+        ),
+        'deploy',
+        ['logger'],
+        { requiredServices: ['reader'] }
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['reader']
+      )
+    })
+
+    test('a contributor nothing reads is not selected', () => {
+      const { ordered } = resolve(
+        withCollections({ one: item('things') }, collection('things')),
+        'dev',
+        ['logger'],
+        { requiredServices: [] }
+      )
+      assert.deepEqual(ordered, [])
+    })
+
+    test('core analyticsSinks takes contributors without being declared', () => {
+      const { ordered, collections } = resolve(
+        state({ sink: item('analyticsSinks') }),
+        'dev',
+        ['logger'],
+        { requiredServices: ['analyticsSinks'] }
+      )
+      assert.deepEqual(
+        ordered.map((s) => s.name),
+        ['sink']
+      )
+      assert.deepEqual(collections, ['analyticsSinks'])
+    })
+
+    test('a provider providing the name of a collection is PKU398', () => {
+      assert.throws(
+        () =>
+          resolve(
+            withCollections(
+              {
+                clash: service({ common: { needs: [], provides: ['things'] } }),
+              },
+              collection('things')
+            )
+          ),
+        /\[PKU398\] 'things' is the provider collection declared in src\/services\.ts; provider 'clash' cannot also provide it as a key/
+      )
+    })
+
+    test('a reader that also contributes is a cycle (PKU387)', () => {
+      assert.throws(
+        () =>
+          resolve(
+            withCollections(
+              {
+                self: item('things', {
+                  common: { needs: ['things'], provides: [] },
+                }),
+              },
+              collection('things')
+            ),
+            'dev',
+            ['logger'],
+            { requiredServices: ['things'] }
+          ),
+        /\[PKU387\]/
+      )
+    })
+  })
+
   describe('optional needs and optional provides', () => {
     test('an optional need nothing provides is built without it', () => {
       const { ordered } = resolve(

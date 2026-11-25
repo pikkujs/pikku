@@ -7,6 +7,8 @@ export interface SerializeProviderRunnerOptions {
   profile?: ProviderProfile
   /** In run order, as `resolveProviders` returned them. */
   services: readonly ResolvedProviderImport[]
+  /** The collections the target holds, as `resolveProviders` returned them: each is a list a reader always finds. */
+  collections?: readonly string[]
   /** The import specifier for a module, from the generated file. */
   specifier: (module: string) => string
   /**
@@ -41,6 +43,9 @@ const importLine = (exported: string, local: string, from: string) =>
  * An addon's provider is registered with the env names its addon declares, so
  * it never sees the host's whole environment.
  *
+ * Each collection is declared on the registry, so a reader finds a list even
+ * when nothing adds to it; an item's `stop()` is run in `stopOrder`.
+ *
  * With a `coercionMap`, the service providing `kysely` is wrapped (see
  * `SerializeProviderRunnerOptions.coercionMap`) so a deployed query returns the
  * Date, boolean and parsed JSON values `pikku dev` returns.
@@ -49,6 +54,7 @@ export const serializeProviderRunner = ({
   target,
   profile,
   services,
+  collections = [],
   specifier,
   coercionMap,
 }: SerializeProviderRunnerOptions): string => {
@@ -72,6 +78,7 @@ export const serializeProviderRunner = ({
     const name = JSON.stringify(service.name)
     const registration = JSON.stringify({
       kind: 'singleton',
+      ...(service.addTo ? { addTo: service.addTo } : {}),
       ...(service.addon ? { addon: service.addon } : {}),
     })
     const coerced = coerce && service.provides.includes('kysely')
@@ -89,7 +96,7 @@ export const serializeProviderRunner = ({
         )
       )
       adds.push(
-        `registry.add(${name}, ${wrap(`{ ${service.variant}: ${local} }`)}, ${meta}, ${registration})`
+        `registry.add(${name}, ${wrap(`{ ${JSON.stringify(service.variant)}: ${local} }`)}, ${meta}, ${registration})`
       )
       return
     }
@@ -134,6 +141,9 @@ export const serializeProviderRunner = ({
     ...coercion,
     `const registry = new ProviderRegistry()`,
     ...adds,
+    ...collections.map(
+      (name) => `registry.collection(${JSON.stringify(name)})`
+    ),
     ``,
     `export const createPlatformServices = async (`,
     `  env: Record<string, string | undefined>,`,

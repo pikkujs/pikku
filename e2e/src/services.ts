@@ -38,7 +38,6 @@ import {
   anonymousAnalyticsIdentity,
   composeAnalyticsIdentity,
   cookieAnalyticsIdentity,
-  createAnalyticsSinks,
 } from '@pikku/core/analytics'
 import { RecordingAnalyticsService } from './recording-analytics-service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
@@ -257,14 +256,25 @@ export const createSingletonServices = pikkuServices(
     // why it is written here and not in a sink.
     const analyticsRecorder = new RecordingAnalyticsService()
     const analyticsConversions = new RecordingAnalyticsService()
-    const analyticsSinks = hostSinks ?? createAnalyticsSinks()
-    analyticsSinks.add(analyticsRecorder, {
-      report_viewed: true,
-      page_viewed: true,
-      // The native smoke jobs look for this one; a sink takes only what its map names.
-      native_opened: true,
-    })
-    analyticsSinks.add(analyticsConversions, { report_viewed: true })
+    const analyticsSinks = [
+      ...(hostSinks ?? []),
+      {
+        label: 'e2e/recorder',
+        item: {
+          sink: analyticsRecorder,
+          map: {
+            report_viewed: true,
+            page_viewed: true,
+            // The native smoke jobs look for this one; a sink takes only what its map names.
+            native_opened: true,
+          },
+        },
+      },
+      {
+        label: 'e2e/conversions',
+        item: { sink: analyticsConversions, map: { report_viewed: true } },
+      },
+    ]
 
     // Ordered, not merged: the cookie resolver reads what the consent banner
     // wrote, and the minting one is handed that answer. Storing an id on a

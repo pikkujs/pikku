@@ -93,7 +93,7 @@ const WIRED_BY_EXAMPLE = [
  * with no example. Nothing on this branch added any of them.
  */
 const CORE_LEAK = 175
-const UNRESOLVABLE = 1234
+const UNRESOLVABLE = 1222
 const BARE_ERRORS = 5
 const FUNCTIONS_WITHOUT_EXAMPLE = 0
 const BARE_SYMBOLS = 0

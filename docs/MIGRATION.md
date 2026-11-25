@@ -77,13 +77,14 @@ The console's `agentCredentialCheck` (scope `pikku:console:credentials:read`) wa
 
 ### OTLP and analytics sinks are registries; `analyticsService` and `accepts` are gone
 
-Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build. Register sinks in plain code with `add(sink, map)`. See [telemetry-sinks.md](./telemetry-sinks.md).
+Core now creates the `otlpSinks` singleton service before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build; register OTLP sinks in plain code with `add(sink)`. Analytics sinks are the `analyticsSinks` provider collection: add one with `defineProvider({ addTo: analyticsSinks, ... })`. See [telemetry-sinks.md](./telemetry-sinks.md).
 
 **Removed from `@pikku/core`:**
 
-- The `analyticsService` singleton service. Register a sink with `analyticsSinks.add(sink, { event_name: true })` instead.
+- The `analyticsService` singleton service. Add a sink with a provider that returns `{ sink, map: { event_name: true } }` and `addTo: analyticsSinks` instead.
+- `AnalyticsSinkRegistry` and `createAnalyticsSinks`. `analyticsSinks` is now a `ProviderCollection<'analyticsSinks', { sink, map }>` and the services hold `readonly ProviderCollectionEntry<{ sink, map }>[]` under that key.
 - `AnalyticsSink` (`{ service, accepts }`) and its `accepts` predicate. A sink now carries a map of the events it receives; an event not in the map never reaches it (fail closed).
-- The old `fanOutAnalytics(sinks)` signature. It is now `fanOutAnalytics(registry, fallback)`.
+- The old `fanOutAnalytics(sinks)` signature. It is now `fanOutAnalytics(entries, fallback)`, over the `analyticsSinks` entries.
 - `OtlpTracer`, `OtlpLogger` and `startProcessMetrics` no longer take an `OtlpHttpExporter`; they take an `OtlpSinkBase`.
 
 **Behaviour change:** with no `PIKKU_OTLP_ENDPOINT` the tracer is now real, not inert. The endpoint only decides whether the HTTP exporter is registered. `PIKKU_TELEMETRY=0` still turns it all off. Callers that passed `{}` as the environment to `createRuntimeTelemetry` and want it off must pass `{ PIKKU_TELEMETRY: '0' }`.

@@ -2727,6 +2727,9 @@
       "name": "@pikku/verifiers-providers-deploy",
       "dependencies": {
         "@pikku/core": "workspace:*",
+        "@pikku/kysely": "workspace:*",
+        "@pikku/kysely-bun-sqlite": "workspace:*",
+        "@pikku/kysely-sqlite": "workspace:*",
         "@pikku/schema-cfworker": "workspace:*",
       },
       "devDependencies": {

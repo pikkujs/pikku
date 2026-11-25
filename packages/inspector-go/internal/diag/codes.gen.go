@@ -76,6 +76,7 @@ const (
 	FunctionNeedUnmet                 Code = "PKU390"
 	ProviderNeedsOptionalKey          Code = "PKU391"
 	EntryOwnedKeyReplaced             Code = "PKU397"
+	CollectionKeyConflict             Code = "PKU398"
 	DbColumnNameTypeContradiction     Code = "PKU480"
 	DbJsonColumnUntyped               Code = "PKU481"
 	DbFormatOnNonString               Code = "PKU482"

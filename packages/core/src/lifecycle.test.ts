@@ -151,4 +151,28 @@ describe('stopSingletonServices', () => {
     await withServices(services, () => stopSingletonServices())
     assert.deepStrictEqual(log, ['shared'])
   })
+
+  test('collection items stop in the recorded order, each item once, a throwing item does not stop the rest', async () => {
+    const log: string[] = []
+    const failing = {
+      async stop() {
+        log.push('b')
+        throw new Error('stop failed')
+      },
+    }
+    const services: Record<string | symbol, unknown> = {
+      db: stopping(log, 'db'),
+      things: [
+        { label: 'a', item: stopping(log, 'a') },
+        { label: 'b', item: failing },
+      ],
+    }
+    recordStopOrder([
+      { collection: 'things', label: 'b' },
+      { collection: 'things', label: 'a' },
+      'db',
+    ])
+    await withServices(services, () => stopSingletonServices())
+    assert.deepStrictEqual(log, ['b', 'a', 'db'])
+  })
 })

@@ -1,6 +1,7 @@
 export type ProviderErrorKind =
   | 'duplicate-name'
   | 'duplicate-provider'
+  | 'collection-key-conflict'
   | 'unsatisfied-need'
   | 'cycle'
   | 'optional-key-needed'

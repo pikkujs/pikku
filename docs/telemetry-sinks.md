@@ -1,10 +1,16 @@
 # Telemetry sinks: `otlpSinks` and `analyticsSinks`
 
-Core creates two registries before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build, and passes them in as `existingServices.otlpSinks` and `existingServices.analyticsSinks`. Cloudflare deploys have no runtime telemetry path today, so the registries are not created there.
+Core creates the `otlpSinks` registry before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build, and passes it in as `existingServices.otlpSinks`. Cloudflare deploys have no runtime telemetry path today, so it is not created there. Analytics sinks are a provider collection, `analyticsSinks`, that providers add to.
 
 ```typescript
 existingServices.otlpSinks.add(spanLog)
-existingServices.analyticsSinks.add(conversions, { checkout_completed: true })
+```
+
+```typescript
+export const conversionsSink = defineProvider({
+  addTo: analyticsSinks,
+  common: () => ({ sink: conversions, map: { checkout_completed: true } }),
+})
 ```
 
 ## OTLP sinks
@@ -24,18 +30,21 @@ An `OtlpSinkBase` has `exportSpans`, `exportLogs`, `exportMetrics`, `flush`, `cl
 
 ## Analytics sinks
 
-`AnalyticsEventSink` is an `AnalyticsService` with an optional `setMap`. The map is required and its keys are the event names the sink receives. An event not in the map does not go to that sink. With no sink registered, events go to the logger as before. In local dev the Kysely sink is registered for every declared event.
+`analyticsSinks`, exported by `@pikku/core/analytics`, is a provider collection of `{ sink, map }` items. A provider adds one with `defineProvider({ addTo: analyticsSinks, ... })` and returns the item. `AnalyticsEventSink` is an `AnalyticsService` with an optional `setMap`, called once with the item's map. The map is required and its keys are the event names the sink receives. An event not in the map does not go to that sink. With no sink, events go to the logger as before. Each entry is labelled with its provider's name, and an item may have a `stop()`, called when the server stops. In local dev the Kysely sink is an entry for every declared event.
 
-To register a sink for every event the app declares, read the names with `getDeclaredAnalyticsEvents()` from `@pikku/core/analytics`. The generated bootstrap registers them (`analytics/pikku-analytics-meta.gen.ts`), so this works in a bundle with no filesystem and no `metaService`, such as a Cloudflare Worker or a standalone binary. It throws if the bootstrap was not imported.
+To add a sink for every event the app declares, read the names with `getDeclaredAnalyticsEvents()` from `@pikku/core/analytics`. The generated bootstrap registers them (`analytics/pikku-analytics-meta.gen.ts`), so this works in a bundle with no filesystem and no `metaService`, such as a Cloudflare Worker or a standalone binary. It throws if the bootstrap was not imported.
 
 ```typescript
-existingServices.analyticsSinks.add(
-  warehouse,
-  Object.fromEntries(getDeclaredAnalyticsEvents().map((name) => [name, true]))
-)
+export const warehouseSink = defineProvider({
+  addTo: analyticsSinks,
+  common: () => ({
+    sink: warehouse,
+    map: Object.fromEntries(getDeclaredAnalyticsEvents().map((name) => [name, true])),
+  }),
+})
 ```
 
-A Cloudflare worker and a standalone build call `assertAnalyticsSinksDeclared(analyticsSinks)` once the services are built: with a sink registered and no declared event, they refuse to start rather than drop every event.
+A Cloudflare worker and a standalone build call `assertAnalyticsSinksDeclared(analyticsSinks)` once the services are built: with a sink and no declared event, they refuse to start rather than drop every event.
 
 ## Stitching spans into runs: `@pikku/core/otlp/runs`
 

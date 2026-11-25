@@ -47,6 +47,17 @@ describe('serializeProviderRunner', () => {
     )
   })
 
+  test('an item provider records its collection, and every collection is declared on the registry', () => {
+    const source = serializeProviderRunner({
+      target: 'dev',
+      specifier,
+      collections: ['things'],
+      services: [resolved({ name: 'one', addTo: 'things' })],
+    })
+    assert.match(source, /\{"kind":"singleton","addTo":"things"\}\)/)
+    assert.match(source, /registry\.collection\("things"\)/)
+  })
+
   test('an addon provider is registered with the env names its addon declares, and the stop order is recorded', () => {
     const source = serializeProviderRunner({
       target: 'deploy',
@@ -111,7 +122,7 @@ describe('serializeProviderRunner', () => {
       source,
       /import \{ mailerDeploy as variant0 \} from "\.\/src\/mailer\.deploy\.ts"/
     )
-    assert.match(source, /registry\.add\("mailer", \{ deploy: variant0 \}, /)
+    assert.match(source, /registry\.add\("mailer", \{ "deploy": variant0 \}, /)
     assert.doesNotMatch(source, /services\.ts/)
   })
 
@@ -189,7 +200,7 @@ describe('serializeProviderRunner', () => {
       })
       assert.match(
         source,
-        /registry\.add\("db", withKyselyCoercion\(\{ deploy: variant0 \}\), /
+        /registry\.add\("db", withKyselyCoercion\(\{ "deploy": variant0 \}\), /
       )
     })
 

@@ -20,6 +20,16 @@ export function defineProvider<TNeeds, TProvides extends object>(
 ): ProviderFactory<TNeeds, TProvides>
 export function defineProvider<
   TNeeds,
+  TName extends string,
+  TItem extends object,
+  const TOptional extends string = never,
+>(
+  variants: ProviderVariants<TNeeds, TItem, TOptional> & {
+    addTo: ProviderCollection<TName, TItem>
+  }
+): ProviderVariants<TNeeds, TItem, TOptional>
+export function defineProvider<
+  TNeeds,
   TProvides extends object,
   const TOptional extends string = never,
 >(

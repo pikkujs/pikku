@@ -1,4 +1,5 @@
-import { defineProvider, defineProviderCollection } from '@pikku/core/provider'
+import { defineProviderCollection } from '@pikku/core/provider'
+import { defineProvider } from '#pikku/provider'
 
 export const things = defineProviderCollection<'things', { n: number }>(
   'things'

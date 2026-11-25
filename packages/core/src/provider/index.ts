@@ -10,10 +10,14 @@ export type { ProviderResolveOptions } from './provider-registry.js'
 export { runProviders } from './run-providers.js'
 export { scopedEnv } from './scoped-env.js'
 export { recordStopOrder } from './stop-order.js'
+export type { ProviderStopEntry } from './stop-order.js'
 export type { ProviderErrorKind } from './provider-error.js'
 export type { ProviderStartHook } from './run-providers.js'
 export type {
   ProviderCollection,
+  ProviderCollectionEntry,
+  ProviderCollectionItem,
+  ProviderCollectionValue,
   ProviderAddonScope,
   ProviderDefinition,
   ProviderEnv,

@@ -5,6 +5,7 @@ import type { CLILogger } from '../../../services/cli-logger.service.js'
 import {
   functionNeedsOf,
   resolveProviders,
+  runsNothing,
 } from '../../../providers/resolve-providers.js'
 import { serializeProviderRunner } from '../../../providers/serialize-provider-runner.js'
 import { withoutScenarios } from '../scenarios/scenario-partition.js'
@@ -48,7 +49,7 @@ export const writeDevProviders = async (
     return
   }
 
-  const { ordered } = resolveProviders({
+  const resolved = resolveProviders({
     state: visitState,
     rootDir: config.rootDir,
     target: 'dev',
@@ -59,7 +60,7 @@ export const writeDevProviders = async (
     functions: functionNeedsOf(withoutScenarios(visitState.functions.meta)),
     targetLabel: 'pikku dev',
   })
-  if (ordered.length === 0) {
+  if (runsNothing(resolved)) {
     await removeFileInDir(logger, file, { logRemove: false })
     return
   }
@@ -69,7 +70,8 @@ export const writeDevProviders = async (
     file,
     serializeProviderRunner({
       target: 'dev',
-      services: ordered,
+      services: resolved.ordered,
+      collections: resolved.collections,
       specifier: (module) => localSpecifier(module, target),
     })
   )
