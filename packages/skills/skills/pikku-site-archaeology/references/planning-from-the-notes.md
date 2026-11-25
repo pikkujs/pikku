@@ -18,8 +18,9 @@ rules of the `pikku-changes` skill, and these on top:
 - Every change body ends with `Evidence:` and one line per feature it plans (a route, form field, table, outside-service
   decision, interaction): `- <feature>: <source>`, where the source is `page:<id>` (a captured page), `behaviour:<key>`
   (a key of `behaviour.json`, such as `forms[0].fields`, `outsideHosts.<host>`, `interactions`, `redirects`),
-  `note:<file in knowledge/site/>` or a captured URL. A feature with no source is not planned: it is an "Open question: ..."
-  in the nearest change.
+  `note:<file in knowledge/site/>` or a captured URL. A route, form field, table, outside-service decision or interaction
+  needs a primary source where the capture has one: `page:`, `behaviour:` or a captured URL. A `note:` may be added as
+  context, never alone. A feature with no source is not planned: it is an "Open question: ..." in the nearest change.
 - Every service in `outside-services.md` and every host in `behaviour.json` `outsideHosts` is named by a change: one that
   replaces it (a hosted form becomes the app's own form and table, a tracker or error reporter is removed, fonts and pictures
   are served by the app, the page builder's hosting is the rebuilt app), or one that keeps it, in the body of the change that

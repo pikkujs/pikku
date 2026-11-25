@@ -509,11 +509,14 @@ async function probeForms(page, forms) {
       const said = await page.evaluate((i) => {
         const g = document.querySelector(`[data-capture-form="${i}"]`); if (!g) return null
         const text = (e) => (e.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160)
-        const invalid = [...g.querySelectorAll('input, select, textarea')].filter((f) => f.matches(':invalid') || f.getAttribute('aria-invalid') === 'true').map((f) => ({ name: f.name || f.id || '', message: f.validationMessage || '' }))
+        const invalid = [...g.querySelectorAll('input, select, textarea')].filter((f) => (f.form && f.matches(':invalid')) || f.getAttribute('aria-invalid') === 'true').map((f) => ({ name: f.name || f.id || '', message: f.validationMessage || '' }))
         const messages = [...document.querySelectorAll('[role=alert], [aria-live], [class*=error i], [class*=invalid i]')].map(text).filter(Boolean)
         return { invalid: invalid.slice(0, 20), messages: [...new Set(messages)].slice(0, 10) }
       }, f.index).catch(() => null)
-      out.push({ index: f.index, submitted: true, wouldSend: held, ...(said || {}), ...(page.url() !== url ? { navigatedTo: page.url() } : {}) })
+      const shown = said && (said.invalid.length || said.messages.length)
+      // what the page says about an empty form, or that it could not say: the check is the server's answer to the held request
+      const validation = shown ? 'in the page' : held.length ? 'server-side, not observable without a POST' : 'none seen'
+      out.push({ index: f.index, submitted: true, wouldSend: held, ...(said || {}), validation, ...(page.url() !== url ? { navigatedTo: page.url() } : {}) })
       if (page.url() !== url) await page.goBack({ timeout: 15000 }).catch(() => {})
     } catch (e) { out.push({ index: f.index, error: String(e.message || e).split('\n')[0].slice(0, 120) }) }
     await page.unroute('**/*', hold)
