@@ -35,6 +35,16 @@ rules of the `pikku-changes` skill, and these on top:
   subscription) stays in place, linked from the rebuilt pages, until the person confirms what replaces it (the payment
   processor, its account and its rules): the plan says so as "Decision: keep <service> until ..." and an "Open question: ..."
   for the replacement. No change removes a working purchase path before that.
+- A site that itself sells through Stripe (a `buy.stripe.com` payment link or `checkout.stripe.com` in the capture,
+  `js.stripe.com` loaded by its own pages, or a shop cart being replaced whose payments the owner moves to Stripe) gets a
+  change that wires the `@pikku/addon-commerce-stripe` addon (catalogue, cart, hosted Stripe Checkout, orders, fulfilment,
+  refunds and its webhook, for one-off purchases only) instead of the plan's own cart, order and checkout tables. That
+  change cites the evidence, keeps the existing checkout or payment link until the owner has connected their Stripe account
+  and confirmed, and says it depends on a release of the addon that declares its tables in `db/tables.ts` (its tables
+  ship as SQL per dialect today, which `pikku db` refuses). Stripe seen only inside another provider's embed (Acuity,
+  ThriveCart, Eventbrite, a Shopify hosted checkout) is not this: that provider stays as decided, with an
+  "Open question: ...". Recurring payments (subscriptions, plans, memberships) are an "Open question: ..." naming
+  better-auth's Stripe plugin, never the commerce addon.
 - Moving the domain (DNS, registrar, mail records, the old host's shutdown) is the owner's operation, not app code: it is an
   "Open question: ..." in the data change, never a change of its own.
 - A clone needs its look first. The capture is already in `artifacts/references/<site>/` (with `behaviour.json`): file no
