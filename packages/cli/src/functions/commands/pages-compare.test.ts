@@ -289,12 +289,13 @@ describe('the capture of what a site relies on and does', () => {
       }
       const chromium = CHROMIUM
       let posts = 0
+      let cartChanges = 0
       const page = (assets: string) => `<!doctype html><html lang="en"><head>
 <link rel="stylesheet" href="${assets}/site.css"><script src="${assets}/tracker.js"></script>
 <style>nav a { color: rgb(0, 0, 0); transition: color 0.2s ease } nav a:hover { color: rgb(200, 0, 0) } #menu[hidden] { display: none }</style>
 </head><body><header><nav><a href="/">Home</a><a href="/about">About</a><a href="/feed">Feed</a><a href="/wp-json/pages">API</a><a href="/guide.pdf">Guide</a></nav>
 <button aria-expanded="false" onclick="this.setAttribute('aria-expanded','true');document.getElementById('menu').hidden=false">Menu</button>
-<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a><a href="${assets}/delayed">Enroll</a><a href="${assets}/forms/d/e/abc/viewform">here</a>` : ''}<a href="/buy/123:1">Buy now</a><button>Jetzt buchen</button><a href="https://buy.stripe.com/test_abc">Pay by card</a><a href="/wp-json/wp/v2/pages/1">api</a><a href="/wp-content/uploads/talk.mp3">talk</a><a href="/fonts/a.woff2">font</a>
+<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a><a href="${assets}/delayed">Enroll</a><a href="${assets}/forms/d/e/abc/viewform">here</a>` : ''}<a href="/buy/123:1">Buy now</a>${assets ? `<a href="${assets}/learn/?add-to-cart=118762">Buy the course</a>` : ''}<button>Jetzt buchen</button><a href="https://buy.stripe.com/test_abc">Pay by card</a><a href="/wp-json/wp/v2/pages/1">api</a><a href="/wp-content/uploads/talk.mp3">talk</a><a href="/fonts/a.woff2">font</a>
 <button onclick="document.getElementById('login').hidden=false">Log In</button><form id="login" hidden><input type="email" name="email" aria-label="Email"><input type="password" name="password" aria-label="Password"><button type="submit">Go</button></form></header>
 <main><h1>Welcome</h1><div class="apply">
 <label for="email">Email</label><input id="email" name="email" type="email" required>
@@ -306,6 +307,7 @@ describe('the capture of what a site relies on and does', () => {
         const assets = host.startsWith('127.0.0.1')
           ? `http://localhost:${host.split(':')[1]}`
           : ''
+        if (/[?&]add-to-cart=/.test(req.url ?? '')) cartChanges++
         if (host.startsWith('localhost') && req.url === '/moved')
           res
             .writeHead(301, {
@@ -492,12 +494,16 @@ describe('the capture of what a site relies on and does', () => {
       )
       assert.equal(hosted.text, 'here')
       assert.equal(hosted.step.forms[0].fields[0].name, 'pronouns')
-      // a cart or checkout link is never a page nor opened; German flow words start a flow
-      assert.ok(
-        !summary.actions.some((a: { href?: string }) =>
-          a.href?.includes('/buy/')
+      // a cart, checkout or add-to-cart link is recorded and never opened: the live shop's cart is not touched
+      for (const href of ['/buy/123:1', '?add-to-cart=118762']) {
+        const link = summary.actions.find((a: { href?: string }) =>
+          a.href?.includes(href)
         )
-      )
+        assert.match(link.notOpened, /would change a cart/)
+        assert.equal(link.step, undefined)
+      }
+      assert.equal(cartChanges, 0, 'an add-to-cart link was opened')
+      // German flow words start a flow
       assert.ok(
         summary.actions.some((a: { text: string }) => a.text === 'Jetzt buchen')
       )

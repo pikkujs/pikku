@@ -41,12 +41,11 @@ export async function pages(root) {
   try { landed = (await fetch(root, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) })).url || root } catch {}
   const base = new URL(landed).origin
   const seen = new Set(), out = []
-  // a shop's cart and checkout links start an order when opened: never a page to capture
-  const ORDER = /^\/(buy|checkouts?|cart\/(add|change|update|clear))(\/|$)/i
+  // a shop's cart and checkout links start an order when opened: never a page to capture (CHANGES_STATE)
   // a CMS's own machinery (its API, feeds, uploads and admin) and files of any kind are not pages
   const MACHINERY = /^\/(wp-json|wp-admin|wp-content|wp-includes|xmlrpc\.php|feed|comments\/feed|cdn-cgi)(\/|$)|\/feed\/?$/i
   const FILE = /\.(jpe?g|png|gif|webp|avif|svg|ico|pdf|css|js|mjs|map|xml|json|txt|webmanifest|woff2?|ttf|otf|eot|mp3|m4a|wav|ogg|mp4|webm|mov|zip|docx?|xlsx?|pptx?|csv|ics|epub)$/i
-  const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !ORDER.test(x.pathname) && !MACHINERY.test(x.pathname) && !FILE.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
+  const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !CHANGES_STATE.test(x.pathname) && !MACHINERY.test(x.pathname) && !FILE.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
   const get = async (u) => { try { return await (await fetch(u, { headers: { 'user-agent': UA } })).text() } catch { return '' } }
   const maps = [`${base}/sitemap.xml`]
   const robots = await get(`${base}/robots.txt`)
@@ -481,6 +480,13 @@ const LOOK = ['color', 'backgroundColor', 'opacity', 'transform', 'textDecoratio
 const lookOf = (page, n) => page.evaluate(([n, props]) => { const e = document.querySelector(`[data-capture-probe="${n}"]`); if (!e) return null; const cs = getComputedStyle(e); return Object.fromEntries(props.map((p) => [p, cs[p]])) }, [n, LOOK]).catch(() => null)
 const changed = (a, b) => (a && b ? Object.fromEntries(Object.keys(a).filter((k) => a[k] !== b[k]).map((k) => [k, [a[k], b[k]]])) : {})
 
+/**
+ * A link that changes a shop's state when opened: a cart, checkout or order path, or a query that adds to or removes
+ * from a cart or wishlist (WooCommerce `?add-to-cart=`, `?remove_item=` and their kind). Never opened by the capture.
+ */
+export const CHANGES_STATE = /^\/(buy|checkouts?|cart\/(add|change|update|clear))(\/|$)|[?&](add[-_]to[-_]cart|remove[-_]item|undo[-_]item|add[-_]to[-_]wishlist|remove[-_]from[-_]wishlist|empty[-_]cart|wc-ajax|add-to-basket)=/i
+const changesState = (href) => { try { const u = new URL(href); return CHANGES_STATE.test(u.pathname + u.search) } catch { return false } }
+
 /** A link or button that starts a visitor's flow: booking, tickets, buying, enrolling, applying, signing in or up. */
 const ACTION = /^((jetzt )?(book( now| a| your)?|enrol+( now)?|get tickets?|tickets?|buy( now)?|register|sign ?up|sign ?in|log ?in|apply( here| now)?|subscribe|join( now)?|checkout|reserve|buchen|termin buchen|anmelden|einloggen|registrieren|bewerben|abonnieren|mitglied werden|reservieren))\b/i
 
@@ -524,8 +530,10 @@ const describeStep = async (p) => {
  */
 async function probeActions(page, seen) {
   const ctx = page.context()
-  const marked = await page.evaluate(([rx, formHost, formPath]) => {
-    const ACTION = new RegExp(rx, 'i'), FORM_HOST = new RegExp(formHost, 'i'), FORM_URL = new RegExp(formPath, 'i')
+  const marked = await page.evaluate(([rx, formHost, formPath, stateRx]) => {
+    const ACTION = new RegExp(rx, 'i'), FORM_HOST = new RegExp(formHost, 'i'), FORM_URL = new RegExp(formPath, 'i'), STATE = new RegExp(stateRx, 'i')
+    const state = (e) => { try { const u = new URL(e.href); return e.tagName === 'A' && STATE.test(u.pathname + u.search) } catch { return false } }
+    let opened = 0
     const formLink = (e) => { try { const u = new URL(e.href); return FORM_HOST.test(u.hostname) || FORM_URL.test(u.pathname) } catch { return false } }
     const text = (e) => (e.innerText || e.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim()
     const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 }
@@ -533,15 +541,15 @@ async function probeActions(page, seen) {
     for (const e of document.querySelectorAll('a, button, [role=button]')) {
       const t = text(e)
       const form = e.tagName === 'A' && formLink(e)
-      // a shop's cart and checkout links start an order: never opened
-      if (e.tagName === 'A' && /^\/(buy|checkouts?|cart\/(add|change|update|clear))(\/|$)/i.test((() => { try { return new URL(e.href).pathname } catch { return '' } })())) continue
-      if (out.length >= 6 || !vis(e) || !(form || (t && t.length <= 40 && ACTION.test(t)))) continue
+      if (!vis(e) || !(form || (t && t.length <= 40 && ACTION.test(t)))) continue
+      // up to six flows are opened a page; a link that would change a cart is only recorded, so it takes no place
+      if (!state(e) && opened++ >= 6) continue
       const n = out.length
       e.setAttribute('data-capture-action', String(n))
       out.push({ n, text: t.slice(0, 80), href: e.tagName === 'A' ? e.href : '' })
     }
     return out
-  }, [ACTION.source, FORM_LINK.source, FORM_PATH.source]).catch(() => [])
+  }, [ACTION.source, FORM_LINK.source, FORM_PATH.source, CHANGES_STATE.source]).catch(() => [])
   const hold = (route) => (route.request().method() === 'GET' ? route.continue() : route.abort())
   const found = []
   for (const m of marked) {
@@ -549,6 +557,8 @@ async function probeActions(page, seen) {
     if (seen.has(sig)) continue
     seen.add(sig)
     const row = { text: m.text, ...(m.href ? { href: m.href } : {}) }
+    // a cart, checkout or add-to-cart link would change the live shop: recorded, never opened
+    if (m.href && changesState(m.href)) { found.push({ ...row, notOpened: 'opening it would change a cart or order on the live site' }); continue }
     try {
       if (m.href && /^https?:/.test(m.href) && new URL(m.href).hash === '') {
         // opening a link fills in and sends nothing, and the step's own reads may be POSTs (a booking widget's): not held
@@ -763,7 +773,7 @@ async function captureSiblings(browser, recs, opts = {}) {
   for (const r of recs) for (const l of r.siblingLinks || []) if (!hosts.has(l.host)) hosts.set(l.host, { ...l, pages: [] })
   for (const r of recs) for (const l of r.siblingLinks || []) { const h = hosts.get(l.host); if (h.pages.length < 6 && !h.pages.includes(r.id)) h.pages.push(r.id) }
   const out = []
-  for (const h of [...hosts.values()].slice(0, 4)) {
+  for (const h of [...hosts.values()].filter((h) => !changesState(h.href)).slice(0, 4)) {
     const ctx = await newCaptureContext(browser, 1440, opts)
     const page = await ctx.newPage()
     const row = { host: h.host, linkedAs: h.text, from: h.pages, url: h.href }
@@ -861,6 +871,8 @@ export async function summariseBehaviour(out, root, recs, siblings = []) {
  */
 export async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
   mkdirSync(out, { recursive: true })
+  // a page given that would change a cart or order on the live site is never opened
+  urls = urls.filter((u) => !changesState(u.split('|')[0]))
   const browser = await launch(out, opts.chromium)
   const pool = async (each) => { let next = 0; const worker = async () => { while (next < urls.length) { const i = next++; await each(i) } }; await Promise.all(Array.from({ length: Math.min(jobs, urls.length) }, worker)) }
   if (opts.behaviour !== false && urls.length) {
