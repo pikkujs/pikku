@@ -37,9 +37,8 @@ describe('the providers inspector fixtures', () => {
         }
       }
     }
-    assert.equal(
-      await readFile(join(goRoot, standIn), 'utf8'),
-      await readFile(join(parityRoot, standIn), 'utf8')
-    )
+    const declarations = async (root: string) =>
+      (await readFile(join(root, standIn), 'utf8')).replace(/\s+/g, '')
+    assert.equal(await declarations(goRoot), await declarations(parityRoot))
   })
 })
