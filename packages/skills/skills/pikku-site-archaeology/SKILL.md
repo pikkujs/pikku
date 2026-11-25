@@ -24,7 +24,8 @@ such as hundreds of event pages, is captured through three of them and listed in
 `behaviour.json`: what every page relies on and does, read in a browser (outside hosts and what each loads, redirects,
 cookies by name, fonts, media, every form with its fields and what an empty submit does, sent nowhere, each embedded
 frame (a booking tool, a hosted form) with its choices, forms and hosts under `frames`, the first step of each flow a
-page starts (Book, Enroll, Get Tickets, Buy, Apply, Log In, Subscribe: where it lands and what it asks for) under
+page starts (Book, Enroll, Get Tickets, Buy, Apply, Log In, Subscribe, and any link to a hosted form: where it lands
+and what it asks for, read once the step has settled) under
 `actions`, menus that open,
 hover, focus and scroll changes, transitions and animations, language links, script errors); `<page>.behaviour.json` has
 one page's detail and accessibility tree, `interactions/` pictures before and after an opener. Wait for `behaviour.json`
