@@ -384,6 +384,16 @@ export const pagesCapture = pikkuSessionlessFunc({
     const urls = only?.length ? only : await site.pages(url)
     if (!urls.length) urls.push(origin.href)
     writeFileSync(join(dir, 'pages.txt'), `${urls.join('\n')}\n`)
+    // pages.txt keeps every page; a template of many alike pages is captured through a few of them (templates.json)
+    const sampled =
+      !only?.length && site.sampleTemplates
+        ? site.sampleTemplates(urls)
+        : { capture: urls, templates: [] }
+    if (sampled.templates.length)
+      writeFileSync(
+        join(dir, 'templates.json'),
+        JSON.stringify(sampled.templates, null, 1)
+      )
     const widths = (viewports ?? '1440,390,1920')
       .split(',')
       .map((w) => Number(w.trim()))
@@ -392,11 +402,11 @@ export const pagesCapture = pikkuSessionlessFunc({
       process.stderr.write(`${parts.join(' ')}\n`)
     log(
       dim(
-        `Capturing ${urls.length} page(s) at ${widths.join(', ')} px into ${dir}: about a minute per page and width`
+        `Capturing ${sampled.capture.length} of ${urls.length} page(s) at ${widths.join(', ')} px into ${dir}: about a minute per page and width`
       )
     )
     const { pages, pictures } = await site
-      .capture(dir, urls, widths, tiles ?? true, jobs ?? 4, {
+      .capture(dir, sampled.capture, widths, tiles ?? true, jobs ?? 4, {
         chromium: await loadChromium(),
         log,
       })
