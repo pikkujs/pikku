@@ -18,18 +18,28 @@ Capture the original with this command. Do not write your own capture script.
 mkdir -p artifacts/references/<site> && pikku ui pages capture https://the-site.example/ --out artifacts/references/<site> > artifacts/references/<site>/capture.log 2>&1 &
 ```
 
-It writes the page list to `artifacts/references/<site>/pages.txt` at once. It then captures every page (screenshots,
-layout, colours and fonts) and downloads the pictures, in the background. The builders need that reference:
+It writes the page list to `artifacts/references/<site>/pages.txt` at once. Within a few minutes it writes
+`behaviour.json`: what every page relies on and does, read in a browser (outside hosts and what each loads, redirects,
+cookies by name, fonts, media, every form with its fields and what an empty submit does, sent nowhere, menus that open,
+hover, focus and scroll changes, transitions and animations, language links, script errors); `<page>.behaviour.json` has
+one page's detail and accessibility tree, `interactions/` pictures before and after an opener. Wait for `behaviour.json`
+and read it before you write the notes. It then captures every page (screenshots, layout, colours and fonts) and
+downloads the pictures, in the background. The builders need that reference:
 `pikku changes done` refuses page changes of a clone without it. That list is your to-do list. Look at **every** page on it: a page you did not look at is a page the plan will miss. If
 there is no browser, fetch each page with `curl -sL` and read the text.
 
 ## 2. What to find on every page
 
 - What the page is for, and its main sections, in plain words.
-- Every **form**: its fields, its button, and what the visitor sees after sending it (a thank-you page, an email, nothing).
+- Every **form**: its fields with their type, whether required, their options and any control beside them (a country
+  code picker), its button, where an empty submit would send and what the page says about it, and what the visitor sees
+  after sending it (a thank-you page, an email, nothing).
 - Every other thing a visitor can do: book, apply, register, log in, search, filter, pay, download.
 - Prices, and the currency they are written in. The language of the page.
-- Every outside service the page relies on, and what it is for. Read the served HTML, not only the visible links: hosted
+- How the page behaves: menus and sections that open, hover and focus states, a header that changes on scroll,
+  transitions and animations, a language switch.
+- Every outside service the page relies on, and what it is for: every host in `behaviour.json` `outsideHosts` and every
+  link that leaves the site. Read the served HTML, not only the visible links: hosted
   forms and form backends, embeds (video, maps, calendars, social feeds), analytics and trackers, fonts and CDNs, payment,
   ticketing and booking links, newsletter and email services, the hosted CMS or page builder that serves the site, and
   sign-in.
@@ -46,6 +56,7 @@ Write plain notes in `knowledge/site/` (follow the pikku-knowledge skill for the
 - `things-kept.md`: what the rebuilt site must remember (enquiries, subscribers, bookings, applications, events and so
   on) and the content the owner changes over time, in plain words, each with the pages it comes from.
 - `prices-and-languages.md`: the prices, the currency and the languages, page by page.
+- `interactions.md`: what opens, hovers, focuses, scrolls, moves and switches language, on which pages, before and after.
 - `outside-services.md`: each outside service, the pages it is on, what it does there, and a decision: replace it (with
   what, inside the app) or keep it (and why, e.g. the owner's payment account).
 - `open-questions.md`: what you could not tell from the outside (logins, payments, anything behind a form).

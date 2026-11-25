@@ -252,6 +252,150 @@ describe('the capture script behind pikku ui pages capture', () => {
   })
 })
 
+/** A chromium to capture with, or null where none starts (the capture test is skipped there). */
+const CHROMIUM: unknown = await (async () => {
+  for (const name of ['@playwright/test', 'playwright-core']) {
+    const mod = await import(name).catch(() => null)
+    if (!mod?.chromium) continue
+    const browser = await mod.chromium
+      .launch({
+        executablePath:
+          process.env.PIKKU_CHROMIUM ||
+          process.env.PLAYWRIGHT_CHROMIUM_PATH ||
+          undefined,
+      })
+      .catch(() => null)
+    if (!browser) return null
+    await browser.close()
+    return mod.chromium
+  }
+  return null
+})()
+
+describe('the capture of what a site relies on and does', () => {
+  test(
+    'records outside hosts, redirects, cookies by name, forms with their field types and an empty submit sent nowhere, and interactions before and after',
+    { timeout: 120_000, skip: !CHROMIUM && 'no chromium to capture with' },
+    async () => {
+      const site = (await loadSiteCapture()) as unknown as {
+        capture: (
+          out: string,
+          urls: string[],
+          widths: number[],
+          tiles: boolean,
+          jobs: number,
+          opts: Record<string, unknown>
+        ) => Promise<unknown>
+      }
+      const chromium = CHROMIUM
+      let posts = 0
+      const page = (assets: string) => `<!doctype html><html lang="en"><head>
+<link rel="stylesheet" href="${assets}/site.css"><script src="${assets}/tracker.js"></script>
+<style>nav a { color: rgb(0, 0, 0); transition: color 0.2s ease } nav a:hover { color: rgb(200, 0, 0) } #menu[hidden] { display: none }</style>
+</head><body><header><nav><a href="/">Home</a><a href="/about">About</a></nav>
+<button aria-expanded="false" onclick="this.setAttribute('aria-expanded','true');document.getElementById('menu').hidden=false">Menu</button>
+<div id="menu" hidden>Workshops and circles and events</div></header>
+<main><h1>Welcome</h1><div class="apply">
+<label for="email">Email</label><input id="email" name="email" type="email" required>
+<div><div><select aria-label="Country code"><option>+49</option><option>+44</option></select><input name="phone" type="tel" aria-label="Phone"></div></div>
+<button onclick="fetch('/api/submit',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'',phone:''})})">Send</button>
+</div></main><script>localStorage.setItem('visited','1');console.log('hello from the page')</script></body></html>`
+      const server = createServer((req, res) => {
+        const host = req.headers.host!
+        const assets = host.startsWith('127.0.0.1')
+          ? `http://localhost:${host.split(':')[1]}`
+          : ''
+        if (req.method === 'POST') {
+          posts++
+          res.end('{}')
+        } else if (req.url === '/old')
+          res.writeHead(301, { location: '/' }).end()
+        else if (req.url === '/site.css')
+          res
+            .writeHead(200, { 'content-type': 'text/css' })
+            .end('body{margin:0}')
+        else if (req.url === '/tracker.js')
+          res
+            .writeHead(200, { 'content-type': 'text/javascript' })
+            .end("document.cookie='seen=1; path=/'")
+        else
+          res
+            .writeHead(200, {
+              'content-type': 'text/html',
+              'set-cookie': 'session=secret-value; HttpOnly',
+            })
+            .end(page(assets))
+      })
+      await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok))
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+      const out = mkdtempSync(join(tmpdir(), 'pages-behaviour-'))
+      try {
+        await site.capture(out, [`${base}/old|home`], [1440], false, 1, {
+          chromium,
+          pictures: false,
+          log: () => {},
+        })
+      } finally {
+        server.close()
+      }
+      const summary = JSON.parse(
+        readFileSync(join(out, 'behaviour.json'), 'utf8')
+      )
+      const page1 = JSON.parse(
+        readFileSync(join(out, 'home.behaviour.json'), 'utf8')
+      )
+      assert.deepEqual(Object.keys(summary.outsideHosts), ['localhost'])
+      assert.deepEqual(summary.outsideHosts.localhost.pages, ['home'])
+      assert.deepEqual(page1.redirects, [`${base}/old`])
+      assert.deepEqual(page1.setsCookies, ['session'])
+      assert.ok(page1.cookies.some((c: { name: string }) => c.name === 'seen'))
+      assert.ok(!JSON.stringify(page1).includes('secret-value'))
+      assert.deepEqual(page1.storage.local, ['visited'])
+      assert.ok(
+        page1.console.some((l: string) => /hello from the page/.test(l))
+      )
+      const [form] = summary.forms
+      const types = form.fields.map((f: { type: string }) => f.type)
+      assert.ok(types.includes('email') && types.includes('tel'))
+      const phone = form.fields.find((f: { type: string }) => f.type === 'tel')
+      assert.match(phone.beside.join(' '), /\+49/)
+      assert.equal(
+        form.fields.find((f: { type: string }) => f.type === 'email').required,
+        true
+      )
+      assert.equal(posts, 0, 'the empty submit reached the server')
+      assert.deepEqual(
+        form.submit.wouldSend.map(
+          (s: { method: string; path: string; fields: string[] }) => [
+            s.method,
+            s.path,
+            s.fields,
+          ]
+        ),
+        [['POST', '/api/submit', ['email', 'phone']]]
+      )
+      const hover = summary.interactions.find(
+        (i: { kind: string; what: string }) =>
+          i.kind === 'hover' && /Home/.test(i.what)
+      )
+      assert.deepEqual(hover.changes.color, ['rgb(0, 0, 0)', 'rgb(200, 0, 0)'])
+      const open = summary.interactions.find(
+        (i: { kind: string }) => i.kind === 'open'
+      )
+      assert.equal(open.expanded, 'true')
+      assert.ok(open.textAdded > 0)
+      for (const picture of open.pictures)
+        assert.ok(readFileSync(join(out, picture)).length > 0)
+      assert.ok(
+        summary.motion.some((m: { transition?: string }) =>
+          /color 0\.2s/.test(m.transition ?? '')
+        )
+      )
+      assert.match(page1.accessibility, /button "Menu"/)
+    }
+  )
+})
+
 describe('gitStamp', () => {
   test('records HEAD and whether the frontend has uncommitted changes', async () => {
     const calls: string[] = []

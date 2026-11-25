@@ -356,7 +356,7 @@ const loadChromium = async (): Promise<unknown> => {
 
 export const pagesCapture = pikkuSessionlessFunc({
   description:
-    'Capture the original site a clone is rebuilt from, into the reference pages compare and the done gate read: every page from its sitemap and links, at each width, as <id>-<width>.jpg, .layout.json and .style.json, <id>.json (title, menu, headings, text, colours and fonts by use, pictures), and the original pictures downloaded into <out>/pictures/.',
+    'Capture the original site a clone is rebuilt from, into the reference pages compare and the done gate read: first behaviour.json and <id>.behaviour.json (outside hosts, redirects, cookies by name, forms and an empty submit held back, interactions before and after, transitions), then every page from its sitemap and links, at each width, as <id>-<width>.jpg, .layout.json and .style.json, <id>.json (title, menu, headings, text, colours and fonts by use, pictures), and the original pictures downloaded into <out>/pictures/.',
   input: PagesCaptureInput,
   output: PagesCaptureOutput,
   func: async ({ config }, { url, out, viewports, page, jobs, tiles }) => {

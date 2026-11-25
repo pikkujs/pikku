@@ -12,6 +12,9 @@
 //       --all: the same for every page, 4 at a time (slow: run it in the background, output to a file); prints only problems
 //   capture writes per page and width: <id>-<width>.jpg (screenshot), .layout.json (sections), .style.json (computed style of the
 //   page background, header, h1/h2/h3, first paragraph, primary button, text column: pikku ui pages compare diffs it against yours)
+//   capture first writes per page <id>.behaviour.json (at 1440: hosts, redirects, headers, console, cookies by name, storage keys,
+//   fonts, media, accessibility tree, forms and an empty submit held back, hover/focus/open/scroll before and after, transitions;
+//   opener pictures in interactions/) and behaviour.json, the site's summary with robots.txt and its outside hosts.
 //   <id>.json lists the page's pictures ({ src, file }); capture downloads them into <out-dir>/pictures/ and sets `file`
 //   (relative to <out-dir>); pictures/index.json maps each original address to its file and pages. capture.json lists the run.
 // `pikku ui pages capture <url> --out artifacts/references/<site>` runs the same capture (page list included) from the CLI.
@@ -353,17 +356,261 @@ async function capturePage(browser, out, entry, vps, tiles, opts = {}) {
   return rec
 }
 
+// ---------------------------------------------------------------- behaviour (runs once per page, at 1440)
+/**
+ * What a page relies on and does, read in the browser: fonts that loaded, media and frames, every form with its fields,
+ * elements with transitions or animations, storage keys, language links, and elements that open something. Bounded:
+ * at most 25 transition signatures, 12 options per field, 8 forms.
+ */
+export function extractBehaviourInPage() {
+  const text = (e) => (e?.innerText || e?.textContent || '').replace(/\s+/g, ' ').trim()
+  const vis = (e) => { const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none' }
+  const sel = (e) => `${e.tagName.toLowerCase()}${e.id ? `#${e.id}` : ''}${typeof e.className === 'string' && e.className.trim() ? `.${e.className.trim().split(/\s+/).slice(0, 2).join('.')}` : ''}`
+  const labelOf = (f) => {
+    const by = f.getAttribute('aria-labelledby')
+    const named = f.getAttribute('aria-label') || (by && by.split(/\s+/).map((i) => text(document.getElementById(i))).join(' ')) || (f.id && text(document.querySelector(`label[for="${CSS.escape(f.id)}"]`))) || text(f.closest('label'))
+    return (named || f.getAttribute('placeholder') || f.getAttribute('name') || '').slice(0, 120)
+  }
+  const field = (f) => {
+    const o = { tag: f.tagName.toLowerCase(), type: f.getAttribute('type') || (f.getAttribute('role') || ''), name: f.getAttribute('name') || '', label: labelOf(f), required: f.required || f.getAttribute('aria-required') === 'true' }
+    for (const a of ['pattern', 'minlength', 'maxlength', 'min', 'max', 'autocomplete', 'inputmode']) if (f.getAttribute(a)) o[a] = f.getAttribute(a)
+    if (f.tagName === 'SELECT') o.options = [...f.options].slice(0, 12).map((x) => text(x)).filter(Boolean)
+    // a control beside the field, such as a phone number's country code picker
+    const wrap = f.parentElement?.parentElement
+    const beside = wrap ? [...wrap.querySelectorAll('button, [role=combobox], [role=button], select')].filter((b) => b !== f).map((b) => text(b) || b.getAttribute('aria-label') || '').filter(Boolean).slice(0, 3) : []
+    if (beside.length) o.beside = beside
+    return o
+  }
+  const FIELDS = 'input:not([type=hidden]), select, textarea, [role=combobox], [role=listbox], [role=radiogroup], [role=checkbox], [contenteditable=true]'
+  const SUBMIT = 'button[type=submit], input[type=submit], button:not([type]), [role=button], button'
+  let groups = [...document.querySelectorAll('form')]
+  // a page builder's form is often no <form>: a box with two or more fields and a button
+  if (!groups.length) for (const b of document.querySelectorAll('button, [role=button]')) {
+    let box = b.parentElement
+    for (let i = 0; box && i < 6; i++, box = box.parentElement) if (box.querySelectorAll(FIELDS).length >= 2) { if (!groups.some((g) => g.contains(box) || box.contains(g))) groups.push(box); break }
+  }
+  const forms = groups.slice(0, 8).map((g, i) => {
+    g.setAttribute('data-capture-form', String(i))
+    const submit = [...g.querySelectorAll(SUBMIT)].filter(vis).pop()
+    return { index: i, selector: sel(g), action: g.getAttribute?.('action') || '', method: (g.getAttribute?.('method') || '').toLowerCase(), fields: [...g.querySelectorAll(FIELDS)].filter((f) => f.type !== 'submit').slice(0, 30).map(field), submit: submit ? text(submit) || submit.value || '' : null }
+  })
+  const motion = new Map()
+  for (const e of [...document.querySelectorAll('body *')].slice(0, 4000)) {
+    const cs = getComputedStyle(e)
+    const t = cs.transitionDuration.split(',').some((d) => parseFloat(d) > 0) ? `${cs.transitionProperty} ${cs.transitionDuration} ${cs.transitionTimingFunction}` : ''
+    const a = cs.animationName !== 'none' ? `${cs.animationName} ${cs.animationDuration} ${cs.animationIterationCount}` : ''
+    if (!t && !a) continue
+    const key = `${t}|${a}`
+    if (!motion.has(key) && motion.size < 25) motion.set(key, { example: sel(e), ...(t ? { transition: t } : {}), ...(a ? { animation: a } : {}), count: 0 })
+    if (motion.has(key)) motion.get(key).count++
+  }
+  const keys = (s) => { try { return Object.keys(s).slice(0, 30) } catch { return [] } }
+  const fonts = [...document.fonts].filter((f) => f.status === 'loaded').map((f) => `${f.family.replace(/["']/g, '')} ${f.weight} ${f.style}`)
+  const LANG = /^(en|de|fr|es|it|nl|pl|english|deutsch|français|español|italiano|nederlands|polski)$/i
+  return {
+    lang: document.documentElement.lang || '',
+    fonts: [...new Set(fonts)].slice(0, 30),
+    media: [...document.querySelectorAll('video, audio, iframe, embed, object')].slice(0, 20).map((m) => ({ tag: m.tagName.toLowerCase(), src: (m.currentSrc || m.src || m.data || '').slice(0, 200), title: m.title || '' })),
+    forms,
+    motion: [...motion.values()],
+    storage: { local: keys(localStorage), session: keys(sessionStorage) },
+    languageLinks: [...document.querySelectorAll('a[hreflang], link[rel=alternate][hreflang], a')].filter((a) => a.hreflang || LANG.test(text(a))).slice(0, 10).map((a) => ({ text: text(a), hreflang: a.hreflang || '', href: a.href })),
+  }
+}
+
+/** Computed styles a hover, focus or scroll changes. */
+const LOOK = ['color', 'backgroundColor', 'opacity', 'transform', 'textDecorationLine', 'boxShadow', 'borderColor', 'outlineStyle', 'outlineColor', 'position', 'top', 'height']
+const lookOf = (page, n) => page.evaluate(([n, props]) => { const e = document.querySelector(`[data-capture-probe="${n}"]`); if (!e) return null; const cs = getComputedStyle(e); return Object.fromEntries(props.map((p) => [p, cs[p]])) }, [n, LOOK]).catch(() => null)
+const changed = (a, b) => (a && b ? Object.fromEntries(Object.keys(a).filter((k) => a[k] !== b[k]).map((k) => [k, [a[k], b[k]]])) : {})
+
+/**
+ * Hover and focus on the first links, buttons and fields, open what says it opens (aria-expanded, details, a menu
+ * button), and scroll the page past its header: each with the styles before and after, and for an opener a picture of
+ * the window before and after under interactions/. Something already probed on an earlier page (the same tag, text and
+ * class: a shared header) is not probed again. Nothing is followed off the page.
+ */
+async function probeInteractions(page, out, id, seen) {
+  const marked = await page.evaluate(() => {
+    const text = (e) => (e.innerText || e.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().slice(0, 60)
+    const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.top < innerHeight * 3 }
+    const sig = (e) => `${e.tagName}|${text(e)}|${typeof e.className === 'string' ? e.className : ''}`
+    const pick = (q, n) => [...document.querySelectorAll(q)].filter(vis).slice(0, n)
+    const out = []; let k = 0
+    const mark = (e, kind) => { e.setAttribute('data-capture-probe', String(k)); out.push({ n: k++, kind, what: `${e.tagName.toLowerCase()} "${text(e)}"`, sig: `${kind}|${sig(e)}` }) }
+    for (const e of pick('nav a, header a, a[class*=button i], a[class*=btn i], button', 6)) mark(e, 'hover')
+    for (const e of pick('input:not([type=hidden]), textarea, select', 2)) mark(e, 'focus')
+    for (const e of pick('[aria-expanded=false], details > summary, [aria-haspopup]:not(a[href]:not([href="#"]))', 4)) mark(e, 'open')
+    const header = [...document.querySelectorAll('header, [role=banner], #SITE_HEADER')].find(vis)
+    if (header) mark(header, 'scroll')
+    return out
+  }).catch(() => [])
+  const found = []
+  for (const m of marked) {
+    if (seen.has(m.sig)) continue
+    seen.add(m.sig)
+    const probe = page.locator(`[data-capture-probe="${m.n}"]`)
+    const before = await lookOf(page, m.n)
+    const row = { kind: m.kind, what: m.what }
+    try {
+      if (m.kind === 'hover') { await probe.hover({ timeout: 3000 }); await page.waitForTimeout(500) }
+      else if (m.kind === 'focus') { await probe.focus({ timeout: 3000 }); await page.waitForTimeout(300) }
+      else if (m.kind === 'scroll') { await page.evaluate(() => scrollTo(0, 1200)); await page.waitForTimeout(800) }
+      else {
+        const url = page.url(), visible = async () => page.evaluate(() => document.body.innerText.length)
+        const shot = (when) => join('interactions', `${id}-open-${m.n}-${when}.jpg`)
+        mkdirSync(join(out, 'interactions'), { recursive: true })
+        const textBefore = await visible()
+        await page.screenshot({ path: join(out, shot('before')), type: 'jpeg', quality: 60 })
+        await probe.click({ timeout: 3000 }); await page.waitForTimeout(700)
+        if (page.url() !== url) { row.navigatesTo = page.url(); await page.goBack({ timeout: 15000 }).catch(() => {}) }
+        else {
+          await page.screenshot({ path: join(out, shot('after')), type: 'jpeg', quality: 60 })
+          row.expanded = await probe.getAttribute('aria-expanded').catch(() => null)
+          row.textAdded = (await visible()) - textBefore
+          row.pictures = [shot('before'), shot('after')]
+          await page.keyboard.press('Escape').catch(() => {})
+        }
+      }
+      const after = await lookOf(page, m.n)
+      row.changes = changed(before, after)
+      if (m.kind === 'scroll') await page.evaluate(() => scrollTo(0, 0))
+      await page.mouse.move(0, 0)
+    } catch (e) { row.error = String(e.message || e).split('\n')[0].slice(0, 120) }
+    found.push(row)
+  }
+  return found
+}
+
+/**
+ * The submit of each form, sent nowhere: every request that is not a GET is held back while the empty form is
+ * submitted, so the capture records where it would post and which fields (names only, no values), and what the page
+ * says about the empty fields. A form that submits by GET is not submitted.
+ */
+async function probeForms(page, forms) {
+  const out = []
+  for (const f of forms) {
+    if (f.method === 'get' || f.submit === null) { out.push({ index: f.index, submitted: false }); continue }
+    const held = []
+    const hold = (route) => { const r = route.request(); if (r.method() === 'GET') return route.continue(); let fields = []; try { const body = r.postData() || ''; fields = body.trim().startsWith('{') ? Object.keys(JSON.parse(body)) : [...new URLSearchParams(body).keys()] } catch {} ; const u = new URL(r.url()); held.push({ method: r.method(), host: u.host, path: u.pathname.slice(0, 120), contentType: r.headers()['content-type'] || '', fields: fields.slice(0, 30) }); return route.abort() }
+    await page.route('**/*', hold)
+    const url = page.url()
+    try {
+      const form = page.locator(`[data-capture-form="${f.index}"]`)
+      const button = form.locator('button[type=submit], input[type=submit], button, [role=button]').last()
+      await button.click({ timeout: 3000 }); await page.waitForTimeout(1500)
+      const said = await page.evaluate((i) => {
+        const g = document.querySelector(`[data-capture-form="${i}"]`); if (!g) return null
+        const text = (e) => (e.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160)
+        const invalid = [...g.querySelectorAll('input, select, textarea')].filter((f) => f.matches(':invalid') || f.getAttribute('aria-invalid') === 'true').map((f) => ({ name: f.name || f.id || '', message: f.validationMessage || '' }))
+        const messages = [...document.querySelectorAll('[role=alert], [aria-live], [class*=error i], [class*=invalid i]')].map(text).filter(Boolean)
+        return { invalid: invalid.slice(0, 20), messages: [...new Set(messages)].slice(0, 10) }
+      }, f.index).catch(() => null)
+      out.push({ index: f.index, submitted: true, wouldSend: held, ...(said || {}), ...(page.url() !== url ? { navigatedTo: page.url() } : {}) })
+      if (page.url() !== url) await page.goBack({ timeout: 15000 }).catch(() => {})
+    } catch (e) { out.push({ index: f.index, error: String(e.message || e).split('\n')[0].slice(0, 120) }) }
+    await page.unroute('**/*', hold)
+  }
+  return out
+}
+
+const HEADERS = ['server', 'x-powered-by', 'content-security-policy', 'strict-transport-security', 'cache-control', 'x-frame-options', 'link']
+
+/**
+ * One page's behaviour, at 1440: where it loads from (hosts, by request type), its redirects and response headers,
+ * console messages and script errors, cookies (names and domains, never values) and storage keys, the accessibility
+ * tree (first 6000 characters), fonts and media, its forms and what an empty submit does, and its interactions.
+ * Written to <id>.behaviour.json; `seen` carries what earlier pages already probed.
+ */
+export async function captureBehaviour(browser, out, entry, seen = new Set(), opts = {}) {
+  const [url, idOverride] = entry.split('|')
+  const id = idOverride || idOf(url)
+  const ctx = await newCaptureContext(browser, 1440, opts)
+  const page = await ctx.newPage()
+  const requests = [], consoleLines = [], errors = []
+  page.on('request', (r) => requests.push({ url: r.url(), type: r.resourceType(), method: r.method() }))
+  page.on('console', (m) => { if (consoleLines.length < 30 && m.type() !== 'debug') consoleLines.push(`${m.type()}: ${m.text().slice(0, 200)}`) })
+  page.on('pageerror', (e) => { if (errors.length < 20) errors.push(String(e.message || e).slice(0, 200)) })
+  const rec = { id, url }
+  try {
+    const res = await page.goto(url, { waitUntil: 'load', timeout: 45000 }).catch(() => null)
+    const redirects = []
+    for (let r = res?.request().redirectedFrom(); r; r = r.redirectedFrom()) redirects.unshift(r.url())
+    const headers = res ? await res.allHeaders().catch(() => ({})) : {}
+    rec.status = res?.status() ?? null
+    rec.redirects = redirects
+    rec.headers = Object.fromEntries(HEADERS.filter((h) => headers[h]).map((h) => [h, headers[h].slice(0, 300)]))
+    rec.setsCookies = [...new Set((headers['set-cookie'] || '').split('\n').map((c) => c.split('=')[0].trim()).filter(Boolean))]
+    await settle(page).catch(() => {})
+    Object.assign(rec, await page.evaluate(extractBehaviourInPage).catch((e) => ({ error: String(e).slice(0, 120) })))
+    rec.cookies = (await ctx.cookies()).map((c) => ({ name: c.name, domain: c.domain, session: c.expires === -1, httpOnly: c.httpOnly }))
+    rec.accessibility = ((await page.locator('body').ariaSnapshot({ timeout: 10000 }).catch(() => '')) || '').slice(0, 6000)
+    rec.interactions = await probeInteractions(page, out, id, seen)
+    rec.submits = await probeForms(page, rec.forms || [])
+  } catch (e) { rec.error = String(e.message || e).split('\n')[0].slice(0, 200) }
+  await ctx.close()
+  const own = new URL(url).hostname.replace(/^www\./, '')
+  const hosts = {}
+  for (const r of requests) { let h; try { h = new URL(r.url).hostname } catch { continue } if (!/^https?:/.test(r.url)) continue; const e = (hosts[h] ||= { requests: 0, types: {}, thirdParty: h.replace(/^www\./, '') !== own && !h.endsWith(`.${own}`) }); e.requests++; e.types[r.type] = (e.types[r.type] || 0) + 1 }
+  rec.hosts = hosts
+  rec.console = consoleLines
+  rec.scriptErrors = errors
+  writeFileSync(join(out, `${id}.behaviour.json`), JSON.stringify(rec, null, 1))
+  return rec
+}
+
+/**
+ * The site's behaviour across its pages, for a person and the planning agent: robots.txt and its sitemaps, every
+ * outside host with the pages that load it and what it loads, every form, cookies, fonts, media, interactions,
+ * language links and pages with script errors. Written to behaviour.json beside the pages.
+ */
+export async function summariseBehaviour(out, root, recs) {
+  const base = new URL(root).origin
+  let robots = ''
+  try { const r = await fetch(`${base}/robots.txt`, { headers: { 'user-agent': UA } }); if (r.ok) robots = (await r.text()).slice(0, 3000) } catch {}
+  const hosts = {}, cookies = {}, fonts = new Set(), media = new Set(), langs = new Map()
+  for (const r of recs) {
+    for (const [h, e] of Object.entries(r.hosts || {})) { const s = (hosts[h] ||= { thirdParty: e.thirdParty, pages: [], types: {} }); s.pages.push(r.id); for (const [t, n] of Object.entries(e.types)) s.types[t] = (s.types[t] || 0) + n }
+    for (const c of r.cookies || []) cookies[`${c.name}@${c.domain}`] = c
+    for (const f of r.fonts || []) fonts.add(f)
+    for (const m of r.media || []) media.add(`${m.tag} ${m.src}`)
+    for (const l of r.languageLinks || []) langs.set(l.href, l)
+  }
+  const summary = {
+    site: base,
+    robots,
+    sitemaps: [...robots.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => m[1]),
+    outsideHosts: Object.fromEntries(Object.entries(hosts).filter(([, e]) => e.thirdParty).map(([h, e]) => [h, { pages: e.pages.length <= 6 ? e.pages : [...e.pages.slice(0, 5), `and ${e.pages.length - 5} more`], types: e.types }])),
+    forms: recs.flatMap((r) => (r.forms || []).map((f) => ({ page: r.id, ...f, submit: { label: f.submit, ...(r.submits || []).find((s) => s.index === f.index) } }))),
+    cookies: Object.values(cookies),
+    fonts: [...fonts],
+    media: [...media],
+    languageLinks: [...langs.values()],
+    interactions: recs.flatMap((r) => (r.interactions || []).filter((i) => i.error || Object.keys(i.changes || {}).length || i.kind === 'open').map((i) => ({ page: r.id, ...i }))),
+    motion: [...new Map(recs.flatMap((r) => r.motion || []).map((m) => [`${m.transition}|${m.animation}`, m])).values()].slice(0, 25),
+    scriptErrors: recs.filter((r) => r.scriptErrors?.length).map((r) => ({ page: r.id, errors: r.scriptErrors.slice(0, 3) })),
+    redirects: recs.filter((r) => r.redirects?.length).map((r) => ({ page: r.id, from: r.redirects })),
+  }
+  writeFileSync(join(out, 'behaviour.json'), JSON.stringify(summary, null, 1))
+  return summary
+}
+
 /**
  * Pages are independent, so `jobs` of them are captured at once (default 4); capture.json keeps the order of the list.
+ * The behaviour of every page comes first (captureBehaviour, then behaviour.json; skipped with `opts.behaviour === false`),
+ * because it is quick and the plan is written from it, then the screenshots and layout at each width.
  * Then the pictures are downloaded (unless `opts.pictures === false`). `opts.chromium`: a playwright chromium to launch.
  */
 export async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
   mkdirSync(out, { recursive: true })
   const browser = await launch(out, opts.chromium)
+  const pool = async (each) => { let next = 0; const worker = async () => { while (next < urls.length) { const i = next++; await each(i) } }; await Promise.all(Array.from({ length: Math.min(jobs, urls.length) }, worker)) }
+  if (opts.behaviour !== false && urls.length) {
+    const seen = new Set(), recs = new Array(urls.length)
+    await pool(async (i) => { recs[i] = await captureBehaviour(browser, out, urls[i], seen, opts) })
+    await summariseBehaviour(out, urls[0].split('|')[0], recs)
+  }
   const index = new Array(urls.length)
-  let next = 0
-  const worker = async () => { while (next < urls.length) { const i = next++; index[i] = await capturePage(browser, out, urls[i], vps, tiles, opts) } }
-  await Promise.all(Array.from({ length: Math.min(jobs, urls.length) }, worker))
+  await pool(async (i) => { index[i] = await capturePage(browser, out, urls[i], vps, tiles, opts) })
   await browser.close()
   // the browser's profile, caches and sockets are not part of the reference: left here they are committed with it
   rmSync(resolve(out, '.browser'), { recursive: true, force: true })
@@ -373,7 +620,7 @@ export async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
 }
 
 /** The `<id>.json` page files of a capture (not its layout, style or run files). */
-const pageFiles = (out) => readdirSync(out).filter((f) => f.endsWith('.json') && !/-\d+\.(layout|style)\.json$/.test(f) && f !== 'capture.json' && f !== 'map.json')
+const pageFiles = (out) => readdirSync(out).filter((f) => f.endsWith('.json') && !/(-\d+\.(layout|style)|\.behaviour)\.json$/.test(f) && !['capture.json', 'map.json', 'behaviour.json'].includes(f))
 
 /**
  * Download every picture the capture listed into <out>/pictures/, named after the address and a short hash. Each
@@ -543,7 +790,7 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()
     compare(pos[0], pos[1], only, width)
   } else if (cmd === 'shot') {
     const out = rest[0], url = rest[1]; const w = rest.includes('--width') ? Number(rest[rest.indexOf('--width') + 1]) : 1440
-    await capture(out, [url], [w], true, 1, { pictures: false })
+    await capture(out, [url], [w], true, 1, { pictures: false, behaviour: false })
   } else if (cmd === 'check') {
     const only = rest.includes('--page') ? rest[rest.indexOf('--page') + 1] : null, all = rest.includes('--all')
     if (only || all) await audit(rest[0], rest[1], only, all); else await check(rest[0], rest[1])
