@@ -451,6 +451,35 @@ describe('the capture of what a site relies on and does', () => {
   )
 })
 
+describe('the pages a capture takes from a long page list', () => {
+  test('keeps every page outside a template and three of each template of many alike pages', async () => {
+    const site = await loadSiteCapture()
+    const b = 'https://site.example'
+    const events = Array.from(
+      { length: 5 },
+      (_, i) => `${b}/event-info/show-${i}`
+    )
+    const urls = [
+      `${b}/`,
+      `${b}/shows`,
+      ...events,
+      `${b}/post/one`,
+      `${b}/post/two`,
+    ]
+    const got = site!.sampleTemplates!(urls)
+    assert.deepEqual(got.capture, [
+      `${b}/`,
+      `${b}/shows`,
+      ...events.slice(0, 3),
+      `${b}/post/one`,
+      `${b}/post/two`,
+    ])
+    assert.deepEqual(got.templates, [
+      { pattern: '/event-info/*', count: 5, sampled: events.slice(0, 3) },
+    ])
+  })
+})
+
 describe('gitStamp', () => {
   test('records HEAD and whether the frontend has uncommitted changes', async () => {
     const calls: string[] = []

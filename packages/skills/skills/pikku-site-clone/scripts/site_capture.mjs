@@ -73,6 +73,23 @@ export async function pages(root) {
   return out.filter((u) => !notPages.has(u))
 }
 
+/**
+ * Pages that share a template (every event, post or profile under one first path segment) are many and alike: the
+ * capture takes `per` of each such group and lists the group as a template, `{ pattern, count, sampled }`, so a site of
+ * hundreds of event pages is captured in minutes and its plan still sees every page. Other pages are all kept.
+ */
+export function sampleTemplates(urls, per = 3) {
+  const groups = new Map()
+  for (const u of urls) {
+    const parts = new URL(u).pathname.split('/').filter(Boolean)
+    const key = parts.length >= 2 ? `/${parts[0]}/*` : null
+    if (key) groups.set(key, [...(groups.get(key) || []), u])
+  }
+  const templates = [...groups].filter(([, members]) => members.length > per).map(([pattern, members]) => ({ pattern, count: members.length, sampled: members.slice(0, per) }))
+  const skipped = new Set(templates.flatMap((t) => groups.get(t.pattern).slice(per)))
+  return { capture: urls.filter((u) => !skipped.has(u)), templates }
+}
+
 // ---------------------------------------------------------------- in-page extraction (runs in the browser)
 export function extractInPage() {
   const W = document.documentElement.scrollWidth, H = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight)

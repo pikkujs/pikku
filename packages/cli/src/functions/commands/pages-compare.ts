@@ -585,6 +585,14 @@ export interface SiteCapture {
     } | null
   }>
   downloadPictures?: (out: string) => Promise<unknown>
+  /** Splits a page list into the pages to capture and the templates sampled. Older capture scripts have none. */
+  sampleTemplates?: (
+    urls: string[],
+    per?: number
+  ) => {
+    capture: string[]
+    templates: Array<{ pattern: string; count: number; sampled: string[] }>
+  }
 }
 
 /**

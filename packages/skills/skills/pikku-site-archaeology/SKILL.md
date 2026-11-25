@@ -19,7 +19,8 @@ outlasts the tool's timeout and is stopped. Do not write your own capture script
 mkdir -p artifacts/references/<site> && pikku ui pages capture https://the-site.example/ --out artifacts/references/<site> > artifacts/references/<site>/capture.log 2>&1 &
 ```
 
-It writes the page list to `artifacts/references/<site>/pages.txt` at once. Within a few minutes it writes
+It writes the page list to `artifacts/references/<site>/pages.txt` at once (every page; a template of many alike pages,
+such as hundreds of event pages, is captured through three of them and listed in `templates.json`). Within a few minutes it writes
 `behaviour.json`: what every page relies on and does, read in a browser (outside hosts and what each loads, redirects,
 cookies by name, fonts, media, every form with its fields and what an empty submit does, sent nowhere, each embedded
 frame (a booking tool, a hosted form) with its choices, forms and hosts under `frames`, menus that open,
