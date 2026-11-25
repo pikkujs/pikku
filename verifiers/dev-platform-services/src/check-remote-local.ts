@@ -10,7 +10,7 @@ const store = createScriptContent(
 )
 const generated = await ingestText(
   store,
-  join(scenario, '.pikku/services/pikku-dev-services.gen.ts')
+  join(scenario, '.pikku/providers/pikku-dev-providers.gen.ts')
 )
 
 assert.ok(generated.includes('@verifier/svc-notify/src/notifier.js'))

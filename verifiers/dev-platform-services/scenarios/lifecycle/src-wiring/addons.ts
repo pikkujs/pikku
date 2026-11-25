@@ -5,5 +5,5 @@ import { wireAddon } from '#pikku/addon'
 wireAddon({
   name: 'notify',
   package: '@verifier/svc-notify',
-  services: ['hookC', 'hookB', 'hookA'],
+  providers: ['hookC', 'hookB', 'hookA'],
 })

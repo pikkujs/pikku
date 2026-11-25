@@ -43,11 +43,11 @@ pub struct Options {
     /// checkAddonBans applies.
     #[serde(skip_serializing_if = "is_false")]
     pub is_addon: bool,
-    /// Set while `#pikku/service` does not exist yet: a pikkuService whose
+    /// Set while `#pikku/provider` does not exist yet: a defineProvider whose
     /// return type depends on the merged type cannot be read, so PKU372 waits
     /// for the pass that has the leaf.
     #[serde(skip_serializing_if = "is_false")]
-    pub defer_service_provides: bool,
+    pub defer_provider_provides: bool,
     /// InspectorOptions.types. Only finalize reads it; it is accepted and
     /// passed through untouched.
     #[serde(skip_serializing_if = "Option::is_none")]

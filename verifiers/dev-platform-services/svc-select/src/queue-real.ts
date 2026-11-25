@@ -1,11 +1,11 @@
-import { pikkuService } from '@pikku/core/pikku-service'
+import { defineProvider } from '@pikku/core/provider'
 
 /**
  * Runs only for a target whose functions destructure `queueClient`. It needs
  * the target's own `queueService`, so a project that never reaches
  * `queueClient` neither runs this nor imports its module.
  */
-export const queueReal = pikkuService({
+export const queueReal = defineProvider({
   dev: ({ queueService }) => ({
     queueClient: { kind: 'real', target: 'dev', queueService },
   }),

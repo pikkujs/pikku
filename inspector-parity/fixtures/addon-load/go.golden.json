@@ -70,19 +70,22 @@
    ]
   }
  },
- "optedInServices": {
+ "optedInProviders": {
   "ext": {
    "packageName": "@acme/addon",
-   "services": {
+   "providers": {
     "c1": {
+     "kind": "singleton",
      "module": "src/services/c1.ts",
      "export": "c1",
      "variants": {
       "common": {
        "needs": [],
+       "optional": [],
        "provides": [
         "c1"
-       ]
+       ],
+       "optionalProvides": []
       }
      }
     }
@@ -90,16 +93,19 @@
   },
   "rem": {
    "packageName": "@acme/addon",
-   "services": {
+   "providers": {
     "c1": {
+     "kind": "singleton",
      "module": "src/services/c1.ts",
      "export": "c1",
      "variants": {
       "common": {
        "needs": [],
+       "optional": [],
        "provides": [
         "c1"
-       ]
+       ],
+       "optionalProvides": []
       }
      }
     }
@@ -338,7 +344,7 @@
     "contentGrants": {
      "x": "rw"
     },
-    "services": [
+    "providers": [
      "c1",
      "missing"
     ],
@@ -389,7 +395,7 @@
     "local": {
      "package": "@acme/addon",
      "ui": true,
-     "services": [
+     "providers": [
       "c1"
      ]
     }
@@ -440,7 +446,7 @@
   {
    "level": "critical",
    "code": "PKU374",
-   "message": "wireAddon('ext') opts in to service 'missing', but @acme/addon declares no such service. It declares: c1, c2."
+   "message": "wireAddon('ext') opts in to provider 'missing', but @acme/addon declares no such provider. It declares: c1, c2."
   },
   {
    "level": "critical",

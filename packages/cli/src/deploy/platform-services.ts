@@ -7,10 +7,10 @@ import type {
   ServiceSupport,
 } from '@pikku/deploy'
 import {
-  collectServiceSources,
-  resolvePikkuServices,
-} from '../pikku-services/resolve-pikku-services.js'
-import { serializePikkuServices } from '../pikku-services/serialize-pikku-services.js'
+  collectProviderSources,
+  resolveProviders,
+} from '../providers/resolve-providers.js'
+import { serializeProviderRunner } from '../providers/serialize-provider-runner.js'
 
 export const PLATFORM_SERVICES_FILE = 'platform-services.gen.ts'
 
@@ -41,7 +41,7 @@ export const readUnitRequiredServices = async (
   return required
 }
 
-type ServicesState = Parameters<typeof resolvePikkuServices>[0]['state']
+type ProvidersState = Parameters<typeof resolveProviders>[0]['state']
 
 /**
  * What the provider-agnostic server entry holds when services run: nothing (it
@@ -60,14 +60,14 @@ export const genericServerEntrySupport = (): ServiceSupport => ({
  * The provider says what its runtime holds and supports (`serviceSupport`); this
  * is the one place that turns it and the project's services into the file, so
  * every adapter gets the same selection, ordering and errors. Only the services
- * the unit reaches are selected (see `resolvePikkuServices`). A provider with no
+ * the unit reaches are selected (see `resolveProviders`). A provider with no
  * `serviceSupport` cannot run a service, so a project that declares one it
  * would run fails the build there rather than shipping without it.
  */
 export async function writeUnitPlatformServices(options: {
   provider: ProviderAdapter
   ctx: EntryGenerationContext
-  state: ServicesState
+  state: ProvidersState
   projectDir: string
   /** The services the unit's functions, middleware and permissions destructure. */
   requiredServices: ReadonlySet<string>
@@ -86,16 +86,16 @@ export async function writeUnitPlatformServices(options: {
     ? genericServerEntrySupport()
     : provider.serviceSupport?.(ctx)
   if (!support) {
-    if (collectServiceSources(state, projectDir).length > 0) {
+    if (collectProviderSources(state, projectDir).length > 0) {
       throw new Error(
-        `The ${provider.name} deploy cannot run the services the project declares with pikkuService or opts in to with wireAddon (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them, or deploy with a provider that supports them.`
+        `The ${provider.name} deploy cannot run the services the project declares with defineProvider or opts in to with wireAddon (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them, or deploy with a provider that supports them.`
       )
     }
     await remove()
     return undefined
   }
 
-  const { ordered } = resolvePikkuServices({
+  const { ordered } = resolveProviders({
     state,
     rootDir: projectDir,
     target: 'deploy',
@@ -113,7 +113,7 @@ export async function writeUnitPlatformServices(options: {
 
   await writeFile(
     file,
-    serializePikkuServices({
+    serializeProviderRunner({
       target: 'deploy',
       services: ordered,
       specifier: (module) => module.replace(/\\/g, '/'),

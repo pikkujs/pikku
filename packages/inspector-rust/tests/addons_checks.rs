@@ -178,7 +178,7 @@ fn wirings_are_top_level() {
         ),
         (
             "src/nested.ts",
-            "import { wireAddon } from '@pikku/core/addon'\nimport { wireHTTP } from '@pikku/core/http'\n\nexport function optInToJobs() {\n  wireAddon({ name: 'shop', package: '@fixture/shop-addon', services: ['jobs'] })\n}\n\nexport const addRoute = () => {\n  wireHTTP({ route: '/a', func: {} as any })\n}\n",
+            "import { wireAddon } from '@pikku/core/addon'\nimport { wireHTTP } from '@pikku/core/http'\n\nexport function optInToJobs() {\n  wireAddon({ name: 'shop', package: '@fixture/shop-addon', providers: ['jobs'] })\n}\n\nexport const addRoute = () => {\n  wireHTTP({ route: '/a', func: {} as any })\n}\n",
         ),
         (
             "src/enclosures.ts",
@@ -190,7 +190,7 @@ fn wirings_are_top_level() {
         ),
         (
             "src/top.ts",
-            "import { wireAddon } from '@pikku/core/addon'\n\nwireAddon({ name: 'top', package: '@fixture/top-addon', services: ['inbox'] })\n",
+            "import { wireAddon } from '@pikku/core/addon'\n\nwireAddon({ name: 'top', package: '@fixture/top-addon', providers: ['inbox'] })\n",
         ),
     ] {
         std::fs::write(root.join(name), text).unwrap();
@@ -221,23 +221,23 @@ fn wirings_are_top_level() {
     let _ = std::fs::remove_dir_all(&root);
 }
 
-const SERVICE_CODES: [&str; 7] = ["PKU369", "PKU371", "PKU372", "PKU373", "PKU374", "PKU375", "PKU376"];
+const PROVIDER_CODES: [&str; 7] = ["PKU369", "PKU371", "PKU372", "PKU373", "PKU374", "PKU375", "PKU376"];
 
 fn wirings_addons_golden() -> Value {
     serde_json::from_slice(&std::fs::read(go_testdata("wirings-addons").join("inspect.golden.json")).unwrap()).unwrap()
 }
 
-/// The pikkuService manifest, the services each wireAddon opted in to and the
+/// The defineProvider manifest, the services each wireAddon opted in to and the
 /// PKU369-376 diagnostics, against Go's golden of `testdata/wirings-addons`.
 #[test]
-fn pikku_service_matches_the_wirings_addons_golden() {
+fn define_provider_matches_the_wirings_addons_golden() {
     let root = go_testdata("wirings-addons");
     let root_s = root.to_string_lossy().into_owned();
     let res = run(&root, |_| {});
     let text = pikku_inspect::jsjson::to_string(res.state.as_ref().unwrap().as_ref()).unwrap();
     let state: Value = serde_json::from_str(&text.replace(&root_s, "<fixture>")).unwrap();
     let golden = wirings_addons_golden();
-    for key in ["pikkuServices", "optedInServices"] {
+    for key in ["providers", "optedInProviders"] {
         assert_eq!(state[key].to_string(), golden["state"][key].to_string(), "state.{key} differs from Go");
     }
     assert_eq!(state["rpc"]["wireAddonDeclarations"].to_string(), golden["state"]["rpc"]["wireAddonDeclarations"].to_string());
@@ -245,7 +245,7 @@ fn pikku_service_matches_the_wirings_addons_golden() {
         v.as_array()
             .unwrap()
             .iter()
-            .filter(|d| SERVICE_CODES.contains(&d["code"].as_str().unwrap_or("")))
+            .filter(|d| PROVIDER_CODES.contains(&d["code"].as_str().unwrap_or("")))
             .map(|d| (d["code"].as_str().unwrap().to_string(), d["message"].as_str().unwrap().replace(&root_s, "<fixture>")))
             .collect()
     };
@@ -253,13 +253,13 @@ fn pikku_service_matches_the_wirings_addons_golden() {
     assert_eq!(pick(&got), pick(&golden["diagnostics"]));
 }
 
-/// While `#pikku/service` does not exist, a service whose return type cannot be
+/// While `#pikku/provider` does not exist, a provider whose return type cannot be
 /// read is not PKU372.
 #[test]
-fn defer_service_provides_skips_pku372() {
+fn defer_provider_provides_skips_pku372() {
     let root = go_testdata("wirings-addons");
     let count = |defer: bool| {
-        run(&root, |o| o.defer_service_provides = defer)
+        run(&root, |o| o.defer_provider_provides = defer)
             .diagnostics
             .iter()
             .filter(|d| d.code.as_deref() == Some("PKU372"))

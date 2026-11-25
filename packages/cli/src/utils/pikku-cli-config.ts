@@ -427,7 +427,7 @@ const assertDeployShape = (config: Record<string, unknown>, file: string) => {
     }
     if ('contributors' in project) {
       throw new PikkuCLIConfigError(
-        `deploy.contributors is no longer read — remove it from ${file}. Declare each service with pikkuService and opt in to an addon service with wireAddon({ services: [...] }); see docs/MIGRATION.md`
+        `deploy.contributors is no longer read — remove it from ${file}. Declare each provider with defineProvider and opt in to an addon provider with wireAddon({ providers: [...] }); see docs/MIGRATION.md`
       )
     }
     for (const key of ['grouping', 'embed']) {
@@ -748,11 +748,11 @@ const _getPikkuCLIConfig = async (
       )
     }
 
-    if (!result.pikkuServiceTypesFile) {
-      result.pikkuServiceTypesFile = join(
+    if (!result.providerTypesFile) {
+      result.providerTypesFile = join(
         result.outDir,
-        'service',
-        'pikku-service-types.gen.ts'
+        'provider',
+        'provider-types.gen.ts'
       )
     }
 
@@ -1661,21 +1661,18 @@ const _getPikkuCLIConfig = async (
       result.flagsMetaJsonFile = join(scopesDir, 'pikku-flags-meta.gen.json')
     }
 
-    // Services, when the package calls pikkuService: the meta is published
+    // Providers, when the package calls defineProvider: the meta is published
     // beside the other generated files so a host can opt in, and the dev file
     // is what `pikku dev` loads for the services a project declared or wired.
-    const pikkuServicesDir = join(result.outDir, 'services')
-    if (!result.pikkuServicesMetaJsonFile) {
-      result.pikkuServicesMetaJsonFile = join(
-        pikkuServicesDir,
-        'pikku-services-meta.gen.json'
+    const providersDir = join(result.outDir, 'providers')
+    if (!result.providersMetaJsonFile) {
+      result.providersMetaJsonFile = join(
+        providersDir,
+        'pikku-providers-meta.gen.json'
       )
     }
-    if (!result.devPikkuServicesFile) {
-      result.devPikkuServicesFile = join(
-        pikkuServicesDir,
-        'pikku-dev-services.gen.ts'
-      )
+    if (!result.devProvidersFile) {
+      result.devProvidersFile = join(providersDir, 'pikku-dev-providers.gen.ts')
     }
 
     // Addon screens, when the package declares any. Their own directory:
@@ -1800,7 +1797,7 @@ const _getPikkuCLIConfig = async (
       const value = (result as Record<string, any>)[section]
       if (value && typeof value === 'object' && 'contributors' in value) {
         throw new PikkuCLIConfigError(
-          `${section}.contributors is no longer read — remove it from ${result.configDir}/pikku.config.json. Declare each service with pikkuService and opt in to an addon service with wireAddon({ services: [...] }); see docs/MIGRATION.md`
+          `${section}.contributors is no longer read — remove it from ${result.configDir}/pikku.config.json. Declare each provider with defineProvider and opt in to an addon provider with wireAddon({ providers: [...] }); see docs/MIGRATION.md`
         )
       }
     }

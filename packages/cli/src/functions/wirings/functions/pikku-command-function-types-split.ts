@@ -12,7 +12,7 @@ import {
 import { serializeMiddlewareTypes } from '../middleware/serialize-middleware-types.js'
 import { serializeSetupTypes } from '../setup/serialize-setup-types.js'
 import { serializeAuthGuards } from '../auth/serialize-auth-guards.js'
-import { serviceTypesSource } from '../../../pikku-services/service-types-source.js'
+import { providerTypesSource } from '../../../providers/provider-types-source.js'
 
 export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
   { bootstrap?: boolean },
@@ -72,7 +72,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       // its services provide, from the service leaf; an addon declares only its own.
       config.addon
         ? `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, singletonServicesType.typePath, packageMappings)}'`
-        : `import type { SingletonServices } from '${getFileImportRelativePath(functionTypesFile, config.pikkuServiceTypesFile, packageMappings)}'`,
+        : `import type { SingletonServices } from '${getFileImportRelativePath(functionTypesFile, config.providerTypesFile, packageMappings)}'`,
       config.addon ? singletonServicesType.type : 'SingletonServices',
       `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, wireServicesType.typePath, packageMappings)}'`,
       wireServicesType.type,
@@ -136,8 +136,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
     if (!config.addon) {
       await writeFileInDir(
         logger,
-        config.pikkuServiceTypesFile,
-        serviceTypesSource(visitState, config)
+        config.providerTypesFile,
+        providerTypesSource(visitState, config)
       )
     }
 

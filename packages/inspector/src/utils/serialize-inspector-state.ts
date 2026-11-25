@@ -318,8 +318,8 @@ export interface SerializableInspectorState {
   remoteAddonFunctions?: InspectorState['remoteAddonFunctions']
   studio?: InspectorState['studio']
   addonStudio?: InspectorState['addonStudio']
-  pikkuServices?: InspectorState['pikkuServices']
-  optedInServices?: InspectorState['optedInServices']
+  providers?: InspectorState['providers']
+  optedInProviders?: InspectorState['optedInProviders']
   projectServicesRead?: InspectorState['projectServicesRead']
   exportedContracts: InspectorState['exportedContracts']
 }
@@ -564,8 +564,8 @@ export function serializeInspectorState(
     remoteAddonFunctions: state.remoteAddonFunctions,
     studio: state.studio,
     addonStudio: state.addonStudio,
-    pikkuServices: state.pikkuServices,
-    optedInServices: state.optedInServices,
+    providers: state.providers,
+    optedInProviders: state.optedInProviders,
     projectServicesRead: state.projectServicesRead,
     exportedContracts: state.exportedContracts,
   }
@@ -813,8 +813,8 @@ export function deserializeInspectorState(
       : {}),
     studio: data.studio,
     addonStudio: data.addonStudio,
-    pikkuServices: data.pikkuServices,
-    optedInServices: data.optedInServices,
+    providers: data.providers,
+    optedInProviders: data.optedInProviders,
     projectServicesRead: data.projectServicesRead,
     exportedContracts: data.exportedContracts || {
       http: {},

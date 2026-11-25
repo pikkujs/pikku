@@ -428,7 +428,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     // What a service provides is read from its return type, which can depend on
     // the leaf this writes, so it runs until a pass changes nothing.
-    await workflow.do('Service types', 'pikkuServiceTypes', null)
+    await workflow.do('Provider types', 'providerTypes', null)
 
     // Type generators are independent of each other
     // These write the addon-safe subset of their leaf when the project is an
@@ -532,7 +532,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
       workflow.do('Addon types', 'pikkuAddonTypes', {}),
       workflow.do('Screens', 'pikkuScreens', null),
-      workflow.do('Services meta', 'pikkuServicesMeta', null),
+      workflow.do('Providers meta', 'providersMeta', null),
     ])
 
     if (hasInternalRPCs) {

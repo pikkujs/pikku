@@ -4,7 +4,7 @@ import { wireQueueWorker } from '#pikku/queue'
 import { wireScheduler } from '#pikku/scheduler'
 import { enqueueJob, processJob, startFlow, tick } from './jobs.js'
 
-wireAddon({ name: 'nats', package: '@pikku/queue-nats', services: ['nats'] })
+wireAddon({ name: 'nats', package: '@pikku/queue-nats', providers: ['nats'] })
 
 wireHTTP({ method: 'post', route: '/enqueue', auth: false, func: enqueueJob })
 wireHTTP({ method: 'post', route: '/start-flow', auth: false, func: startFlow })

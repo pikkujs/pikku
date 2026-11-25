@@ -37,7 +37,7 @@ describe('writeUnitPlatformServices', () => {
     >
   ) =>
     ({
-      pikkuServices: Object.fromEntries(
+      providers: Object.fromEntries(
         Object.entries(services).map(([name, service]) => [
           name,
           {
@@ -48,7 +48,7 @@ describe('writeUnitPlatformServices', () => {
           },
         ])
       ),
-      optedInServices: {},
+      optedInProviders: {},
       rpc: { wireAddonDeclarations: new Map() },
     }) as never
 
@@ -80,8 +80,8 @@ describe('writeUnitPlatformServices', () => {
       projectDir: root,
       requiredServices: new Set(
         Object.values(
-          (st as { pikkuServices: Record<string, { variants: Variants }> })
-            .pikkuServices
+          (st as { providers: Record<string, { variants: Variants }> })
+            .providers
         ).flatMap((meta) =>
           Object.values(meta.variants).flatMap((variant) => variant!.provides)
         )
@@ -187,8 +187,8 @@ describe('writeUnitPlatformServices', () => {
   test('nothing declared writes nothing and removes a stale file', async () => {
     writeFileSync(join(unitDir, PLATFORM_SERVICES_FILE), 'stale')
     const none = {
-      pikkuServices: {},
-      optedInServices: {},
+      providers: {},
+      optedInProviders: {},
       rpc: { wireAddonDeclarations: new Map() },
     } as never
     assert.equal(await run('api', none), undefined)
@@ -207,7 +207,7 @@ describe('writeUnitPlatformServices', () => {
     test('onServerStart where the target runs no server lifecycle is a build error naming service and unit', async () => {
       await assert.rejects(
         run('worker-unit', starts(), provider({ runsServerLifecycle: false })),
-        /onServerStart would never be called: service 'queue' in unit 'worker-unit'/
+        /onServerStart would never be called: provider 'queue' in unit 'worker-unit'/
       )
     })
 
@@ -237,8 +237,8 @@ describe('writeUnitPlatformServices', () => {
 
     test('the generic server entry with nothing declared writes no file', async () => {
       const none = {
-        pikkuServices: {},
-        optedInServices: {},
+        providers: {},
+        optedInProviders: {},
         rpc: { wireAddonDeclarations: new Map() },
       } as never
       assert.equal(

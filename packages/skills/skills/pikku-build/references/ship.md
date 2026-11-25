@@ -25,8 +25,8 @@ with Node, or a self-contained executable compiled with `bun build --compile`.
 factories the deploy codegen expects, and hand-rolling an `ExportedHandler` is
 how a worker deploy fails at runtime instead of at build.
 
-Platform services an addon builds for the bundle come from the `pikkuService`s
-the project opted in to with `wireAddon({ services: [...] })`, plus the ones the
+Platform services an addon builds for the bundle come from the `defineProvider`s
+the project opted in to with `wireAddon({ providers: [...] })`, plus the ones the
 project declares itself. `plan` and `apply` select the `deploy` (or `common`)
 variant of each, order them by what they need and provide and, on standalone,
 run them after the database is open, with `logger` and `kysely` in reach.

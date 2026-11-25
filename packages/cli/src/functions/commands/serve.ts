@@ -34,8 +34,8 @@ import {
 } from './load-user-project.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
-import { loadDevPikkuServices } from './dev-pikku-services.js'
-import { devBaselineFor } from '../wirings/cli/write-dev-pikku-services.js'
+import { loadDevProviders } from './dev-providers.js'
+import { devBaselineFor } from '../wirings/cli/write-dev-providers.js'
 import { resolveFrontendMount } from './serve-frontend.js'
 import { servedFrontend } from '../../utils/frontend.js'
 import { serverReadyLine } from '../../server/server-ready.js'
@@ -243,10 +243,10 @@ export const serve = pikkuSessionlessFunc<
       }
     )
 
-    const { services: localServices, startHooks } = await loadDevPikkuServices(
+    const { services: localServices, startHooks } = await loadDevProviders(
       baseLocalServices,
       config.rootDir,
-      config.devPikkuServicesFile,
+      config.devProvidersFile,
       devBaselineFor(config, inspectorState, 'serve'),
       process.env
     )

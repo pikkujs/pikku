@@ -43,7 +43,7 @@ pub(crate) enum Endpoint {
 pub(crate) struct AddonLocal {
     pub pkg: String,
     pub ui: bool,
-    pub services: Vec<String>,
+    pub providers: Vec<String>,
 }
 
 /// A `state.rpc.wireAddonDeclarations` entry, typed for the readers in the
@@ -63,8 +63,8 @@ pub struct AddonDecl {
     pub scopes: Vec<String>,
     pub uses: Option<Record<String>>,
     /// The addon service names the project opted in to.
-    pub services: Vec<String>,
-    /// A wireRemoteAddon's local package: the screens and services shown
+    pub providers: Vec<String>,
+    /// A wireRemoteAddon's local package: the screens and providers shown
     /// under the remote name are read from it.
     pub(crate) local: Option<AddonLocal>,
     pub(crate) secret_overrides: Option<Record<OJson>>,
@@ -110,7 +110,7 @@ impl AddonDecl {
         let local = o.get("local").filter(|l| l.is_object()).map(|l| AddonLocal {
             pkg: l.get("package").and_then(OJson::str).unwrap_or("").to_string(),
             ui: l.get("ui").is_some_and(|v| *v == OJson::Bool(true)),
-            services: l.get("services").map(OJson::string_members).unwrap_or_default(),
+            providers: l.get("providers").map(OJson::string_members).unwrap_or_default(),
         });
         Some(AddonDecl {
             pkg: s("package"),
@@ -131,7 +131,7 @@ impl AddonDecl {
             },
             scopes: o.get("scopes").map(OJson::string_members).unwrap_or_default(),
             uses: string_record_of(o.get("uses")),
-            services: o.get("services").map(OJson::string_members).unwrap_or_default(),
+            providers: o.get("providers").map(OJson::string_members).unwrap_or_default(),
             local,
             secret_overrides: object_record_of(o.get("secretOverrides")),
             variable_overrides: object_record_of(o.get("variableOverrides")),
@@ -438,7 +438,7 @@ impl Loader<'_> {
         }
     }
 
-    /// The screens and services a wireRemoteAddon takes from its local
+    /// The screens and providers a wireRemoteAddon takes from its local
     /// package, under the remote addon's name.
     fn load_remote_addon_local(&mut self, ns: &str, decl: &AddonDecl) {
         let l = decl.local.as_ref().unwrap();
@@ -446,12 +446,12 @@ impl Loader<'_> {
             pkg: l.pkg.clone(),
             file: decl.file.clone(),
             ui: l.ui,
-            services: l.services.clone(),
+            providers: l.providers.clone(),
             ..Default::default()
         };
         let req = AddonResolver(addon_resolution_dirs(self.root_dir, &decl.file));
-        if !local.services.is_empty() {
-            self.record_opted_in_services(ns, &local, &req);
+        if !local.providers.is_empty() {
+            self.record_opted_in_providers(ns, &local, &req);
         }
         if local.ui
             && let Err(e) = self.load_addon_studio(ns, &local, &req)
@@ -477,8 +477,8 @@ impl Loader<'_> {
         let req = AddonResolver(dirs.clone());
 
         self.record_declared_uses(ns, decl, &dirs);
-        if !decl.services.is_empty() {
-            self.record_opted_in_services(ns, decl, &req);
+        if !decl.providers.is_empty() {
+            self.record_opted_in_providers(ns, decl, &req);
         }
 
         if decl.ui {
@@ -535,30 +535,30 @@ impl Loader<'_> {
         Ok(())
     }
 
-    /// `wireAddon({ services })` against what the addon declared. A name it
+    /// `wireAddon({ providers })` against what the addon declared. A name it
     /// does not declare is an error rather than a skip: the project asked for a
     /// service and would otherwise build without it.
-    fn record_opted_in_services(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) {
+    fn record_opted_in_providers(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) {
         let mut registered = OJson::new_object();
         let via = format!("wireAddon('{ns}')");
-        if let Some(path) = resolve_addon_meta(req, &decl.pkg, "services/pikku-services-meta") {
+        if let Some(path) = resolve_addon_meta(req, &decl.pkg, "providers/pikku-providers-meta") {
             match read_json_file(&path) {
                 Err(e) => {
                     self.log.critical(
-                        codes::ADDON_SERVICE_UNKNOWN,
-                        format!("{via} opts in to services, but the services manifest of {} could not be read: {e}", decl.pkg),
+                        codes::ADDON_PROVIDER_UNKNOWN,
+                        format!("{via} opts in to providers, but the providers manifest of {} could not be read: {e}", decl.pkg),
                     );
                     return;
                 }
                 Ok(meta) => {
-                    if let Some(c) = meta.get("services").filter(|c| c.is_object()) {
+                    if let Some(c) = meta.get("providers").filter(|c| c.is_object()) {
                         registered = c.clone();
                     }
                 }
             }
         }
         let mut selected = OJson::new_object();
-        for name in &decl.services {
+        for name in &decl.providers {
             match registered.get(name) {
                 None => {
                     let known: Vec<String> = match &registered {
@@ -566,13 +566,13 @@ impl Loader<'_> {
                         _ => vec![],
                     };
                     let hint = if known.is_empty() {
-                        "It declares none; add a pikkuService export to the package and run pikku all in it.".to_string()
+                        "It declares none; add a defineProvider export to the package and run pikku all in it.".to_string()
                     } else {
                         format!("It declares: {}.", known.join(", "))
                     };
                     self.log.critical(
-                        codes::ADDON_SERVICE_UNKNOWN,
-                        format!("{via} opts in to service '{name}', but {} declares no such service. {hint}", decl.pkg),
+                        codes::ADDON_PROVIDER_UNKNOWN,
+                        format!("{via} opts in to provider '{name}', but {} declares no such provider. {hint}", decl.pkg),
                     );
                 }
                 Some(v) => selected.set(name, v.clone()),
@@ -583,16 +583,16 @@ impl Loader<'_> {
         }
         let mut entry = OJson::new_object();
         entry.set("packageName", OJson::string(&decl.pkg));
-        entry.set("services", selected);
+        entry.set("providers", selected);
 
         let mut all = OJson::new_object();
-        if let Some(existing) = ojson_of_raw(&self.state.opted_in_services)
+        if let Some(existing) = ojson_of_raw(&self.state.opted_in_providers)
             && existing.is_object()
         {
             all = existing;
         }
         all.set(ns, entry);
-        self.state.opted_in_services = all.raw();
+        self.state.opted_in_providers = all.raw();
     }
 
     fn load_addon_studio(&mut self, ns: &str, decl: &AddonDecl, req: &AddonResolver) -> Result<(), String> {
@@ -1196,17 +1196,17 @@ pub(crate) mod tests {
     fn wire_declarations_round_trip_to_typed_decls() {
         let mut state = State::default();
         let raw = |s: &str| Raw::of(serde_json::from_str(s).unwrap());
-        state.rpc.wire_addon_declarations.set("a", raw(r#"{"package":"@s/a","file":"/x/a.ts","mcp":["f"],"mcpEndpoint":true,"expose":true,"uses":{"db":"main"},"scopes":["s1"],"services":["c"],"ui":true}"#));
-        state.rpc.wire_addon_declarations.set("r", raw(r#"{"package":"@s/r","range":"^1.0.0","file":"/x/r.ts","remote":true,"hasAuth":false,"local":{"package":"@s/l","ui":true,"services":["c2"]}}"#));
+        state.rpc.wire_addon_declarations.set("a", raw(r#"{"package":"@s/a","file":"/x/a.ts","mcp":["f"],"mcpEndpoint":true,"expose":true,"uses":{"db":"main"},"scopes":["s1"],"providers":["c"],"ui":true}"#));
+        state.rpc.wire_addon_declarations.set("r", raw(r#"{"package":"@s/r","range":"^1.0.0","file":"/x/r.ts","remote":true,"hasAuth":false,"local":{"package":"@s/l","ui":true,"providers":["c2"]}}"#));
         let decls: HashMap<String, AddonDecl> = declared_addons(&state).into_iter().collect();
         let a = &decls["a"];
         assert_eq!((a.pkg.as_str(), a.ui, a.mcp.clone(), a.mcp_endpoint.clone(), a.expose.clone()), ("@s/a", true, Flex::List(vec!["f".into()]), Endpoint::Bool(true), Flex::Bool(true)));
         assert_eq!(a.uses.as_ref().unwrap().get("db").map(String::as_str), Some("main"));
-        assert_eq!((a.scopes.clone(), a.services.clone()), (vec!["s1".to_string()], vec!["c".to_string()]));
+        assert_eq!((a.scopes.clone(), a.providers.clone()), (vec!["s1".to_string()], vec!["c".to_string()]));
         let r = &decls["r"];
         assert!(r.remote && r.rng == "^1.0.0");
         let l = r.local.as_ref().unwrap();
-        assert_eq!((l.pkg.as_str(), l.ui, l.services.clone()), ("@s/l", true, vec!["c2".to_string()]));
+        assert_eq!((l.pkg.as_str(), l.ui, l.providers.clone()), ("@s/l", true, vec!["c2".to_string()]));
         assert_eq!(declared_addons(&state).iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(), ["a", "r"]);
     }
 }

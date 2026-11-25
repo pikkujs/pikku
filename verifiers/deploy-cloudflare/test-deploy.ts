@@ -165,7 +165,7 @@ import { wireHTTP } from '#pikku/http'
 wireAddon({
   name: 'kyselyStandIn',
   package: '@verifier/service-kysely',
-  services: ['kyselyStandIn'],
+  providers: ['kyselyStandIn'],
 })
 
 // Reaching \`kysely\` is what puts the service providing it in this unit.

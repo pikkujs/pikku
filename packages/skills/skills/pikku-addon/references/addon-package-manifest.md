@@ -5,7 +5,7 @@
 - Package Structure
 - pikku.config.json
 - package.json (key fields)
-- Platform services (`pikkuService`)
+- Platform services (`defineProvider`)
 - tsconfig.json (key fields)
 
 `npx pikku new addon` scaffolds these files. You rarely hand-edit them — consult this when wiring exports or config by hand.
@@ -103,13 +103,13 @@ live in a file that never imports `#pikku` — see "Functions" in the skill.
 writes `@my-org/addon-todos/.pikku/rpc/...`, exactly as it would in an
 application, and the leaf stays the package's own business.
 
-## Platform services (`pikkuService`)
+## Platform services (`defineProvider`)
 
 An addon can ship code that builds services for the **host's** target — a log
 source over the host's database, a client built from a host secret. The addon
-declares them in code with `pikkuService`; nothing goes in `package.json` and
+declares them in code with `defineProvider`; nothing goes in `package.json` and
 `wireAddon` of the addon itself has no field for it. A host that wants one opts
-in by name with `wireAddon({ services: ['logSources'] })`, and gets nothing it
+in by name with `wireAddon({ providers: ['logSources'] })`, and gets nothing it
 did not list. An opted-in service is not run everywhere: a target (`pikku dev`,
 or one deploy unit) selects it only when a key it provides is destructured by the
 functions, middleware or permissions that target includes, or by another selected
@@ -118,11 +118,11 @@ error and no import, so wiring it once does not need per-build wiring.
 
 ```ts
 // src/services.ts
-import { pikkuService } from '@pikku/core/pikku-service'
+import { defineProvider } from '@pikku/core/provider'
 import { logSourcesDev } from './log-sources-dev.js'
 import { logSourcesDeploy } from './log-sources-deploy.js'
 
-export const logSources = pikkuService({
+export const logSources = defineProvider({
   dev: logSourcesDev,
   deploy: logSourcesDeploy,
 })
@@ -157,7 +157,7 @@ Rules the inspector and the build enforce:
 - A service with no variant for a target is simply not part of it, unless it
   provides a key that target needs: then the build fails.
 - Run `pikku all` in the addon: it writes
-  `.pikku/services/pikku-services-meta.gen.json`, which a host reads to opt in
+  `.pikku/providers/pikku-providers-meta.gen.json`, which a host reads to opt in
   (an unknown name is PKU374). Ship `.pikku` in `files` and export
   `./.pikku/services/*`.
 - A plain package that is not an addon declares services the same way and is

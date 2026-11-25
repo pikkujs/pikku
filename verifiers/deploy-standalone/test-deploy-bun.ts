@@ -134,7 +134,7 @@ import { wireHTTP } from '#pikku/http'
 wireAddon({
   name: 'marker',
   package: '@verifier/service-marker',
-  services: ['markerReader', 'marker', 'hookB', 'hookA'],
+  providers: ['markerReader', 'marker', 'hookB', 'hookA'],
 })
 
 // Reaching these keys is what puts the services providing them in the unit.
@@ -484,7 +484,7 @@ if (!BUN_AVAILABLE) {
 
   await check('bundle: carries the opted-in services and only those', () => {
     const bundle = readText(join(DEPLOY_DIR, unitName, 'bundle.js'))
-    if (!bundle.includes('wireAddon.services'))
+    if (!bundle.includes('wireAddon.providers'))
       throw new Error('the opted-in services are not in the bundle')
     if (bundle.includes('NEVER_BUNDLED_MARKER'))
       throw new Error('a service the project did not opt in to was bundled')

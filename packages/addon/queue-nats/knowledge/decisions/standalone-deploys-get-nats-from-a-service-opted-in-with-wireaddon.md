@@ -2,16 +2,16 @@
 type: decision
 title: Standalone deploys get NATS from a service opted in with wireAddon
 description: '@pikku/queue-nats publishes a service that, on a deploy, puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
-tags: [nats, pikku-service, deploy, standalone, permissions]
+tags: [nats, provider, deploy, standalone, permissions]
 ---
 
 # Standalone deploys get NATS from a service opted in with wireAddon
 
-`@pikku/queue-nats` has no functions. It publishes one `pikkuService`, `nats`
+`@pikku/queue-nats` has no functions. It publishes one `defineProvider`, `nats`
 (a deploy variant that connects, and a dev variant that provides only an inert
 `natsLifecycle`, so `pikku dev` keeps its in-memory queue). The package is built
 as an addon, so its service metadata ships under `./.pikku/*`. An app opts in at build time with
-`wireAddon({ name: 'nats', package: '@pikku/queue-nats', services: ['nats'] })`.
+`wireAddon({ name: 'nats', package: '@pikku/queue-nats', providers: ['nats'] })`.
 
 ## Which build applies it
 
@@ -105,7 +105,7 @@ server with the users in an `include`d file and `--signal reload=<pidfile>`.
 - Open question: the generated `RequiredSingletonServices` still requires
   `queueService`, `schedulerService`, `workflowService` and `workflowRunService`
   for an app that wires a queue worker, although the nats service or the deploy
-  build provides them. `SingletonServices` from `#pikku/service` carries the
+  build provides them. `SingletonServices` from `#pikku/provider` carries the
   keys a service provides, so an app that declares the services type through it
   needs no cast.
 - NATS permissions cannot filter reply subjects or a push consumer's

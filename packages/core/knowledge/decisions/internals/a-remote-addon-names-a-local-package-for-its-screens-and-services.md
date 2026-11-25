@@ -24,7 +24,7 @@ statically by the inspector into the same `wireAddonDeclarations` entry
 matching `wireAddon`'s `ui` and `services`. `loadAddonFunctionsMeta` loads the
 screens manifest and the opted-in services from `local.package` and records
 them under the one name (`state.addonStudio[name]`,
-`state.optedInServices[name]`). The screens command writes the installed-addon
+`state.optedInProviders[name]`). The screens command writes the installed-addon
 import path from `local.package`, not the contract package.
 
 **Why not `ui`/`services` flat beside `package`.** The remote `package` is a

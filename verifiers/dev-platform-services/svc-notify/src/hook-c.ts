@@ -1,8 +1,8 @@
-import { pikkuService } from '@pikku/core/pikku-service'
+import { defineProvider } from '@pikku/core/provider'
 import { logHook, maybeFail } from './hook-log.js'
 
 /** A chain: hook-a, then hook-b needing it, then hook-c. */
-export const hookC = pikkuService({
+export const hookC = defineProvider({
   common: ({ hookB }) => ({
     hookC: {
       tag: `${hookB.tag}>c`,
