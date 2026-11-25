@@ -159,7 +159,7 @@ Rules the inspector and the build enforce:
 - Run `pikku all` in the addon: it writes
   `.pikku/providers/pikku-providers-meta.gen.json`, which a host reads to opt in
   (an unknown name is PKU374). Ship `.pikku` in `files` and export
-  `./.pikku/services/*`.
+  `./.pikku/*`.
 - A plain package that is not an addon declares services the same way and is
   wired with `wireAddon`; it needs a `pikku.config.json` with `"addon": true`.
 - Services run after every service providing one of their needs. A target's
@@ -176,6 +176,20 @@ Rules the inspector and the build enforce:
   build error. Teardown is the provided value's own `stop()`, called in reverse
   build order.
 - Fail closed: a service whose bindings are missing at startup throws.
+- **Declare every variable and secret an addon provider reads** with
+  `defineVariable` / `defineSecret`: its `env` holds only those names (and the
+  host's `variableOverrides` / `secretOverrides`), and anything else is
+  `env-denied`.
+- A provider that provides `logger`, `secrets`, `variables`, `credentialService`,
+  `auth` or `jwt` must say `replaces: [...]` (PKU394), and the host's
+  `pikku-addons.lock` records it. Adding a need, a provided key or a `replaces`
+  in a later version is PKU395 for the host until it runs
+  `pikku all --approve-providers`; a host in CI (`--frozen`) fails (PKU396).
+- Contribute to a list with `defineProvider({ addTo: collection })`, importing the
+  collection (core's `analyticsSinks`, or one the addon declares with
+  `defineProviderCollection`). A database addon has no `deploy:standalone`
+  variant (the standalone entry opens its own, PKU397). Providers run in the host's
+  process, so `wireRemoteAddon` cannot take them (PKU381).
 
 Full reference: `docs/services.md` in the pikku repo.
 

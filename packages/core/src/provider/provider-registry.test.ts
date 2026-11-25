@@ -360,6 +360,27 @@ describe('ProviderRegistry.resolve optional needs', () => {
     assert.deepEqual(names(registry, 'dev'), ['a'])
   })
 
+  test('an optional need that closes a cycle is a cycle only when its provider is present', () => {
+    const needer = defineProvider(({ q }: any) => ({ a: q }))
+    const present = new ProviderRegistry()
+      .add('a', needer, optionalMeta(['q'], ['q'], ['a']))
+      .add(
+        'q',
+        defineProvider(({ a }: any) => ({ q: a })),
+        optionalMeta(['a'], [], ['q'])
+      )
+    assert.throws(
+      () => names(present, 'dev'),
+      (e: any) => e.kind === 'cycle'
+    )
+    const absent = new ProviderRegistry().add(
+      'a',
+      needer,
+      optionalMeta(['q'], ['q'], ['a'])
+    )
+    assert.deepEqual(names(absent, 'dev'), ['a'])
+  })
+
   test('an optional need something provides orders the needer after it', () => {
     const registry = new ProviderRegistry()
       .add(

@@ -47,6 +47,12 @@ for engine in pg sqlite; do
   marker_in_bundles "PIKKU_MARKER_$other" && fail "engine $engine: PIKKU_MARKER_$other leaked" || pass "engine $engine: PIKKU_MARKER_$other absent"
 done
 
+echo "--- AI SDKs and analytics sinks arrive through collections ---"
+if out=$(npx tsx src/check-collections.ts 2>&1); then pass "collections: ai providers and analytics sinks"; else fail "collections: $(tail -n 3 <<<"$out" | tr '\n' ' ')"; fi
+build pg >/dev/null 2>&1
+marker_in_bundles PIKKU_MARKER_OPENAI && pass "ai: PIKKU_MARKER_OPENAI bundled when listed" || fail "ai: PIKKU_MARKER_OPENAI missing"
+marker_in_bundles PIKKU_MARKER_ANTHROPIC && pass "ai: PIKKU_MARKER_ANTHROPIC bundled when listed" || fail "ai: PIKKU_MARKER_ANTHROPIC missing"
+
 echo "--- per-request auditLog and events ---"
 if out=$(cd . && npx tsx src/check-audit.ts 2>&1); then pass "auditLog/events"; else fail "auditLog/events: $(tail -n 3 <<<"$out" | tr '\n' ' ')"; fi
 

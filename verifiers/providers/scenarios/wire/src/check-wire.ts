@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import { createPlatformServices } from '../.pikku/providers/pikku-dev-providers.gen.js'
 import { pikkuState } from '@pikku/core/state'
 
+const stopLog: string[] = []
+;(globalThis as { __stopLog?: string[] }).__stopLog = stopLog
 const logger = { info() {}, error() {} }
 const singletons = await createPlatformServices({}, { logger })
 const create = pikkuState(null, 'package', 'wireProviders')
@@ -39,4 +41,9 @@ const audited = await create(singletons, {} as never, {
 })
 assert.equal((audited.services.events as any).audited, true)
 await first.stop()
+assert.deepEqual(
+  stopLog,
+  ['events', 'requestScope'],
+  'per-request providers stop in reverse resolved order'
+)
 console.log('ok: wire providers build per invocation from the generated runner')

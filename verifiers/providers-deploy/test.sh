@@ -84,7 +84,9 @@ expect_marker "side effect" cloudflare __pikkuHit absent
 
 echo "--- standalone owns its database: a plain deploy variant cannot replace kysely ---"
 cp src/addons.ts src/addons.ts.orig
-trap 'mv -f src/addons.ts.orig src/addons.ts 2>/dev/null' EXIT
+cp src/http.wiring.ts src/http.wiring.ts.orig
+cp pikku.config.json pikku.config.json.orig
+trap 'mv -f pikku.config.json.orig pikku.config.json 2>/dev/null; mv -f src/addons.ts.orig src/addons.ts 2>/dev/null; mv -f src/http.wiring.ts.orig src/http.wiring.ts 2>/dev/null' EXIT
 cat >>src/addons.ts <<'TS'
 
 // prov-db has no deploy:standalone variant, so it is not run on standalone.
@@ -94,6 +96,48 @@ if out=$(rm -rf .pikku && npx pikku all --approve-providers 2>&1 && plan standal
 else
   fail "standalone with no deploy:standalone variant: $(tail -n 2 <<<"$out" | tr '\n' ' ')"
 fi
+
+echo "--- the real @pikku/addon-kysely-* providers, one at a time ---"
+# Each driver's own startup error text is unique to its provider module.
+PG_TEXT='The postgres kysely service needs DATABASE_URL'
+SQLITE_TEXT='The sqlite kysely service needs LIBSQL_URL'
+real_addon() { # package
+  cat >src/addons.ts <<TS
+import { wireAddon } from '#pikku/addon'
+
+wireAddon({ name: 'db', package: '$1', providers: ['kysely'] })
+wireAddon({ name: 'ai', package: '@verifier/prov-ai', providers: ['openai'] })
+TS
+}
+# A project with a db section owns kysely under pikku dev, so a database addon replaces it only without one.
+node -e "
+  const fs = require('fs'); const c = JSON.parse(fs.readFileSync('pikku.config.json.orig', 'utf8')); delete c.db
+  fs.writeFileSync('pikku.config.json', JSON.stringify(c, null, 2))"
+for real in postgres sqlite; do
+  if [ "$real" = postgres ]; then
+    own=$PG_TEXT; other=$SQLITE_TEXT
+    # postgres has no Worker variant, so no Worker unit may reach kysely.
+    grep -v "route: '/db'" src/http.wiring.ts.orig >src/http.wiring.ts
+  else
+    own=$SQLITE_TEXT; other=$PG_TEXT
+    cp src/http.wiring.ts.orig src/http.wiring.ts
+  fi
+  real_addon "@pikku/addon-kysely-$real"
+  if ! out=$(rm -rf .pikku .deploy && npx pikku all --approve-providers 2>&1 && plan cloudflare && plan standalone); then
+    fail "real $real: $(tail -n 3 <<<"$out" | tr '\n' ' ')"
+    continue
+  fi
+  container=$(find .deploy/cloudflare/container -name bundle.js 2>/dev/null | head -n 1)
+  expect_marker "real $real container" cloudflare "$own" present "$container"
+  expect_marker "real $real container" cloudflare "$other" absent "$container"
+  expect_marker "real $real" cloudflare "$other" absent
+  # Standalone opens its own sqlite database, which can import the libSQL package, so only postgres is a clean witness there.
+  expect_marker "real $real standalone (no deploy:standalone variant)" standalone "$PG_TEXT" absent
+done
+mv -f src/addons.ts.orig src/addons.ts
+cp src/addons.ts src/addons.ts.orig
+cp src/http.wiring.ts.orig src/http.wiring.ts
+cp pikku.config.json.orig pikku.config.json
 
 echo "=== $passed passed, ${#failures[@]} failed ==="
 for f in "${failures[@]}"; do echo "  x $f"; done

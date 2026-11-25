@@ -9,7 +9,7 @@ tags: [cli, provider, services, deploy, dev]
 
 `resolveProviders` is the one resolver. It reads what the inspector recorded
 (the project's `defineProvider` consts and the ones opted in with
-`wireAddon({ services })`), never loads user code, and hands core's
+`wireAddon({ providers })`), never loads user code, and hands core's
 `ProviderRegistry` the target and its baseline: what `pikku dev` injects
 (`devBaselineServices`), or what the deploy provider's entry holds
 (`ProviderAdapter.serviceSupport`, `{ baseline, runsServerLifecycle }`).

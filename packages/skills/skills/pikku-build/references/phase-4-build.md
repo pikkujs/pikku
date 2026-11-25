@@ -205,7 +205,12 @@ skip the file under `NODE_ENV=production`. A service's `onServerStart` runs befo
 the app's `beforeStart`; teardown is the provided value's `stop()`. An unmet need,
 a key provided twice or a cycle fails `pikku all`. A host that injects an addon
 (CI, Studio) writes a gitignored wiring file containing
-`wireAddon({ name, package, services })`. Reference: `docs/services.md`.
+`wireAddon({ name, package, providers })`. Providers are in-process, trusted code:
+`pikku-addons.lock` records each addon provider's surface (commit it; `--frozen`,
+implied by `CI=true`, refuses to change it), and an addon provider reads only the
+variables and secrets its addon declares. `defineWireProvider` builds per-request
+services and `defineProviderCollection` plus `addTo` contribute list items.
+Reference: `docs/services.md`.
 
 ## 6a. Close the changeset against its plan, not against your memory
 

@@ -9,6 +9,7 @@
   "dependencies": {
     "@pikku/addon-kysely": "workspace:*",
     "@pikku/addon-kysely-bun-sqlite": "workspace:*",
+    "@pikku/addon-kysely-postgres": "workspace:*",
     "@pikku/addon-kysely-sqlite": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*"
