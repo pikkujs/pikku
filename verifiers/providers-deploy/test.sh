@@ -2,6 +2,8 @@
 # One project built for standalone, cloudflare-worker and cloudflare-container, with bundle greps.
 # Not part of test:verifiers: run it by hand with `bash verifiers/providers-deploy/test.sh`.
 cd "$(dirname "$0")"
+unset CI
+rm -f pikku-addons.lock
 
 failures=()
 passed=0

@@ -110,6 +110,7 @@ export {
 export type {
   AddonsLock,
   AddonsLockEntry,
+  ProviderLockEntry,
   RemoteAddonSdkManifest,
   RemoteAddonPackageSpec,
   LockedSdk,

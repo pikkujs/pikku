@@ -1,5 +1,9 @@
 #!/bin/bash
 set -e
+cd "$(dirname "$0")"
+# The scenarios write pikku-addons.lock as they build; CI=true would freeze it.
+unset CI
+rm -f scenarios/*/pikku-addons.lock
 
 echo "=== Dev Platform Services Verifier ==="
 echo "--- a project that declares and opts in to nothing generates no services file ---"

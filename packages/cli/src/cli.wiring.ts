@@ -375,6 +375,16 @@ wireCLI({
             'Emit relative imports even when packageMappings would apply (used by per-unit deploy codegen)',
           default: false,
         },
+        frozen: {
+          description:
+            'Refuse to write pikku-addons.lock and fail on any drift in it (PKU396). Implied by CI=true. A build that has to change the lock fails instead of changing it.',
+          default: false,
+        },
+        approveProviders: {
+          description:
+            'Accept the changed surface of addon providers in pikku-addons.lock: bare for every provider, or the ids (<namespace>/<export>, comma-separated) it names',
+          type: 'string[]',
+        },
         lazyAddons: {
           description:
             "Register wired addons' functions and schemas from an exported loadAddons() instead of at startup (used by per-unit deploy codegen)",

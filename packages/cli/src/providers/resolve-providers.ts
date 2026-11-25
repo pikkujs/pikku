@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, parse, posix, resolve } from 'node:path'
 import {
+  PROTECTED_KEYS,
   ProviderRegistry,
   variantOrder,
   type ProviderAddonScope,
@@ -361,6 +362,28 @@ export const optionalProvidedKeys = (meta: ProviderMeta): string[] => [
   ),
 ]
 
+/**
+ * A provider may provide a protected key only by listing it in `replaces`, on
+ * every target, reached or not.
+ */
+export const checkProtectedKeys = (
+  sources: readonly ProviderSource[]
+): void => {
+  for (const source of sources) {
+    if (source.meta.addTo) continue
+    const replaces = new Set(source.meta.replaces ?? [])
+    const key = providedKeys(source.meta)
+      .filter((provided) => PROTECTED_KEYS.includes(provided))
+      .find((provided) => !replaces.has(provided))
+    if (key !== undefined) {
+      throw new ProviderBuildError(
+        ErrorCode.PROTECTED_KEY_NOT_REPLACED,
+        `Provider '${source.name}' provides '${key}', a protected key, without listing it in replaces. Add replaces: ['${key}'] to its definition.`
+      )
+    }
+  }
+}
+
 const noop = () => ({})
 
 /** The keys core builds for every invocation, which no provider supplies. */
@@ -467,6 +490,7 @@ export const resolveProviders = (options: {
     ? `${targetLabel} (${options.unitLabel})`
     : targetLabel
   const allSources = collectProviderSources(options.state, options.rootDir)
+  checkProtectedKeys(allSources)
   const sources = allSources.filter((source) => source.meta.kind !== 'wire')
   const wireSources = allSources.filter((source) => source.meta.kind === 'wire')
   const baselineKeys = new Set(baseline)

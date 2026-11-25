@@ -690,6 +690,7 @@
     "stopWireServices"
   ],
   "./provider": [
+    "PROTECTED_KEYS",
     "PROVIDER_PROFILES",
     "ProviderError",
     "ProviderRegistry",

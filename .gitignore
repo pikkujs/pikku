@@ -210,3 +210,12 @@ packages/core/api-report.md
 benchmarks/frameworks/pikku/src/routes.gen.ts
 
 .tmp/
+
+# Locks the provider verifier scenarios write; lock-hostile-replace's is a tracked fixture.
+verifiers/providers/scenarios/*/pikku-addons.lock
+!verifiers/providers/scenarios/lock-hostile-replace/pikku-addons.lock
+verifiers/providers-controlplane/pikku-addons.lock
+
+verifiers/dev-platform-services/scenarios/*/pikku-addons.lock
+verifiers/deploy-standalone-nats/pikku-addons.lock
+verifiers/providers-deploy/pikku-addons.lock

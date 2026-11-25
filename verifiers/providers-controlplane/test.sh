@@ -2,6 +2,7 @@
 # Downstream (controlplane) cases from the providers plan, section 4.13.
 # Not part of test:verifiers: run it by hand with `bash verifiers/providers-controlplane/test.sh`.
 cd "$(dirname "$0")"
+unset CI
 
 failures=()
 passed=0
@@ -52,7 +53,7 @@ if out=$(cd . && npx tsx src/check-audit.ts 2>&1); then pass "auditLog/events"; 
 echo "--- the singleton example builds; the audited kysely per request is PKU393 ---"
 if out=$(rm -rf .pikku && npx pikku all 2>&1); then pass "createSingletonServices checks existingServices.kysely and spreads existingServices"; else fail "factory examples: $(tail -n 3 <<<"$out" | tr '\n' ' ')"; fi
 cp src/services.ts "$services_backup"
-cp cases/audited-wire-services.ts src/services.ts
+cp cases/audited-wire-services.ts.txt src/services.ts
 if out=$(npx pikku all 2>&1); then
   fail "audited kysely per request was accepted, expected PKU393"
 elif grep -qF PKU393 <<<"$out"; then

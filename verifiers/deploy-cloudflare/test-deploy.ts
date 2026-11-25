@@ -77,6 +77,9 @@ const COERCION_UNIT_NAME = 'verifier-db-reach'
 const DB_DIALECT_DIR = join(FUNCTIONS_DIR, 'db')
 const ADDON_WIRING_FILE = join(FUNCTIONS_DIR, 'src', 'zz-services-wiring.ts')
 
+// The temporary addon wiring writes pikku-addons.lock; CI=true would freeze it.
+delete process.env.CI
+
 const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
 const restoreConfig = () => {
   writeFileSync(CONFIG_FILE, originalConfig)
@@ -87,6 +90,7 @@ const restoreConfig = () => {
     ADDON_WIRING_FILE,
     ADDON_LINK,
     DB_DIALECT_DIR,
+    join(FUNCTIONS_DIR, 'pikku-addons.lock'),
   ]) {
     rmSync(fixture, { force: true, recursive: true })
   }

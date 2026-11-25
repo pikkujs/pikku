@@ -2,6 +2,8 @@
 # Providers verifier. Usage: ./test.sh [scenario ...]   (no arguments runs every scenario)
 # Not part of test:verifiers: run it by hand with `bash verifiers/providers/test.sh`.
 cd "$(dirname "$0")"
+# CI=true implies --frozen, which refuses the lock writes the lock scenarios assert.
+unset CI
 
 failures=()
 passed=0

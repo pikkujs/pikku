@@ -16,9 +16,31 @@ export type AddonsLockEntry = {
   integrity: string
 }
 
+/**
+ * What the project approved of one addon provider it opted in to: the surface
+ * (what it provides, imports and adds to) a later build is checked against.
+ * `version` and `metaHash` record where the approval came from; only the surface
+ * fields gate a build.
+ */
+export type ProviderLockEntry = {
+  package: string
+  version: string
+  /** `sha256-<hex>` of the provider's meta, as canonical JSON. */
+  metaHash: string
+  kind: 'singleton' | 'wire'
+  provides: string[]
+  optionalProvides: string[]
+  imports: string[]
+  optionalImports: string[]
+  addsTo: string | null
+  replaces: string[]
+}
+
 export type AddonsLock = {
-  lockfileVersion: 1
+  lockfileVersion: 2
   sdks: Record<string, AddonsLockEntry>
+  /** Keyed `<namespace>/<export>`. */
+  providers: Record<string, ProviderLockEntry>
 }
 
 /** `manifest.json` at the root of an SDK. */
@@ -59,8 +81,9 @@ export const parseRemoteAddonPackage = (
 }
 
 export const emptyAddonsLock = (): AddonsLock => ({
-  lockfileVersion: 1,
+  lockfileVersion: 2,
   sdks: {},
+  providers: {},
 })
 
 /** The project's lock, an empty one when there is none. Throws when the file is not a lock. */
@@ -80,17 +103,37 @@ export const readAddonsLock = (rootDir: string): AddonsLock => {
   ) {
     throw new Error(`${path} has no "sdks" object`)
   }
-  return { lockfileVersion: 1, sdks: parsed.sdks ?? {} }
+  return {
+    lockfileVersion: 2,
+    sdks: parsed.sdks ?? {},
+    providers: parsed.providers ?? {},
+  }
 }
 
-/** Sorted by package name, each entry's keys in a fixed order, so the same lock always writes the same bytes. */
+/** Sorted by package name and provider id, each entry's keys in a fixed order, so the same lock always writes the same bytes. */
 export const serializeAddonsLock = (lock: AddonsLock): string => {
   const sdks: Record<string, AddonsLockEntry> = {}
   for (const name of Object.keys(lock.sdks).sort()) {
     const { range, version, integrity } = lock.sdks[name]!
     sdks[name] = { range, version, integrity }
   }
-  return `${JSON.stringify({ lockfileVersion: 1, sdks }, null, 2)}\n`
+  const providers: Record<string, ProviderLockEntry> = {}
+  for (const id of Object.keys(lock.providers).sort()) {
+    const entry = lock.providers[id]!
+    providers[id] = {
+      package: entry.package,
+      version: entry.version,
+      metaHash: entry.metaHash,
+      kind: entry.kind,
+      provides: entry.provides,
+      optionalProvides: entry.optionalProvides,
+      imports: entry.imports,
+      optionalImports: entry.optionalImports,
+      addsTo: entry.addsTo,
+      replaces: entry.replaces,
+    }
+  }
+  return `${JSON.stringify({ lockfileVersion: 2, sdks, providers }, null, 2)}\n`
 }
 
 export const remoteSdkDir = (

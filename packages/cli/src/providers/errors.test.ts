@@ -12,7 +12,12 @@ type Variants = Record<
   }
 >
 
-type Provider = { variants: Variants; onServerStart?: boolean; kind?: 'wire' }
+type Provider = {
+  variants: Variants
+  onServerStart?: boolean
+  kind?: 'wire'
+  replaces?: string[]
+}
 
 const state = (
   providers: Record<string, Provider>,
@@ -149,7 +154,7 @@ describe('provider build errors, one exact message per code', () => {
       "[PKU393] Wire provider 'shadow' provides 'held', which 'held' already holds as a singleton on the standalone deploy. A key has one lifetime."
     )
     assert.equal(
-      message({ shadow: wire([], ['logger']) }),
+      message({ shadow: { ...wire([], ['logger']), replaces: ['logger'] } }),
       "[PKU393] Wire provider 'shadow' provides 'logger', which 'the baseline' already holds as a singleton on the standalone deploy. A key has one lifetime."
     )
     assert.equal(
@@ -173,6 +178,29 @@ describe('provider build errors, one exact message per code', () => {
     assert.equal(
       message({ events: wire(['auditLog'], ['events']) }),
       "[PKU391] Provider 'events' needs 'auditLog', which 'core' provides only sometimes. Add 'auditLog' to its optional list."
+    )
+  })
+
+  test('PKU394 PROTECTED_KEY_NOT_REPLACED', () => {
+    assert.equal(
+      message({ pino: common([], ['logger']) }),
+      "[PKU394] Provider 'pino' provides 'logger', a protected key, without listing it in replaces. Add replaces: ['logger'] to its definition."
+    )
+  })
+
+  test('a protected key listed in replaces is accepted', () => {
+    assert.doesNotThrow(() =>
+      resolveProviders({
+        state: state({
+          pino: { ...common([], ['logger']), replaces: ['logger'] },
+        }),
+        rootDir: '/p',
+        target: 'deploy',
+        profile: 'standalone',
+        baseline: ['logger'],
+        requiredServices: ['logger'],
+        targetLabel: 'the standalone deploy',
+      })
     )
   })
 
