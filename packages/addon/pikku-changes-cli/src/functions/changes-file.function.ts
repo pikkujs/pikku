@@ -1,4 +1,6 @@
+import { existsSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
+import { isAbsolute, join } from 'node:path'
 import { z } from 'zod'
 import { pikkuSessionlessFunc } from '#pikku/addon/function'
 import { CloudPreconditionError } from '@pikku/cli/addon-support'
@@ -14,8 +16,10 @@ import {
   filingOrder,
   parsePlanText,
   validatePlan,
+  type PlannedChange,
 } from '../lib/change-plan.js'
 import { isCloneProject } from '../lib/page-reference.js'
+import { evidenceProblems } from '../lib/plan-evidence.js'
 import { git } from '@pikku/cli/addon-support'
 
 export const ChangesFileInput = z.object({
@@ -104,6 +108,41 @@ export const ChangesFile = pikkuSessionlessFunc({
   },
 })
 
+/** How long a refusal of a site plan's evidence counts: the retry that follows it is filed, not refused again. */
+const EVIDENCE_RETRY_MS = 2 * 60 * 60 * 1000
+
+/**
+ * A site plan's evidence is checked against the capture (evidenceProblems). The first time it fails the plan is
+ * refused with every bad citation and unnamed host, so the planner fixes them in the same turn; a second failure is
+ * filed, with what is still wrong as an open question in the first change, so a planner cannot loop on it.
+ */
+export async function checkEvidence(plan: PlannedChange[], top: string) {
+  const common = (await git(['rev-parse', '--git-common-dir'], top)).trim()
+  const marker = join(
+    isAbsolute(common) ? common : join(top, common),
+    'pikku-changes-evidence.json'
+  )
+  const problems = evidenceProblems(plan, top)
+  const refused =
+    existsSync(marker) &&
+    Date.now() - statSync(marker).mtimeMs < EVIDENCE_RETRY_MS
+  if (problems.length && !refused) {
+    writeFileSync(
+      marker,
+      JSON.stringify({ at: new Date().toISOString(), problems }, null, 1)
+    )
+    throw new CloudPreconditionError(
+      [
+        'The plan was not filed: its evidence does not check out against the capture. Fix these and run the same command again (a second time it is filed, with what is still wrong as open questions in the first change):',
+        ...problems.map((p) => `- ${p}`),
+      ].join('\n')
+    )
+  }
+  if (problems.length)
+    plan[0]!.body += `\n\nOpen question: this evidence did not check out against the capture when the plan was filed:\n${problems.map((p) => `- ${p}`).join('\n')}`
+  rmSync(marker, { force: true })
+}
+
 /**
  * `--plan` files every change of a plan in one call, or none: the plan is
  * checked whole before the first change is written, and each `dependsOn` ref
@@ -125,9 +164,9 @@ async function filePlan(
   const top = await git(['rev-parse', '--show-toplevel'])
     .then((out) => out.trim())
     .catch(() => process.cwd())
-  const plan = validatePlan(parsePlanText(text, source), {
-    clone: isCloneProject(top),
-  })
+  const clone = isCloneProject(top)
+  const plan = validatePlan(parsePlanText(text, source), { clone })
+  if (clone) await checkEvidence(plan, top)
 
   const { rpc, projectId } = await changesContext(input.apiUrl, input.projectId)
   if (input.backlog && projectId !== LOCAL_PROJECT_ID)
