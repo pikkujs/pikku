@@ -21,7 +21,9 @@ rules of the `pikku-changes` skill, and these on top:
   `note:<file in knowledge/site/>` or a captured URL. A route, form field, table, outside-service decision or interaction
   needs a primary source where the capture has one: `page:`, `behaviour:` or a captured URL. A `note:` may be added as
   context, never alone. A form or flow inside an embedded service (a booking tool, a hosted form) is evidenced by
-  `behaviour:frames` (its choices, forms, fields and hosts); a page fetched with curl is not evidence. A feature with no
+  `behaviour:frames` (its choices, forms, fields and hosts), and the first step of a flow behind a link or button (a hosted
+  form, a checkout, a sign-in) by `behaviour:actions`; a page fetched with curl is not evidence. A member or sign-in area is
+  an original feature only where `actions` shows its step; later steps the capture did not reach are open questions. A feature with no
   source is not planned: it is an "Open question: ..." in the nearest change.
 - Every service in `outside-services.md` and every host in `behaviour.json` `outsideHosts` is named by a change: one that
   replaces it (a hosted form becomes the app's own form and table, a tracker or error reporter is removed, fonts and pictures
