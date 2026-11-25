@@ -27,6 +27,16 @@ npm create pikku@latest
 
 By default this creates `./my-app`. Use `--name` to override it.
 
+The starter template is downloaded from
+[`pikkujs/starter-template`](https://github.com/pikkujs/starter-template) at the
+commit this release of `create-pikku` pins. `--version <ref>` downloads another
+branch, tag or commit of that repository instead. For every other template,
+`--version` names a ref of `pikkujs/pikku` (of `pikkujs/nextjs-app-starter` for
+`nextjs-full`), and the default is `main`.
+
+If a downloaded template is empty or has no `package.json`, `create-pikku` exits
+with a non-zero status and creates no project.
+
 ### Variations Mode
 
 Use `--variations` to access the full template picker and interactive options:
@@ -45,17 +55,17 @@ npm create pikku@latest -- --template express --name my-app --install --package-
 
 ## CLI Options
 
-| Option                        | Short | Description                           | Example                      |
-| ----------------------------- | ----- | ------------------------------------- | ---------------------------- |
-| `--template <template>`       | `-t`  | Template to use                       | `--template express`         |
-| `--name <name>`               | `-n`  | Project name                          | `--name my-app`              |
-| `--install`                   | `-i`  | Install dependencies automatically    | `--install`                  |
-| `--package-manager <manager>` | `-p`  | Package manager to use                | `--package-manager yarn`     |
-| `--version <version>`         | `-v`  | Template version/branch               | `--version main`             |
-| `--yarn-link <path>`          |       | Link to local Pikku development       | `--yarn-link ../pikku`       |
-| `--variations`                |       | Show all template variations          | `--variations`               |
-| `--frontend <frontend>`       |       | Frontend to keep for starter template | `--frontend app` |
-| `--help`                      | `-h`  | Display help information              | `--help`                     |
+| Option                        | Short | Description                           | Example                  |
+| ----------------------------- | ----- | ------------------------------------- | ------------------------ |
+| `--template <template>`       | `-t`  | Template to use                       | `--template express`     |
+| `--name <name>`               | `-n`  | Project name                          | `--name my-app`          |
+| `--install`                   | `-i`  | Install dependencies automatically    | `--install`              |
+| `--package-manager <manager>` | `-p`  | Package manager to use                | `--package-manager yarn` |
+| `--version <version>`         | `-v`  | Template ref (branch, tag or commit)  | `--version main`         |
+| `--yarn-link <path>`          |       | Link to local Pikku development       | `--yarn-link ../pikku`   |
+| `--variations`                |       | Show all template variations          | `--variations`           |
+| `--frontend <frontend>`       |       | Frontend to keep for starter template | `--frontend app`         |
+| `--help`                      | `-h`  | Display help information              | `--help`                 |
 
 ## Available Templates
 

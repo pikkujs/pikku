@@ -17,8 +17,8 @@ import { createSpinner } from 'nanospinner'
 import {
   cleanPikkuConfig,
   cleanTSConfig,
+  downloadPopulatedTemplate,
   filterFilesByFeatures,
-  lazymkdir,
   mergeDirectories,
   mergeJsonFiles,
   preparePackageJsonForYarnLink,
@@ -27,11 +27,12 @@ import {
   serverlessChanges,
   updatePackageJSONScripts,
   ensureOxlintSetup,
-  withNetworkRetry,
+  withStagingDir,
   wranglerChanges,
+  STARTER_TEMPLATE_REF,
+  STARTER_TEMPLATE_SOURCE,
 } from './utils.js'
 import { program } from 'commander'
-import { tmpdir } from 'os'
 import { spawnSync } from 'child_process'
 import fs, { unlinkSync, writeFileSync } from 'fs'
 
@@ -290,34 +291,34 @@ async function setupTemplate(cliOptions: CliOptions) {
   const spinner = createSpinner('Downloading template...').start()
 
   try {
-    // Download both templates, with optional version (branch/tag)
-    const tmpDirPrefix = tmpdir()
-    const functionsPath = `${tmpDirPrefix}/pikku/functions`
-    const templatePath = `${tmpDirPrefix}/pikku/template`
-
-    await downloadWithRetry(functionsUrl, functionsPath, spinner)
-    await downloadWithRetry(templateUrl, templatePath, spinner)
-
-    spinner.success()
-
     // Get supported features for the selected template
     const selectedTemplate = templates.find((t) => t.template === template)
     const supportedFeatures = (selectedTemplate?.supports || []) as string[]
 
-    // Filter files based on supported features
-    filterFilesByFeatures(functionsPath, supportedFeatures)
+    await withStagingDir(targetPath, async (stagingDir) => {
+      // Download both templates, with optional version (branch/tag)
+      const functionsPath = path.join(stagingDir, 'functions')
+      const templatePath = path.join(stagingDir, 'template')
 
-    // Merge and process files
-    await lazymkdir(targetPath)
-    mergeJsonFiles([functionsPath, templatePath], targetPath, 'package.json')
-    mergeJsonFiles(
-      [functionsPath, templatePath],
-      targetPath,
-      'pikku.config.json'
-    )
-    mergeJsonFiles([functionsPath, templatePath], targetPath, 'tsconfig.json')
-    mergeDirectories(functionsPath, targetPath)
-    mergeDirectories(templatePath, targetPath)
+      await downloadWithRetry(functionsUrl, functionsPath, spinner)
+      await downloadWithRetry(templateUrl, templatePath, spinner)
+
+      spinner.success()
+
+      // Filter files based on supported features
+      filterFilesByFeatures(functionsPath, supportedFeatures)
+
+      // Merge and process files
+      mergeJsonFiles([functionsPath, templatePath], targetPath, 'package.json')
+      mergeJsonFiles(
+        [functionsPath, templatePath],
+        targetPath,
+        'pikku.config.json'
+      )
+      mergeJsonFiles([functionsPath, templatePath], targetPath, 'tsconfig.json')
+      mergeDirectories(functionsPath, targetPath)
+      mergeDirectories(templatePath, targetPath)
+    })
     replaceFunctionReferences(targetPath)
     if (template !== 'functions') {
       removeFunctionsOnlyFiles(targetPath)
@@ -363,8 +364,10 @@ async function downloadWithRetry(
   dir: string,
   spinner: ReturnType<typeof createSpinner>
 ) {
-  return withNetworkRetry(
-    () => downloadTemplate(source, { dir, force: true }),
+  return downloadPopulatedTemplate(
+    source,
+    dir,
+    (source, dir) => downloadTemplate(source, { dir }),
     {
       onRetry: (error, attempt) => {
         spinner.update({
@@ -375,23 +378,19 @@ async function downloadWithRetry(
   )
 }
 
-async function cloneRepo(
-  cliOptions: CliOptions,
-  repoName: string,
-  source = `gh:pikkujs/${repoName}`
-) {
+async function cloneRepo(cliOptions: CliOptions, repository: string) {
   const { version, name } = cliOptions
   const targetPath = path.join(process.cwd(), name)
-  const versionRef = version ? `#${version}` : ''
+  const source = `${repository}#${version}`
 
-  const spinner = createSpinner('Downloading template...').start()
+  const spinner = createSpinner(`Downloading ${source}...`).start()
 
   try {
-    const tmpDirPrefix = tmpdir()
-    const repoDirPath = `${tmpDirPrefix}/pikku/${repoName}`
-    await downloadWithRetry(`${source}${versionRef}`, repoDirPath, spinner)
-    await lazymkdir(targetPath)
-    mergeDirectories(repoDirPath, targetPath)
+    await withStagingDir(targetPath, async (stagingDir) => {
+      const templatePath = path.join(stagingDir, 'template')
+      await downloadWithRetry(source, templatePath, spinner)
+      mergeDirectories(templatePath, targetPath)
+    })
 
     try {
       if (cliOptions.packageManager !== 'npm') {
@@ -418,7 +417,7 @@ async function cloneRepo(
 
 async function setupRepo(cliOptions: CliOptions, repoName: string) {
   const { name } = cliOptions
-  const targetPath = await cloneRepo(cliOptions, repoName)
+  const targetPath = await cloneRepo(cliOptions, `gh:pikkujs/${repoName}`)
 
   await installDependencies(targetPath, cliOptions)
 
@@ -428,7 +427,6 @@ async function setupRepo(cliOptions: CliOptions, repoName: string) {
 }
 
 async function run() {
-  const version = cliOptions.version || 'main'
   const requestedTemplate =
     cliOptions.template === 'cloud' ? 'starter-template' : cliOptions.template
 
@@ -458,6 +456,10 @@ async function run() {
           })),
         })
       : DEFAULT_TEMPLATE)
+
+  const version =
+    cliOptions.version ||
+    (template === 'starter-template' ? STARTER_TEMPLATE_REF : 'main')
 
   const packageManager =
     template === 'starter-template'
@@ -527,11 +529,7 @@ async function setupCloud(cliOptions: CliOptions) {
   // Clone the starter first so the picker reflects whatever apps the
   // template *actually* ships — avoids drift between this CLI and the
   // template repo when new scaffolds are added.
-  const targetPath = await cloneRepo(
-    cliOptions,
-    'starter-template',
-    `${BASE_URL}/starter-template`
-  )
+  const targetPath = await cloneRepo(cliOptions, STARTER_TEMPLATE_SOURCE)
   const appsDir = path.join(targetPath, 'apps')
 
   if (!fs.existsSync(appsDir)) {
