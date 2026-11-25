@@ -145,14 +145,36 @@ export const queue = defineProvider({
   providing one key, an unmet need and a cycle are build errors. A target's
   baseline key (what `pikku dev` injects, or what a deploy entry holds first) may
   be replaced by exactly one service.
-- Teardown is the provided value's own `stop()`, called by `stopSingletonServices`
-  in reverse of build order.
-- Put each `dev` / `deploy` variant given by reference in a module of its own, or
-  both reach every bundle (PKU375).
+- Put each `dev` / `deploy` / `deploy:<profile>` variant given by reference in a
+  module of its own, or both reach every bundle (PKU375). Profiles are
+  `standalone`, `cloudflare-worker`, `cloudflare-container` and `server`.
+- `optional: ['queueService']` makes a need optional (typed `T | undefined`). A key a
+  provider returns conditionally is optional in the merged type, and a provider that
+  needs it must list it in `optional` (PKU391).
+- `secrets`, `variables`, `credentialService`, `auth`, `jwt` and `logger` are
+  protected: provide one only with `replaces: ['logger']` (PKU394).
+- `defineWireProvider(({ logger }, wire) => ...)` builds a service per invocation
+  from the singletons and the invocation's `wire`. It needs singleton keys or
+  earlier wire keys; a singleton needing a wire key is PKU392, a wire key a
+  singleton holds is PKU393, and `auditLog`, `analytics`, `session` and `rpc` are
+  core's (PKU399). Core builds `auditLog` first, so read it as `optional`.
+- `defineProviderCollection<'name', Item>('name')` and `defineProvider({ addTo })`
+  contribute one item to a list read as label-sorted `{ label, item }` entries;
+  core's `analyticsSinks` is one.
+- Teardown is the provided value's own `stop()`, called in reverse resolved order,
+  once per object. Per request the audit flush runs first, then the project's wire
+  services stop, then the wire providers.
+- A key the entry opens itself (standalone's `kysely`) cannot be replaced
+  (PKU397): a database addon has no `deploy:standalone` variant.
 - Fail closed: throw from the factory when a binding is missing.
-- A project takes an addon's services by name with
+- A project takes an addon's providers by name with
   `wireAddon({ name, package, providers: ['queue'] })`. Nothing is injected
-  without that list.
+  without that list. An addon provider's `env` holds only the names its addon
+  declares with `defineVariable` / `defineSecret`. Providers are in-process,
+  trusted code; `pikku-addons.lock` records each one's surface (PKU395 on a
+  change, `--approve-providers`; `--frozen`, implied by `CI=true`, PKU396).
+  `wireRemoteAddon` takes none (PKU381).
+- A function that destructures a key nothing provides fails the build (PKU390).
 
 `pikku all` generates `#pikku/provider`. Its `SingletonServices` is the type you
 declared plus every key a service provides, as required properties with no `any`,

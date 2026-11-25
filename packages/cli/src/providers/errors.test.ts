@@ -1,6 +1,9 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { emptyAddonsLock } from '@pikku/inspector'
+import type { AddonsLock, ProviderLockEntry } from '@pikku/inspector'
 import { resolveProviders } from './resolve-providers.js'
+import { checkProviderLock } from './providers-lock.js'
 
 type Variants = Record<
   string,
@@ -188,6 +191,23 @@ describe('provider build errors, one exact message per code', () => {
     )
   })
 
+  test('PKU394 holds on every target, whichever variant provides the protected key', () => {
+    const variantOnly = {
+      pino: {
+        variants: {
+          'deploy:cloudflare-worker': {
+            needs: [],
+            provides: ['logger'],
+          },
+        },
+      },
+    }
+    assert.match(
+      message(variantOnly),
+      /^\[PKU394\] Provider 'pino' provides 'logger', a protected key/
+    )
+  })
+
   test('a protected key listed in replaces is accepted', () => {
     assert.doesNotThrow(() =>
       resolveProviders({
@@ -212,5 +232,86 @@ describe('provider build errors, one exact message per code', () => {
       ),
       "[PKU397] The standalone deploy opens its own 'kysely'; provider 'db' cannot replace it. Give 'db' no variant for this target (for a database addon: no deploy:standalone variant)."
     )
+  })
+
+  describe('the provider lock', () => {
+    const entry = (
+      extra: Partial<ProviderLockEntry> = {}
+    ): ProviderLockEntry => ({
+      package: '@acme/addon',
+      version: '1.0.0',
+      metaHash: 'sha256-a',
+      kind: 'singleton',
+      provides: ['cache'],
+      optionalProvides: [],
+      imports: ['logger'],
+      optionalImports: [],
+      addsTo: null,
+      replaces: [],
+      ...extra,
+    })
+    const lockOf = (
+      providers: Record<string, ProviderLockEntry>
+    ): AddonsLock => ({ ...emptyAddonsLock(), providers })
+    const lockMessage = (run: () => unknown): string => {
+      try {
+        run()
+      } catch (error) {
+        return (error as Error).message
+      }
+      assert.fail('expected the build to fail')
+    }
+
+    test('PKU395 PROVIDER_LOCK_DRIFT', () => {
+      assert.equal(
+        lockMessage(() =>
+          checkProviderLock({
+            current: { 'a/x': entry({ imports: ['kysely', 'logger'] }) },
+            lock: lockOf({ 'a/x': entry() }),
+            frozen: false,
+          })
+        ),
+        "[PKU395] Addon provider 'a/x' changed since pikku-addons.lock approved it:\n+ imports kysely\nReview it, then run 'pikku all --approve-providers a/x' and commit pikku-addons.lock."
+      )
+    })
+
+    test('PKU396 PROVIDER_LOCK_FROZEN, new provider', () => {
+      assert.equal(
+        lockMessage(() =>
+          checkProviderLock({
+            current: { 'a/x': entry() },
+            lock: emptyAddonsLock(),
+            frozen: true,
+          })
+        ),
+        "[PKU396] pikku-addons.lock is frozen (--frozen) but addon provider 'a/x' is new. Run pikku all without --frozen locally and commit the lock."
+      )
+    })
+
+    test('PKU396 PROVIDER_LOCK_FROZEN, changed surface', () => {
+      assert.equal(
+        lockMessage(() =>
+          checkProviderLock({
+            current: { 'a/x': entry({ addsTo: 'sinks' }) },
+            lock: lockOf({ 'a/x': entry() }),
+            frozen: true,
+          })
+        ),
+        "[PKU396] pikku-addons.lock is frozen (--frozen) but addon provider 'a/x' changed:\n+ addsTo sinks\nRun pikku all without --frozen locally and commit the lock."
+      )
+    })
+
+    test('PKU396 PROVIDER_LOCK_FROZEN, removed provider', () => {
+      assert.equal(
+        lockMessage(() =>
+          checkProviderLock({
+            current: {},
+            lock: lockOf({ 'a/x': entry() }),
+            frozen: true,
+          })
+        ),
+        "[PKU396] pikku-addons.lock is frozen (--frozen) but addon provider 'a/x' was removed. Run pikku all without --frozen locally and commit the lock."
+      )
+    })
   })
 })

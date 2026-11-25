@@ -172,6 +172,28 @@ What an app sees:
 - `@pikku/addon-queue-nats` publishes `nats` as a `defineProvider` (`deploy:standalone` and `deploy:server` variants, and a dev variant that provides an inert `natsLifecycle`; the package is built as an addon and lives in `packages/addon/queue-nats`) instead of a contributor. Opt in with `wireAddon({ name: 'nats', package: '@pikku/addon-queue-nats', providers: ['nats'] })` in place of `wireContributors`. There is no `when`: a target selects `nats` when it reaches `queueService`, `schedulerService` or `natsLifecycle`, and a Worker unit that does is refused at build time, so wire it only for a standalone build. It provides `natsLifecycle` with a `stop()` that drains the workers and closes the connection.
 - The inspector state keys are `providers` and `optedInProviders`; an addon publishes `providers/pikku-providers-meta.gen.json`, `{ metaVersion: 2, providers, collections }`. PKU360 to PKU364 are retired; PKU369 to PKU376 cover a provider the build cannot read (PKU369), needs or provides it cannot read (PKU371, PKU372), an unreadable or unknown `wireAddon({ providers })` (PKU373, PKU374), variants sharing a module (PKU375), and a duplicate provider name (PKU376).
 
+### Providers: per-request providers, collections, protected keys, the lock and a scoped environment
+
+**What:** `defineProvider` grows the rest of its surface. All of it lands together with the rename above.
+
+| Old                                                                | New                                                                                       |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| `closeWireServices(logger, wireServices)` from `@pikku/core/utils` | `stopWireServices(logger, wireServices)`                                                  |
+| a per-request service's `close()`                                  | `stop()`, called last built first; `close()` is no longer called                          |
+| `AnalyticsSinkRegistry`, `createAnalyticsSinks`, the registry key  | the `analyticsSinks` collection from `@pikku/core/analytics`, read with `fanOutAnalytics` |
+| `PKU360` to `PKU364` (contributor errors)                          | retired; `PKU369` to `PKU399` (except `PKU370` and `PKU384`) are the provider codes       |
+
+- `defineWireProvider` builds a service per invocation from `(singletons, wire)`, opted in through the same `providers` list. A singleton provider that needs a wire key is PKU392; a wire key a singleton holds is PKU393; providing `auditLog`, `analytics`, `session` or `rpc` is PKU399. Core builds `auditLog` first, so a wire provider reads it as `optional`.
+- `defineProviderCollection(name)` and `defineProvider({ addTo })` add items to a list read as label-sorted `{ label, item }` entries. `analyticsSinks` is core's collection of `{ sink, map }`.
+- `optional: [...]` makes a need optional, and a key a provider returns conditionally is optional in the merged type. `deploy:<profile>` variants (`standalone`, `cloudflare-worker`, `cloudflare-container`, `server`) pick a build per deploy runtime.
+- `secrets`, `variables`, `credentialService`, `auth`, `jwt` and `logger` are protected: a provider provides one only with `replaces: ['logger']` (PKU394). A deploy provider's `serviceSupport` also returns `entryOwned` and `profile`; no provider may replace an entry-owned key, so a database addon has no `deploy:standalone` variant (PKU397).
+- Providers are in-process, trusted code. `wireRemoteAddon({ providers })` is PKU381: use `local: { package, providers }`.
+- **Declare what an addon provider reads.** An addon provider's `env` holds only the names its addon declares with `defineVariable` or `defineSecret` (and the ones `variableOverrides` and `secretOverrides` rename). An addon that reads `process.env`-style names it never declared now fails with `env-denied`: declare each one. A project's own providers read the raw environment.
+- `pikku-addons.lock` records every opted-in addon provider (its surface, not only its version). A changed surface is PKU395 until `pikku all --approve-providers[=id,...]` accepts it. `pikku all --frozen` refuses to write the lock (PKU396), and `CI=true` implies `--frozen`, so commit the lock and regenerate it at every release for workspace addons. A project that builds in CI with addon providers needs the lock committed first.
+- A project `createSingletonServices` no longer has to spread `existingServices` or check for injected keys: a key an opted-in provider provides is typed as present, and the runner merges injected keys onto what the factory returns.
+- A function that destructures a key no provider, baseline key or `createSingletonServices` provides fails the build for its unit (PKU390).
+- A factory that needs nothing may omit its parameter or name it `_services` and not read it; only a read of the whole object is PKU371.
+
 ### The nats and kysely packages are addons and are renamed
 
 All of them live in `packages/addon/*` and are built as addons (`pikku all && tsc -b && pikku dist`, metadata served under `./.pikku/*`). Their public classes and factories are unchanged; only the package name changes, so update the dependency and every import.
