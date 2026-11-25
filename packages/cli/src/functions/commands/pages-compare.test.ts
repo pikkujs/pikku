@@ -551,6 +551,59 @@ describe('the capture of what a site relies on and does', () => {
   )
 })
 
+describe('a hosted form a page links to', () => {
+  test(
+    'is opened in the site’s own language, as its visitors see it',
+    { timeout: 120_000, skip: !CHROMIUM && 'no chromium to capture with' },
+    async () => {
+      const site = (await loadSiteCapture()) as unknown as {
+        capture: (
+          out: string,
+          urls: string[],
+          widths: number[],
+          tiles: boolean,
+          jobs: number,
+          opts: Record<string, unknown>
+        ) => Promise<unknown>
+      }
+      const server = createServer((req, res) => {
+        res.writeHead(200, { 'content-type': 'text/html' })
+        if (req.url?.endsWith('/viewform')) {
+          // answers in the language the browser asks for, as Google Forms does
+          const label = (req.headers['accept-language'] ?? '').startsWith('sl')
+            ? 'Ime'
+            : 'Name'
+          res.end(
+            `<!doctype html><title>Form</title><form><label for="n">${label}</label><input id="n" name="name" required><button type="submit">Send</button></form>`
+          )
+        } else
+          res.end(
+            `<!doctype html><html lang="sl"><title>Domov</title><h1>Domov</h1><a href="http://localhost:${(server.address() as AddressInfo).port}/forms/d/e/x/viewform">obrazec</a></html>`
+          )
+      })
+      await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok))
+      const port = (server.address() as AddressInfo).port
+      const out = mkdtempSync(join(tmpdir(), 'pages-form-language-'))
+      try {
+        await site.capture(
+          out,
+          [`http://127.0.0.1:${port}/`],
+          [1440],
+          false,
+          1,
+          { chromium: CHROMIUM, pictures: false, log: () => {} }
+        )
+      } finally {
+        server.close()
+      }
+      const { actions } = JSON.parse(
+        readFileSync(join(out, 'behaviour.json'), 'utf8')
+      )
+      assert.equal(actions[0].step.forms[0].fields[0].label, 'Ime')
+    }
+  )
+})
+
 describe('the site’s own other apps', () => {
   test(
     'a sub-domain the site links is recorded under siblings with its first page, read-only',

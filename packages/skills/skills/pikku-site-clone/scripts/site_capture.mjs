@@ -551,6 +551,7 @@ async function probeActions(page, seen) {
     return out
   }, [ACTION.source, FORM_LINK.source, FORM_PATH.source, CHANGES_STATE.source]).catch(() => [])
   const hold = (route) => (route.request().method() === 'GET' ? route.continue() : route.abort())
+  const lang = (await page.evaluate(() => document.documentElement.lang).catch(() => '')).trim()
   const found = []
   for (const m of marked) {
     const sig = `action|${m.text.toLowerCase()}|${m.href ? new URL(m.href).pathname.replace(/[^/]+$/, '') : ''}`
@@ -561,12 +562,14 @@ async function probeActions(page, seen) {
     if (m.href && changesState(m.href)) { found.push({ ...row, notOpened: 'opening it would change a cart or order on the live site' }); continue }
     try {
       if (m.href && /^https?:/.test(m.href) && new URL(m.href).hash === '') {
-        // opening a link fills in and sends nothing, and the step's own reads may be POSTs (a booking widget's): not held
-        const other = await ctx.newPage()
+        // opening a link fills in and sends nothing, and the step's own reads may be POSTs (a booking widget's): not held.
+        // It opens in the site's own language, so a hosted form (Google Forms answers by Accept-Language) reads as the site's visitors see it.
+        const own = lang ? await ctx.browser()?.newContext({ locale: lang, extraHTTPHeaders: { 'accept-language': lang } }).catch(() => null) : null
+        const other = await (own ?? ctx).newPage()
         try {
           await other.goto(m.href, { waitUntil: 'domcontentloaded', timeout: 30000 })
           row.step = await describeStep(other)
-        } finally { await other.close().catch(() => {}) }
+        } finally { await (own ?? other).close().catch(() => {}) }
       } else {
         await page.route('**/*', hold)
         const url = page.url(), before = await page.evaluate(() => document.body.innerText.length).catch(() => 0)
