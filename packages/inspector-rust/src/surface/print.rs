@@ -7,10 +7,10 @@ use icu_collator::options::CollatorOptions;
 use icu_collator::{Collator, CollatorBorrowed};
 use regex::Regex;
 use tsrs_ast::{Kind, Node, Symbol, SymbolFlags, get_source_file_of_node};
-use tsrs_checker::{SignatureKind, Type, TypeFlags, TypeFormatFlags};
+use tsrs_checker::{Signature, SignatureKind, Type, TypeFlags, TypeFormatFlags};
 use tsrs_core::P;
 
-use super::jsdoc::documentation_comment;
+use super::jsdoc::{documentation_comment, has_hidden_tag};
 use super::quotes::double_quote_literals;
 use super::{Member, Session, collapse_whitespace, first_decl};
 use crate::sourcescan::js_trim;
@@ -32,6 +32,11 @@ const INLINE_LIMIT: usize = 72;
 fn not_terminal() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
     R.get_or_init(|| Regex::new(r"[{}]|=>").unwrap())
+}
+
+/// Whether a signature's declaration is tagged `@hidden`.
+fn is_hidden_overload(signature: P<Signature>) -> bool {
+    signature.declaration().is_some_and(has_hidden_tag)
 }
 
 pub fn symbol_name(sym: P<Symbol>) -> String {
@@ -128,8 +133,45 @@ impl Session<'_> {
         printed.join(" | ")
     }
 
+    /// The overloads the surface documents, and whether any was left out. A type
+    /// whose every overload is hidden keeps them all.
+    fn call_signatures(&mut self, t: P<Type>) -> (Vec<P<Signature>>, bool) {
+        let all = self.c.get_signatures_of_type_exported(t, SignatureKind::Call).to_vec();
+        let visible: Vec<P<Signature>> = all.iter().copied().filter(|s| !is_hidden_overload(*s)).collect();
+        if visible.is_empty() {
+            return (all, false);
+        }
+        let hidden = visible.len() < all.len();
+        (visible, hidden)
+    }
+
+    /// Prints a subset of a type's overloads the way the checker prints the type
+    /// that has exactly those.
+    fn print_signatures(&mut self, signatures: &[P<Signature>], location: Option<P<Node>>) -> String {
+        let mut flags = signature_flags();
+        if signatures.len() == 1 {
+            flags |= TypeFormatFlags::WriteArrowStyleSignature;
+        }
+        let mut printed = Vec::new();
+        for signature in signatures {
+            let text = self.c.signature_to_string_ex(*signature, location, flags, None);
+            printed.push(collapse_whitespace(&double_quote_literals(&text)));
+        }
+        if printed.len() == 1 {
+            return printed.remove(0);
+        }
+        format!("{{ {}; }}", printed.join("; "))
+    }
+
     pub fn signature_of(&mut self, name: &str, t: P<Type>, kind: &str, location: Option<P<Node>>) -> String {
-        let printed = if kind == "class" { self.constructor_signature(name, t) } else { self.print_type(t, location) };
+        let printed = if kind == "class" {
+            self.constructor_signature(name, t)
+        } else {
+            match self.call_signatures(t) {
+                (visible, true) => self.print_signatures(&visible, location),
+                _ => self.print_type(t, location),
+            }
+        };
         if printed.is_empty() || printed == "any" || printed == "error" || printed == name {
             return String::new();
         }
@@ -181,7 +223,7 @@ impl Session<'_> {
         if kind != "function" && kind != "const" {
             return Some(t);
         }
-        let signatures = self.c.get_signatures_of_type_exported(t, SignatureKind::Call);
+        let (signatures, _) = self.call_signatures(t);
         if signatures.is_empty() {
             return Some(t);
         }

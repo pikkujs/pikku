@@ -193,3 +193,51 @@ func TestKeepsDocOfNameReexportedFromTsx(t *testing.T) {
 	}
 	t.Fatal("useMark not collected")
 }
+
+// An overload tagged @hidden stays out of the documentation, the signature and
+// the option keys, wherever it sits in the overload list.
+func TestHiddenOverload(t *testing.T) {
+	dir := writeFixture(t)
+	files := map[string]string{
+		"src/index.ts": "export * from './define.gen.js'\n",
+		"src/define.gen.ts": `/** @hidden */
+export function define(config: {
+  /** Declared only. */
+  mock: true
+}): number
+/** Defines a thing. */
+export function define(config: {
+  /** The body. */
+  func: () => void
+}): string
+export function define(config: unknown): any {
+  return config
+}
+`,
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := Collect(dir, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, symbol := range entries[0].Symbols {
+		if symbol.Name != "define" {
+			continue
+		}
+		if symbol.Summary != "Defines a thing." {
+			t.Errorf("summary = %q", symbol.Summary)
+		}
+		if want := "(config: { func: () => void; }) => string"; symbol.Signature != want {
+			t.Errorf("signature = %q, want %q", symbol.Signature, want)
+		}
+		if len(symbol.Members) != 1 || !strings.HasPrefix(symbol.Members[0].Line, "func:") {
+			t.Errorf("members = %+v", symbol.Members)
+		}
+		return
+	}
+	t.Fatal("define not collected")
+}

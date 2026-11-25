@@ -140,10 +140,53 @@ func (s *session) constructorSignature(name string, t *checker.Type) string {
 	return strings.Join(printed, " | ")
 }
 
+// isHiddenOverload reports whether a signature's declaration is tagged @hidden.
+func isHiddenOverload(signature *checker.Signature) bool {
+	declaration := signature.Declaration()
+	return declaration != nil && anyNode(jsDocTags(declaration), func(tag *ast.Node) bool {
+		return tag.TagName() != nil && tag.TagName().Text() == "hidden"
+	})
+}
+
+// callSignatures is the overloads the surface documents, and whether any was
+// left out. A type whose every overload is hidden keeps them all.
+func (s *session) callSignatures(t *checker.Type) ([]*checker.Signature, bool) {
+	all := s.c.GetSignaturesOfType(t, checker.SignatureKindCall)
+	var visible []*checker.Signature
+	for _, signature := range all {
+		if !isHiddenOverload(signature) {
+			visible = append(visible, signature)
+		}
+	}
+	if len(visible) == 0 {
+		return all, false
+	}
+	return visible, len(visible) < len(all)
+}
+
+// printSignatures prints a subset of a type's overloads the way the checker
+// prints the type that has exactly those.
+func (s *session) printSignatures(signatures []*checker.Signature, location *ast.Node) string {
+	flags := signatureFlags
+	if len(signatures) == 1 {
+		flags |= checker.TypeFormatFlagsWriteArrowStyleSignature
+	}
+	printed := make([]string, len(signatures))
+	for i, signature := range signatures {
+		printed[i] = collapseWhitespace(doubleQuoteLiterals(s.c.SignatureToStringEx(signature, location, flags, nil)))
+	}
+	if len(printed) == 1 {
+		return printed[0]
+	}
+	return "{ " + strings.Join(printed, "; ") + "; }"
+}
+
 func (s *session) signatureOf(name string, t *checker.Type, kind string, location *ast.Node) string {
 	var printed string
 	if kind == "class" {
 		printed = s.constructorSignature(name, t)
+	} else if visible, hidden := s.callSignatures(t); hidden {
+		printed = s.printSignatures(visible, location)
 	} else {
 		printed = s.printType(t, location)
 	}
@@ -233,7 +276,7 @@ func (s *session) shapeOf(t *checker.Type, kind string) *checker.Type {
 	if kind != "function" && kind != "const" {
 		return t
 	}
-	signatures := s.c.GetSignaturesOfType(t, checker.SignatureKindCall)
+	signatures, _ := s.callSignatures(t)
 	if len(signatures) == 0 {
 		return t
 	}

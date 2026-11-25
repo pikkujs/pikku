@@ -460,6 +460,10 @@ pub fn documentation_comment(sym: Option<P<Symbol>>, mut c: Option<&mut Checker>
     doc
 }
 
+pub fn has_hidden_tag(node: P<Node>) -> bool {
+    jsdoc_tags(node).iter().any(|t| t.tag_name().text() == "hidden")
+}
+
 fn has_inherit_doc_tag(node: P<Node>) -> bool {
     jsdoc_tags(node).iter().any(|t| {
         let n = t.tag_name().text();
