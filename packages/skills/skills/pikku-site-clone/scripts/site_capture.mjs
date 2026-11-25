@@ -41,7 +41,9 @@ export async function pages(root) {
   try { landed = (await fetch(root, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) })).url || root } catch {}
   const base = new URL(landed).origin
   const seen = new Set(), out = []
-  const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !/\.(jpe?g|png|gif|webp|svg|pdf|css|js|xml|json|ico|txt)$/i.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
+  // a shop's cart and checkout links start an order when opened: never a page to capture
+  const ORDER = /^\/(buy|checkouts?|cart\/(add|change|update|clear))(\/|$)/i
+  const add = (u) => { try { const x = new URL(u, base); x.hash = ''; x.search = ''; if (x.origin === base && !ORDER.test(x.pathname) && !/\.(jpe?g|png|gif|webp|svg|pdf|css|js|xml|json|ico|txt)$/i.test(x.pathname)) { const k = x.origin + (x.pathname.replace(/\/+$/, '') || '/'); if (!seen.has(k)) { seen.add(k); out.push(k) } } } catch {} }
   const get = async (u) => { try { return await (await fetch(u, { headers: { 'user-agent': UA } })).text() } catch { return '' } }
   const maps = [`${base}/sitemap.xml`]
   const robots = await get(`${base}/robots.txt`)
@@ -73,19 +75,23 @@ export async function pages(root) {
   return out.filter((u) => !notPages.has(u))
 }
 
+/** First path segments that hold distinct pages, not one template: a language version, a CMS's own pages. */
+const NOT_A_TEMPLATE = /^([a-z]{2}(-[a-z]{2})?|pages?|p|info|legal|policies)$/i
+
 /**
- * Pages that share a template (every event, post or profile under one first path segment) are many and alike: the
- * capture takes `per` of each such group and lists the group as a template, `{ pattern, count, sampled }`, so a site of
- * hundreds of event pages is captured in minutes and its plan still sees every page. Other pages are all kept.
+ * Pages that share a template (every event, post, product or profile under one first path segment) are many and alike:
+ * when a group has `min` or more pages, the capture takes `per` of it and lists the group as a template,
+ * `{ pattern, count, sampled }`, so a site of hundreds of event pages is captured in minutes and its plan still sees
+ * every page. Smaller groups, language versions and a CMS's own pages are all kept.
  */
-export function sampleTemplates(urls, per = 3) {
+export function sampleTemplates(urls, per = 3, min = 20) {
   const groups = new Map()
   for (const u of urls) {
     const parts = new URL(u).pathname.split('/').filter(Boolean)
-    const key = parts.length >= 2 ? `/${parts[0]}/*` : null
+    const key = parts.length >= 2 && !NOT_A_TEMPLATE.test(parts[0]) ? `/${parts[0]}/*` : null
     if (key) groups.set(key, [...(groups.get(key) || []), u])
   }
-  const templates = [...groups].filter(([, members]) => members.length > per).map(([pattern, members]) => ({ pattern, count: members.length, sampled: members.slice(0, per) }))
+  const templates = [...groups].filter(([, members]) => members.length >= Math.max(min, per + 1)).map(([pattern, members]) => ({ pattern, count: members.length, sampled: members.slice(0, per) }))
   const skipped = new Set(templates.flatMap((t) => groups.get(t.pattern).slice(per)))
   return { capture: urls.filter((u) => !skipped.has(u)), templates }
 }
@@ -447,6 +453,19 @@ export function extractBehaviourInPage() {
     forms,
     motion: [...motion.values()],
     storage: { local: keys(() => localStorage), session: keys(() => sessionStorage) },
+    // links to the site's own other hosts (app., info., shop. of the same registrable domain)
+    siblingLinks: (() => {
+      const base = (h) => { const p = h.replace(/^www\./, '').split('.'); return p.slice(/\.(co|com|org|net|ac|gov)\.[a-z]{2}$/.test(h) ? -3 : -2).join('.') }
+      const own = location.hostname.replace(/^www\./, '')
+      const seen = new Map()
+      for (const a of document.querySelectorAll('a[href]')) {
+        let u; try { u = new URL(a.href) } catch { continue }
+        const h = u.hostname.replace(/^www\./, '')
+        if (!/^https?:$/.test(u.protocol) || h === own || base(h) !== base(own) || seen.has(h)) continue
+        seen.set(h, { host: h, href: u.href, text: (a.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60) })
+      }
+      return [...seen.values()].slice(0, 10)
+    })(),
     downloads: [...document.querySelectorAll('a[href]')].filter((a) => a.hasAttribute('download') || FILE.test(a.pathname)).slice(0, 20).map((a) => ({ text: text(a).slice(0, 80), href: a.href })),
     languageLinks: [...document.querySelectorAll('a[hreflang], link[rel=alternate][hreflang], a')].filter((a) => a.hreflang || LANG.test(text(a))).slice(0, 10).map((a) => ({ text: text(a), hreflang: a.hreflang || '', href: a.href })),
   }
@@ -458,7 +477,7 @@ const lookOf = (page, n) => page.evaluate(([n, props]) => { const e = document.q
 const changed = (a, b) => (a && b ? Object.fromEntries(Object.keys(a).filter((k) => a[k] !== b[k]).map((k) => [k, [a[k], b[k]]])) : {})
 
 /** A link or button that starts a visitor's flow: booking, tickets, buying, enrolling, applying, signing in or up. */
-const ACTION = /^(book( now| a| your)?|enrol+( now)?|get tickets?|tickets?|buy( now)?|register|sign ?up|sign ?in|log ?in|apply( here| now)?|subscribe|join( now)?|checkout|reserve)\b/i
+const ACTION = /^((jetzt )?(book( now| a| your)?|enrol+( now)?|get tickets?|tickets?|buy( now)?|register|sign ?up|sign ?in|log ?in|apply( here| now)?|subscribe|join( now)?|checkout|reserve|buchen|termin buchen|anmelden|einloggen|registrieren|bewerben|abonnieren|mitglied werden|reservieren))\b/i
 
 /** A link to a hosted form service starts a flow whatever its words say. */
 const FORM_LINK = /(^|\.)(forms\.gle|typeform\.com|tally\.so|jotform\.com|forms\.office\.com|form\.jotform\.com)$|^docs\.google\.com$/i
@@ -492,7 +511,7 @@ const describeStep = async (p) => {
 }
 
 /**
- * The first step of each flow a page offers (up to four links or buttons whose words start one: Book, Enroll, Get
+ * The first step of each flow a page offers (up to six links or buttons whose words start one: Book, Enroll, Get
  * Tickets, Buy, Apply, Log In, Subscribe...), opened read-only: a link is opened in a page of its own, on or off the
  * site (a hosted form), a button is clicked where it is (a sign-in or checkout dialog). While a button is clicked every
  * request that is not a GET is held back; nothing is filled in or sent, and a flow already opened from an earlier page
@@ -509,7 +528,9 @@ async function probeActions(page, seen) {
     for (const e of document.querySelectorAll('a, button, [role=button]')) {
       const t = text(e)
       const form = e.tagName === 'A' && formLink(e)
-      if (out.length >= 4 || !vis(e) || !(form || (t && t.length <= 40 && ACTION.test(t)))) continue
+      // a shop's cart and checkout links start an order: never opened
+      if (e.tagName === 'A' && /^\/(buy|checkouts?|cart\/(add|change|update|clear))(\/|$)/i.test((() => { try { return new URL(e.href).pathname } catch { return '' } })())) continue
+      if (out.length >= 6 || !vis(e) || !(form || (t && t.length <= 40 && ACTION.test(t)))) continue
       const n = out.length
       e.setAttribute('data-capture-action', String(n))
       out.push({ n, text: t.slice(0, 80), href: e.tagName === 'A' ? e.href : '' })
@@ -727,7 +748,40 @@ export async function captureBehaviour(browser, out, entry, seen = new Set(), op
  * outside host with the pages that load it and what it loads, every form, cookies, fonts, media, interactions,
  * language links and pages with script errors. Written to behaviour.json beside the pages.
  */
-export async function summariseBehaviour(out, root, recs) {
+/**
+ * The site's own other hosts its pages link to (an app., info. or shop. sub-domain): the first page of each, up to four,
+ * opened once, read-only and without signing in, with its title and whether it shows a sign-in, a shop or forms. A
+ * person decides whether they are part of the rebuild.
+ */
+async function captureSiblings(browser, recs, opts = {}) {
+  const hosts = new Map()
+  for (const r of recs) for (const l of r.siblingLinks || []) if (!hosts.has(l.host)) hosts.set(l.host, { ...l, pages: [] })
+  for (const r of recs) for (const l of r.siblingLinks || []) { const h = hosts.get(l.host); if (h.pages.length < 6 && !h.pages.includes(r.id)) h.pages.push(r.id) }
+  const out = []
+  for (const h of [...hosts.values()].slice(0, 4)) {
+    const ctx = await newCaptureContext(browser, 1440, opts)
+    const page = await ctx.newPage()
+    const row = { host: h.host, linkedAs: h.text, from: h.pages, url: h.href }
+    try {
+      await page.goto(h.href, { waitUntil: 'domcontentloaded', timeout: 30000 })
+      const step = await describeStep(page)
+      const words = `${step.text || ''} ${(step.choices || []).join(' ')}`
+      Object.assign(row, {
+        url: step.url,
+        title: step.title,
+        heading: step.heading,
+        signIn: step.forms.some((f) => f.fields.some((x) => x.type === 'password')) || /\b(log ?in|sign ?in|anmelden|einloggen)\b/i.test(words),
+        shop: /\b(cart|checkout|basket|warenkorb|kasse|add to cart|in den warenkorb)\b/i.test(words),
+        forms: step.forms.length,
+      })
+    } catch (e) { row.error = String(e.message || e).split('\n')[0].slice(0, 160) }
+    await ctx.close()
+    out.push(row)
+  }
+  return out
+}
+
+export async function summariseBehaviour(out, root, recs, siblings = []) {
   const base = new URL(root).origin
   let robots = ''
   try { const r = await fetch(`${base}/robots.txt`, { headers: { 'user-agent': UA } }); if (r.ok) robots = (await r.text()).slice(0, 3000) } catch {}
@@ -758,6 +812,7 @@ export async function summariseBehaviour(out, root, recs) {
     media: [...media],
     languageLinks: [...langs.values()],
     downloads: [...downloads.values()],
+    siblings,
     actions: recs.flatMap((r) => (r.actions || []).map((a) => ({ page: r.id, ...a }))),
     interactions: recs.flatMap((r) => (r.interactions || []).filter((i) => i.error || Object.keys(i.changes || {}).length || i.kind === 'open').map((i) => ({ page: r.id, ...i }))),
     motion: [...new Map(recs.flatMap((r) => r.motion || []).map((m) => [`${m.transition}|${m.animation}`, m])).values()].slice(0, 25),
@@ -782,7 +837,8 @@ export async function capture(out, urls, vps, tiles, jobs = 4, opts = {}) {
   if (opts.behaviour !== false && urls.length) {
     const seen = new Set(), recs = new Array(urls.length)
     await pool(async (i) => { recs[i] = await captureBehaviour(browser, out, urls[i], seen, opts) })
-    await summariseBehaviour(out, urls[0].split('|')[0], recs)
+    const siblings = await captureSiblings(browser, recs, opts)
+    await summariseBehaviour(out, urls[0].split('|')[0], recs, siblings)
   }
   const index = new Array(urls.length)
   await pool(async (i) => { index[i] = await capturePage(browser, out, urls[i], vps, tiles, opts) })
