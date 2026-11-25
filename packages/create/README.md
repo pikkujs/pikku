@@ -19,7 +19,9 @@ npm install -g create-pikku
 
 ### Default Mode
 
-Running without arguments now scaffolds the default starter template with Yarn, keeps the default frontend, installs dependencies, and runs Pikku setup:
+Running without arguments scaffolds the default starter template, keeps the
+default frontend, installs dependencies with [Bun](https://bun.sh), runs Pikku
+setup and runs `bun run dev`:
 
 ```bash
 npm create pikku@latest
@@ -36,6 +38,24 @@ branch, tag or commit of that repository instead. For every other template,
 
 If a downloaded template is empty or has no `package.json`, `create-pikku` exits
 with a non-zero status and creates no project.
+
+The starter template uses Bun. It accepts no `--package-manager` other than `bun`
+and no `--yarn-link`, and `create-pikku` stops before downloading if you pass
+either, or if it is going to install and `bun` cannot be run.
+
+`create-pikku` does not create the starter's database. Before the first
+`bun run dev`, run these in the project, as `create-pikku` prints them:
+
+```bash
+bunx --bun pikku db generate
+bunx --bun pikku db migrate
+```
+
+With `--skip-install`, run `bun install` and `bunx --bun pikku all` before them.
+
+For every template, if installing or a setup step fails, `create-pikku` exits with
+a non-zero status and does not report the setup as complete. The project files
+stay in place.
 
 ### Variations Mode
 
@@ -111,7 +131,7 @@ Supported package managers:
 
 - `npm` - Most popular package manager
 - `yarn` - What Pikku usually uses
-- `bun` - Experimental support
+- `bun` - Experimental support (required by the starter template)
 - `pnpm` - Not currently available
 
 ## Examples
