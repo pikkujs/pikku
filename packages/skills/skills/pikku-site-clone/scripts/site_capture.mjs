@@ -408,7 +408,10 @@ export function extractBehaviourInPage() {
   const labelOf = (f) => {
     const by = f.getAttribute('aria-labelledby')
     const named = f.getAttribute('aria-label') || (by && by.split(/\s+/).map((i) => text(document.getElementById(i))).join(' ')) || (f.id && text(document.querySelector(`label[for="${CSS.escape(f.id)}"]`))) || text(f.closest('label'))
-    return (named || f.getAttribute('placeholder') || f.getAttribute('name') || '').slice(0, 120)
+    // a form builder's question (Google Forms) sits in the field's group heading, its placeholder only says "Your answer"
+    const group = named ? null : f.closest('[role=listitem], fieldset, [role=group]')
+    const question = group && text(group.querySelector('[role=heading], legend, h1, h2, h3, h4'))
+    return (named || question || f.getAttribute('placeholder') || f.getAttribute('name') || '').slice(0, 120)
   }
   const field = (f) => {
     const o = { tag: f.tagName.toLowerCase(), type: f.getAttribute('type') || (f.getAttribute('role') || ''), name: f.getAttribute('name') || '', label: labelOf(f), required: f.required || f.getAttribute('aria-required') === 'true' }

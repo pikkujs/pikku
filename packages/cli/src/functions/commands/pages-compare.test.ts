@@ -575,7 +575,7 @@ describe('a hosted form a page links to', () => {
               ? 'Ime'
               : 'Name'
           res.end(
-            `<!doctype html><title>Form</title><form><label for="n">${label}</label><input id="n" name="name" required><button type="submit">Send</button></form>`
+            `<!doctype html><title>Form</title><form><label for="n">${label}</label><input id="n" name="name" required><div role="listitem"><div role="heading">Why do you want to join?</div><textarea placeholder="Your answer"></textarea></div><button type="submit">Send</button></form>`
           )
         } else
           res.end(
@@ -601,6 +601,11 @@ describe('a hosted form a page links to', () => {
         readFileSync(join(out, 'behaviour.json'), 'utf8')
       )
       assert.equal(actions[0].step.forms[0].fields[0].label, 'Ime')
+      // a question in its group's heading names the field, not the placeholder
+      assert.equal(
+        actions[0].step.forms[0].fields[1].label,
+        'Why do you want to join?'
+      )
     }
   )
 })
