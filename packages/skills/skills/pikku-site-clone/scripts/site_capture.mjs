@@ -418,7 +418,7 @@ export function extractBehaviourInPage() {
     if (!motion.has(key) && motion.size < 25) motion.set(key, { example: sel(e), ...(t ? { transition: t } : {}), ...(a ? { animation: a } : {}), count: 0 })
     if (motion.has(key)) motion.get(key).count++
   }
-  const keys = (s) => { try { return Object.keys(s).slice(0, 30) } catch { return [] } }
+  const keys = (store) => { try { return Object.keys(store()).slice(0, 30) } catch { return [] } }
   const fonts = [...document.fonts].filter((f) => f.status === 'loaded').map((f) => `${f.family.replace(/["']/g, '')} ${f.weight} ${f.style}`)
   const LANG = /^(en|de|fr|es|it|nl|pl|english|deutsch|français|español|italiano|nederlands|polski)$/i
   const FILE = /\.(pdf|docx?|xlsx?|pptx?|odt|ods|csv|zip|ics|mp3|mp4|epub)$/i
@@ -428,7 +428,7 @@ export function extractBehaviourInPage() {
     media: [...document.querySelectorAll('video, audio, iframe, embed, object')].slice(0, 20).map((m) => ({ tag: m.tagName.toLowerCase(), src: (m.currentSrc || m.src || m.data || '').slice(0, 200), title: m.title || '' })),
     forms,
     motion: [...motion.values()],
-    storage: { local: keys(localStorage), session: keys(sessionStorage) },
+    storage: { local: keys(() => localStorage), session: keys(() => sessionStorage) },
     downloads: [...document.querySelectorAll('a[href]')].filter((a) => a.hasAttribute('download') || FILE.test(a.pathname)).slice(0, 20).map((a) => ({ text: text(a).slice(0, 80), href: a.href })),
     languageLinks: [...document.querySelectorAll('a[hreflang], link[rel=alternate][hreflang], a')].filter((a) => a.hreflang || LANG.test(text(a))).slice(0, 10).map((a) => ({ text: text(a), hreflang: a.hreflang || '', href: a.href })),
   }
@@ -502,19 +502,19 @@ async function probeInteractions(page, out, id, seen) {
  * submitted, so the capture records where it would post and which fields (names only, no values), and what the page
  * says about the empty fields. A form that submits by GET is not submitted.
  */
-async function probeForms(page, forms) {
+async function probeForms(page, forms, target = page) {
   const out = []
   for (const f of forms) {
     if (f.method === 'get' || f.submit === null) { out.push({ index: f.index, submitted: false }); continue }
     const held = []
     const hold = (route) => { const r = route.request(); if (r.method() === 'GET') return route.continue(); let fields = []; try { const body = r.postData() || ''; fields = body.trim().startsWith('{') ? Object.keys(JSON.parse(body)) : [...new URLSearchParams(body).keys()] } catch {} ; const u = new URL(r.url()); held.push({ method: r.method(), host: u.host, path: u.pathname.slice(0, 120), contentType: r.headers()['content-type'] || '', fields: fields.slice(0, 30) }); return route.abort() }
     await page.route('**/*', hold)
-    const url = page.url()
+    const url = target.url()
     try {
-      const form = page.locator(`[data-capture-form="${f.index}"]`)
+      const form = target.locator(`[data-capture-form="${f.index}"]`)
       const button = form.locator('button[type=submit], input[type=submit], button, [role=button]').last()
       await button.click({ timeout: 3000 }); await page.waitForTimeout(1500)
-      const said = await page.evaluate((i) => {
+      const said = await target.evaluate((i) => {
         const g = document.querySelector(`[data-capture-form="${i}"]`); if (!g) return null
         const text = (e) => (e.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 160)
         const invalid = [...g.querySelectorAll('input, select, textarea')].filter((f) => (f.form && f.matches(':invalid')) || f.getAttribute('aria-invalid') === 'true').map((f) => ({ name: f.name || f.id || '', message: f.validationMessage || '' }))
@@ -524,10 +524,43 @@ async function probeForms(page, forms) {
       const shown = said && (said.invalid.length || said.messages.length)
       // what the page says about an empty form, or that it could not say: the check is the server's answer to the held request
       const validation = shown ? 'in the page' : held.length ? 'server-side, not observable without a POST' : 'none seen'
-      out.push({ index: f.index, submitted: true, wouldSend: held, ...(said || {}), validation, ...(page.url() !== url ? { navigatedTo: page.url() } : {}) })
-      if (page.url() !== url) await page.goBack({ timeout: 15000 }).catch(() => {})
+      out.push({ index: f.index, submitted: true, wouldSend: held, ...(said || {}), validation, ...(target.url() !== url ? { navigatedTo: target.url() } : {}) })
+      if (target === page && page.url() !== url) await page.goBack({ timeout: 15000 }).catch(() => {})
     } catch (e) { out.push({ index: f.index, error: String(e.message || e).split('\n')[0].slice(0, 120) }) }
     await page.unroute('**/*', hold)
+  }
+  return out
+}
+
+/** What a visitor sees and can choose in an embedded frame: its title, first heading, text and the choices it offers. */
+export function extractFrameInPage() {
+  const text = (e) => (e?.innerText || '').replace(/\s+/g, ' ').trim()
+  const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 }
+  const choices = [...document.querySelectorAll('button, a[href], [role=button], [role=option], [role=tab], label')].filter(vis).map((e) => (text(e) || e.getAttribute('aria-label') || '').slice(0, 100)).filter(Boolean)
+  return { title: document.title, heading: text(document.querySelector('h1, h2, h3')).slice(0, 200), text: text(document.body).slice(0, 1500), choices: [...new Set(choices)].slice(0, 40) }
+}
+
+/**
+ * Every embedded frame of the page (a booking tool, a hosted form, a map), opened where it is, read-only: its address,
+ * title, text and choices, its forms with their fields, an empty submit with every non-GET request held back, and the
+ * hosts the frame itself loads from. At most six frames a page.
+ */
+async function captureFrames(page, requests) {
+  const out = []
+  for (const frame of page.frames()) {
+    if (frame === page.mainFrame() || !/^https?:/.test(frame.url())) continue
+    if (out.length >= 6) break
+    const f = { src: frame.url().slice(0, 300) }
+    try {
+      Object.assign(f, await frame.evaluate(extractFrameInPage))
+      const inner = await frame.evaluate(extractBehaviourInPage).catch(() => null)
+      f.forms = inner?.forms || []
+      f.submits = await probeForms(page, f.forms, frame)
+    } catch (e) { f.error = String(e.message || e).split('\n')[0].slice(0, 160) }
+    const hosts = {}
+    for (const r of requests) if (r.frame === frame) { try { const h = new URL(r.url).hostname; hosts[h] = (hosts[h] || 0) + 1 } catch {} }
+    f.hosts = hosts
+    out.push(f)
   }
   return out
 }
@@ -546,7 +579,7 @@ export async function captureBehaviour(browser, out, entry, seen = new Set(), op
   const ctx = await newCaptureContext(browser, 1440, opts)
   const page = await ctx.newPage()
   const requests = [], consoleLines = [], errors = []
-  page.on('request', (r) => requests.push({ url: r.url(), type: r.resourceType(), method: r.method() }))
+  page.on('request', (r) => requests.push({ url: r.url(), type: r.resourceType(), method: r.method(), frame: (() => { try { return r.frame() } catch { return null } })() }))
   page.on('console', (m) => { if (consoleLines.length < 30 && m.type() !== 'debug') consoleLines.push(`${m.type()}: ${m.text().slice(0, 200)}`) })
   page.on('pageerror', (e) => { if (errors.length < 20) errors.push(String(e.message || e).slice(0, 200)) })
   const rec = { id, url }
@@ -565,6 +598,7 @@ export async function captureBehaviour(browser, out, entry, seen = new Set(), op
     rec.accessibility = ((await page.locator('body').ariaSnapshot({ timeout: 10000 }).catch(() => '')) || '').slice(0, 6000)
     rec.interactions = await probeInteractions(page, out, id, seen)
     rec.submits = await probeForms(page, rec.forms || [])
+    rec.frames = await captureFrames(page, requests)
   } catch (e) { rec.error = String(e.message || e).split('\n')[0].slice(0, 200) }
   await ctx.close()
   const own = new URL(url).hostname.replace(/^www\./, '')
@@ -608,6 +642,7 @@ export async function summariseBehaviour(out, root, recs) {
     downloads: [...downloads.values()],
     interactions: recs.flatMap((r) => (r.interactions || []).filter((i) => i.error || Object.keys(i.changes || {}).length || i.kind === 'open').map((i) => ({ page: r.id, ...i }))),
     motion: [...new Map(recs.flatMap((r) => r.motion || []).map((m) => [`${m.transition}|${m.animation}`, m])).values()].slice(0, 25),
+    frames: recs.flatMap((r) => (r.frames || []).map((f) => ({ page: r.id, ...f }))),
     scriptErrors: recs.filter((r) => r.scriptErrors?.length).map((r) => ({ page: r.id, errors: r.scriptErrors.slice(0, 3) })),
     redirects: recs.filter((r) => r.redirects?.length).map((r) => ({ page: r.id, from: r.redirects })),
   }

@@ -21,7 +21,8 @@ mkdir -p artifacts/references/<site> && pikku ui pages capture https://the-site.
 
 It writes the page list to `artifacts/references/<site>/pages.txt` at once. Within a few minutes it writes
 `behaviour.json`: what every page relies on and does, read in a browser (outside hosts and what each loads, redirects,
-cookies by name, fonts, media, every form with its fields and what an empty submit does, sent nowhere, menus that open,
+cookies by name, fonts, media, every form with its fields and what an empty submit does, sent nowhere, each embedded
+frame (a booking tool, a hosted form) with its choices, forms and hosts under `frames`, menus that open,
 hover, focus and scroll changes, transitions and animations, language links, script errors); `<page>.behaviour.json` has
 one page's detail and accessibility tree, `interactions/` pictures before and after an opener. Wait for `behaviour.json`
 and read it before you write the notes. It then captures every page (screenshots, layout, colours and fonts) and
