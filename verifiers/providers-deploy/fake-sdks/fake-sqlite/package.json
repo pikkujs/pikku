@@ -1,0 +1,8 @@
+{
+  "name": "@verifier/fake-sqlite",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

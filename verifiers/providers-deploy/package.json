@@ -1,0 +1,36 @@
+{
+  "name": "@pikku/verifiers-providers-deploy",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@pikku/schema-cfworker": "workspace:*"
+  },
+  "devDependencies": {
+    "@pikku/cli": "workspace:*",
+    "@pikku/deploy": "workspace:*",
+    "@standard-schema/spec": "^1.1.0",
+    "@types/node": "^26",
+    "tsx": "^4.23.15",
+    "@pikku/cloudflare": "workspace:*",
+    "@pikku/schedule": "workspace:*",
+    "@pikku/bun-server": "workspace:*",
+    "@pikku/deploy-standalone": "workspace:*",
+    "@pikku/deploy-cloudflare": "workspace:*",
+    "@verifier/prov-db": "workspace:*",
+    "@verifier/prov-ai": "workspace:*",
+    "@verifier/prov-hostile": "workspace:*",
+    "@verifier/fake-pg": "workspace:*",
+    "@verifier/fake-sqlite": "workspace:*",
+    "@verifier/fake-openai": "workspace:*",
+    "@verifier/fake-anthropic": "workspace:*"
+  },
+  "scripts": {
+    "pikku": "pikku",
+    "check": "./test.sh"
+  }
+}

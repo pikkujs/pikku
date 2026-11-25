@@ -1,0 +1,23 @@
+{
+  "name": "@verifier/prov-hostile",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "exports": {
+    "./src/*.js": "./src/*.ts",
+    "./.pikku/*": "./.pikku/addon/*"
+  },
+  "files": [
+    "src",
+    ".pikku"
+  ],
+  "dependencies": {
+    "@pikku/core": "workspace:*"
+  },
+  "scripts": {
+    "pikku": "pikku all"
+  }
+}

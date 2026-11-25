@@ -2658,6 +2658,141 @@
         "tsx": "^4.23.15",
       },
     },
+    "verifiers/providers": {
+      "name": "@pikku/verifiers-providers",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/bun-server": "workspace:*",
+        "@pikku/cli": "workspace:*",
+        "@pikku/deploy": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
+        "@pikku/schedule": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "@verifier/prov-ai": "workspace:*",
+        "@verifier/prov-db": "workspace:*",
+        "@verifier/prov-hostile": "workspace:*",
+        "@verifier/prov-sinks": "workspace:*",
+        "@verifier/prov-wire": "workspace:*",
+        "tsx": "^4.23.15",
+      },
+    },
+    "verifiers/providers-controlplane": {
+      "name": "@pikku/verifiers-providers-controlplane",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/bun-server": "workspace:*",
+        "@pikku/cli": "workspace:*",
+        "@pikku/cloudflare": "workspace:*",
+        "@pikku/deploy": "workspace:*",
+        "@pikku/deploy-cloudflare": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
+        "@pikku/schedule": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "@verifier/fake-anthropic": "workspace:*",
+        "@verifier/fake-openai": "workspace:*",
+        "@verifier/fake-pg": "workspace:*",
+        "@verifier/fake-sqlite": "workspace:*",
+        "@verifier/prov-ai": "workspace:*",
+        "@verifier/prov-db-pg": "workspace:*",
+        "@verifier/prov-db-sqlite": "workspace:*",
+        "@verifier/prov-sinks": "workspace:*",
+        "tsx": "^4.23.15",
+      },
+    },
+    "verifiers/providers-controlplane/addons/prov-db-pg": {
+      "name": "@verifier/prov-db-pg",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@verifier/fake-pg": "workspace:*",
+      },
+    },
+    "verifiers/providers-controlplane/addons/prov-db-sqlite": {
+      "name": "@verifier/prov-db-sqlite",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@verifier/fake-sqlite": "workspace:*",
+      },
+    },
+    "verifiers/providers-deploy": {
+      "name": "@pikku/verifiers-providers-deploy",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@pikku/schema-cfworker": "workspace:*",
+      },
+      "devDependencies": {
+        "@pikku/bun-server": "workspace:*",
+        "@pikku/cli": "workspace:*",
+        "@pikku/cloudflare": "workspace:*",
+        "@pikku/deploy": "workspace:*",
+        "@pikku/deploy-cloudflare": "workspace:*",
+        "@pikku/deploy-standalone": "workspace:*",
+        "@pikku/schedule": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "@types/node": "^26",
+        "@verifier/fake-anthropic": "workspace:*",
+        "@verifier/fake-openai": "workspace:*",
+        "@verifier/fake-pg": "workspace:*",
+        "@verifier/fake-sqlite": "workspace:*",
+        "@verifier/prov-ai": "workspace:*",
+        "@verifier/prov-db": "workspace:*",
+        "@verifier/prov-hostile": "workspace:*",
+        "tsx": "^4.23.15",
+      },
+    },
+    "verifiers/providers-deploy/fake-sdks/fake-anthropic": {
+      "name": "@verifier/fake-anthropic",
+    },
+    "verifiers/providers-deploy/fake-sdks/fake-openai": {
+      "name": "@verifier/fake-openai",
+    },
+    "verifiers/providers-deploy/fake-sdks/fake-pg": {
+      "name": "@verifier/fake-pg",
+    },
+    "verifiers/providers-deploy/fake-sdks/fake-sqlite": {
+      "name": "@verifier/fake-sqlite",
+    },
+    "verifiers/providers/addons/prov-ai": {
+      "name": "@verifier/prov-ai",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@verifier/fake-anthropic": "workspace:*",
+        "@verifier/fake-openai": "workspace:*",
+      },
+    },
+    "verifiers/providers/addons/prov-db": {
+      "name": "@verifier/prov-db",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+        "@verifier/fake-pg": "workspace:*",
+        "@verifier/fake-sqlite": "workspace:*",
+      },
+    },
+    "verifiers/providers/addons/prov-hostile": {
+      "name": "@verifier/prov-hostile",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+    },
+    "verifiers/providers/addons/prov-sinks": {
+      "name": "@verifier/prov-sinks",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+    },
+    "verifiers/providers/addons/prov-wire": {
+      "name": "@verifier/prov-wire",
+      "dependencies": {
+        "@pikku/core": "workspace:*",
+      },
+    },
     "verifiers/rate-limits": {
       "name": "@pikku/verifiers-rate-limits",
       "dependencies": {
@@ -4001,6 +4136,12 @@
 
     "@pikku/verifiers-product-hooks-none": ["@pikku/verifiers-product-hooks-none@workspace:verifiers/product-hooks-none"],
 
+    "@pikku/verifiers-providers": ["@pikku/verifiers-providers@workspace:verifiers/providers"],
+
+    "@pikku/verifiers-providers-controlplane": ["@pikku/verifiers-providers-controlplane@workspace:verifiers/providers-controlplane"],
+
+    "@pikku/verifiers-providers-deploy": ["@pikku/verifiers-providers-deploy@workspace:verifiers/providers-deploy"],
+
     "@pikku/verifiers-rate-limits": ["@pikku/verifiers-rate-limits@workspace:verifiers/rate-limits"],
 
     "@pikku/verifiers-release": ["@pikku/verifiers-release@workspace:verifiers/release"],
@@ -4562,6 +4703,28 @@
     "@ungap/structured-clone": ["@ungap/structured-clone@1.4.0", "", {}, "sha512-1mEZtMKPM09vDmQt5y7YvmN2+DFTP7Tg0EWXdic8/C6VRnpb33e4ghisCIE3WZjsE2N8mf+QV1Zqh7ZFYLWInQ=="],
 
     "@vercel/oidc": ["@vercel/oidc@3.2.0", "", {}, "sha512-UycprH3T6n3jH0k44NHMa7pnFHGu/N05MjojYr+Mc6I7obkoLIJujSWwin1pCvdy/eOxrI/l3uDLQsmcrOb4ug=="],
+
+    "@verifier/fake-anthropic": ["@verifier/fake-anthropic@workspace:verifiers/providers-deploy/fake-sdks/fake-anthropic"],
+
+    "@verifier/fake-openai": ["@verifier/fake-openai@workspace:verifiers/providers-deploy/fake-sdks/fake-openai"],
+
+    "@verifier/fake-pg": ["@verifier/fake-pg@workspace:verifiers/providers-deploy/fake-sdks/fake-pg"],
+
+    "@verifier/fake-sqlite": ["@verifier/fake-sqlite@workspace:verifiers/providers-deploy/fake-sdks/fake-sqlite"],
+
+    "@verifier/prov-ai": ["@verifier/prov-ai@workspace:verifiers/providers/addons/prov-ai"],
+
+    "@verifier/prov-db": ["@verifier/prov-db@workspace:verifiers/providers/addons/prov-db"],
+
+    "@verifier/prov-db-pg": ["@verifier/prov-db-pg@workspace:verifiers/providers-controlplane/addons/prov-db-pg"],
+
+    "@verifier/prov-db-sqlite": ["@verifier/prov-db-sqlite@workspace:verifiers/providers-controlplane/addons/prov-db-sqlite"],
+
+    "@verifier/prov-hostile": ["@verifier/prov-hostile@workspace:verifiers/providers/addons/prov-hostile"],
+
+    "@verifier/prov-sinks": ["@verifier/prov-sinks@workspace:verifiers/providers/addons/prov-sinks"],
+
+    "@verifier/prov-wire": ["@verifier/prov-wire@workspace:verifiers/providers/addons/prov-wire"],
 
     "@verifier/service-marker": ["@verifier/service-marker@workspace:verifiers/deploy-standalone/service-marker"],
 

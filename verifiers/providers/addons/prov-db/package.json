@@ -1,0 +1,25 @@
+{
+  "name": "@verifier/prov-db",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#pikku/*.js": "./.pikku/*.ts",
+    "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "exports": {
+    "./src/*.js": "./src/*.ts",
+    "./.pikku/*": "./.pikku/addon/*"
+  },
+  "files": [
+    "src",
+    ".pikku"
+  ],
+  "dependencies": {
+    "@pikku/core": "workspace:*",
+    "@verifier/fake-pg": "workspace:*",
+    "@verifier/fake-sqlite": "workspace:*"
+  },
+  "scripts": {
+    "pikku": "pikku all"
+  }
+}

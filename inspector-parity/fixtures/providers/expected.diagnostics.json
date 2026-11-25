@@ -1,0 +1,45 @@
+{
+  "refuse-not-exported.ts": [
+    "PKU369"
+  ],
+  "refuse-unknown-key.ts": [
+    "PKU369"
+  ],
+  "refuse-not-destructured.ts": [
+    "PKU371"
+  ],
+  "refuse-any-return.ts": [
+    "PKU372",
+    "PKU372"
+  ],
+  "refuse-null-member.ts": [
+    "PKU372"
+  ],
+  "refuse-provides-nothing.ts": [
+    "PKU380"
+  ],
+  "refuse-unknown-profile.ts": [
+    "PKU377"
+  ],
+  "refuse-optional.ts": [
+    "PKU378",
+    "PKU378"
+  ],
+  "refuse-replaces.ts": [
+    "PKU382"
+  ],
+  "refuse-wire-addto.ts": [
+    "PKU383",
+    "PKU369"
+  ],
+  "refuse-collection.ts": [
+    "PKU379",
+    "PKU379"
+  ],
+  "refuse-shared-module.ts": [
+    "PKU375"
+  ],
+  "refuse-duplicate-name.ts": [
+    "PKU376"
+  ]
+}
