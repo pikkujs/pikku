@@ -10,13 +10,20 @@ rules of the `pikku-changes` skill, and these on top:
   (menu labels, buttons, footer) stays in the i18n messages.
 - An owner area in the same app: a `frontend` change with `"newPages": ["/admin", ...]` where the signed-in owner lists,
   adds, edits and removes those records and reads what the forms sent. It depends on the data change. Never a separate app.
-- Every service in `outside-services.md` is handled by a change: one that replaces it names it (a hosted form becomes the
-  app's own form and table, a tracker is removed, fonts and pictures are served by the app, the page builder's hosting is
-  the rebuilt app), and one kept says so in the body of the change that links to it: "Decision: keep <service>: <why>".
-- A clone needs its look first: after the data change, a capture change (`artifacts`: run
-  `pikku ui pages capture <url> --out artifacts/references/<site>`, done when every page on the list has its screenshots and
-  style.json there and the pictures are in its `pictures/` folder), then a frame change (`frontend`: header, footer, theme;
-  depends on the capture). Every page change depends on the frame change, so no page is built before the capture and the frame exist.
+- The rebuilt site does what the original does, no more. A route, form, table or email comes from the capture: an original
+  page, form or redirect, an email the original visibly sends or promises, the owner area, or the data of a service being
+  replaced. Anything seen only in policy or legal text, or implied by a service's name (a newsletter the privacy policy
+  mentions, an email a booking tool may send), is an "Open question: ..." in the nearest change, never a change, route,
+  table or email of its own.
+- Every service in `outside-services.md` and every host in `behaviour.json` `outsideHosts` is named by a change: one that
+  replaces it (a hosted form becomes the app's own form and table, a tracker or error reporter is removed, fonts and pictures
+  are served by the app, the page builder's hosting is the rebuilt app), or one that keeps it, in the body of the change that
+  links to it: "Decision: keep <service>: <why>". Before filing, check each one against the plan's bodies.
+- Moving the domain (DNS, registrar, mail records, the old host's shutdown) is the owner's operation, not app code: it is an
+  "Open question: ..." in the data change, never a change of its own.
+- A clone needs its look first. The capture is already in `artifacts/references/<site>/` (with `behaviour.json`): file no
+  capture change, only an `artifacts` change for pages the capture missed or that failed, by name. Then a frame change
+  (`frontend`: header, footer, theme). Every page change depends on the frame change, so no page is built before the frame exists.
 - The frame change carries the shared behaviour of `interactions.md` (the menu that opens, the header on scroll, hover and
   focus states, transitions, the language switch), and a page change the behaviour of its own pages. A change that builds a
   form lists every field with its type, whether required, its options and any control beside it, and the validation and
