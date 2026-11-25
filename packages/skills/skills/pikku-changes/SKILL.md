@@ -7,8 +7,9 @@ description: >-
 # Working a changes queue
 
 **If the request is a brief to plan (an app or feature to build), your whole job is one
-`pikku changes file --plan artifacts/plan.json`, then one closing message listing what you filed. Do not claim, plan, build or
-mark anything done; that is the next agents' work, and doing it here breaks their plan.**
+`pikku changes file --plan artifacts/plan.json`, then one closing message listing what you filed. A brief that names an
+existing site comes with the site study first: its capture and notes (`pikku-site-archaeology`) are part of this turn.
+Do not claim, plan, build or mark anything done; that is the next agents' work, and doing it here breaks their plan.**
 
 Someone walked the deployed app and circled things. Each item is their words, a
 screenshot of what they saw, and the elements the circle enclosed. You have the repo.
