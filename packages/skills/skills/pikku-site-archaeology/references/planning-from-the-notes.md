@@ -4,7 +4,15 @@ A brief that names a site is planned from what the site holds, not from its addr
 rules of the `pikku-changes` skill, and these on top:
 
 - The data change stores what `things-kept.md` and `forms.md` say, in the currency and languages `prices-and-languages.md` says,
-  and the plan covers every form and page you found.
+  and the plan covers every form and page you found. The content the owner changes over time (events, prices and offers,
+  testimonials, articles, sections they update) is records in tables the data change creates (its body names them), seeded
+  with the original's content and read by the pages; never a catalogue written into code. Wording that does not change
+  (menu labels, buttons, footer) stays in the i18n messages.
+- An owner area in the same app: a `frontend` change with `"newPages": ["/admin", ...]` where the signed-in owner lists,
+  adds, edits and removes those records and reads what the forms sent. It depends on the data change. Never a separate app.
+- Every service in `outside-services.md` is handled by a change: one that replaces it names it (a hosted form becomes the
+  app's own form and table, a tracker is removed, fonts and pictures are served by the app, the page builder's hosting is
+  the rebuilt app), and one kept says so in the body of the change that links to it: "Decision: keep <service>: <why>".
 - A clone needs its look first: after the data change, a capture change (`artifacts`: run
   `pikku ui pages capture <url> --out artifacts/references/<site>`, done when every page on the list has its screenshots and
   style.json there and the pictures are in its `pictures/` folder), then a frame change (`frontend`: header, footer, theme;
