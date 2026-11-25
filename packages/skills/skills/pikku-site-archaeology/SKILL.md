@@ -32,7 +32,8 @@ there is no browser, fetch each page with `curl -sL` and read the text.
 
 - What the page is for, and its main sections, in plain words.
 - Every **form**: its fields with their type, whether required, their options and any control beside them (a country
-  code picker), its button, where an empty submit would send and what the page says about it, and what the visitor sees
+  code picker), its button, where an empty submit would send and what the page says about it (`validation`; one checked
+  only by the server is an open question), and what the visitor sees
   after sending it (a thank-you page, an email, nothing).
 - Every other thing a visitor can do: book, apply, register, log in, search, filter, pay, download (the files a page
   links to are in `behaviour.json` `downloads`).

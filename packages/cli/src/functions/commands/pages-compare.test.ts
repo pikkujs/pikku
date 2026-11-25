@@ -388,6 +388,10 @@ describe('the capture of what a site relies on and does', () => {
         ),
         [['POST', '/api/submit', ['email', 'phone']]]
       )
+      assert.equal(
+        form.submit.validation,
+        'server-side, not observable without a POST'
+      )
       const hover = summary.interactions.find(
         (i: { kind: string; what: string }) =>
           i.kind === 'hover' && /Home/.test(i.what)
