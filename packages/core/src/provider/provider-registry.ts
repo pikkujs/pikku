@@ -4,6 +4,7 @@ import type {
   ProviderFactory,
   ProviderMeta,
   ProviderProfile,
+  ProviderRegistration,
   ProviderTarget,
   ProviderVariantName,
   ResolvedProvider,
@@ -15,6 +16,7 @@ interface Entry {
   name: string
   definition: ProviderDefinition
   meta: ProviderMeta
+  registration: ProviderRegistration
 }
 
 /** The variants a target looks for, most specific first. */
@@ -66,15 +68,24 @@ export interface ProviderResolveOptions {
 export class ProviderRegistry {
   private readonly entries: Entry[] = []
 
-  /** Registers one provider. `meta` is the inspector's reading of each variant the definition has. */
-  add(name: string, definition: ProviderDefinition, meta: ProviderMeta): this {
+  /**
+   * Registers one provider. `meta` is the inspector's reading of each variant
+   * the definition has. A provider with `registration.addon` runs on an `env`
+   * scoped to what that addon declares.
+   */
+  add(
+    name: string,
+    definition: ProviderDefinition,
+    meta: ProviderMeta,
+    registration: ProviderRegistration = { kind: 'singleton' }
+  ): this {
     if (this.entries.some((entry) => entry.name === name)) {
       throw new ProviderError(
         'duplicate-name',
         `Provider '${name}' is registered more than once.`
       )
     }
-    this.entries.push({ name, definition, meta })
+    this.entries.push({ name, definition, meta, registration })
     return this
   }
 
@@ -118,6 +129,7 @@ export class ProviderRegistry {
         provides: meta.provides,
         optionalProvides: meta.optionalProvides ?? [],
         factory: chosen.factory,
+        addon: entry.registration.addon,
         onServerStart:
           typeof definition === 'function'
             ? undefined

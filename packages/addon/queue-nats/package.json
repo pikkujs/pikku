@@ -23,7 +23,8 @@
     "pikku": "pikku all"
   },
   "peerDependencies": {
-    "@pikku/core": "^0.12.162"
+    "@pikku/core": "^0.12.162",
+    "zod": "^4"
   },
   "dependencies": {
     "@nats-io/jetstream": "^3.4.0",
@@ -41,7 +42,8 @@
   ],
   "devDependencies": {
     "@pikku/cli": "workspace:*",
-    "@standard-schema/spec": "^1.1.0"
+    "@standard-schema/spec": "^1.1.0",
+    "zod": "^4"
   },
   "imports": {
     "#pikku/*.js": "./dist/.pikku/*.js",

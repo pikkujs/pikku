@@ -8,15 +8,19 @@ export { ProviderError } from './provider-error.js'
 export { ProviderRegistry, variantOrder } from './provider-registry.js'
 export type { ProviderResolveOptions } from './provider-registry.js'
 export { runProviders } from './run-providers.js'
+export { scopedEnv } from './scoped-env.js'
+export { recordStopOrder } from './stop-order.js'
 export type { ProviderErrorKind } from './provider-error.js'
 export type { ProviderStartHook } from './run-providers.js'
 export type {
   ProviderCollection,
+  ProviderAddonScope,
   ProviderDefinition,
   ProviderEnv,
   ProviderFactory,
   ProviderMeta,
   ProviderProfile,
+  ProviderRegistration,
   ProviderTarget,
   ProviderVariantMeta,
   ProviderVariantName,

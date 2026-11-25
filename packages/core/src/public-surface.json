@@ -697,7 +697,9 @@
     "defineProvider",
     "defineProviderCollection",
     "defineWireProvider",
+    "recordStopOrder",
     "runProviders",
+    "scopedEnv",
     "variantOrder"
   ],
   "./telemetry-store": [],

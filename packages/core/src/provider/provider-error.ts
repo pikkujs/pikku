@@ -5,6 +5,10 @@ export type ProviderErrorKind =
   | 'cycle'
   | 'optional-key-needed'
   | 'entry-owned'
+  | 'undeclared-read'
+  | 'undeclared-return'
+  | 'missing-return'
+  | 'env-denied'
   | 'factory-failed'
   | 'start-failed'
 

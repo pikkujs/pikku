@@ -1,8 +1,9 @@
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, parse, posix, resolve } from 'node:path'
 import {
   ProviderRegistry,
   variantOrder,
+  type ProviderAddonScope,
   type ProviderMeta as CoreProviderMeta,
   type ProviderProfile,
   type ProviderTarget,
@@ -38,6 +39,8 @@ export interface ResolvedProviderImport {
   export: string
   /** Set when the chosen variant lives in a module of its own. */
   variantRef?: ProviderImportRef
+  /** Set for an addon's provider: the env names it may read. */
+  addon?: ProviderAddonScope
   onServerStart: boolean
 }
 
@@ -76,8 +79,63 @@ export interface ProviderSource {
   /** The addon namespace, for an opted-in service. */
   namespace?: string
   packageName?: string
+  /** What an opted-in provider may read of the environment. */
+  addonScope?: ProviderAddonScope
   /** Absolute path of an opted-in variant's module, by variant. */
   variantModules: Partial<Record<ProviderVariantName, ProviderImportRef>>
+}
+
+const declaredIds = (path: string, idKey: string): string[] => {
+  if (!existsSync(path)) return []
+  const meta = JSON.parse(readFileSync(path, 'utf8')) as Record<string, any>
+  return Object.entries(meta).map(([key, entry]) => entry?.[idKey] ?? key)
+}
+
+/**
+ * The environment names an addon's providers may read: the variables and
+ * secrets the addon declares (read from its built meta, in `dist` or beside
+ * the source), plus the names `wireAddon`'s overrides grant, each mapped to the
+ * host name behind it. An addon that was never built declares nothing.
+ */
+export const addonProviderScope = (
+  namespace: string,
+  packageDir: string,
+  overrides: {
+    variableOverrides?: Record<string, string>
+    secretOverrides?: Record<string, string>
+  } = {}
+): ProviderAddonScope => {
+  const metaDir = [
+    join(packageDir, 'dist', '.pikku', 'addon'),
+    join(packageDir, '.pikku', 'addon'),
+  ].find((dir) => existsSync(dir))
+  const declared = metaDir
+    ? [
+        ...declaredIds(
+          join(metaDir, 'variables', 'pikku-variables-meta.gen.json'),
+          'variableId'
+        ),
+        ...declaredIds(
+          join(metaDir, 'secrets', 'pikku-secrets-meta.gen.json'),
+          'secretId'
+        ),
+      ]
+    : []
+  const rename = {
+    ...overrides.variableOverrides,
+    ...overrides.secretOverrides,
+  }
+  const names = [...new Set([...declared, ...Object.keys(rename)])].sort()
+  const sortedRename = Object.fromEntries(
+    Object.entries(rename).sort(([a], [b]) => a.localeCompare(b))
+  )
+  return {
+    namespace,
+    env: names,
+    ...(Object.keys(sortedRename).length > 0
+      ? { envRename: sortedRename }
+      : {}),
+  }
 }
 
 const findInstalledPackageDir = (
@@ -150,6 +208,9 @@ export const collectProviderSources = (
     const declaration = state.rpc.wireAddonDeclarations.get(namespace)
     const dirs = addonResolutionDirs(rootDir, declaration?.file)
     const packageDir = findInstalledPackageDir(dirs, opted.packageName)
+    const addonScope = packageDir
+      ? addonProviderScope(namespace, packageDir, declaration)
+      : undefined
     for (const [name, meta] of Object.entries(opted.providers)) {
       if (!packageDir) {
         throw new Error(
@@ -170,6 +231,7 @@ export const collectProviderSources = (
         name: `${namespace}/${name}`,
         namespace,
         packageName: opted.packageName,
+        addonScope,
         module: locateProviderModule(packageDir, meta.module, describe),
         export: meta.export,
         meta,
@@ -383,7 +445,10 @@ export const resolveProviders = (options: {
       [variant]: noop,
       ...(source.meta.onServerStart ? { onServerStart: noop } : {}),
     } as ProviderVariants
-    registry.add(source.name, definition, meta)
+    registry.add(source.name, definition, meta, {
+      kind: source.meta.kind ?? 'singleton',
+      ...(source.addonScope ? { addon: source.addonScope } : {}),
+    })
     byName.set(source.name, source)
   }
 
@@ -436,6 +501,7 @@ export const resolveProviders = (options: {
         ...(source.variantModules[service.variant]
           ? { variantRef: source.variantModules[service.variant] }
           : {}),
+        ...(service.addon ? { addon: service.addon } : {}),
         onServerStart: Boolean(service.onServerStart),
       }
     }),

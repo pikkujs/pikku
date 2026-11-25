@@ -35,7 +35,11 @@ const importLine = (exported: string, local: string, from: string) =>
  * what the services provide over it. `serverStartHooks` lists the `onServerStart`
  * of the services that declare one, in run order, for the server lifecycle to
  * call; nothing in the file calls them. Teardown is each service's own `stop()`,
- * called by `stopSingletonServices`.
+ * called by `stopSingletonServices` in the order `runProviders` computed, which
+ * the file records in core's state.
+ *
+ * An addon's provider is registered with the env names its addon declares, so
+ * it never sees the host's whole environment.
  *
  * With a `coercionMap`, the service providing `kysely` is wrapped (see
  * `SerializeProviderRunnerOptions.coercionMap`) so a deployed query returns the
@@ -66,6 +70,10 @@ export const serializeProviderRunner = ({
       },
     })
     const name = JSON.stringify(service.name)
+    const registration = JSON.stringify({
+      kind: 'singleton',
+      ...(service.addon ? { addon: service.addon } : {}),
+    })
     const coerced = coerce && service.provides.includes('kysely')
     const wrap = (definition: string) =>
       coerced ? `withKyselyCoercion(${definition})` : definition
@@ -81,13 +89,13 @@ export const serializeProviderRunner = ({
         )
       )
       adds.push(
-        `registry.add(${name}, ${wrap(`{ ${service.variant}: ${local} }`)}, ${meta})`
+        `registry.add(${name}, ${wrap(`{ ${service.variant}: ${local} }`)}, ${meta}, ${registration})`
       )
       return
     }
     const local = `service${index}`
     imports.push(importLine(service.export, local, specifier(service.module)))
-    adds.push(`registry.add(${name}, ${wrap(local)}, ${meta})`)
+    adds.push(`registry.add(${name}, ${wrap(local)}, ${meta}, ${registration})`)
     if (service.onServerStart) {
       hooks.push(
         `  { name: ${name}, run: (services) => ${local}.onServerStart!(services) },`
@@ -119,7 +127,7 @@ export const serializeProviderRunner = ({
     : []
 
   return [
-    `import { ProviderRegistry, runProviders } from '@pikku/core/provider'`,
+    `import { ProviderRegistry, recordStopOrder, runProviders } from '@pikku/core/provider'`,
     ...(coerce ? [`import { createCoercionPlugin } from '@pikku/kysely'`] : []),
     ...imports,
     ``,
@@ -132,7 +140,8 @@ export const serializeProviderRunner = ({
     `  runtime: Record<string, unknown> = {}`,
     `): Promise<Record<string, unknown>> => {`,
     `  const services: Record<string, unknown> = { ...runtime }`,
-    `  await runProviders(registry, { target: ${JSON.stringify(target)},${profile ? ` profile: ${JSON.stringify(profile)},` : ''} services, env })`,
+    `  const { stopOrder } = await runProviders(registry, { target: ${JSON.stringify(target)},${profile ? ` profile: ${JSON.stringify(profile)},` : ''} services, env })`,
+    `  recordStopOrder(stopOrder)`,
     `  return services`,
     `}`,
     ``,
