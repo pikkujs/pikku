@@ -72,14 +72,21 @@ Write plain notes in `knowledge/site/` (follow the pikku-knowledge skill for the
 Say which page each fact comes from. Write "not seen" for anything you could not see. Never guess a price, a currency
 or a field.
 
-## 4. Ask about the site's other apps first
+## 4. Ask the person first, in one turn
 
-When the site links to its own sub-domains or sibling apps (the same registrable domain on another host, such as
-`app.<site>` or `info.<site>`, in `behaviour.json` `outsideHosts`, `actions` or the pages' links), do not file yet. End
-this turn with one short question to the person: list each host with what the capture saw of it (its first page's title,
-and whether it has a sign-in, a shop or forms) and say the default: out of scope, kept as a link and an open question.
-File after the answer. A host they plan in is captured with `pikku ui pages capture <its url>` and planned like the main
-site; the others stay links with an open question.
+Before you file, ask one short question when the capture shows either of these, both in the same message:
+
+- **The site's own other apps**: sub-domains or sibling hosts of the same registrable domain (`behaviour.json`
+  `siblings`, such as `app.<site>` or `info.<site>`). List each host with what the capture saw of it (its first page's
+  title, and whether it has a sign-in, a shop or forms). Default: out of scope, kept as a link and an open question.
+- **Payments the site takes**: `behaviour.json` `payments` (a payment provider's links or scripts on the site's own pages,
+  such as `buy.stripe.com`, `js.stripe.com`, PayPal or a shop's checkout). Ask which payment provider they use, listing what
+  the capture saw per provider. Default: keep the existing checkout or payment links and leave the replacement open. A
+  provider seen only inside another provider's embed (an Acuity or ThriveCart frame loading Stripe) does not ask by itself.
+
+End the turn with that question and do not file. File after the answer. A sibling host they plan in is captured with
+`pikku ui pages capture <its url>` and planned like the main site; the others stay links with an open question. How the
+plan handles the payment answer is in `references/planning-from-the-notes.md`.
 
 ## 5. Then plan from it
 
