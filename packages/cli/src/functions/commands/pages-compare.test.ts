@@ -347,7 +347,7 @@ describe('the capture of what a site relies on and does', () => {
             .end(
               '<form><label for="p">Pronoun(s)</label><input id="p" name="pronouns" required><button type="submit">Submit</button></form>'
             )
-        else if (req.url === '/forms/d/e/abc/viewform')
+        else if (req.url?.startsWith('/forms/d/e/abc/viewform'))
           res
             .writeHead(200, { 'content-type': 'text/html' })
             .end(
@@ -568,11 +568,12 @@ describe('a hosted form a page links to', () => {
       }
       const server = createServer((req, res) => {
         res.writeHead(200, { 'content-type': 'text/html' })
-        if (req.url?.endsWith('/viewform')) {
-          // answers in the language the browser asks for, as Google Forms does
-          const label = (req.headers['accept-language'] ?? '').startsWith('sl')
-            ? 'Ime'
-            : 'Name'
+        if (req.url?.includes('/viewform')) {
+          // answers in the language its `hl` asks for, whatever the browser's, as Google Forms does
+          const label =
+            new URL(req.url, 'http://x').searchParams.get('hl') === 'sl'
+              ? 'Ime'
+              : 'Name'
           res.end(
             `<!doctype html><title>Form</title><form><label for="n">${label}</label><input id="n" name="name" required><button type="submit">Send</button></form>`
           )
