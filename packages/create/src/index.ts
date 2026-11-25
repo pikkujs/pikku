@@ -21,7 +21,6 @@ import {
   filterFilesByFeatures,
   mergeDirectories,
   mergeJsonFiles,
-  preparePackageJsonForYarnLink,
   removeFunctionsOnlyFiles,
   replaceFunctionReferences,
   serverlessChanges,
@@ -32,8 +31,15 @@ import {
   STARTER_TEMPLATE_REF,
   STARTER_TEMPLATE_SOURCE,
 } from './utils.js'
+import {
+  assertBunAvailable,
+  installDependencies,
+  runStep,
+  SetupError,
+  starterNextSteps,
+  starterPackageManager,
+} from './setup-steps.js'
 import { program } from 'commander'
-import { spawnSync } from 'child_process'
 import fs, { unlinkSync, writeFileSync } from 'fs'
 
 const BASE_URL = 'gh:pikkujs/pikku/recipes'
@@ -203,81 +209,16 @@ program
     '--skip-install',
     'Skip installing dependencies (useful when the caller will run install manually)'
   )
-  .option('-p, --package-manager <packageManager>', 'Package manager')
+  .option(
+    '-p, --package-manager <packageManager>',
+    'Package manager (the starter template only accepts bun)'
+  )
   .option('--yarn-link <link>', 'Yarn link (for local pikku development)')
   .option('--variations', 'Show all template variations')
   .option('--frontend <frontend>', 'Frontend app to keep for cloud')
   .parse(process.argv)
 
 const cliOptions = program.opts()
-
-async function installDependencies(
-  targetPath: string,
-  { packageManager, install, yarnLink, template }: CliOptions
-) {
-  if (install) {
-    if (yarnLink) {
-      writeFileSync(
-        path.join(targetPath, '.yarnrc.yml'),
-        [
-          'compressionLevel: mixed',
-          'enableGlobalCache: false',
-          'nodeLinker: node-modules',
-        ].join('\n')
-      )
-      // Remove version constraints from @pikku/* packages to prevent yarn
-      // from trying to fetch unreleased versions from npm
-      preparePackageJsonForYarnLink(targetPath)
-    }
-
-    console.log(chalk.blue('📦 Installing dependencies...'))
-    const installArgs = ['install']
-    if (packageManager === 'yarn') {
-      installArgs.push('--no-immutable')
-    }
-    spawnSync(packageManager, installArgs, {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
-
-    if (yarnLink) {
-      if (packageManager === 'yarn') {
-        console.log(chalk.blue('🔗 Linking to Pikku'))
-        // Resolve to absolute path from current working directory
-        const absoluteYarnLinkPath = path.resolve(yarnLink)
-        spawnSync(
-          'yarn',
-          ['link', '--all', '--private', absoluteYarnLinkPath],
-          {
-            cwd: targetPath,
-            stdio: 'inherit',
-          }
-        )
-      } else {
-        console.log(
-          chalk.red('⚠️ Yarn link is only supported with yarn package manager')
-        )
-        process.exit(1)
-      }
-    }
-
-    console.log(chalk.blue('🦎 Running pikku...'))
-    spawnSync(packageManager, ['pikku', '--silent'], {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
-
-    if (template === 'cli') {
-      console.log(
-        chalk.blue('🚀 Running pikku again to setup up the remote channel.')
-      )
-      spawnSync(packageManager, ['pikku', '--silent'], {
-        cwd: targetPath,
-        stdio: 'inherit',
-      })
-    }
-  }
-}
 
 async function setupTemplate(cliOptions: CliOptions) {
   const { version, name: projectPath, packageManager, template } = cliOptions
@@ -463,7 +404,7 @@ async function run() {
 
   const packageManager =
     template === 'starter-template'
-      ? 'yarn'
+      ? starterPackageManager(cliOptions)
       : cliOptions.packageManager ||
         (cliOptions.variations
           ? await select({
@@ -498,6 +439,10 @@ async function run() {
 
   const install =
     !cliOptions.skipInstall && (cliOptions.install || !cliOptions.variations)
+
+  if (template === 'starter-template' && install) {
+    assertBunAvailable()
+  }
 
   const selectedOptions: CliOptions = {
     name,
@@ -592,19 +537,27 @@ async function setupCloud(cliOptions: CliOptions) {
   await installDependencies(targetPath, cliOptions)
 
   console.log(chalk.green('\n✅ Project setup complete!'))
-  console.log(`Run the following command to get started:\n`)
-  console.log(chalk.bold(`cd ${cliOptions.name}`))
+  console.log(`Run the following commands to get started:\n`)
+  console.log(
+    chalk.bold(starterNextSteps(cliOptions.name, cliOptions.install).join('\n'))
+  )
 
   if (cliOptions.install) {
     console.log(chalk.blue('\n🚀 Starting dev server...'))
-    spawnSync('yarn', ['dev'], {
-      cwd: targetPath,
-      stdio: 'inherit',
-    })
+    runStep(
+      'bun',
+      ['run', 'dev'],
+      targetPath,
+      'The project files are installed; run the commands listed above in that directory.'
+    )
   }
 }
 
 run().catch((error) => {
-  console.error(chalk.red('Failed to create project:'), error)
+  if (error instanceof SetupError) {
+    console.error(chalk.red(`\n${error.message}`))
+  } else {
+    console.error(chalk.red('Failed to create project:'), error)
+  }
   process.exit(1)
 })
