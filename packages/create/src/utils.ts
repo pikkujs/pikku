@@ -773,3 +773,62 @@ export async function withNetworkRetry<T>(
 
   throw lastError
 }
+
+/** The repository the default template is downloaded from. */
+export const STARTER_TEMPLATE_SOURCE = 'gh:pikkujs/starter-template'
+
+/**
+ * The starter commit a scaffold downloads unless `--version` names another ref.
+ * It is the commit the `recipes/starter-template` submodule pins, and a test
+ * holds the two equal.
+ */
+export const STARTER_TEMPLATE_REF = '34fb324e125bcc5c65b85ac5dc3fd3e4dc8bb7fb'
+
+export class EmptyTemplateError extends Error {
+  constructor(source: string) {
+    super(
+      `The template downloaded from ${source} is empty or incomplete: it has no package.json. No project was created from it. Check that the template and ref exist.`
+    )
+    this.name = 'EmptyTemplateError'
+  }
+}
+
+/**
+ * Downloads `source` into `dir` and refuses a result without a package.json.
+ * The download itself succeeds for a directory the repository archive leaves
+ * empty, such as a git submodule or a path that does not exist.
+ */
+export async function downloadPopulatedTemplate(
+  source: string,
+  dir: string,
+  download: (source: string, dir: string) => Promise<unknown>,
+  retryOptions?: NetworkRetryOptions
+): Promise<void> {
+  await withNetworkRetry(() => download(source, dir), retryOptions)
+  if (!fs.existsSync(path.join(dir, 'package.json'))) {
+    throw new EmptyTemplateError(source)
+  }
+}
+
+/**
+ * Runs `operation` with a new, empty directory inside `targetPath`, so it only
+ * ever holds what this run downloaded and moving files out of it never crosses
+ * a filesystem. If `operation` fails, the directories created here are removed.
+ */
+export async function withStagingDir<T>(
+  targetPath: string,
+  operation: (stagingDir: string) => Promise<T>
+): Promise<T> {
+  const createdDir = fs.mkdirSync(targetPath, { recursive: true })
+  const stagingDir = fs.mkdtempSync(path.join(targetPath, '.create-pikku-'))
+  try {
+    return await operation(stagingDir)
+  } catch (error) {
+    if (createdDir) {
+      fs.rmSync(createdDir, { recursive: true, force: true })
+    }
+    throw error
+  } finally {
+    fs.rmSync(stagingDir, { recursive: true, force: true })
+  }
+}
