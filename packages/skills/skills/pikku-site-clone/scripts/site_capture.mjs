@@ -568,6 +568,12 @@ async function probeActions(page, seen) {
         const other = await (own ?? ctx).newPage()
         try {
           await other.goto(m.href, { waitUntil: 'domcontentloaded', timeout: 30000 })
+          // Google Forms picks its language from where the request comes from, not Accept-Language: it takes `hl`
+          const landed = new URL(other.url())
+          if (lang && FORM_PATH.test(landed.pathname) && !landed.searchParams.has('hl')) {
+            landed.searchParams.set('hl', lang)
+            await other.goto(landed.href, { waitUntil: 'domcontentloaded', timeout: 30000 })
+          }
           row.step = await describeStep(other)
         } finally { await (own ?? other).close().catch(() => {}) }
       } else {
