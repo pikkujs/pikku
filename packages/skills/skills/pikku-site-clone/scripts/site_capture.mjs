@@ -415,8 +415,9 @@ export function extractBehaviourInPage() {
   const FIELDS = 'input:not([type=hidden]), select, textarea, [role=combobox], [role=listbox], [role=radiogroup], [role=checkbox], [contenteditable=true]'
   const SUBMIT = 'button[type=submit], input[type=submit], button:not([type]), [role=button], button'
   let groups = [...document.querySelectorAll('form')]
-  // a page builder's form is often no <form>: a box with two or more fields and a button
-  if (!groups.length) for (const b of document.querySelectorAll('button, [role=button]')) {
+  // a page builder's form is often no <form>: a box with two or more fields and a button, beside any real form
+  for (const b of document.querySelectorAll('button, [role=button]')) {
+    if (b.closest('form')) continue
     let box = b.parentElement
     for (let i = 0; box && i < 6; i++, box = box.parentElement) if (box.querySelectorAll(FIELDS).length >= 2) { if (!groups.some((g) => g.contains(box) || box.contains(g))) groups.push(box); break }
   }
@@ -455,6 +456,73 @@ export function extractBehaviourInPage() {
 const LOOK = ['color', 'backgroundColor', 'opacity', 'transform', 'textDecorationLine', 'boxShadow', 'borderColor', 'outlineStyle', 'outlineColor', 'position', 'top', 'height']
 const lookOf = (page, n) => page.evaluate(([n, props]) => { const e = document.querySelector(`[data-capture-probe="${n}"]`); if (!e) return null; const cs = getComputedStyle(e); return Object.fromEntries(props.map((p) => [p, cs[p]])) }, [n, LOOK]).catch(() => null)
 const changed = (a, b) => (a && b ? Object.fromEntries(Object.keys(a).filter((k) => a[k] !== b[k]).map((k) => [k, [a[k], b[k]]])) : {})
+
+/** A link or button that starts a visitor's flow: booking, tickets, buying, enrolling, applying, signing in or up. */
+const ACTION = /^(book( now| a| your)?|enrol+( now)?|get tickets?|tickets?|buy( now)?|register|sign ?up|sign ?in|log ?in|apply( here| now)?|subscribe|join( now)?|checkout|reserve)\b/i
+
+/** Where a flow's first step lands and what it asks for: address, title, text, choices, forms and frames. */
+const describeStep = async (p) => {
+  const step = { url: p.url(), ...(await p.evaluate(extractFrameInPage).catch(() => ({}))) }
+  step.forms = ((await p.evaluate(extractBehaviourInPage).catch(() => null))?.forms || []).map(({ index, ...f }) => f)
+  step.frames = p.frames().filter((f) => f !== p.mainFrame() && /^https?:/.test(f.url())).map((f) => f.url().slice(0, 200)).slice(0, 6)
+  return step
+}
+
+/**
+ * The first step of each flow a page offers (up to four links or buttons whose words start one: Book, Enroll, Get
+ * Tickets, Buy, Apply, Log In, Subscribe...), opened read-only: a link is opened in a page of its own, on or off the
+ * site (a hosted form), a button is clicked where it is (a sign-in or checkout dialog). Every request that is not a GET
+ * is held back, nothing is filled in or sent, and a flow already opened from an earlier page is not opened again.
+ */
+async function probeActions(page, seen) {
+  const ctx = page.context()
+  const marked = await page.evaluate((rx) => {
+    const ACTION = new RegExp(rx, 'i')
+    const text = (e) => (e.innerText || e.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim()
+    const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 }
+    const out = []
+    for (const e of document.querySelectorAll('a, button, [role=button]')) {
+      const t = text(e)
+      if (out.length >= 4 || !t || t.length > 40 || !ACTION.test(t) || !vis(e)) continue
+      const n = out.length
+      e.setAttribute('data-capture-action', String(n))
+      out.push({ n, text: t, href: e.tagName === 'A' ? e.href : '' })
+    }
+    return out
+  }, ACTION.source).catch(() => [])
+  const hold = (route) => (route.request().method() === 'GET' ? route.continue() : route.abort())
+  const found = []
+  for (const m of marked) {
+    const sig = `action|${m.text.toLowerCase()}|${m.href ? new URL(m.href).pathname.replace(/[^/]+$/, '') : ''}`
+    if (seen.has(sig)) continue
+    seen.add(sig)
+    const row = { text: m.text, ...(m.href ? { href: m.href } : {}) }
+    try {
+      if (m.href && /^https?:/.test(m.href) && new URL(m.href).hash === '') {
+        const other = await ctx.newPage()
+        await other.route('**/*', hold)
+        try {
+          await other.goto(m.href, { waitUntil: 'load', timeout: 30000 })
+          await other.waitForTimeout(2000)
+          row.step = await describeStep(other)
+        } finally { await other.close().catch(() => {}) }
+      } else {
+        await page.route('**/*', hold)
+        const url = page.url(), before = await page.evaluate(() => document.body.innerText.length).catch(() => 0)
+        try {
+          await page.locator(`[data-capture-action="${m.n}"]`).click({ timeout: 3000 })
+          await page.waitForTimeout(2000)
+          row.step = await describeStep(page)
+          row.step.textAdded = (await page.evaluate(() => document.body.innerText.length).catch(() => 0)) - before
+          if (page.url() !== url) await page.goBack({ timeout: 15000 }).catch(() => {})
+          else await page.keyboard.press('Escape').catch(() => {})
+        } finally { await page.unroute('**/*', hold) }
+      }
+    } catch (e) { row.error = String(e.message || e).split('\n')[0].slice(0, 160) }
+    found.push(row)
+  }
+  return found
+}
 
 /**
  * Hover and focus on the first links, buttons and fields, open what says it opens (aria-expanded, details, a menu
@@ -614,6 +682,7 @@ export async function captureBehaviour(browser, out, entry, seen = new Set(), op
     rec.cookies = (await ctx.cookies()).map((c) => ({ name: c.name, domain: c.domain, session: c.expires === -1, httpOnly: c.httpOnly }))
     rec.accessibility = ((await page.locator('body').ariaSnapshot({ timeout: 10000 }).catch(() => '')) || '').slice(0, 6000)
     rec.interactions = await probeInteractions(page, out, id, seen)
+    rec.actions = await probeActions(page, seen)
     rec.submits = await probeForms(page, rec.forms || [])
     rec.frames = await captureFrames(page, requests)
   } catch (e) { rec.error = String(e.message || e).split('\n')[0].slice(0, 200) }
@@ -651,12 +720,20 @@ export async function summariseBehaviour(out, root, recs) {
     robots,
     sitemaps: [...robots.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => m[1]),
     outsideHosts: Object.fromEntries(Object.entries(hosts).filter(([, e]) => e.thirdParty).map(([h, e]) => [h, { pages: e.pages.length <= 6 ? e.pages : [...e.pages.slice(0, 5), `and ${e.pages.length - 5} more`], types: e.types }])),
-    forms: recs.flatMap((r) => (r.forms || []).map((f) => ({ page: r.id, ...f, submit: { label: f.submit, ...(r.submits || []).find((s) => s.index === f.index) } }))),
+    // a form every page shares (a newsletter box in the footer) is listed once, with the pages it is on
+    forms: [...recs.flatMap((r) => (r.forms || []).map((f) => ({ page: r.id, ...f, submit: { label: f.submit, ...(r.submits || []).find((s) => s.index === f.index) } }))).reduce((all, f) => {
+      const key = JSON.stringify([f.fields.map((x) => [x.type, x.name, x.label]), f.submit.label])
+      const seen = all.get(key)
+      if (seen) seen.pages.push(f.page)
+      else all.set(key, { ...f, pages: [f.page] })
+      return all
+    }, new Map()).values()].map((f) => ({ ...f, pages: f.pages.length <= 6 ? f.pages : [...f.pages.slice(0, 5), `and ${f.pages.length - 5} more`] })),
     cookies: Object.values(cookies),
     fonts: [...fonts],
     media: [...media],
     languageLinks: [...langs.values()],
     downloads: [...downloads.values()],
+    actions: recs.flatMap((r) => (r.actions || []).map((a) => ({ page: r.id, ...a }))),
     interactions: recs.flatMap((r) => (r.interactions || []).filter((i) => i.error || Object.keys(i.changes || {}).length || i.kind === 'open').map((i) => ({ page: r.id, ...i }))),
     motion: [...new Map(recs.flatMap((r) => r.motion || []).map((m) => [`${m.transition}|${m.animation}`, m])).values()].slice(0, 25),
     frames: recs.flatMap((r) => (r.frames || []).map((f) => ({ page: r.id, ...f }))),

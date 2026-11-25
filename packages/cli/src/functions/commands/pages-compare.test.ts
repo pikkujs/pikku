@@ -294,7 +294,8 @@ describe('the capture of what a site relies on and does', () => {
 <style>nav a { color: rgb(0, 0, 0); transition: color 0.2s ease } nav a:hover { color: rgb(200, 0, 0) } #menu[hidden] { display: none }</style>
 </head><body><header><nav><a href="/">Home</a><a href="/about">About</a><a href="/feed">Feed</a><a href="/wp-json/pages">API</a><a href="/guide.pdf">Guide</a></nav>
 <button aria-expanded="false" onclick="this.setAttribute('aria-expanded','true');document.getElementById('menu').hidden=false">Menu</button>
-<div id="menu" hidden>Workshops and circles and events</div></header>
+<div id="menu" hidden>Workshops and circles and events</div>${assets ? `<a href="${assets}/apply">Apply here</a>` : ''}
+<button onclick="document.getElementById('login').hidden=false">Log In</button><form id="login" hidden><input type="email" name="email" aria-label="Email"><input type="password" name="password" aria-label="Password"><button type="submit">Go</button></form></header>
 <main><h1>Welcome</h1><div class="apply">
 <label for="email">Email</label><input id="email" name="email" type="email" required>
 <div><div><select aria-label="Country code"><option>+49</option><option>+44</option></select><input name="phone" type="tel" aria-label="Phone"></div></div>
@@ -320,6 +321,12 @@ describe('the capture of what a site relies on and does', () => {
           res
             .writeHead(200, { 'content-type': 'text/css' })
             .end('body{margin:0}')
+        else if (req.url === '/apply')
+          res
+            .writeHead(200, { 'content-type': 'text/html' })
+            .end(
+              `<!doctype html><title>Scholarship</title><h1>Apply</h1><form action="/applied" method="post"><label for="level">Course</label><select id="level" name="level" required><option>Level 1</option><option>Level 2</option></select><textarea name="why" required aria-label="Why"></textarea><button type="submit">Submit</button></form>`
+            )
         else if (req.url === '/embed')
           res
             .writeHead(200, { 'content-type': 'text/html' })
@@ -388,7 +395,9 @@ describe('the capture of what a site relies on and does', () => {
       assert.ok(
         page1.console.some((l: string) => /hello from the page/.test(l))
       )
-      const [form] = summary.forms
+      const form = summary.forms.find((f: { fields: { type: string }[] }) =>
+        f.fields.some((x) => x.type === 'tel')
+      )
       const types = form.fields.map((f: { type: string }) => f.type)
       assert.ok(types.includes('email') && types.includes('tel'))
       const phone = form.fields.find((f: { type: string }) => f.type === 'tel')
@@ -430,6 +439,27 @@ describe('the capture of what a site relies on and does', () => {
         )
       )
       assert.match(page1.accessibility, /button "Menu"/)
+      const apply = summary.actions.find(
+        (a: { text: string }) => a.text === 'Apply here'
+      )
+      assert.equal(apply.step.url, `http://localhost:${port}/apply`)
+      assert.equal(apply.step.title, 'Scholarship')
+      assert.deepEqual(apply.step.forms[0].fields[0].options, [
+        'Level 1',
+        'Level 2',
+      ])
+      const login = summary.actions.find(
+        (a: { text: string }) => a.text === 'Log In'
+      )
+      assert.ok(login.step.textAdded >= 0)
+      assert.deepEqual(
+        login.step.forms
+          .find((f: { fields: { type: string }[] }) =>
+            f.fields.some((x) => x.type === 'password')
+          )
+          .fields.map((x: { type: string }) => x.type),
+        ['email', 'password']
+      )
       const [frame] = summary.frames
       assert.equal(frame.src, `http://localhost:${port}/embed`)
       assert.equal(frame.title, 'Book a session')
