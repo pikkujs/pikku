@@ -15,6 +15,11 @@ rules of the `pikku-changes` skill, and these on top:
   replaced. Anything seen only in policy or legal text, or implied by a service's name (a newsletter the privacy policy
   mentions, an email a booking tool may send), is an "Open question: ..." in the nearest change, never a change, route,
   table or email of its own.
+- Every change body ends with `Evidence:` and one line per feature it plans (a route, form field, table, outside-service
+  decision, interaction): `- <feature>: <source>`, where the source is `page:<id>` (a captured page), `behaviour:<key>`
+  (a key of `behaviour.json`, such as `forms[0].fields`, `outsideHosts.<host>`, `interactions`, `redirects`),
+  `note:<file in knowledge/site/>` or a captured URL. A feature with no source is not planned: it is an "Open question: ..."
+  in the nearest change.
 - Every service in `outside-services.md` and every host in `behaviour.json` `outsideHosts` is named by a change: one that
   replaces it (a hosted form becomes the app's own form and table, a tracker or error reporter is removed, fonts and pictures
   are served by the app, the page builder's hosting is the rebuilt app), or one that keeps it, in the body of the change that
