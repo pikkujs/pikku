@@ -75,7 +75,8 @@ export const serializeServicesMap = (
 
   // Installed by the runner, so destructuring one must not make it required of
   // `createSingletonServices` — the generated analytics ingest does exactly that.
-  const runnerInstalledServices = ['analytics', 'auditLog']
+  // `analyticsSinks` is the collection the providers fill, read by the fan-out.
+  const runnerInstalledServices = ['analytics', 'auditLog', 'analyticsSinks']
   runnerInstalledServices.forEach((service) => usedServices.delete(service))
 
   // Create singleton services map: all singleton services with true/false based on usage

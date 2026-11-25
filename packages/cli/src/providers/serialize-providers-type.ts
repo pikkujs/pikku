@@ -10,10 +10,19 @@ export interface ServiceTypeSource {
   export: string
 }
 
+/** A `defineProviderCollection` const the project or an opted-in addon declares. */
+export interface CollectionTypeSource {
+  name: string
+  specifier: string
+  export: string
+}
+
 export interface SerializeSingletonServicesTypeOptions {
   /** `import type { X as BaseSingletonServices } from '...'`, written by the caller. */
   baseImport: string
   services: readonly ServiceTypeSource[]
+  /** Each is a key of the merged type: the label-sorted entries its providers add. */
+  collections?: readonly CollectionTypeSource[]
 }
 
 const typeOf = ({ specifier, export: exported }: ServiceTypeSource) =>
@@ -39,6 +48,7 @@ const typeOf = ({ specifier, export: exported }: ServiceTypeSource) =>
 export const serializeProvidersType = ({
   baseImport,
   services,
+  collections = [],
 }: SerializeSingletonServicesTypeOptions): string => {
   const keys = new Map<string, ServiceTypeSource>()
   const optionalKeys = new Set<string>()
@@ -48,17 +58,21 @@ export const serializeProvidersType = ({
     }
     for (const key of service.optionalProvides ?? []) optionalKeys.add(key)
   }
-  const provided = [...keys.keys()].sort()
+  const collected = new Map(collections.map((c) => [c.name, c]))
+  const provided = [...new Set([...keys.keys(), ...collected.keys()])].sort()
 
   const merged =
     provided.length === 0
       ? `export type SingletonServices = BaseSingletonServices`
       : [
           `export type SingletonServices = Omit<BaseSingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}> & {`,
-          ...provided.map(
-            (key) =>
-              `  ${JSON.stringify(key)}${optionalKeys.has(key) ? '?' : ''}: Merged<${JSON.stringify(key)}, Provided<${typeOf(keys.get(key)!)}, ${JSON.stringify(key)}>>`
-          ),
+          ...provided.map((key) => {
+            const collection = collected.get(key)
+            if (collection) {
+              return `  readonly ${JSON.stringify(key)}: CollectionEntries<typeof import(${JSON.stringify(collection.specifier)}).${collection.export}>`
+            }
+            return `  ${JSON.stringify(key)}${optionalKeys.has(key) ? '?' : ''}: Merged<${JSON.stringify(key)}, Provided<${typeOf(keys.get(key)!)}, ${JSON.stringify(key)}>>`
+          }),
           `}`,
         ].join('\n')
 
@@ -72,7 +86,16 @@ export type ProviderKeyIsAny<Key extends string> = {
   readonly providerKeyIsAny: Key
 }
 
-type Factory<Service> = Service extends (...args: never[]) => unknown
+${
+  collections.length === 0
+    ? ''
+    : `type CollectionEntries<Collection> =
+  Collection extends ProviderCollection<string, infer Item>
+    ? readonly ProviderCollectionEntry<Item>[]
+    : never
+
+`
+}type Factory<Service> = Service extends (...args: never[]) => unknown
   ? Service
   : Service extends object
     ? Extract<
@@ -112,11 +135,17 @@ type Merged<Key extends string, Value> = Key extends keyof BaseSingletonServices
 
 import { defineProvider as coreProvider } from '@pikku/core/provider'
 import type {
+${collections.length === 0 ? '' : '  ProviderCollectionEntry,\n'}  ProviderCollection,
   ProviderFactory,
   ProviderVariants,
   WithOptional,
 } from '@pikku/core/provider'
 ${baseImport}
+
+export type {
+  ProviderCollection,
+  ProviderCollectionEntry,
+} from '@pikku/core/provider'
 
 ${helpers}${merged}
 
@@ -127,6 +156,21 @@ ${helpers}${merged}
 export type InjectedServices = ${provided.length === 0 ? 'Record<never, never>' : `Pick<SingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}>`}
 
 type DefineProvider = {
+  <
+    TName extends string,
+    TItem extends object,
+    const TOptional extends keyof SingletonServices & string = never,
+  >(
+    variants: ProviderVariants<
+      WithOptional<SingletonServices, TOptional>,
+      TItem,
+      TOptional
+    > & { addTo: ProviderCollection<TName, TItem> }
+  ): ProviderVariants<
+    WithOptional<SingletonServices, TOptional>,
+    TItem,
+    TOptional
+  >
   <TProvides extends object>(
     factory: ProviderFactory<SingletonServices, TProvides>
   ): ProviderFactory<SingletonServices, TProvides>

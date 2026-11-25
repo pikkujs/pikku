@@ -5,5 +5,8 @@
     "api": {
       "filter": {}
     }
+  },
+  "db": {
+    "engine": "sqlite"
   }
 }

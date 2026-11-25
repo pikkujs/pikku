@@ -74,6 +74,14 @@ export async function setupServices(
     secrets,
     ...platformServices,
   })
+  // The sinks the providers built are used unless the app returned its own.
+  const { analyticsSinks } = platformServices as Pick<
+    typeof services,
+    'analyticsSinks'
+  >
+  if (analyticsSinks && !services.analyticsSinks) {
+    services.analyticsSinks = analyticsSinks
+  }
   // A worker has no filesystem: the declared events reach it only through the
   // bootstrap, and a sink with none to receive would drop everything silently.
   assertAnalyticsSinksDeclared(services.analyticsSinks)

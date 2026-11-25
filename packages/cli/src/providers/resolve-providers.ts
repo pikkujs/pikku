@@ -41,6 +41,8 @@ export interface ResolvedProviderImport {
   variantRef?: ProviderImportRef
   /** Set for an addon's provider: the env names it may read. */
   addon?: ProviderAddonScope
+  /** The collection an item provider adds its one item to. */
+  addTo?: string
   onServerStart: boolean
 }
 
@@ -50,6 +52,50 @@ export interface ResolvedProviders {
   ordered: ResolvedProviderImport[]
   /** The keys held before any service runs. */
   baseline: readonly string[]
+  /** The collections the target holds: every one a selected provider reads or adds to. */
+  collections: readonly string[]
+}
+
+/** The collections core declares, which any project's providers may add to. */
+export const CORE_COLLECTIONS: Readonly<Record<string, string>> = {
+  analyticsSinks: '@pikku/core/analytics',
+}
+
+/**
+ * Whether a resolution has nothing to run: no provider and no collection of the
+ * project's own. Core's collections need no runner of their own, since a reader
+ * of one finds it unset and falls back.
+ */
+export const runsNothing = (resolved: ResolvedProviders): boolean =>
+  resolved.ordered.length === 0 &&
+  resolved.collections.every((name) => name in CORE_COLLECTIONS)
+
+/** Every collection name the build knows, with the module that declares it. */
+export const knownCollections = (
+  state: Pick<ProvidersState, 'providerCollections' | 'optedInProviders'> &
+    Partial<Pick<ProvidersState, 'providers'>>
+): Map<string, string> => {
+  const known = new Map<string, string>(Object.entries(CORE_COLLECTIONS))
+  for (const [name, collection] of Object.entries(
+    state.providerCollections ?? {}
+  )) {
+    known.set(name, collection.module)
+  }
+  for (const [namespace, opted] of Object.entries(
+    state.optedInProviders ?? {}
+  )) {
+    for (const [name, collection] of Object.entries(opted.collections ?? {})) {
+      known.set(name, `${opted.packageName}:${collection.module}`)
+    }
+    for (const meta of Object.values(opted.providers)) {
+      if (meta.addTo && !known.has(meta.addTo)) known.set(meta.addTo, namespace)
+    }
+  }
+  for (const meta of Object.values(state.providers ?? {})) {
+    if (meta.addTo && !known.has(meta.addTo))
+      known.set(meta.addTo, 'the project')
+  }
+  return known
 }
 
 type ProvidersState = Pick<
@@ -242,6 +288,45 @@ export const collectProviderSources = (
   return sources
 }
 
+/**
+ * The collections the project and its opted-in addons declare, each with the
+ * absolute module that exports it. Core's own are not here: they are imported
+ * by package name.
+ */
+export const collectProviderCollections = (
+  state: Pick<
+    ProvidersState,
+    'providerCollections' | 'optedInProviders' | 'rpc'
+  >,
+  rootDir: string
+): { name: string; module: string; export: string }[] => {
+  const out = Object.values(state.providerCollections ?? {}).map(
+    ({ name, module, export: exported }) => ({ name, module, export: exported })
+  )
+  for (const [namespace, opted] of Object.entries(
+    state.optedInProviders ?? {}
+  )) {
+    const collections = Object.values(opted.collections ?? {})
+    if (collections.length === 0) continue
+    const declaration = state.rpc.wireAddonDeclarations.get(namespace)
+    const dirs = addonResolutionDirs(rootDir, declaration?.file)
+    const packageDir = findInstalledPackageDir(dirs, opted.packageName)
+    if (!packageDir) continue
+    for (const collection of collections) {
+      out.push({
+        name: collection.name,
+        module: locateProviderModule(
+          packageDir,
+          collection.module,
+          `Collection '${collection.name}' of addon '${namespace}' (${opted.packageName})`
+        ),
+        export: collection.export,
+      })
+    }
+  }
+  return out
+}
+
 const variantEntries = (meta: ProviderMeta) =>
   Object.entries(meta.variants) as [ProviderVariantName, ProviderVariantMeta][]
 
@@ -375,7 +460,10 @@ export const resolveProviders = (options: {
   const baselineKeys = new Set(baseline)
   const looked = variantOrder(target, profile)
 
+  const collections = knownCollections(options.state)
+
   const keysOf = (source: ProviderSource): string[] => {
+    if (source.meta.addTo) return []
     const variant = variantFor(source.meta, target, profile)
     return variant
       ? [...source.meta.variants[variant]!.provides]
@@ -385,6 +473,13 @@ export const resolveProviders = (options: {
   const owners = new Map<string, ProviderSource>()
   for (const source of sources) {
     for (const key of keysOf(source)) {
+      const declaredIn = collections.get(key)
+      if (declaredIn !== undefined) {
+        throw new ProviderBuildError(
+          ErrorCode.COLLECTION_KEY_CONFLICT,
+          `'${key}' is the provider collection declared in ${declaredIn}; provider '${source.name}' cannot also provide it as a key.`
+        )
+      }
       const owner = owners.get(key)
       if (owner && owner !== source) {
         throw new ProviderBuildError(
@@ -405,13 +500,21 @@ export const resolveProviders = (options: {
     grew = false
     for (const source of sources) {
       if (selected.has(source)) continue
-      if (!keysOf(source).some((key) => reached.has(key))) continue
+      const joins = source.meta.addTo
+        ? reached.has(source.meta.addTo)
+        : keysOf(source).some((key) => reached.has(key))
+      if (!joins) continue
       selected.add(source)
       grew = true
       const variant = variantFor(source.meta, target, profile)
       const read = variant ? source.meta.variants[variant]! : undefined
       for (const need of read?.needs ?? []) {
-        if (read!.optional?.includes(need) && !owners.has(need)) continue
+        if (
+          read!.optional?.includes(need) &&
+          !owners.has(need) &&
+          !collections.has(need)
+        )
+          continue
         reached.add(need)
       }
     }
@@ -422,6 +525,7 @@ export const resolveProviders = (options: {
   for (const source of sources) {
     if (!selected.has(source)) continue
     const variant = variantFor(source.meta, target, profile)
+    if (!variant && source.meta.addTo) continue
     if (!variant) {
       const keys = providedKeys(source.meta)
       const uncovered = keys.filter((key) => !baselineKeys.has(key))
@@ -447,10 +551,16 @@ export const resolveProviders = (options: {
     } as ProviderVariants
     registry.add(source.name, definition, meta, {
       kind: source.meta.kind ?? 'singleton',
+      ...(source.meta.addTo ? { addTo: source.meta.addTo } : {}),
       ...(source.addonScope ? { addon: source.addonScope } : {}),
     })
     byName.set(source.name, source)
   }
+
+  const reachedCollections = [...collections.keys()]
+    .filter((name) => reached.has(name))
+    .sort()
+  for (const name of reachedCollections) registry.collection(name)
 
   let resolved: ReturnType<ProviderRegistry['resolve']>
   try {
@@ -487,6 +597,7 @@ export const resolveProviders = (options: {
   return {
     target,
     baseline,
+    collections: reachedCollections,
     ordered: resolved.map((service) => {
       const source = byName.get(service.name)!
       return {
@@ -502,6 +613,7 @@ export const resolveProviders = (options: {
           ? { variantRef: source.variantModules[service.variant] }
           : {}),
         ...(service.addon ? { addon: service.addon } : {}),
+        ...(service.addTo ? { addTo: service.addTo } : {}),
         onServerStart: Boolean(service.onServerStart),
       }
     }),
@@ -542,11 +654,7 @@ const checkFunctionNeeds = ({
       for (const key of variant?.optionalProvides ?? []) soft.add(key)
     }
   }
-  for (const name of Object.keys(state.providerCollections ?? {}))
-    held.add(name)
-  for (const opted of Object.values(state.optedInProviders ?? {})) {
-    for (const name of Object.keys(opted.collections ?? {})) held.add(name)
-  }
+  for (const name of knownCollections(state).keys()) held.add(name)
   for (const factory of [
     state.projectServicesProvided,
     state.projectWireServicesProvided,

@@ -76,7 +76,8 @@ import type {
   AnalyticsLog,
   AnalyticsIdentityResolver,
 } from '../analytics/analytics.types.js'
-import type { AnalyticsSinkRegistry } from '../analytics/fan-out-analytics.js'
+import type { AnalyticsSinkItem } from '../analytics/fan-out-analytics.js'
+import type { ProviderCollectionEntry } from '../provider/provider.types.js'
 import type { OtlpSinkRegistry } from '../otlp/otlp-sink.js'
 
 /**
@@ -253,8 +254,8 @@ export interface CoreSingletonServices<Config extends CoreConfig = CoreConfig> {
   /** V8 precise-coverage collector (`pikku dev --coverage` only) */
   coverageService?: CoverageService
   audit?: AuditService
-  /** Where product-analytics events go; with no sink registered (or unset) they go to the logger. */
-  analyticsSinks?: AnalyticsSinkRegistry
+  /** Where product-analytics events go; with no sink (or unset) they go to the logger. */
+  analyticsSinks?: readonly ProviderCollectionEntry<AnalyticsSinkItem>[]
   /** Where spans, logs and metrics go. Created by the runtime before `createSingletonServices`; register sinks with `otlpSinks.add`. */
   otlpSinks?: OtlpSinkRegistry
   /**

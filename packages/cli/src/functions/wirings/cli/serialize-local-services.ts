@@ -267,7 +267,7 @@ const inMemoryBody = (
   extras: LocalServicesExtras = {},
   options: LocalServicesOptions = {}
 ): Promise<Record<string, any>> => {
-  const { kysely, analyticsSinks, ...hostServices } = extras
+  const { kysely, ...hostServices } = extras
   if (kysely) {
     // Handed a database this file was generated without: the database-backed
     // services are only emitted for a project codegen saw a database in.
@@ -292,7 +292,6 @@ ${localCLI ? cliOnlyServices : ''}    queueService,
     agentStorage: undefined,
     agentRunState: new InMemoryAgentRunStateService(),
     agentRunService: undefined,
-    analyticsSinks: analyticsSinks ?? createAnalyticsSinks(),
     ...(kysely ? { kysely } : {}),
     ...hostServices,
   }
@@ -337,8 +336,7 @@ export const createLocalServices = async (
   extras: LocalServicesExtras = {},
   options: LocalServicesOptions = {}
 ): Promise<Record<string, any>> => {
-  const { kysely: hostKysely, analyticsSinks: hostAnalyticsSinks, ...hostServices } =
-    extras
+  const { kysely: hostKysely, ...hostServices } = extras
   const warnLogger = options.logger ?? stderr
   const isRequired = (name: GatedService): boolean =>
     options.requiredServices
@@ -374,18 +372,22 @@ export const createLocalServices = async (
   const featureFlags = kysely
     ? await initOrWarn(new KyselyFeatureFlagStore(kysely), 'featureFlags', warnLogger)
     : undefined
-  const analyticsSinks = hostAnalyticsSinks ?? createAnalyticsSinks()
   const analyticsDatabase = kysely
     ? await initOrWarn(new KyselyAnalyticsService(kysely), 'analyticsSinks', warnLogger)
     : undefined
-  if (analyticsDatabase) {
-    analyticsSinks.add(
-      analyticsDatabase,
-      Object.fromEntries(
-        (options.analyticsEvents ?? declaredAnalyticsEvents).map((name) => [name, true])
-      )
-    )
-  }
+  const analyticsSinks = analyticsDatabase
+    ? [
+        {
+          label: 'local/kysely',
+          item: {
+            sink: analyticsDatabase,
+            map: Object.fromEntries(
+              (options.analyticsEvents ?? declaredAnalyticsEvents).map((name) => [name, true])
+            ),
+          },
+        },
+      ]
+    : []
 
   const scopeService =
     kysely && isRequired('scopeService') ? new KyselyScopeService(kysely) : undefined
@@ -534,8 +536,6 @@ export const serializeLocalServices = ({
     ...(database && engine
       ? [`import type { LeaseService } from '@pikku/core/services'`]
       : []),
-    `import { createAnalyticsSinks } from '@pikku/core/analytics'`,
-    `import type { AnalyticsSinkRegistry } from '@pikku/core/analytics'`,
     `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
     `import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'`,
     `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`
@@ -612,8 +612,6 @@ export interface LocalServicesExtras {
    }
    */
   kysely?: ${database ? 'Kysely<any>' : 'unknown'} | null
-  /** The registry the host created; the local analytics sink is added to it. Created here when the host has none. */
-  analyticsSinks?: AnalyticsSinkRegistry
   /** Anything else the host provides, which wins over what is assembled here. */
   [service: string]: unknown
 }

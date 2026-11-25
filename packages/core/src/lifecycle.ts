@@ -31,7 +31,7 @@ const stopService = async (
  * Stops addon package services first, then the parent singleton services.
  * Addon package services stop in reverse of the order they were built. The
  * parent's stop in the order the provider runner recorded (latest provider
- * first), then the rest in reverse insertion order. An object held under two
+ * first, a collection's items each in their place), then the rest in reverse insertion order. An object held under two
  * keys is stopped once.
  */
 export const stopSingletonServices = async (): Promise<void> => {
@@ -59,10 +59,23 @@ export const stopSingletonServices = async (): Promise<void> => {
   const stopped = new WeakSet<object>()
   const held = new Map(Object.entries(singletonServices))
   const handled = new Set<string>()
-  for (const name of readStopOrder()) {
-    if (!held.has(name)) continue
-    handled.add(name)
-    await stopService(logger, name, held.get(name), stopped)
+  for (const entry of readStopOrder()) {
+    if (typeof entry !== 'string') {
+      const items = held.get(entry.collection)
+      const found = Array.isArray(items)
+        ? items.find((candidate) => candidate?.label === entry.label)
+        : undefined
+      await stopService(
+        logger,
+        `${entry.collection}/${entry.label}`,
+        found?.item,
+        stopped
+      )
+      continue
+    }
+    if (!held.has(entry)) continue
+    handled.add(entry)
+    await stopService(logger, entry, held.get(entry), stopped)
   }
   for (const [name, service] of [...held].reverse()) {
     if (handled.has(name)) continue

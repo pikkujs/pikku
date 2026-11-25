@@ -2,6 +2,7 @@ import type { InspectorState } from '@pikku/inspector'
 import type { PikkuCLIConfig } from '../../types/config.js'
 import { getFileImportRelativePath } from '../utils/file-import-path.js'
 import {
+  collectProviderCollections,
   collectProviderSources,
   optionalProvidedKeys,
   providedKeys,
@@ -23,7 +24,10 @@ export const providerTypesSource = (
   state: Pick<
     InspectorState,
     'providers' | 'optedInProviders' | 'filesAndMethods'
-  > & { rpc: Pick<InspectorState['rpc'], 'wireAddonDeclarations'> },
+  > &
+    Partial<Pick<InspectorState, 'providerCollections'>> & {
+      rpc: Pick<InspectorState['rpc'], 'wireAddonDeclarations'>
+    },
   config: Config
 ): string => {
   const base = state.filesAndMethods.singletonServicesType
@@ -33,6 +37,13 @@ export const providerTypesSource = (
   const leaf = config.providerTypesFile
   const mappings = config.packageMappings
   return serializeProvidersType({
+    collections: collectProviderCollections(state, config.rootDir).map(
+      ({ name, module, export: exported }) => ({
+        name,
+        specifier: getFileImportRelativePath(leaf, module, mappings),
+        export: exported,
+      })
+    ),
     baseImport: `import type { ${base.type} as BaseSingletonServices } from '${getFileImportRelativePath(leaf, base.typePath, mappings)}'`,
     services: collectProviderSources(state, config.rootDir).map((source) => ({
       name: source.name,
@@ -67,14 +78,15 @@ export const singletonServicesTypeRef = (
   }
 }
 
-/** Every key any service the project runs provides, so the services map names them. */
+/** Every key any service the project runs provides, and every collection it declares, so the services map names them. */
 export const providedServiceKeys = (
   state: Parameters<typeof collectProviderSources>[0],
   rootDir: string
 ): string[] => [
-  ...new Set(
-    collectProviderSources(state, rootDir).flatMap((source) =>
+  ...new Set([
+    ...collectProviderSources(state, rootDir).flatMap((source) =>
       providedKeys(source.meta)
-    )
-  ),
+    ),
+    ...collectProviderCollections(state, rootDir).map(({ name }) => name),
+  ]),
 ]

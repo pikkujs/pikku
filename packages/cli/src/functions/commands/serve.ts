@@ -50,7 +50,6 @@ import { assertBackendToServe } from '../../utils/select-backends.js'
 import { resolveProjectVersion } from '../../deploy/build-pipeline.js'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { asContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'
-import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 
 export const serve = pikkuSessionlessFunc<
@@ -81,7 +80,6 @@ export const serve = pikkuSessionlessFunc<
       version: resolveProjectVersion(config.rootDir),
       contextStorage: asContextStorage(new AsyncLocalStorage()),
     })
-    const analyticsSinks = createAnalyticsSinks()
     // Created before the app's services so a relay can be added from
     // `createSingletonServices`; the distributor stays here and is reached by
     // the transports, while services get the publisher and the registry.
@@ -216,7 +214,6 @@ export const serve = pikkuSessionlessFunc<
       {
         kysely: kysely ?? null,
         otlpSinks: telemetry.otlpSinks,
-        analyticsSinks,
         logger: telemetry.enabled ? telemetry.logger : new ConsoleLogger(),
         ...(telemetry.enabled ? { tracer: telemetry.tracer } : {}),
         ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
@@ -255,13 +252,13 @@ export const serve = pikkuSessionlessFunc<
       userConfig,
       localServices
     )
-    // The runtime's own registries win: the tracer and the analytics fan-out
-    // read these instances, so an app that returned others would lose its sinks,
+    // The runtime's own registry wins: the tracer reads it, so an app that returned another would lose its sinks,
     // and the event hub's publisher and registry are the distributor's own.
     const resolvedServices = {
       ...singletonServices,
       otlpSinks: telemetry.otlpSinks,
-      analyticsSinks,
+      analyticsSinks:
+        singletonServices.analyticsSinks ?? localServices.analyticsSinks,
       ...eventHubServices,
       getInspectorState,
     }

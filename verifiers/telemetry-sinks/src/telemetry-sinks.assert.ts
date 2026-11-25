@@ -3,11 +3,11 @@ import { before, describe, test } from 'node:test'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 import { fetch } from '@pikku/core/http'
-import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { createRuntimeTelemetry } from '@pikku/core/otlp'
 import { ConsoleLogger } from '@pikku/core/services'
+import { createPlatformServices } from '../.pikku/providers/pikku-dev-providers.gen.js'
+import { conversions } from './providers.js'
 import {
-  conversions,
   createConfig,
   createSingletonServices,
   ended,
@@ -17,9 +17,10 @@ import {
 
 /**
  * The host path of `pikku dev`, `pikku serve` and a standalone build: core
- * builds the runtime telemetry and both registries before the app's
- * createSingletonServices runs, with PIKKU_OTLP_ENDPOINT unset, and hands them
- * in. The app registers its sinks in plain code.
+ * builds the runtime telemetry before the app's createSingletonServices runs,
+ * with PIKKU_OTLP_ENDPOINT unset, and hands it in with what the providers
+ * built. The app registers its OTLP sinks in plain code and adds its analytics
+ * sink as a provider.
  */
 const quiet = new ConsoleLogger()
 quiet.setLevel(5)
@@ -30,11 +31,12 @@ before(async () => {
     { logger: quiet, serviceName: 'sinks-verifier' }
   )
   telemetry.stopMetrics()
+  const platform = await createPlatformServices({}, { logger: quiet })
   await createSingletonServices(await createConfig(), {
+    ...platform,
     logger: quiet,
     tracer: telemetry.tracer,
     otlpSinks: telemetry.otlpSinks,
-    analyticsSinks: createAnalyticsSinks(),
   } as never)
 })
 

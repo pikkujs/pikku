@@ -18,6 +18,7 @@ const RESOLVE_CODES: Partial<Record<ProviderErrorKind, ErrorCode>> = {
   cycle: ErrorCode.PROVIDER_CYCLE,
   'optional-key-needed': ErrorCode.PROVIDER_NEEDS_OPTIONAL_KEY,
   'entry-owned': ErrorCode.ENTRY_OWNED_KEY_REPLACED,
+  'collection-key-conflict': ErrorCode.COLLECTION_KEY_CONFLICT,
 }
 
 /** The build error for a core resolution failure, or the failure itself when it has no code. */

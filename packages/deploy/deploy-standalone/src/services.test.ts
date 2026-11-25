@@ -45,7 +45,7 @@ describe(`StandaloneProviderAdapter services`, () => {
     )
     assert.match(
       source,
-      /analyticsSinks: __pikkuAnalyticsSinks,\n    \.\.\.platformServices,\n  \}\)/,
+      /otlpSinks: __pikkuTelemetry\.otlpSinks,\n    \.\.\.platformServices,\n  \}\)/,
       'provided services must be spread last so they override the defaults'
     )
     assert.doesNotMatch(source, /const createPlatformServices = async/)

@@ -6,21 +6,17 @@
  */
 import '../.pikku/backends/api/pikku-bootstrap.gen.js'
 import { fetch } from '@pikku/core/http'
-import {
-  assertAnalyticsSinksDeclared,
-  createAnalyticsSinks,
-} from '@pikku/core/analytics'
+import { assertAnalyticsSinksDeclared } from '@pikku/core/analytics'
 import { ConsoleLogger } from '@pikku/core/services'
-import { createConfig, createSingletonServices, delivered } from './services.js'
+import { createPlatformServices } from '../.pikku/providers/pikku-dev-providers.gen.js'
+import { delivered } from './providers.js'
+import { createConfig, createSingletonServices } from './services.js'
 
 const logger = new ConsoleLogger()
 logger.setLevel(5)
-const analyticsSinks = createAnalyticsSinks()
-await createSingletonServices(await createConfig(), {
-  logger,
-  analyticsSinks,
-} as never)
-assertAnalyticsSinksDeclared(analyticsSinks)
+const platform = await createPlatformServices({}, { logger })
+await createSingletonServices(await createConfig(), platform as never)
+assertAnalyticsSinksDeclared(platform.analyticsSinks as never)
 
 const response = await fetch(
   new Request('http://localhost/checkout', {

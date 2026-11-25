@@ -813,17 +813,24 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     )
   })
 
-  test('the runtime registries are created before the services and win over what the app returns', () => {
+  test('the telemetry registry is created before the services and wins over what the app returns', () => {
     const source = generate(baseContext)
     assert.match(source, /otlpSinks: __pikkuTelemetry\.otlpSinks,/)
-    assert.match(source, /analyticsSinks: __pikkuAnalyticsSinks,/)
-    assert.ok(
-      source.indexOf('createAnalyticsSinks()') <
-        source.indexOf('createSingletonServices(')
-    )
+    assert.doesNotMatch(source, /createAnalyticsSinks|__pikkuAnalyticsSinks/)
     assert.match(
       source,
-      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, \.\.\.eventHubServices \}\)/
+      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, \.\.\.eventHubServices \}\)/
+    )
+  })
+
+  test('the sinks the providers built win over what the app returns', () => {
+    const source = generate({
+      ...baseContext,
+      platformServices: { importPath: './platform-services.gen.js' },
+    })
+    assert.match(
+      source,
+      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: singletonServices\.analyticsSinks \?\? platformServices\.analyticsSinks, \.\.\.eventHubServices \}\)/
     )
   })
 
@@ -831,10 +838,10 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     const source = generate(baseContext)
     assert.match(
       source,
-      /import \{ assertAnalyticsSinksDeclared, createAnalyticsSinks \} from '@pikku\/core\/analytics'/
+      /import \{ assertAnalyticsSinksDeclared \} from '@pikku\/core\/analytics'/
     )
     const check = source.indexOf(
-      'assertAnalyticsSinksDeclared(__pikkuAnalyticsSinks)'
+      'assertAnalyticsSinksDeclared(singletonServices.analyticsSinks)'
     )
     assert.ok(check > source.indexOf('Object.assign(singletonServices'))
     assert.ok(check < source.indexOf('new PikkuBunServer('))

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import { defineQueueIdentityTransportTests } from '@pikku/core/testing'
 import { CloudflareQueueService } from './cloudflare-queue-service.js'
 import { constantTimeEqual } from './dispatch-auth.js'
-import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { pikkuState } from '@pikku/core/state'
 // Type-only, so it is erased before runtime and does not load the module ahead
 // of the `cloudflare:workers` stub registered below.
@@ -267,8 +266,12 @@ describe('setupServices and the declared analytics events', () => {
         ? Object.fromEntries(names.map((name) => [name, { name }]))
         : (null as never)
     )
-    const analyticsSinks = createAnalyticsSinks()
-    analyticsSinks.add({ write: async () => {} }, { page_viewed: true })
+    const analyticsSinks = [
+      {
+        label: 'sink',
+        item: { sink: { write: async () => {} }, map: { page_viewed: true } },
+      },
+    ]
     return {
       createConfig: async () => ({}),
       createSingletonServices: async () => ({ analyticsSinks }) as any,

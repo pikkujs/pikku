@@ -12,3 +12,8 @@ export const plain = pikkuSessionlessFunc<void, string>({
   auth: false,
   func: async () => 'plain',
 })
+export const serverJob = pikkuSessionlessFunc<void, string>({
+  auth: false,
+  deploy: 'server',
+  func: async ({ kysely }) => String(kysely),
+})

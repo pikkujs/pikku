@@ -571,7 +571,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`,
       `import { AsyncLocalStorage as __pikkuAsyncLocalStorage } from 'node:async_hooks'`,
       `import { asContextStorage as __pikkuAsContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'`,
-      `import { assertAnalyticsSinksDeclared, createAnalyticsSinks } from '@pikku/core/analytics'`,
+      `import { assertAnalyticsSinksDeclared } from '@pikku/core/analytics'`,
       ...(ctx.db
         ? [
             `import { KyselyTriggerSourceStore } from '@pikku/kysely'`,
@@ -637,7 +637,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines(ctx),
       ...this.platformServicesCallLines(ctx),
-      `  const __pikkuAnalyticsSinks = createAnalyticsSinks()`,
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -651,12 +650,11 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    eventHubRegistry,`,
       `    ...(__pikkuTelemetry.enabled ? { tracer: __pikkuTelemetry.tracer } : {}),`,
       `    otlpSinks: __pikkuTelemetry.otlpSinks,`,
-      `    analyticsSinks: __pikkuAnalyticsSinks,`,
       ...this.platformServicesSpreadLines(ctx),
       `  })`,
-      `  // The runtime's registries win: the tracer and the analytics fan-out read these instances.`,
-      `  Object.assign(singletonServices, { otlpSinks: __pikkuTelemetry.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, ...eventHubServices })`,
-      `  assertAnalyticsSinksDeclared(__pikkuAnalyticsSinks)`,
+      `  // The runtime's registry wins: the tracer reads it. The sinks the providers built are used unless the app returned its own.`,
+      `  Object.assign(singletonServices, { otlpSinks: __pikkuTelemetry.otlpSinks, ${ctx.platformServices ? 'analyticsSinks: singletonServices.analyticsSinks ?? platformServices.analyticsSinks, ' : ''}...eventHubServices })`,
+      `  assertAnalyticsSinksDeclared(singletonServices.analyticsSinks)`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
       ...(ctx.frontend

@@ -326,13 +326,12 @@
     "refreshAttention"
   ],
   "./analytics": [
-    "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
+    "analyticsSinks",
     "anonymousAnalyticsIdentity",
     "assertAnalyticsSinksDeclared",
     "composeAnalyticsIdentity",
     "cookieAnalyticsIdentity",
-    "createAnalyticsSinks",
     "createInvocationAnalytics",
     "defineAnalyticsEvents",
     "fanOutAnalytics",

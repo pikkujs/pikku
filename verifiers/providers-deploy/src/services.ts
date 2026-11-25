@@ -12,23 +12,19 @@ export const createConfig = pikkuConfig(async () => {
 })
 
 export const createSingletonServices = pikkuServices(
-  async (
-    config,
-    { kysely, aiProviders }
-  ): Promise<RequiredSingletonServices> => {
+  async (config, existingServices): Promise<RequiredSingletonServices> => {
     const variables = new LocalVariablesService()
     const secrets = new LocalSecretService(variables)
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
 
     return {
+      ...existingServices,
       config,
       secrets,
       logger,
       variables,
       schema,
-      kysely,
-      aiProviders,
     } as RequiredSingletonServices
   }
 )

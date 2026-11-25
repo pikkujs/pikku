@@ -1,20 +1,8 @@
-import {
-  assertAnalyticsSinksDeclared,
-  getDeclaredAnalyticsEvents,
-  type AnalyticsEventSink,
-  type AnalyticsSinkRegistry,
-} from '@pikku/core/analytics'
 import type { OtlpSinkBase, OtlpSinkRegistry } from '@pikku/core/otlp'
 import { createRunStitcher } from '@pikku/core/otlp/runs'
 
-/**
- * Called from `createSingletonServices` with the registries the host hands in
- * as `existingServices.otlpSinks` and `existingServices.analyticsSinks`.
- */
-export const registerTelemetrySinks = (
-  otlpSinks: OtlpSinkRegistry,
-  analyticsSinks: AnalyticsSinkRegistry
-) => {
+/** Called from `createSingletonServices` with the registry the host hands in as `existingServices.otlpSinks`. */
+export const registerTelemetrySinks = (otlpSinks: OtlpSinkRegistry) => {
   // @snippet start registerOtlpSink
   const spanLog: OtlpSinkBase = {
     onSpanStart: (span) => console.debug('started', span.name),
@@ -26,27 +14,6 @@ export const registerTelemetrySinks = (
   }
   otlpSinks.add(spanLog)
   // @snippet end registerOtlpSink
-
-  // @snippet start registerAnalyticsSink
-  const conversions: AnalyticsEventSink = {
-    write: async (events) => console.debug('conversions', events.length),
-  }
-  // Only the events named in the map reach this sink; any other is dropped.
-  analyticsSinks.add(conversions, { checkout_completed: true })
-  // @snippet end registerAnalyticsSink
-
-  // @snippet start declaredAnalyticsEvents
-  const warehouse: AnalyticsEventSink = {
-    write: async (events) => console.debug('warehouse', events.length),
-  }
-  // Every event the app declares, as the generated bootstrap registered them.
-  analyticsSinks.add(
-    warehouse,
-    Object.fromEntries(getDeclaredAnalyticsEvents().map((name) => [name, true]))
-  )
-  // Refuses to start when a sink is registered but no event is declared.
-  assertAnalyticsSinksDeclared(analyticsSinks)
-  // @snippet end declaredAnalyticsEvents
 }
 
 /** Called from `createSingletonServices` with the registry the host hands in as `existingServices.otlpSinks`. */

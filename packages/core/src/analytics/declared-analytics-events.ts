@@ -1,5 +1,6 @@
 import { pikkuState } from '../pikku-state.js'
-import type { AnalyticsSinkRegistry } from './fan-out-analytics.js'
+import type { ProviderCollectionEntry } from '../provider/provider.types.js'
+import type { AnalyticsSinkItem } from './fan-out-analytics.js'
 
 /**
  * The names of the events the app declares with `defineAnalyticsEvents`, as
@@ -22,19 +23,19 @@ export const getDeclaredAnalyticsEvents = (): string[] => {
 }
 
 /**
- * Refuses a runtime that registered analytics sinks while declaring no events,
- * which would drop every event without a word. A registry with no sinks passes.
+ * Refuses a runtime that has analytics sinks while declaring no events,
+ * which would drop every event without a word. No sinks passes.
  *
  * @example snippet: declaredAnalyticsEvents
  */
 export const assertAnalyticsSinksDeclared = (
-  registry: AnalyticsSinkRegistry | undefined
+  sinks: readonly ProviderCollectionEntry<AnalyticsSinkItem>[] | undefined
 ): void => {
-  const sinks = registry?.entries().length ?? 0
-  if (sinks === 0) return
+  const count = sinks?.length ?? 0
+  if (count === 0) return
   if (getDeclaredAnalyticsEvents().length === 0) {
     throw new Error(
-      `${sinks} analytics sink${sinks === 1 ? ' is' : 's are'} registered, but the app declares no analytics events, so every event would be dropped. Declare them with defineAnalyticsEvents and run \`pikku all\`, or register no sink.`
+      `${count} analytics sink${count === 1 ? ' is' : 's are'} registered, but the app declares no analytics events, so every event would be dropped. Declare them with defineAnalyticsEvents and run \`pikku all\`, or add no sink.`
     )
   }
 }

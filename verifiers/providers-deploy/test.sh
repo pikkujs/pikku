@@ -66,7 +66,7 @@ expect_marker "worker db unit" cloudflare PIKKU_MARKER_PG absent "$worker_db"
 expect_marker "container" cloudflare PIKKU_MARKER_PG present "$(find .deploy/cloudflare/container -name bundle.js 2>/dev/null | head -n 1)"
 
 echo "--- a unit that reaches no kysely carries neither driver ---"
-plain=$(bundle_for cloudflare plain)
+plain=.deploy/cloudflare/units/svc-base/bundle.js
 expect_marker "plain unit" cloudflare PIKKU_MARKER_SQLITE absent "$plain"
 expect_marker "plain unit" cloudflare PIKKU_MARKER_PG absent "$plain"
 
