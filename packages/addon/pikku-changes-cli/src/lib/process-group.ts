@@ -89,17 +89,28 @@ const liveGroups = new Set<number>()
 let exitHooked = false
 let signalsHooked = false
 
-const killLiveGroups = () => {
-  for (const group of liveGroups)
-    try {
-      process.kill(-group, 'SIGKILL')
-    } catch {
-      // already gone
-    }
+/** How long tracked groups get to clean up after SIGTERM when this process exits or is stopped. */
+const STOP_GRACE_MS = 2_000
+
+/** Blocks this thread for `ms`: an exit or signal handler cannot wait for a timer. */
+const block = (ms: number) =>
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+
+/**
+ * Stops every tracked group without leaving the handler: SIGTERM first, so a leader that started
+ * process groups of its own (Pi's tool calls run detached) stops them, then SIGKILL for whatever is
+ * left after the grace.
+ */
+const stopLiveGroups = () => {
+  const groups = [...liveGroups]
+  for (const group of groups) signalled(-group, 'SIGTERM')
+  const until = Date.now() + STOP_GRACE_MS
+  while (groups.some(groupAlive) && Date.now() < until) block(20)
+  for (const group of groups) signalled(-group, 'SIGKILL')
 }
 
 /**
- * A signal ends this process without an `exit` event, so the groups are killed on SIGTERM and SIGINT
+ * A signal ends this process without an `exit` event, so the groups are stopped on SIGTERM and SIGINT
  * too (not SIGHUP: under nohup a handler would undo the ignore). A listener stops the default exit,
  * so when no other listener handles the signal it is raised again and the process ends as it would
  * have. A process that handles the signal and goes on is hooked again by its next tracked group.
@@ -111,7 +122,7 @@ const hookSignals = () => {
     const handler = () => {
       for (const [hooked, listener] of handlers) process.off(hooked, listener)
       signalsHooked = false
-      killLiveGroups()
+      stopLiveGroups()
       if (!process.listenerCount(signal)) process.kill(process.pid, signal)
     }
     return [signal, handler] as const
@@ -125,7 +136,7 @@ export const trackGroup = (pgid: number) => {
   hookSignals()
   if (exitHooked) return
   exitHooked = true
-  process.once('exit', killLiveGroups)
+  process.once('exit', stopLiveGroups)
 }
 
 export const untrackGroup = (pgid: number) => liveGroups.delete(pgid)

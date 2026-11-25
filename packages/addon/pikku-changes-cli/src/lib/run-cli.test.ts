@@ -273,6 +273,50 @@ await runCli(['spawn-sleep', ${JSON.stringify(pidFile)}], { cwd: ${JSON.stringif
   })
 })
 
+describe('tracked process groups', () => {
+  test('a process stopped by SIGTERM lets a tracked leader stop the groups it started itself before it is killed', async () => {
+    const dir = await throwawayRepo()
+    const pidFile = join(dir, 'grandchild.pid')
+    // The leader runs as Pi does: its tool runs detached in a group of its own, which it kills on SIGTERM.
+    const leader = `const { spawn } = require('node:child_process')
+const tool = spawn('sleep', ['400'], { detached: true, stdio: 'ignore' })
+require('node:fs').writeFileSync(${JSON.stringify(pidFile)}, String(tool.pid))
+process.on('SIGTERM', () => { try { process.kill(-tool.pid, 'SIGKILL') } catch {} process.exit(143) })
+setInterval(() => {}, 1000)`
+    const runner = spawn(
+      process.execPath,
+      [
+        '-e',
+        `import { spawn } from 'node:child_process'
+import { trackGroup } from ${JSON.stringify(new URL('./process-group.ts', import.meta.url).pathname)}
+const leader = spawn(process.execPath, ['-e', ${JSON.stringify(leader)}], { detached: true, stdio: 'ignore' })
+trackGroup(leader.pid)
+setInterval(() => {}, 1000)`,
+      ],
+      { stdio: 'ignore' }
+    )
+    const ended = new Promise<NodeJS.Signals | null>((done) =>
+      runner.once('exit', (_code, signal) => done(signal))
+    )
+    let tool = 0
+    await until(async () => {
+      tool = Number(await readFile(pidFile, 'utf8').catch(() => '0'))
+      return tool > 0
+    }, 'the leader to start its tool')
+    try {
+      assert.ok(groupAlive(tool))
+      runner.kill('SIGTERM')
+      assert.equal(await ended, 'SIGTERM', 'the runner ends as SIGTERM ends it')
+      await until(
+        async () => !groupAlive(tool),
+        'the tool the leader started to go'
+      )
+    } finally {
+      await stopGroup(tool, 100)
+    }
+  })
+})
+
 describe('output helpers', () => {
   test('trimOutput keeps the start and the end', () => {
     const text = `${'a'.repeat(100)}${'b'.repeat(1000)}${'c'.repeat(100)}`
