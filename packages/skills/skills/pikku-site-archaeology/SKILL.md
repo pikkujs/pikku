@@ -12,7 +12,8 @@ read it and say "yes, that is the site". You build nothing: the plan is filed af
 
 ## 1. The page list
 
-Capture the original with this command. Do not write your own capture script.
+Capture the original with this command, in the background exactly as written (the trailing `&`): run in the foreground it
+outlasts the tool's timeout and is stopped. Do not write your own capture script.
 
 ```bash
 mkdir -p artifacts/references/<site> && pikku ui pages capture https://the-site.example/ --out artifacts/references/<site> > artifacts/references/<site>/capture.log 2>&1 &
