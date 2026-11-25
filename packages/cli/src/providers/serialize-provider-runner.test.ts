@@ -11,7 +11,9 @@ const resolved = (
 ): ResolvedProviderImport => ({
   variant: 'common',
   needs: [],
+  optional: [],
   provides: [],
+  optionalProvides: [],
   module: '/p/src/services.ts',
   export: overrides.name,
   onServerStart: false,
@@ -36,13 +38,33 @@ describe('serializeProviderRunner', () => {
     )
     assert.match(
       source,
-      /registry\.add\("cache", service0, \{"common":\{"needs":\["kysely"\],"provides":\["cache"\]\}\}\)/
+      /registry\.add\("cache", service0, \{"common":\{"needs":\["kysely"\],"optional":\[\],"provides":\["cache"\],"optionalProvides":\[\]\}\}\)/
     )
     assert.match(source, /registry\.add\("clock", service1, \{"dev":/)
     assert.match(
       source,
       /runProviders\(registry, \{ target: "dev", services, env \}\)/
     )
+  })
+
+  test('a deploy profile is handed to the runner so it picks the variant it was resolved for', () => {
+    const source = serializeProviderRunner({
+      target: 'deploy',
+      profile: 'cloudflare-worker',
+      specifier,
+      services: [
+        resolved({
+          name: 'db',
+          variant: 'deploy:cloudflare-worker',
+          provides: ['kysely'],
+        }),
+      ],
+    })
+    assert.match(
+      source,
+      /runProviders\(registry, \{ target: "deploy", profile: "cloudflare-worker", services, env \}\)/
+    )
+    assert.match(source, /\{"deploy:cloudflare-worker":\{/)
   })
 
   test('a variant in its own module is imported alone, so the others never reach a bundle', () => {

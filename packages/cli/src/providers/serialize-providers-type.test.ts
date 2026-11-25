@@ -31,7 +31,7 @@ describe('serializeProvidersType', () => {
     })
     assert.match(
       source,
-      /Omit<BaseSingletonServices, "a" \| "b" \| "kysely"> & \{\n  "a": Provided<typeof import\("\.\/a\.js"\)\.a, "a">\n  "b": Provided<typeof import\("\.\/b\.js"\)\.b, "b">\n  "kysely": Provided<typeof import\("\.\/b\.js"\)\.b, "kysely">\n\}/
+      /Omit<BaseSingletonServices, "a" \| "b" \| "kysely"> & \{\n  "a": Merged<"a", Provided<typeof import\("\.\/a\.js"\)\.a, "a">>\n  "b": Merged<"b", Provided<typeof import\("\.\/b\.js"\)\.b, "b">>\n  "kysely": Merged<"kysely", Provided<typeof import\("\.\/b\.js"\)\.b, "kysely">>\n\}/
     )
   })
 
@@ -142,6 +142,84 @@ export const wrong: string = services.cache
 
     test('services destructure each other from the merged type, and every key keeps its type', () => {
       assert.deepEqual(diagnostics(files), [])
+    })
+
+    test('a conditionally provided key is optional, and a need listed in optional may be undefined', () => {
+      const optionalLeaf = serializeProvidersType({
+        baseImport,
+        services: [
+          {
+            name: 'maybe',
+            provides: ['audit'],
+            optionalProvides: ['audit'],
+            specifier: './maybe.js',
+            export: 'maybe',
+          },
+          {
+            name: 'probe',
+            provides: ['probe'],
+            specifier: './probe.js',
+            export: 'probe',
+          },
+        ],
+      })
+      const found = diagnostics({
+        'base.ts': files['base.ts'],
+        'leaf.ts': optionalLeaf,
+        'maybe.ts': `import { defineProvider } from './leaf.js'
+export const maybe = defineProvider({
+  optional: ['kysely'],
+  common: ({ kysely }) => (kysely ? { audit: { write: (_: string) => {} } } : {}),
+})
+`,
+        'probe.ts': `import { defineProvider } from './leaf.js'
+export const probe = defineProvider({
+  optional: ['audit'],
+  common: ({ audit, logger }) => {
+    if (audit) audit.write('x')
+    // @ts-expect-error audit is optional in the merged type
+    audit.write('y')
+    logger.info('z')
+    return { probe: true }
+  },
+})
+`,
+        'use.ts': `import type { InjectedServices, SingletonServices } from './leaf.js'
+declare const services: SingletonServices
+declare const injected: InjectedServices
+export const maybeAudit = services.audit?.write
+export const present: boolean = injected.probe
+`,
+      })
+      assert.deepEqual(found, [])
+    })
+
+    test('a key the base type declares keeps the base type and gains what the provider returns', () => {
+      const wrapLeaf = serializeProvidersType({
+        baseImport,
+        services: [
+          {
+            name: 'wrap',
+            provides: ['logger'],
+            specifier: './wrap.js',
+            export: 'wrap',
+          },
+        ],
+      })
+      const found = diagnostics({
+        'base.ts': files['base.ts'],
+        'leaf.ts': wrapLeaf,
+        'wrap.ts': `import { defineProvider } from './leaf.js'
+export const wrap = defineProvider(() => ({ logger: { info: (_: string) => {}, flush: () => {} } }))
+`,
+        'use.ts': `import type { SingletonServices } from './leaf.js'
+import type { SingletonServices as Base } from './base.js'
+declare const services: SingletonServices
+export const asBase: Base['logger'] = services.logger
+export const flush: () => void = services.logger.flush
+`,
+      })
+      assert.deepEqual(found, [])
     })
 
     test('a key typed any becomes a visible error type, never a silent any', () => {

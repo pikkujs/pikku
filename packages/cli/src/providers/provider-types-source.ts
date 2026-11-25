@@ -1,7 +1,11 @@
 import type { InspectorState } from '@pikku/inspector'
 import type { PikkuCLIConfig } from '../../types/config.js'
 import { getFileImportRelativePath } from '../utils/file-import-path.js'
-import { collectProviderSources, providedKeys } from './resolve-providers.js'
+import {
+  collectProviderSources,
+  optionalProvidedKeys,
+  providedKeys,
+} from './resolve-providers.js'
 import { serializeProvidersType } from './serialize-providers-type.js'
 
 type Config = Pick<
@@ -33,6 +37,7 @@ export const providerTypesSource = (
     services: collectProviderSources(state, config.rootDir).map((source) => ({
       name: source.name,
       provides: providedKeys(source.meta),
+      optionalProvides: optionalProvidedKeys(source.meta),
       specifier: getFileImportRelativePath(leaf, source.module, mappings),
       export: source.export,
     })),

@@ -18,9 +18,13 @@ import type {
 export function defineProvider<TNeeds, TProvides extends object>(
   factory: ProviderFactory<TNeeds, TProvides>
 ): ProviderFactory<TNeeds, TProvides>
-export function defineProvider<TNeeds, TProvides extends object>(
-  variants: ProviderVariants<TNeeds, TProvides>
-): ProviderVariants<TNeeds, TProvides>
+export function defineProvider<
+  TNeeds,
+  TProvides extends object,
+  const TOptional extends string = never,
+>(
+  variants: ProviderVariants<TNeeds, TProvides, TOptional>
+): ProviderVariants<TNeeds, TProvides, TOptional>
 export function defineProvider(definition: unknown): unknown {
   return definition
 }

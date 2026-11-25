@@ -200,6 +200,8 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
                 : []),
             ]),
       ],
+      profile: container ? 'cloudflare-container' : 'cloudflare-worker',
+      entryOwned: [],
       runsServerLifecycle: container,
     }
   }

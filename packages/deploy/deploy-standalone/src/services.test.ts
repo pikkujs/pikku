@@ -80,6 +80,18 @@ describe(`StandaloneProviderAdapter services`, () => {
         .baseline.includes('kysely')
     )
   })
+
+  test('serviceSupport names the standalone profile and owns kysely only when it opens a database', () => {
+    const adapter = new StandaloneProviderAdapter({})
+    const without = adapter.serviceSupport(ctx as never)
+    assert.equal(without.profile, 'standalone')
+    assert.deepEqual([...without.entryOwned], [])
+    const withDb = adapter.serviceSupport({
+      ...(ctx as object),
+      db: { engine: 'sqlite' },
+    } as never)
+    assert.deepEqual([...withDb.entryOwned], ['kysely'])
+  })
 })
 
 describe(`StandaloneProviderAdapter service server hooks`, () => {

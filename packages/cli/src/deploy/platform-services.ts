@@ -1,5 +1,6 @@
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { InspectorState } from '@pikku/inspector'
 import type {
   EntryGenerationContext,
   EntryPlatformServices,
@@ -8,6 +9,7 @@ import type {
 } from '@pikku/deploy'
 import {
   collectProviderSources,
+  functionNeedsOf,
   resolveProviders,
 } from '../providers/resolve-providers.js'
 import { serializeProviderRunner } from '../providers/serialize-provider-runner.js'
@@ -41,7 +43,8 @@ export const readUnitRequiredServices = async (
   return required
 }
 
-type ProvidersState = Parameters<typeof resolveProviders>[0]['state']
+type ProvidersState = Parameters<typeof resolveProviders>[0]['state'] &
+  Pick<InspectorState, 'functions'>
 
 /**
  * What the provider-agnostic server entry holds when services run: nothing (it
@@ -49,6 +52,8 @@ type ProvidersState = Parameters<typeof resolveProviders>[0]['state']
  */
 export const genericServerEntrySupport = (): ServiceSupport => ({
   baseline: [],
+  profile: 'server',
+  entryOwned: [],
   runsServerLifecycle: true,
 })
 
@@ -99,11 +104,14 @@ export async function writeUnitPlatformServices(options: {
     state,
     rootDir: projectDir,
     target: 'deploy',
+    profile: support.profile,
     baseline: support.baseline,
+    entryOwned: support.entryOwned,
     requiredServices: options.requiredServices,
     factoryServices: state.projectServicesRead,
+    functions: functionNeedsOf(state.functions.meta, ctx.unit.functionIds),
     runsServerLifecycle: support.runsServerLifecycle,
-    targetLabel: `The ${provider.name} deploy`,
+    targetLabel: `the ${provider.name} deploy`,
     unitLabel: `unit '${ctx.unit.name}'`,
   })
   if (ordered.length === 0) {
@@ -115,6 +123,7 @@ export async function writeUnitPlatformServices(options: {
     file,
     serializeProviderRunner({
       target: 'deploy',
+      profile: support.profile,
       services: ordered,
       specifier: (module) => module.replace(/\\/g, '/'),
       coercionMap: ctx.coercionMap,

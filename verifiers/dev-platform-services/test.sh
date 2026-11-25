@@ -64,9 +64,9 @@ expect_failure() { # scenario, message
   fi
   echo "✓ $1: $2"
 }
-expect_failure dup "Providers 'bad/dupA' and 'bad/dupB' both provide 'shared' on dev"
-expect_failure ghost "Provider 'bad/needsGhost' needs 'ghost' on dev, which nothing provides"
-expect_failure cycle "Providers depend on each other in a cycle on dev: bad/cycle"
+expect_failure dup "Providers 'bad/dupA' and 'bad/dupB' both provide 'shared' on pikku dev"
+expect_failure ghost "Provider 'bad/needsGhost' needs 'ghost' on pikku dev, which nothing provides"
+expect_failure cycle "Providers depend on each other in a cycle on pikku dev: bad/cycle"
 echo "--- removed contributor config is refused, not silently dropped ---"
 for section in dev deploy; do
   node -e '

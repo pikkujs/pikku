@@ -529,13 +529,15 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }
 
   /**
-   * The entry holds `kysely` when it opens a database; a service may need it,
-   * or replace it. The server lifecycle runs here, so `onServerStart` is
-   * supported.
+   * The entry holds `kysely` when it opens a database and builds its own
+   * services on it, so a provider may need it but never replace it. The server
+   * lifecycle runs here, so `onServerStart` is supported.
    */
   serviceSupport(ctx: EntryGenerationContext): ServiceSupport {
     return {
       baseline: runtimeServiceNames(ctx),
+      profile: 'standalone',
+      entryOwned: ctx.db ? ['kysely'] : [],
       runsServerLifecycle: true,
     }
   }

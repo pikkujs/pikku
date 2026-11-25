@@ -205,6 +205,7 @@ const optedIn = (addon: string, names: string[]) =>
 const stateOf = (notify: string[], select: string[]) =>
   ({
     providers: {},
+    functions: { meta: {} },
     optedInProviders: {
       notify: {
         packageName: '@verifier/svc-notify',
@@ -358,7 +359,7 @@ await assert.rejects(
     stateOf(['unused'], []),
     ['unused']
   ),
-  /Provider 'notify\/unused' has no deploy variant and no common variant/
+  /\[PKU388\] Provider 'notify\/unused' has no variant for the standalone deploy .*looked for deploy:standalone, deploy, common/
 )
 const unreached = await generate(
   standalone,

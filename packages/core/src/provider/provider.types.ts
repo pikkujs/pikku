@@ -3,6 +3,15 @@ import type { PikkuWire } from '../types/core.types.js'
 /** The build a service is resolved for: `pikku dev`, or a deploy. */
 export type ProviderTarget = 'dev' | 'deploy'
 
+/** The deploy runtimes a `deploy:<profile>` variant may name. */
+export const PROVIDER_PROFILES = [
+  'standalone',
+  'cloudflare-worker',
+  'cloudflare-container',
+  'server',
+] as const
+export type ProviderProfile = (typeof PROVIDER_PROFILES)[number]
+
 export type ProviderEnv = Record<string, string | undefined>
 
 /**
@@ -19,6 +28,7 @@ export type ProviderFactory<
 export interface ProviderVariants<
   TNeeds = any,
   TProvides extends object = Record<string, unknown>,
+  TOptional extends string = string,
 > {
   dev?: ProviderFactory<TNeeds, TProvides>
   deploy?: ProviderFactory<TNeeds, TProvides>
@@ -29,7 +39,7 @@ export interface ProviderVariants<
   /** Used on every target that has no variant of its own. */
   common?: ProviderFactory<TNeeds, TProvides>
   /** Needs that may be absent: string literals, read statically. */
-  optional?: readonly string[]
+  optional?: readonly TOptional[]
   /** Protected keys this provider deliberately provides: string literals, read statically. */
   replaces?: readonly string[]
   /** The collection this provider adds one item to; its factories return that item. */
@@ -41,8 +51,19 @@ export interface ProviderVariants<
 export type ProviderDefinition =
   ProviderFactory<any, any> | ProviderVariants<any, any>
 
-/** The variant of a service that applies on every target. */
-export type ProviderVariantName = ProviderTarget | 'common'
+/** A variant a service may declare: one target, one deploy profile, or every target. */
+export type ProviderVariantName =
+  ProviderTarget | `deploy:${ProviderProfile}` | 'common'
+
+/**
+ * The type a factory destructures when some of its needs may be absent: those
+ * keys become optional.
+ */
+export type WithOptional<TServices, K extends PropertyKey> = Omit<
+  TServices,
+  K
+> &
+  Partial<Pick<TServices, Extract<K, keyof TServices>>>
 
 /**
  * What the inspector reads from one variant: the keys its factory destructures
@@ -50,7 +71,11 @@ export type ProviderVariantName = ProviderTarget | 'common'
  */
 export interface ProviderVariantMeta {
   needs: readonly string[]
+  /** The subset of `needs` the provider works without. */
+  optional?: readonly string[]
   provides: readonly string[]
+  /** The subset of `provides` that is optional in the return type. */
+  optionalProvides?: readonly string[]
 }
 
 export type ProviderMeta = Partial<
@@ -62,7 +87,9 @@ export interface ResolvedProvider {
   name: string
   variant: ProviderVariantName
   needs: readonly string[]
+  optional: readonly string[]
   provides: readonly string[]
+  optionalProvides: readonly string[]
   factory: ProviderFactory
   onServerStart?: (services: any) => void | Promise<void>
 }
