@@ -122,22 +122,8 @@ type PikkuAuthConfig<RequiredServices extends SecretlessServices<SingletonServic
  * Auth permissions only receive services and session (no request data),
  * making them evaluable before request data is available.
  *
- * @example
- * \\\`\\\`\\\`typescript
- * const isAdmin = pikkuAuth(async ({ logger }, session) => {
- *   return session.role === 'admin'
- * })
- *
- * // Passes with no session: the function decides what an anonymous caller sees
- * const isNotSuspended = pikkuAuth({
- *   name: 'Not Suspended',
- *   description: 'Refuses suspended users; anonymous callers pass',
- *   skipWithoutSession: true,
- *   func: async ({ logger }, session) => {
- *     return !session.suspended
- *   }
- * })
- * \\\`\\\`\\\`
+ * @example snippet: shopIsAuthenticated
+ * @example snippet: globalPermission
  */
 export const pikkuAuth = <RequiredServices extends SecretlessServices<SingletonServices> = WiredAuthServices>(
   auth: PikkuAuth<RequiredServices> | PikkuAuthConfig<RequiredServices>

@@ -32,6 +32,16 @@ describe('serializeAuthGuards', () => {
     }
   })
 
+  test('takes the pikkuAuth examples from the template', () => {
+    const content = emit()
+
+    assert.match(
+      content,
+      /^ \* @example snippet: shopIsAuthenticated\n \* @example snippet: globalPermission$/m
+    )
+    assert.doesNotMatch(content, /^ \*.*\\`/m)
+  })
+
   // A credential is what a call is made *with*, so it belongs with the gates
   // rather than beside the typed credential map it has nothing to do with.
   test('declaring a credential lands here too', () => {

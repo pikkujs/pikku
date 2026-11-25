@@ -256,6 +256,40 @@ describe('the shipped surface doc', { skip: doc ? false : 'not built' }, () => {
     )
   })
 
+  test('documents a definer by the overloads that take a body', () => {
+    const { symbols } = read()
+    for (const name of ['pikkuFunc', 'pikkuSessionlessFunc']) {
+      const definitions = symbols.filter((symbol) => symbol.name === name)
+      assert.ok(definitions.length > 0, `${name} is not in the doc`)
+      for (const { summary, signature, members } of definitions) {
+        assert.match(summary ?? '', /^Creates /, name)
+        assert.doesNotMatch(signature ?? '', /PikkuMock/, name)
+        assert.ok(
+          !members?.some((member) => member.line.startsWith('mock:')),
+          `${name} lists the keys of a mock`
+        )
+      }
+    }
+  })
+
+  test('shows no escaped backtick', () => {
+    assert.ok(doc, 'no shipped surface.json — build the CLI first')
+    const escaped = doc.entryPoints
+      .flatMap((entryPoint) => entryPoint.leaves)
+      .flatMap((leaf) => leaf.symbols)
+      .filter((symbol) =>
+        [symbol.summary, symbol.docs, ...(symbol.examples ?? [])].some((text) =>
+          text?.includes('\\`')
+        )
+      )
+      .map((symbol) => symbol.name)
+    assert.deepEqual(
+      [...new Set(escaped)],
+      [],
+      'a doc comment emitted by codegen escapes its backticks once too often'
+    )
+  })
+
   test('a service interface read off a package lists its methods', () => {
     assert.ok(doc, 'no shipped surface.json — build the CLI first')
     const page = renderSurfaceDoc(doc, { target: 'ContentService' })

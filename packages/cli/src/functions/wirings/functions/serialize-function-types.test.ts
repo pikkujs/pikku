@@ -31,6 +31,36 @@ describe('serializeFunctionTypes', () => {
     assert.match(content, /PikkuFunction<In, TopicShape, 'session' \| 'rpc'>/)
   })
 
+  // The surface documents every overload that is not tagged `@hidden`, so a
+  // mock overload without the tag takes over the definer's signature, and prose
+  // on one takes over its summary.
+  test('tags every mock overload @hidden and gives it no prose', () => {
+    const content = emit()
+    const mockOverloads = [
+      ...content.matchAll(
+        /(\/\*\*(?:(?!\*\/)[\s\S])*\*\/)?\nexport function (\w+)<[^()]*>\(\s*config: PikkuMock\w+/g
+      ),
+    ]
+
+    assert.deepEqual(
+      mockOverloads.map(([, comment, name]) => [name, comment]),
+      [
+        ['pikkuFunc', '/** @hidden */'],
+        ['pikkuFunc', '/** @hidden */'],
+        ['pikkuSessionlessFunc', '/** @hidden */'],
+        ['pikkuSessionlessFunc', '/** @hidden */'],
+      ]
+    )
+    assert.equal(content.match(/@hidden/g)?.length, mockOverloads.length)
+  })
+
+  test('takes the approval description example from the template', () => {
+    const content = emit()
+
+    assert.match(content, /^ \* @example snippet: approvalDescription$/m)
+    assert.doesNotMatch(content, /^ \*.*\\`/m)
+  })
+
   // The permission and auth gates left for `#pikku/auth`. `PikkuPermission` is
   // still referenced by every function config, so it has to come back as a
   // type-only import — a value import would be a runtime cycle between the two
