@@ -264,6 +264,7 @@ export declare function defineWireProvider<
  * Declares a list that providers add items to with `addTo`. The name is the
  * services key readers destructure.
  */
-export declare function defineProviderCollection<const TName extends string, TItem>(
-  name: TName
-): ProviderCollection<TName, TItem>
+export declare function defineProviderCollection<
+  const TName extends string,
+  TItem,
+>(name: TName): ProviderCollection<TName, TItem>
