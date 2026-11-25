@@ -796,6 +796,8 @@ async function captureSiblings(browser, recs, opts = {}) {
   return out
 }
 
+const LEGAL_PATH = /(legal|privacy|polic|terms|agreement|cookie|webapps\/mpp\/ua)/i
+
 /** Payment providers by the hosts they use. */
 const PAYMENT_PROVIDERS = [
   ['Stripe', /(^|\.)stripe\.(com|network)$/i], ['PayPal', /(^|\.)(paypal\.(com|me)|paypalobjects\.com)$/i], ['Square', /(^|\.)(squareup\.com|square\.link|squarecdn\.com)$/i],
@@ -814,7 +816,8 @@ export function paymentsOf(recs) {
   const note = (provider, page, what) => { const p = found.get(provider) || { provider, hosts: [], links: [], pages: [] }; found.set(provider, p); if (!p.pages.includes(page) && p.pages.length < 6) p.pages.push(page); what(p) }
   for (const r of recs) {
     for (const [h, e] of Object.entries(r.hosts || {})) if (e.page) for (const [name, rx] of PAYMENT_PROVIDERS) if (rx.test(h)) note(name, r.id, (p) => { if (!p.hosts.includes(h)) p.hosts.push(h) })
-    for (const l of r.paymentLinks || []) for (const [name, rx] of PAYMENT_PROVIDERS) if (rx.test(l.host)) note(name, r.id, (p) => { if (p.links.length < 5 && !p.links.some((x) => x.href === l.href)) p.links.push({ href: l.href, text: l.text }) })
+    // a link to a provider's legal pages (a privacy policy, its terms) is a reference, not a payment
+    for (const l of (r.paymentLinks || []).filter((l) => !LEGAL_PATH.test(new URL(l.href).pathname))) for (const [name, rx] of PAYMENT_PROVIDERS) if (rx.test(l.host)) note(name, r.id, (p) => { if (p.links.length < 5 && !p.links.some((x) => x.href === l.href)) p.links.push({ href: l.href, text: l.text }) })
   }
   return [...found.values()]
 }
