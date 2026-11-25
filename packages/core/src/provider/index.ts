@@ -4,6 +4,7 @@ export {
   defineWireProvider,
 } from './define-provider.js'
 export { PROVIDER_PROFILES } from './provider.types.js'
+export { PROTECTED_KEYS } from './protected-keys.js'
 export { ProviderError } from './provider-error.js'
 export { ProviderRegistry, variantOrder } from './provider-registry.js'
 export type { ProviderResolveOptions } from './provider-registry.js'

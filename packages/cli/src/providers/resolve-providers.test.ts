@@ -25,6 +25,11 @@ type Variant = {
   export?: string
 }
 
+const replacing = <T extends object>(provider: T) => ({
+  ...provider,
+  replaces: ['logger'],
+})
+
 describe('resolveProviders', () => {
   let root: string
   beforeEach(() => {
@@ -238,15 +243,19 @@ describe('resolveProviders', () => {
 
   test('a baseline key may be replaced by exactly one service', () => {
     const one = state({
-      kv: service({ common: { needs: [], provides: ['logger'] } }),
+      kv: replacing(service({ common: { needs: [], provides: ['logger'] } })),
     })
     assert.equal(resolve(one).ordered.length, 1)
     assert.throws(
       () =>
         resolve(
           state({
-            a: service({ common: { needs: [], provides: ['logger'] } }),
-            b: service({ common: { needs: [], provides: ['logger'] } }),
+            a: replacing(
+              service({ common: { needs: [], provides: ['logger'] } })
+            ),
+            b: replacing(
+              service({ common: { needs: [], provides: ['logger'] } })
+            ),
           })
         ),
       /\[PKU385\].*both provide 'logger'/
@@ -458,7 +467,7 @@ describe('resolveProviders', () => {
 
     test('a service replacing a baseline key is selected when that key is reached', () => {
       const st = state({
-        kv: service({ common: { needs: [], provides: ['logger'] } }),
+        kv: replacing(service({ common: { needs: [], provides: ['logger'] } })),
       })
       assert.equal(resolve(st, 'dev', ['logger'], by([])).ordered.length, 0)
       assert.equal(

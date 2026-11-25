@@ -292,8 +292,11 @@ export const syncRemoteAddonSdks = async ({
   download,
   logger,
   coreVersion = installedCoreVersion(rootDir),
+  frozen = false,
 }: {
   rootDir: string
+  /** Refuse to write the lock: a change to it is an error (`--frozen`). */
+  frozen?: boolean
   specs: RemoteAddonSdkSpec[]
   resolveSdk: ResolveSdk
   download: DownloadSdk
@@ -309,7 +312,10 @@ export const syncRemoteAddonSdks = async ({
       `${e?.message ?? e}. Delete it and run 'pikku all' to write a fresh one.`
     )
   }
-  const lock = emptyAddonsLock()
+  const lock: AddonsLock = {
+    ...emptyAddonsLock(),
+    providers: previous.providers,
+  }
   const sdks: SyncedSdk[] = []
 
   for (const spec of specs) {
@@ -411,6 +417,12 @@ export const syncRemoteAddonSdks = async ({
   // No versioned addons and no lock: write nothing, not an empty lock.
   const lockChanged =
     current !== next && !(current === null && specs.length === 0)
+  if (lockChanged && frozen) {
+    throw new RemoteAddonSyncError(
+      ErrorCode.PROVIDER_LOCK_FROZEN,
+      `${ADDONS_LOCK_FILE} is frozen (--frozen) but the remote addon SDKs it pins would change. Run pikku all without --frozen locally and commit the lock.`
+    )
+  }
   if (lockChanged) {
     await writeFile(lockPath, next)
   }
@@ -419,6 +431,7 @@ export const syncRemoteAddonSdks = async ({
 
 export type AddonSyncConfig = {
   rootDir: string
+  frozen?: boolean
   sourceDirs: string[]
   ignoreFiles?: string[]
   /** Set when the project is an addon: its `pikku.uses` dependencies are synced too. */
@@ -490,5 +503,6 @@ export const runAddonSync = async ({
     resolveSdk,
     download,
     logger,
+    frozen: config.frozen,
   })
 }

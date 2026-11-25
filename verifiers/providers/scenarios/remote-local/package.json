@@ -5,5 +5,8 @@
   "imports": {
     "#pikku/*.js": "./.pikku/*.ts",
     "#pikku/*": "./.pikku/*/index.ts"
+  },
+  "devDependencies": {
+    "@verifier/prov-hostile": "workspace:*"
   }
 }

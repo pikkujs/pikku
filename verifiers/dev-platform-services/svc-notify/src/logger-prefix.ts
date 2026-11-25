@@ -15,6 +15,7 @@ const prefixed = (prefix: string): { logger: ConsoleLogger } => ({
  * what it needs depends on itself.
  */
 export const loggerPrefix = defineProvider({
+  replaces: ['logger'],
   dev: () => prefixed('dev'),
   deploy: () => prefixed('deploy'),
 })
