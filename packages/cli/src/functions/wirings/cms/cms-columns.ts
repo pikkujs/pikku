@@ -3,6 +3,7 @@
  * and the zod each input accepts.
  */
 import { ZOD_FORMATS, type ZodFormat } from '../../db/zod-codegen.js'
+import type { CmsImageType } from '@pikku/core/cms'
 import type { CmsColumn } from './cms-model.types.js'
 
 /** The shape a value has in a request or a response, whatever the engine stores. */
@@ -112,6 +113,34 @@ export const filterOperators = (column: CmsColumn): string[] => {
     (kind === 'number' || kind === 'datetime' || column.format === 'isoDate')
   return ['equals', 'in', ...(ordered ? ['gt', 'gte', 'lt', 'lte'] : [])]
 }
+
+const IMAGE_EXTENSIONS: Record<CmsImageType, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+  'image/avif': 'avif',
+}
+
+/** Where the files of an image field are stored in its bucket. */
+export const imagePrefix = (collection: string, field: string) =>
+  `cms/${collection}/${field}/`
+
+export const imageExtensions = (accept: CmsImageType[]) =>
+  Object.fromEntries(accept.map((type) => [type, IMAGE_EXTENSIONS[type]]))
+
+/** A key the upload function of this field could have built, and no other. */
+export const imageKeySchema = (
+  collection: string,
+  field: string,
+  accept: CmsImageType[]
+): string => {
+  const prefix = imagePrefix(collection, field).replaceAll('/', '\\/')
+  const extensions = Object.values(imageExtensions(accept)).join('|')
+  return `z.string().regex(/^${prefix}[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(${extensions})$/)`
+}
+
+export const searchSchema = `z.string().max(200)${NO_NUL}`
 
 /** A record's id as a caller sends it. */
 export const idSchema = (column: CmsColumn): string => {

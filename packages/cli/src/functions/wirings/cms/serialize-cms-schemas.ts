@@ -7,19 +7,27 @@ import type { CmsModel, CmsModelCollection } from './cms-model.types.js'
 import {
   filterOperators,
   idSchema,
+  imageKeySchema,
+  searchSchema,
   operandSchema,
   outputSchema,
   valueSchema,
 } from './cms-columns.js'
-import { stampedColumn } from './build-cms-model.js'
+import {
+  imageFields,
+  relationTarget,
+  stampedColumn,
+} from './build-cms-model.js'
 import { DESCRIBE_SCHEMA } from './serialize-cms-describe-schema.js'
 import {
   createFunction,
   deleteFunction,
   getFunction,
   listFunction,
+  optionsFunction,
   pascal,
   updateFunction,
+  uploadFunction,
 } from './cms-names.js'
 
 export const schemaName = (functionName: string, side: 'Input' | 'Output') =>
@@ -69,7 +77,7 @@ const listSchemas = (collection: CmsModelCollection): string[] => {
           `sort: z.array(z.strictObject({ column: z.enum(${JSON.stringify(list.sort)}), direction: z.enum(['asc', 'desc']) })).max(${list.sort.length}).optional()`,
         ]
       : []),
-    ...(list.search.length ? [`search: z.string().max(200).optional()`] : []),
+    ...(list.search.length ? [`search: ${searchSchema}.optional()`] : []),
   ]
   return [
     `export const ${rowType(name, 'ListRow')} = ${rowSchema(collection, listColumns)}`,
@@ -87,6 +95,54 @@ const listSchemas = (collection: CmsModelCollection): string[] => {
   ]
 }
 
+/** The schemas of the upload and options functions a collection's fields have. */
+const fieldFunctionSchemas = (
+  model: CmsModel,
+  collection: CmsModelCollection
+): string[] => {
+  if (!collection.create && !collection.edit) return []
+  const pair = (fn: string, input: string[], output: string[]) => [
+    `export const ${schemaName(fn, 'Input')} = ${object(input)}`,
+    `export const ${schemaName(fn, 'Output')} = ${object(output, false)}`,
+  ]
+  return collection.fields.flatMap((field) => {
+    if (field.image) {
+      const operations = [
+        ...(collection.create ? ['create'] : []),
+        ...(collection.edit ? ['edit'] : []),
+      ]
+      return pair(
+        uploadFunction(collection.name, field.name),
+        [
+          `for: z.enum(${JSON.stringify(operations)})`,
+          `contentType: z.enum(${JSON.stringify(field.image.accept)})`,
+          `byteLength: z.number().int().min(1).max(${field.image.maxBytes})`,
+        ],
+        [
+          `uploadUrl: z.string()`,
+          `fileKey: z.string()`,
+          `uploadMethod: z.enum(['PUT', 'POST']).optional()`,
+          `uploadHeaders: z.record(z.string(), z.string()).optional()`,
+        ]
+      )
+    }
+    if (field.input !== 'relation') return []
+    const target = relationTarget(model, field.target!)
+    const key = target.columns[target.primaryKey]!
+    return pair(
+      optionsFunction(collection.name, field.name),
+      [
+        `search: ${searchSchema}.optional()`,
+        `ids: z.array(${idSchema(key)}).min(1).max(100).optional()`,
+        `limit: z.number().int().min(1).max(100).optional()`,
+      ],
+      [
+        `rows: z.array(${object([`id: ${outputSchema(key)}`, `label: z.string().nullable()`], false)})`,
+      ]
+    )
+  })
+}
+
 const getSchemas = (collection: CmsModelCollection): string[] => {
   const { name, primaryKey, columns, readColumns } = collection
   return [
@@ -95,7 +151,19 @@ const getSchemas = (collection: CmsModelCollection): string[] => {
       `id: ${idSchema(columns[primaryKey]!)}`,
     ])}`,
     `export const ${schemaName(getFunction(name), 'Output')} = ${object(
-      [`row: ${rowType(name, 'Record')}`],
+      [
+        `row: ${rowType(name, 'Record')}`,
+        ...(imageFields(collection).length
+          ? [
+              `previewUrls: ${object(
+                imageFields(collection).map(
+                  (field) => `${field.name}: z.string().nullable()`
+                ),
+                false
+              )}`,
+            ]
+          : []),
+      ],
       false
     )}`,
   ]
@@ -112,8 +180,10 @@ const fieldSchema = (
 ): string => {
   const column = collection.columns[name]!
   const field = collection.fields.find((f) => f.name === name)!
-  const value = field.image ? 'z.null()' : valueSchema(column)
-  const nullable = column.nullable && !field.image ? '.nullable()' : ''
+  const value = field.image
+    ? imageKeySchema(collection.name, name, field.image.accept)
+    : valueSchema(column)
+  const nullable = column.nullable ? '.nullable()' : ''
   const optional =
     operation === 'update' || column.nullable || column.hasDefault
       ? '.optional()'
@@ -180,6 +250,7 @@ ${model.collections
     ...listSchemas(collection),
     ...getSchemas(collection),
     ...writeSchemas(collection),
+    ...fieldFunctionSchemas(model, collection),
   ])
   .join('\n\n')}
 `

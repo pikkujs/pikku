@@ -6,9 +6,13 @@ export const serializeCmsRuntime = ({
   errorLeaf,
 }: {
   errorLeaf: string
-}): string => `import { ConflictError, UnprocessableContentError } from '${errorLeaf}'
+}): string => `import {
+  ConflictError,
+  ForbiddenError,
+  UnprocessableContentError,
+} from '${errorLeaf}'
 import { sql } from 'kysely'
-import type { AuditLog } from '@pikku/core/services'
+import type { AuditLog, ContentService } from '@pikku/core/services'
 import type {
   CmsCollectionDescription,
   CmsDescription,
@@ -92,6 +96,61 @@ export const cmsDatetime = (value: string): string => {
 export const cmsStoredDatetime = <Value extends string | null | undefined>(
   value: Value
 ): Value => (typeof value === 'string' ? cmsDatetime(value) : value) as Value
+
+/** The file storage an app with image fields has. */
+export const cmsContent = (
+  content: ContentService | undefined
+): ContentService => {
+  if (!content) {
+    throw new Error('A CMS collection with an image needs the content service')
+  }
+  return content
+}
+
+/** A key of its own for every upload, so no upload replaces another's file. */
+export const cmsImageKey = (
+  prefix: string,
+  extensions: Record<string, string>,
+  contentType: string
+): string => \`\${prefix}\${crypto.randomUUID()}.\${extensions[contentType]}\`
+
+/** A record only takes the key of a file that has been uploaded. */
+export const cmsUploaded = async (
+  content: ContentService | undefined,
+  bucket: string,
+  key: string | null | undefined
+): Promise<void> => {
+  if (typeof key !== 'string') return
+  const found = await cmsContent(content).listFilesByPrefix(
+    bucket,
+    key,
+    'private'
+  )
+  if (!found.includes(key)) {
+    throw new UnprocessableContentError(
+      'No file has been uploaded under this key'
+    )
+  }
+}
+
+/**
+ * A short-lived link to show an image. Only a key of the field's own is signed:
+ * whatever else a column holds gets none.
+ */
+export const cmsPreviewUrl = async (
+  content: ContentService | undefined,
+  bucket: string,
+  prefix: string,
+  key: unknown
+): Promise<string | null> =>
+  typeof key === 'string' && key.startsWith(prefix) && !key.includes('..')
+    ? cmsContent(content).getDownloadURL({
+        bucket,
+        key,
+        visibility: 'private',
+        expiresInSeconds: 300,
+      })
+    : null
 
 /** The fields a patch changes, of which there must be one. */
 export const cmsChanged = (values: object): string[] => {
@@ -273,9 +332,53 @@ const cmsSessionCheck = async (
 export const cmsHolds = async (
   scopes: string[],
   services: CmsScopeServices,
-  session: CmsSession
+  session: CmsSession | undefined
 ): Promise<boolean> =>
-  hasScopes(scopes, await cmsLiveScopes(services, session))
+  Boolean(session) &&
+  hasScopes(scopes, await cmsLiveScopes(services, session!))
+
+/** The app's check of the operation an upload is for, when it has one. */
+export const cmsMustPass = async <Operation extends string>(
+  checks: Partial<Record<Operation, CmsAppCheck>>,
+  operation: Operation,
+  services: object,
+  session: CmsSession | undefined
+): Promise<void> => {
+  if (
+    !session ||
+    !(await cmsSessionCheck(checks[operation], services, session))
+  ) {
+    throw new ForbiddenError('You may not upload for this')
+  }
+}
+
+/**
+ * Whether the caller may point a record at another collection: its read scope,
+ * and its read check when it has one. Asked before the target is looked up, so
+ * a caller without it learns nothing about which records exist.
+ */
+export const cmsMayLink = async (
+  scope: string,
+  services: object,
+  session: CmsSession | undefined,
+  check?: CmsAppCheck
+): Promise<void> => {
+  if (
+    !(await cmsHolds([scope], services as CmsScopeServices, session)) ||
+    !(await cmsSessionCheck(check, services, session!))
+  ) {
+    throw new ForbiddenError('You may not link to these records')
+  }
+}
+
+/** The record a relation names, which has to be there. */
+export const cmsLinked = (found: unknown, field: string): void => {
+  if (!found) {
+    throw new UnprocessableContentError(
+      \`'\${field}' refers to a record that does not exist\`
+    )
+  }
+}
 
 
 /** The description cut down to what the caller may do. */

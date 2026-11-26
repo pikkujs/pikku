@@ -199,6 +199,16 @@ export const stampedColumn = (
     : undefined
 }
 
+export const imageFields = (collection: CmsModelCollection) =>
+  collection.fields.filter((field) => field.image)
+
+/** The collection a relation points at, which the model has checked is there. */
+export const relationTarget = (
+  model: CmsModel,
+  target: string
+): CmsModelCollection =>
+  model.collections.find((collection) => collection.name === target)!
+
 const parseCheck = (value: unknown): CmsCheck | undefined => {
   if (typeof value !== 'string') return undefined
   const match =

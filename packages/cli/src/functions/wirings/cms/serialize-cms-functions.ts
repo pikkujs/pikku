@@ -8,9 +8,15 @@ import type {
   CmsCheck,
   CmsModel,
   CmsModelCollection,
+  CmsModelField,
 } from './cms-model.types.js'
-import { valueKind } from './cms-columns.js'
-import { isServerFilledKey, stampedColumn } from './build-cms-model.js'
+import { imageExtensions, imagePrefix, valueKind } from './cms-columns.js'
+import {
+  imageFields,
+  isServerFilledKey,
+  relationTarget,
+  stampedColumn,
+} from './build-cms-model.js'
 import { describeCmsModel } from './cms-description.js'
 import {
   DESCRIBE_FUNCTION,
@@ -18,8 +24,10 @@ import {
   deleteFunction,
   getFunction,
   listFunction,
+  optionsFunction,
   pascal,
   updateFunction,
+  uploadFunction,
 } from './cms-names.js'
 import { rowType, schemaName } from './serialize-cms-schemas.js'
 
@@ -225,12 +233,78 @@ const assignment = (
     ? `${column}: cmsStoredDatetime(${from}.${column}),`
     : `${column}: ${from}.${column},`
 
+const relationFields = (collection: CmsModelCollection) =>
+  collection.fields.filter((field) => field.input === 'relation')
+
+/** What a write checks of the relations and images it is given, before it. */
+const fieldChecks = (
+  model: CmsModel,
+  collection: CmsModelCollection,
+  from: 'values' | 'patch',
+  alias: Alias
+): string =>
+  [
+    ...relationFields(collection).map((field) => {
+      const target = relationTarget(model, field.target!)
+      const check = target.checks.read
+      const args = [
+        `'cms:${target.name}:read'`,
+        check ? 'services' : '{ scopeService }',
+        'session',
+        ...(check ? [alias(check)] : []),
+      ]
+      return `    if (${from}.${field.name} != null) {
+      await cmsMayLink(${args.join(', ')})
+      cmsLinked(
+        await kysely
+          .selectFrom('${target.name}')
+          .select('${target.primaryKey}')
+          .where('${target.primaryKey}', '=', ${from}.${field.name})
+          .executeTakeFirst(),
+        '${field.name}'
+      )
+    }
+`
+    }),
+    ...imageFields(collection).map(
+      (field) =>
+        `    await cmsUploaded(content, '${field.image!.bucket}', ${from}.${field.name})
+`
+    ),
+  ].join('')
+
+/** The signature of a create or an update, with the services its checks use. */
+const writeSignature = (
+  model: CmsModel,
+  collection: CmsModelCollection,
+  params: string
+) => {
+  const relations = relationFields(collection)
+  // A target's own read check may use any service, so the function takes all.
+  const every = relations.some(
+    (field) => relationTarget(model, field.target!).checks.read
+  )
+  const services = [
+    'kysely',
+    'auditLog',
+    ...(relations.length && !every ? ['scopeService'] : []),
+    ...(imageFields(collection).length ? ['content'] : []),
+  ].join(', ')
+  const wire = relations.length ? ', { session }' : ''
+  return every
+    ? {
+        head: `async (services, ${params}${wire}) => {`,
+        open: `    const { ${services} } = services\n`,
+      }
+    : { head: `async ({ ${services} }, ${params}${wire}) => {`, open: '' }
+}
+
 const mutation = (
   collection: CmsModelCollection,
   operation: 'create' | 'edit' | 'delete',
   fn: string,
   description: string,
-  params: string,
+  signature: { head: string; open: string },
   body: string,
   alias: Alias
 ) => `export const ${fn} = pikkuFunc({
@@ -240,12 +314,16 @@ const mutation = (
 ${guards(collection, operation, alias)}
   input: ${schemaName(fn, 'Input')},
   output: ${schemaName(fn, 'Output')},
-  func: async ({ kysely, auditLog }, ${params}) => {
-${body}
+  func: ${signature.head}
+${signature.open}${body}
   },
 })`
 
-const createSource = (collection: CmsModelCollection, alias: Alias): string => {
+const createSource = (
+  model: CmsModel,
+  collection: CmsModelCollection,
+  alias: Alias
+): string => {
   const { name, primaryKey, columns, fields } = collection
   const keyed = isServerFilledKey(columns[primaryKey]!)
   const version = stampedColumn(collection)
@@ -279,8 +357,8 @@ ${values}
     'create',
     createFunction(name),
     'create a record of',
-    '{ values }',
-    `${body}
+    writeSignature(model, collection, '{ values }'),
+    `${fieldChecks(model, collection, 'values', alias)}${body}
     await cmsAudit(auditLog, 'created', '${name}', id, Object.keys(values))
     const row = ${selectRecord(collection, 'id')}
 ${answerRecord(collection)}`,
@@ -288,7 +366,11 @@ ${answerRecord(collection)}`,
   )
 }
 
-const updateSource = (collection: CmsModelCollection, alias: Alias): string => {
+const updateSource = (
+  model: CmsModel,
+  collection: CmsModelCollection,
+  alias: Alias
+): string => {
   const { name, primaryKey, fields } = collection
   const version = stampedColumn(collection)
   const set = [
@@ -331,9 +413,13 @@ const updateSource = (collection: CmsModelCollection, alias: Alias): string => {
     'edit',
     updateFunction(name),
     'change a record of',
-    version ? '{ id, patch, expectedUpdatedAt }' : '{ id, patch }',
+    writeSignature(
+      model,
+      collection,
+      version ? '{ id, patch, expectedUpdatedAt }' : '{ id, patch }'
+    ),
     `    const changed = cmsChanged(patch)
-${read}    let query = kysely
+${fieldChecks(model, collection, 'patch', alias)}${read}    let query = kysely
       .updateTable('${name}')
       .set({
 ${set}
@@ -366,7 +452,7 @@ const deleteSource = (collection: CmsModelCollection, alias: Alias): string => {
     'delete',
     deleteFunction(name),
     'delete a record of',
-    '{ id }',
+    { head: 'async ({ kysely, auditLog }, { id }) => {', open: '' },
     `    const { numDeletedRows } = await cmsWrite('delete', () =>
       kysely
         .deleteFrom('${name}')
@@ -385,6 +471,22 @@ const deleteSource = (collection: CmsModelCollection, alias: Alias): string => {
 const getSource = (collection: CmsModelCollection, alias: Alias): string => {
   const { name, label } = collection
   const fn = getFunction(name)
+  const images = imageFields(collection)
+  const answer = images.length
+    ? `    if (!row) throw new NotFoundError('There is no record with that id')
+    const record = toCmsRow<z.infer<typeof ${rowType(name, 'Record')}>>(row, ${upperSnake(name)}_KINDS)
+    return {
+      row: record,
+      previewUrls: {
+${images
+  .map(
+    (field) =>
+      `        ${field.name}: await cmsPreviewUrl(content, '${field.image!.bucket}', '${imagePrefix(name, field.name)}', record.${field.name}),`
+  )
+  .join('\n')}
+      },
+    }`
+    : answerRecord(collection)
   return `export const ${fn} = pikkuFunc({
   description: ${JSON.stringify(`CMS: one record of ${label}`)},
   expose: true,
@@ -392,9 +494,135 @@ const getSource = (collection: CmsModelCollection, alias: Alias): string => {
 ${guards(collection, 'read', alias)}
   input: ${schemaName(fn, 'Input')},
   output: ${schemaName(fn, 'Output')},
-  func: async ({ kysely }, { id }) => {
+  func: async ({ kysely${images.length ? ', content' : ''} }, { id }) => {
     const row = ${selectRecord(collection, 'id')}
-${answerRecord(collection)}
+${answer}
+  },
+})`
+}
+
+/**
+ * The upload function of an image field. Which grant it needs depends on its
+ * input, so a permission reads it, from the stored grants and never from the
+ * session's own list.
+ */
+const uploadSource = (
+  collection: CmsModelCollection,
+  field: CmsModelField,
+  alias: Alias
+): string => {
+  const { name, label, checks } = collection
+  const fn = uploadFunction(name, field.name)
+  const image = field.image!
+  const permission = `may${pascal(fn)}`
+  const operations = (['create', 'edit'] as const).filter((operation) =>
+    operation === 'create' ? collection.create : collection.edit
+  )
+  const operationType = operations.map((o) => `'${o}'`).join(' | ')
+  const appChecks = operations.flatMap((operation) =>
+    checks[operation] ? [`${operation}: ${alias(checks[operation]!)}`] : []
+  )
+  const source = `const ${permission} = pikkuPermission(
+  async ({ scopeService }, data: { for: ${operationType} }, { session }) =>
+    cmsHolds(['cms:${name}:read', \`cms:${name}:\${data.for}\`], { scopeService }, session)
+)`
+  // The app's check of that operation is asked in the body, which takes every
+  // service for it: a permission has to name the services it uses.
+  const body = appChecks.length
+    ? {
+        head: 'async (services, { for: operation, contentType, byteLength }, { session }) => {',
+        open: `    await cmsMustPass({ ${appChecks.join(', ')} }, operation, services, session)
+    const { content } = services
+`,
+      }
+    : {
+        head: 'async ({ content }, { contentType, byteLength }) => {',
+        open: '',
+      }
+  const group = [permission, ...(checks.read ? [alias(checks.read)] : [])].join(
+    ', '
+  )
+  return `${source}
+
+export const ${fn} = pikkuFunc({
+  description: ${JSON.stringify(`CMS: a URL to upload ${field.label} of ${label} to`)},
+  expose: true,
+  scopes: ['cms:${name}:read'],
+  permissions: { cms: [${group}] },
+  input: ${schemaName(fn, 'Input')},
+  output: ${schemaName(fn, 'Output')},
+  func: ${body.head}
+${body.open}    const upload = await cmsContent(content).getUploadURL({
+      bucket: '${image.bucket}',
+      fileKey: cmsImageKey('${imagePrefix(name, field.name)}', ${JSON.stringify(imageExtensions(image.accept))}, contentType),
+      contentType,
+      size: byteLength,
+      visibility: 'private',
+    })
+    return {
+      uploadUrl: upload.uploadUrl,
+      fileKey: upload.fileKey,
+      uploadMethod: upload.uploadMethod,
+      uploadHeaders: upload.uploadHeaders,
+    }
+  },
+})`
+}
+
+/** The records a relation can point at, as ids and titles. */
+const optionsSource = (
+  model: CmsModel,
+  collection: CmsModelCollection,
+  field: CmsModelField,
+  alias: Alias
+): string => {
+  const target = relationTarget(model, field.target!)
+  const fn = optionsFunction(collection.name, field.name)
+  const { primaryKey, title } = target
+  const scopes = [...new Set([collection.name, target.name])].map(
+    (name) => `'cms:${name}:read'`
+  )
+  const checks = [
+    ...new Set(
+      [collection, target].flatMap((c) =>
+        c.checks.read ? [alias(c.checks.read)] : []
+      )
+    ),
+  ]
+  const id =
+    valueKind(target.columns[primaryKey]!) === 'number'
+      ? `Number(row.${primaryKey})`
+      : `row.${primaryKey}`
+  return `export const ${fn} = pikkuFunc({
+  description: ${JSON.stringify(`CMS: ${target.label} to choose as ${field.label} of ${collection.label}`)},
+  expose: true,
+  readonly: true,
+  scopes: [${scopes.join(', ')}],
+${checks.length ? `  permissions: { cms: [${checks.join(', ')}] },\n` : ''}  input: ${schemaName(fn, 'Input')},
+  output: ${schemaName(fn, 'Output')},
+  func: async ({ kysely }, { search, ids, limit }) => {
+    let query = kysely
+      .selectFrom('${target.name}')
+      .select('${primaryKey}')
+      .select(cmsText('${title}'))
+    if (ids) query = query.where('${primaryKey}', 'in', ids)
+    if (search) {
+      const pattern = cmsSearchPattern(search)
+      query = query.where(
+        sql<boolean>\`lower(cast(\${sql.ref('${title}')} as text)) like lower(\${pattern}) escape '!'\`
+      )
+    }
+    const rows = await query
+      .orderBy(sql.ref('${title}'), 'asc')
+      .orderBy('${primaryKey}', 'asc')
+      .limit(limit ?? (ids ? 100 : 20))
+      .execute()
+    return {
+      rows: rows.map((row) => ({
+        id: ${id},
+        label: row.cmsText${pascal(title)},
+      })),
+    }
   },
 })`
 }
@@ -439,6 +667,7 @@ ${groups.join('\n')}
 
 /** What a collection gets besides `describeCms`. */
 const collectionSource = (
+  model: CmsModel,
   collection: CmsModelCollection,
   alias: Alias
 ): string =>
@@ -450,9 +679,18 @@ const collectionSource = (
       .map((operation) => holds(collection.name, operation)),
     listSource(collection, alias),
     getSource(collection, alias),
-    ...(collection.create ? [createSource(collection, alias)] : []),
-    ...(collection.edit ? [updateSource(collection, alias)] : []),
+    ...(collection.create ? [createSource(model, collection, alias)] : []),
+    ...(collection.edit ? [updateSource(model, collection, alias)] : []),
     ...(collection.delete ? [deleteSource(collection, alias)] : []),
+    ...(collection.create || collection.edit
+      ? collection.fields.flatMap((field) =>
+          field.image
+            ? [uploadSource(collection, field, alias)]
+            : field.input === 'relation'
+              ? [optionsSource(model, collection, field, alias)]
+              : []
+        )
+      : []),
   ].join('\n\n')
 
 const imports = (names: string[], from: string, source: string, type = '') => {
@@ -469,14 +707,14 @@ export const serializeCmsFunctions = (
 ): string => {
   const { lines, alias } = checkImports(model, paths)
   const source = [
-    ...model.collections.map((c) => collectionSource(c, alias)),
+    ...model.collections.map((c) => collectionSource(model, c, alias)),
     describeSource(model, alias),
   ].join('\n\n')
   return [
     imports(['sql'], 'kysely', source),
     imports(['z'], 'zod', source, 'type '),
     imports(['pikkuFunc'], paths.functionLeaf, source),
-    imports(['pikkuAuth'], paths.authLeaf, source),
+    imports(['pikkuAuth', 'pikkuPermission'], paths.authLeaf, source),
     imports(
       [
         'ConflictError',
@@ -493,14 +731,21 @@ export const serializeCmsFunctions = (
         'cmsAudit',
         'cmsChanged',
         'cmsConditions',
+        'cmsContent',
         'cmsDatetime',
         'cmsDescribe',
         'cmsHolds',
+        'cmsImageKey',
+        'cmsLinked',
+        'cmsMayLink',
+        'cmsMustPass',
         'cmsPage',
+        'cmsPreviewUrl',
         'cmsSearchPattern',
         'cmsStoredDatetime',
         'cmsStoredValue',
         'cmsText',
+        'cmsUploaded',
         'cmsWrite',
         'toCmsRow',
       ],

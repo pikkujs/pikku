@@ -18,7 +18,9 @@ import {
   getFunction,
   humanise,
   listFunction,
+  optionsFunction,
   updateFunction,
+  uploadFunction,
 } from './cms-names.js'
 
 const describeField = (
@@ -48,6 +50,14 @@ const describeField = (
     accept: field?.image?.accept,
     maxBytes: field?.image?.maxBytes,
     target: field?.target,
+    uploadFunction:
+      field?.image && (collection.create || collection.edit)
+        ? uploadFunction(collection.name, column.name)
+        : undefined,
+    optionsFunction:
+      field?.input === 'relation' && (collection.create || collection.edit)
+        ? optionsFunction(collection.name, column.name)
+        : undefined,
     untrusted: collection.submitted.includes(column.name) || undefined,
   }
 }

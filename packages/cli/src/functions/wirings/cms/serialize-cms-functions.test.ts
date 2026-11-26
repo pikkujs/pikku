@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url'
 import { buildCmsModel } from './build-cms-model.js'
 import { valueKind } from './cms-columns.js'
 import { describeCmsModel } from './cms-description.js'
+import { cmsFunctionNames } from './cms-names.js'
 import { serializeCmsFunctions } from './serialize-cms-functions.js'
 import { serializeCmsSchemas } from './serialize-cms-schemas.js'
 import {
@@ -65,10 +66,66 @@ describe('the generated CMS functions', () => {
       'getCmsOffering',
       'createCmsOffering',
       'updateCmsOffering',
+      'createCmsOfferingImageKeyUpload',
+      'searchCmsOfferingTherapistIdOptions',
       'listCmsTherapist',
       'getCmsTherapist',
       'describeCms',
     ])
+  })
+
+  test('are the names checked for collisions, and no others', () => {
+    const built = model()
+    assert.deepEqual(
+      exportsOf(functions(built)).sort(),
+      [...built.collections.flatMap(cmsFunctionNames), 'describeCms'].sort()
+    )
+  })
+
+  test('a collection that is only read gets no upload or options function', () => {
+    const declaration: any = testDeclaration()
+    delete declaration.offering.edit
+    delete declaration.offering.create
+    delete declaration.offering.groups
+    delete declaration.offering.thumbnail
+    delete declaration.offering.pii
+    assert.deepEqual(exportsOf(functions(model(declaration))), [
+      'listCmsOffering',
+      'getCmsOffering',
+      'listCmsTherapist',
+      'getCmsTherapist',
+      'describeCms',
+    ])
+  })
+
+  test('an upload asks the stored grants for what it is for', () => {
+    const source = functions()
+    assert.match(
+      source,
+      /const mayCreateCmsOfferingImageKeyUpload = pikkuPermission\(\s+async \(\{ scopeService \}, data: \{ for: 'create' \| 'edit' \}, \{ session \}\) =>\s+cmsHolds\(\s*\['cms:offering:read', `cms:offering:\$\{data\.for\}`\]/
+    )
+    assert.match(
+      sourceOf(source, 'createCmsOfferingImageKeyUpload'),
+      /permissions: \{ cms: \[mayCreateCmsOfferingImageKeyUpload, appCheck0\] \},/
+    )
+  })
+
+  test('options ask for the read of both collections, and for ids and titles', () => {
+    const options = sourceOf(functions(), 'searchCmsOfferingTherapistIdOptions')
+    assert.match(
+      options,
+      /scopes: \['cms:offering:read', 'cms:therapist:read'\],/
+    )
+    assert.match(options, /\.select\('id'\)\s+\.select\(cmsText\('name'\)\)/)
+  })
+
+  test('a link is checked, then looked up, before anything is written', () => {
+    const update = sourceOf(functions(), 'updateCmsOffering')
+    const may = update.indexOf("cmsMayLink('cms:therapist:read'")
+    const found = update.indexOf('cmsLinked(')
+    const write = update.indexOf('.updateTable(')
+    assert.ok(may > 0 && may < found && found < write)
+    assert.ok(update.indexOf('cmsUploaded(') < write)
   })
 
   test('a write wants read and its own grant, in the scopes and read again', () => {

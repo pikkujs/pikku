@@ -36,6 +36,7 @@ export const cms = defineCmsCollections<typeof tables>()({
     groups: [{ label: 'Price', fields: ['priceMinor', 'currency'] }],
     create: true,
     delete: true,
+    permissions: { create: 'src/checks.ts#opensOfferings' },
   },
   therapist: {
     label: 'Therapists',
@@ -44,6 +45,7 @@ export const cms = defineCmsCollections<typeof tables>()({
     edit: { name: true },
     create: true,
     delete: true,
+    permissions: { read: 'src/checks.ts#readsTherapists' },
   },
   courseApplication: {
     label: 'Applications',

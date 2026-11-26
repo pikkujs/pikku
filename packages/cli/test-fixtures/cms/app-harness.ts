@@ -65,6 +65,8 @@ INSERT INTO offering (id, slug, title, status, body, price_minor, featured, posi
   ('o-3', 'yoga-plain', '100 yoga', 'draft', NULL, 3000, FALSE, 1, NULL, '2026-05-01 10:00:00', 'IC-3', 'SENTINEL-SECRET', '2026-01-01T00:00:00.000Z'),
   ('o-4', 'under_score', 'under_score', 'draft', NULL, 4000, TRUE, 2, NULL, NULL, 'IC-4', NULL, '2026-01-01T00:00:00.000Z'),
   ('o-5', 'underXscore', 'underXscore', 'archived', NULL, 5000, FALSE, 2, NULL, NULL, 'IC-5', NULL, '2026-01-01T00:00:00.000Z');
+-- A value the CMS never wrote, which it must not sign a link to.
+UPDATE offering SET image_key = 'legacy/photo.png' WHERE id = 'o-4';
 INSERT INTO course_application (id, email, first_name, motivation, status, note, created_at) VALUES
   ('a-1', 'visitor@example.com', 'Vi', '<script>alert(1)</script>', 'new', NULL, '2026-02-01 09:00:00');
 `
