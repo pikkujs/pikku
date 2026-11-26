@@ -134,64 +134,18 @@ describe('installing an addon reaches core through its own subpath', () => {
   })
 })
 
-describe('the service leaf', () => {
-  test('is reached as #pikku/service from pikkuServiceTypesFile', () => {
-    const leaf = leafEntries.find(([name]) => name === 'service')
-
-    assert.deepEqual(leaf?.[1], ['pikkuServiceTypesFile'])
-  })
-})
-
-describe('typed service names on wireAddon', () => {
-  test('an addon with services types the names of its package', () => {
-    const content = serializeAddonInstallTypes(
-      {},
-      { '@scope/mail': ['mailer', 'audit-log'], '@scope/db': ['pg'] }
-    )
-
+describe('installing nothing', () => {
+  test('keeps the plain re-export', () => {
     assert.match(
-      content,
-      /type AddonServices = \{\n  "@scope\/mail": "mailer" \| "audit-log"\n  "@scope\/db": "pg"\n\}/
-    )
-    assert.match(content, /services\?: AddonServiceName<Package>\[\]/)
-    assert.ok(content.includes("'package' | 'mcp' | 'expose' | 'services'"))
-  })
-
-  test('a package with no meta falls back to string, so builds do not break', () => {
-    const content = serializeAddonInstallTypes(
-      {},
-      { '@scope/mail': ['mailer'] }
-    )
-
-    assert.match(
-      content,
-      /Package extends keyof AddonServices \? AddonServices\[Package\] : string/
-    )
-  })
-
-  test('services alone are enough to get the typed wrapper', () => {
-    const content = serializeAddonInstallTypes(
-      {},
-      { '@scope/mail': ['mailer'] }
-    )
-
-    assert.ok(
-      content.includes('export const wireAddon = <Package extends string>')
-    )
-    assert.ok(!content.includes('export { wireAddon, wireRemoteAddon }'))
-  })
-
-  test('functions alone leave the service map empty, not absent', () => {
-    const content = serializeAddonInstallTypes({ '@scope/mail': ['send'] })
-
-    assert.match(content, /type AddonServices = \{\n  \/\/ none\n\}/)
-  })
-
-  test('nothing installed keeps the plain re-export', () => {
-    assert.match(
-      serializeAddonInstallTypes({}, {}),
+      serializeAddonInstallTypes({}),
       /export \{ wireAddon, wireRemoteAddon \} from '@pikku\/core\/addon'/
     )
+  })
+
+  test('types the functions mcp and expose name', () => {
+    const source = serializeAddonInstallTypes({ '@acme/crm': ['listLeads'] })
+    assert.match(source, /"@acme\/crm": "listLeads"/)
+    assert.doesNotMatch(source, /services\?:/)
   })
 })
 

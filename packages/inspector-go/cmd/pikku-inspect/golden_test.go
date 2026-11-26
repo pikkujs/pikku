@@ -167,34 +167,3 @@ func firstDiff(want, got []byte) string {
 	}
 	return ""
 }
-
-// While `#pikku/service` does not exist, a service whose return type cannot be
-// read is not PKU372; the pass that has the leaf reports it.
-func TestDeferServiceProvidesSkipsPKU372(t *testing.T) {
-	root, err := filepath.Abs("../../testdata/wirings-addons")
-	if err != nil {
-		t.Fatal(err)
-	}
-	count := func(defer_ bool) int {
-		req := goldenRequest(t, root)
-		req.Options.DeferServiceProvides = defer_
-		in, _ := json.Marshal(req)
-		var out bytes.Buffer
-		if err := runInspect(bytes.NewReader(in), &out); err != nil {
-			t.Fatal(err)
-		}
-		n := 0
-		for _, d := range decodeResponse(t, out.Bytes()).Diagnostics {
-			if d.Code == diag.PikkuServiceProvidesNotStatic {
-				n++
-			}
-		}
-		return n
-	}
-	if got := count(false); got != 2 {
-		t.Fatalf("PKU372 without deferral = %d, want 2", got)
-	}
-	if got := count(true); got != 0 {
-		t.Fatalf("PKU372 with deferral = %d, want 0", got)
-	}
-}

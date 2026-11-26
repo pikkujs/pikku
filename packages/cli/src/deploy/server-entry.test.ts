@@ -22,7 +22,7 @@ describe('generateServerEntrySource', () => {
   test('without services the entry is the app lifecycle alone', () => {
     const source = generateServerEntrySource(ctx({ lifecycle }))
     assert.match(source, /__pikkuLifecycle\?\.beforeStart/)
-    assert.doesNotMatch(source, /createPlatformServices|composeServerLifecycle/)
+    assert.doesNotMatch(source, /createPlatformServices/)
     assert.match(
       source,
       /createSingletonServices\(config\)/,
@@ -30,7 +30,7 @@ describe('generateServerEntrySource', () => {
     )
   })
 
-  test('with services, platform services reach the app and the composed lifecycle runs the service start hooks before the app lifecycle', () => {
+  test('platform services reach the app, and its lifecycle runs around server.start()', () => {
     const source = generateServerEntrySource(
       ctx({ lifecycle, platformServices })
     )
@@ -48,28 +48,15 @@ describe('generateServerEntrySource', () => {
       source,
       /await createConfig\(platformServices\.variables as any\)/
     )
-    assert.match(
-      source,
-      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/
-    )
     const at = (needle: string) => source.indexOf(needle)
     assert.ok(
-      at('__pikkuServerLifecycle?.beforeStart') < at('server.start()') &&
-        at('server.start()') < at('__pikkuServerLifecycle?.afterStart'),
-      'start hooks run around server.start()'
+      at('__pikkuLifecycle?.beforeStart') < at('server.start()') &&
+        at('server.start()') < at('__pikkuLifecycle?.afterStart'),
+      'the start hooks run around server.start()'
     )
     assert.match(
       source,
-      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuServerLifecycle\?\.beforeStop.*afterStop: \(\) => __pikkuServerLifecycle\?\.afterStop/
+      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuLifecycle\?\.beforeStop.*afterStop: \(\) => __pikkuLifecycle\?\.afterStop/
     )
-  })
-
-  test('service hooks run even when the app declares no lifecycle', () => {
-    const source = generateServerEntrySource(ctx({ platformServices }))
-    assert.match(
-      source,
-      /composeServerLifecycle\(undefined, \{ start: __pikkuStartHooks/
-    )
-    assert.match(source, /__pikkuServerLifecycle\?\.beforeStart/)
   })
 })

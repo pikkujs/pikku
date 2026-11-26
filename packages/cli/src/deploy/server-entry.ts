@@ -9,11 +9,10 @@
  */
 
 import type { EntryGenerationContext } from '@pikku/deploy'
-import { composedLifecycleLines, entryLifecycleVariable } from '@pikku/deploy'
+import { entryLifecycleVariable } from '@pikku/deploy'
 
 export function generateServerEntrySource(ctx: EntryGenerationContext): string {
   const lifecycle = entryLifecycleVariable(ctx)
-  const composed = composedLifecycleLines(ctx)
   const lines: string[] = [
     `// Generated server entry for "${ctx.unit.name}" (${ctx.unit.role})`,
     `import { PikkuBunServer } from '@pikku/bun-server'`,
@@ -31,11 +30,8 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
           `import { createPlatformServices } from '${ctx.platformServices.importPath}'`,
         ]
       : []),
-    ...composed.imports,
     `import '${ctx.bootstrapPath}'`,
     ``,
-    ...composed.declaration,
-    ...(composed.declaration.length > 0 ? [``] : []),
     `const PORT = Number(process.env.PORT ?? 8080)`,
     `const HOST = process.env.HOST ?? '0.0.0.0'`,
     ``,

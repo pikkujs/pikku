@@ -13,9 +13,7 @@ import {
   existsSync,
   readdirSync,
   statSync,
-  mkdirSync,
   rmSync,
-  symlinkSync,
 } from 'fs'
 import { join } from 'path'
 import { createHash } from 'crypto'
@@ -40,9 +38,8 @@ const CONFIG_FILE = join(FUNCTIONS_DIR, 'pikku.config.json')
  * subject.
  */
 /**
- * Fixtures the template does not carry: a webhook gateway, and the coercion
- * map `pikku db migrate` would write for an app with annotated columns. Both
- * are removed with the config pin below.
+ * A fixture the template does not carry: a webhook gateway. It is removed with
+ * the config pin below.
  */
 const GATEWAY_FUNCTION_FILE = join(
   FUNCTIONS_DIR,
@@ -56,39 +53,13 @@ const GATEWAY_WIRING_FILE = join(
   'wirings',
   'verifier-gateway.wiring.ts'
 )
-const COERCION_FILE = join(FUNCTIONS_DIR, '.pikku', 'db', 'coercion.gen.ts')
-const COERCION_MAP = { todo: { due_at: 'date', done: 'bool' } }
 const GATEWAY_ROUTE = '/verifier/webhook'
-
-// The generated runner wraps the service that provides `kysely` with column
-// coercion, so a unit needs one that does and a function that reaches `kysely`.
-// An addon that provides one is linked into the shared project for the run, with
-// a route whose function destructures it; both are removed on exit.
-const ADDON_DIR = join(process.cwd(), 'service-kysely')
-const ADDON_LINK = join(
-  FUNCTIONS_DIR,
-  'node_modules',
-  '@verifier',
-  'service-kysely'
-)
-const COERCION_UNIT_NAME = 'verifier-db-reach'
-// A coercion map only reaches a service for an app with a known database
-// dialect, so the run also gives the project an (empty) db/sqlite folder.
-const DB_DIALECT_DIR = join(FUNCTIONS_DIR, 'db')
-const ADDON_WIRING_FILE = join(FUNCTIONS_DIR, 'src', 'zz-services-wiring.ts')
 
 const originalConfig = readFileSync(CONFIG_FILE, 'utf-8')
 const restoreConfig = () => {
   writeFileSync(CONFIG_FILE, originalConfig)
-  for (const fixture of [
-    GATEWAY_FUNCTION_FILE,
-    GATEWAY_WIRING_FILE,
-    COERCION_FILE,
-    ADDON_WIRING_FILE,
-    ADDON_LINK,
-    DB_DIALECT_DIR,
-  ]) {
-    rmSync(fixture, { force: true, recursive: true })
+  for (const fixture of [GATEWAY_FUNCTION_FILE, GATEWAY_WIRING_FILE]) {
+    rmSync(fixture, { force: true })
   }
 }
 process.on('exit', restoreConfig)
@@ -109,7 +80,6 @@ pinnedConfig.backends.app.deploy = {
   ...pinnedConfig.backends.app.deploy,
   grouping: { strategy: 'function' },
 }
-pinnedConfig.db = { engine: 'sqlite' }
 writeFileSync(CONFIG_FILE, JSON.stringify(pinnedConfig, null, 2))
 
 writeFileSync(
@@ -147,46 +117,11 @@ wireGateway({
 
 console.log('Setting up: running pikku codegen + deploy plan (cloudflare)...')
 execSync('rm -rf .deploy src/scaffold', { cwd: FUNCTIONS_DIR, stdio: 'pipe' })
-execCli(`node ${PIKKU_BIN} all`, {
-  cwd: ADDON_DIR,
-  stdio: 'pipe',
-  timeout: 60_000,
-})
-mkdirSync(join(DB_DIALECT_DIR, 'sqlite'), { recursive: true })
-mkdirSync(join(FUNCTIONS_DIR, 'node_modules', '@verifier'), { recursive: true })
-rmSync(ADDON_LINK, { force: true })
-symlinkSync(ADDON_DIR, ADDON_LINK, 'dir')
-writeFileSync(
-  ADDON_WIRING_FILE,
-  `import { wireAddon } from '#pikku/addon'
-import { pikkuSessionlessFunc } from '#pikku/function'
-import { wireHTTP } from '#pikku/http'
-
-wireAddon({
-  name: 'kyselyStandIn',
-  package: '@verifier/service-kysely',
-  services: ['kyselyStandIn'],
-})
-
-// Reaching \`kysely\` is what puts the service providing it in this unit.
-export const verifierDbReach = pikkuSessionlessFunc<void, { ok: boolean }>({
-  auth: false,
-  func: async ({ kysely }) => ({ ok: kysely !== undefined }),
-})
-
-wireHTTP({ method: 'get', route: '/verifier/db-reach', func: verifierDbReach })
-`
-)
 execCli(`node ${PIKKU_BIN}`, {
   cwd: FUNCTIONS_DIR,
   stdio: 'pipe',
   timeout: 60_000,
 })
-mkdirSync(join(FUNCTIONS_DIR, '.pikku', 'db'), { recursive: true })
-writeFileSync(
-  COERCION_FILE,
-  `export const coercionMap = ${JSON.stringify(COERCION_MAP, null, 2)} as const\n`
-)
 execCli(
   `node ${PIKKU_BIN} deploy plan --provider cloudflare --result-file .deploy/cloudflare/plan-result.json`,
   {
@@ -559,31 +494,6 @@ check('a unit without the gateway does not import its wiring', () => {
 })
 
 // --- Column coercion (#1913) ---
-check('a worker entry applies the generated coercion map', () => {
-  const unit = getUnitPath(COERCION_UNIT_NAME)
-  const services = readText(join(unit, 'platform-services.gen.ts'))
-  if (
-    !/registry\.add\("kyselyStandIn\/kyselyStandIn", withKyselyCoercion\(/.test(
-      services
-    )
-  )
-    throw new Error(
-      'the service providing kysely is not wrapped with column coercion'
-    )
-  if (!services.includes(JSON.stringify(COERCION_MAP)))
-    throw new Error('platform services do not carry the coercion map')
-  // The bundle is minified, so the plugin's name is gone; its map is not.
-  const bundle = readText(join(unit, 'bundle.js'))
-  if (!/withPlugin\(/.test(bundle) || !/due_at:\s*"date"/.test(bundle))
-    throw new Error(
-      'the unit bundle does not carry the coercion plugin and map'
-    )
-})
-
-// --- Lazy addon registration (#1497) ---
-// No worker unit in this template wires an addon; verifiers/addon-treeshake
-// checks the deferred imports themselves. Here: every worker bootstrap exports
-// loadAddons() and every worker entry awaits it before building services.
 check('worker entries await loadAddons() from a lazy bootstrap', () => {
   const workers = unitDirs.filter((u) =>
     existsSync(join(getUnitPath(u), '.pikku', 'pikku-bootstrap.gen.ts'))

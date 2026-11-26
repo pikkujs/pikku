@@ -8,10 +8,7 @@
  * The generic pipeline handles: analysis, codegen, bundling, plan/apply.
  */
 
-import type {
-  EntryPlatformServices,
-  ServiceSupport,
-} from './service-support.js'
+import type { EntryPlatformServices } from './entry-lifecycle.js'
 import type { DeploymentManifest, DeploymentUnit } from './manifest.js'
 import type { RuntimeProfile } from './runtime-profile.js'
 import type { RuntimeTier } from './runtime-tier.js'
@@ -255,20 +252,13 @@ export interface ProviderAdapter {
 
   /**
    * The import specifier of the host's module exporting
-   * `createPlatformServices(env, services, { requiredServices })`. It runs last
-   * when a unit's services are built, and what it returns is merged over what the
-   * entry holds. A host swaps a vendor by returning its own service. Needs
-   * `serviceSupport`.
+   * `createPlatformServices(env, services, { requiredServices })`. It runs
+   * before the app's `createSingletonServices`, and what it returns is merged
+   * over what the entry holds. A host swaps a vendor by returning its own
+   * service. A provider that names one must import `ctx.platformServices` in the
+   * entries it generates.
    */
   platformServicesModule?(ctx: EntryGenerationContext): string | undefined
-
-  /**
-   * How the project's services apply to this unit's runtime: which keys the
-   * entry holds first, and whether it runs the server lifecycle. Omit it and
-   * the provider runs no services: the build fails if the project declares or
-   * opts in to one that runs on deploy.
-   */
-  serviceSupport?(ctx: EntryGenerationContext): ServiceSupport
 
   /**
    * Generate provider-specific config files per unit (e.g. wrangler.toml).

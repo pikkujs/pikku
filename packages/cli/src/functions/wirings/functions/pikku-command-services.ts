@@ -5,11 +5,7 @@ import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { writeLocalServices } from '../cli/write-local-services.js'
-import { writeDevPikkuServices } from '../cli/write-dev-pikku-services.js'
-import {
-  providedServiceKeys,
-  singletonServicesTypeRef,
-} from '../../../pikku-services/service-types-source.js'
+import { singletonServicesTypeRef } from '../../../utils/singleton-services-type-ref.js'
 
 export const serializeServicesMap = (
   allSingletonServices: string[],
@@ -183,19 +179,8 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
     ).import
     const wireServicesImport = `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(config.servicesFile, wireServicesType.typePath, config.packageMappings)}'`
 
-    // What the project's services provide is part of `SingletonServices` too, so
-    // the map names those keys beside the ones the declared type has.
-    const allSingletonServices = [
-      ...new Set([
-        ...visitState.serviceAggregation.allSingletonServices,
-        ...(config.addon
-          ? []
-          : providedServiceKeys(visitState, config.rootDir)),
-      ]),
-    ]
-
     const servicesCode = serializeServicesMap(
-      allSingletonServices,
+      visitState.serviceAggregation.allSingletonServices,
       visitState.serviceAggregation.allWireServices,
       visitState.serviceAggregation.requiredServices,
       config.forceRequiredServices,
@@ -210,7 +195,6 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
     await writeLocalServices(logger, config, visitState)
-    await writeDevPikkuServices(logger, config, visitState)
   },
   middleware: [
     logCommandInfoAndTime({

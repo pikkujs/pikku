@@ -70,42 +70,6 @@
    ]
   }
  },
- "optedInServices": {
-  "ext": {
-   "packageName": "@acme/addon",
-   "services": {
-    "c1": {
-     "module": "src/services/c1.ts",
-     "export": "c1",
-     "variants": {
-      "common": {
-       "needs": [],
-       "provides": [
-        "c1"
-       ]
-      }
-     }
-    }
-   }
-  },
-  "rem": {
-   "packageName": "@acme/addon",
-   "services": {
-    "c1": {
-     "module": "src/services/c1.ts",
-     "export": "c1",
-     "variants": {
-      "common": {
-       "needs": [],
-       "provides": [
-        "c1"
-       ]
-      }
-     }
-    }
-   }
-  }
- },
  "secrets": {
   "definitions": [
    {
@@ -338,10 +302,6 @@
     "contentGrants": {
      "x": "rw"
     },
-    "services": [
-     "c1",
-     "missing"
-    ],
     "dependencies": [
      {
       "alias": "mail",
@@ -388,10 +348,7 @@
     "authCredentialId": "x",
     "local": {
      "package": "@acme/addon",
-     "ui": true,
-     "services": [
-      "c1"
-     ]
+     "ui": true
     }
    }
   ]
@@ -436,11 +393,6 @@
    "level": "critical",
    "code": "PKU356",
    "message": "@acme/addon (wired as 'ext'): pikku.uses.db is '@acme/db', which has no version range. Write '@acme/db@^1.0.0': the app that wires this addon is checked against it."
-  },
-  {
-   "level": "critical",
-   "code": "PKU374",
-   "message": "wireAddon('ext') opts in to service 'missing', but @acme/addon declares no such service. It declares: c1, c2."
   },
   {
    "level": "critical",

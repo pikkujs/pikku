@@ -3,7 +3,6 @@ import { rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
-  isServicesOnlyPackage,
   serializeLoadAddons,
   splitAddonBootstrap,
 } from './lazy-addon-bootstrap.js'
@@ -27,14 +26,6 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       // and drag in the runtime deps remote consumption exists to avoid. The
       // consumer's own wireRemoteAddon() call registers the remote binding.
       if (decl.remote) continue
-      const manifest = await readAddonFile(
-        stateBeforeBootstrap.rootDir,
-        decl.file,
-        `${decl.package}/package.json`
-      )
-      if (manifest && isServicesOnlyPackage(JSON.parse(manifest).exports)) {
-        continue
-      }
       const bootstrapSpecifier = `${decl.package}/.pikku/pikku-bootstrap.gen.js`
       const split = config.lazyAddons
         ? await readAddonBootstrap(

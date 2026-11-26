@@ -33,7 +33,6 @@ import {
   spy,
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
-import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
 import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
@@ -58,9 +57,7 @@ import {
   loadUserModule,
 } from './load-user-project.js'
 import { createDevCredentialService } from './dev-credentials.js'
-import { loadDevPikkuServices } from './dev-pikku-services.js'
 import { loadPlatformServicesOption } from './platform-services-option.js'
-import { devBaselineFor } from '../wirings/cli/write-dev-pikku-services.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
@@ -633,18 +630,9 @@ export const dev = pikkuSessionlessFunc<
       }
     )
 
-    const { services: providedServices, startHooks } =
-      await loadDevPikkuServices(
-        baseLocalServices,
-        config.rootDir,
-        config.devPikkuServicesFile,
-        devBaselineFor(config, inspectorState, 'dev'),
-        process.env
-      )
-
     const localServices = await loadPlatformServicesOption(
       platformServices,
-      providedServices,
+      baseLocalServices,
       {
         rootDir: config.rootDir,
         env: process.env,
@@ -713,14 +701,12 @@ export const dev = pikkuSessionlessFunc<
       { contentSigningJWT, mcpJson, mcpSurfaces }
     )
 
-    const lifecycle = composeServerLifecycle(await loadLifecycle(), {
-      start: startHooks,
-    })
+    const lifecycle = await loadLifecycle()
 
     await pikkuServer.init()
-    await lifecycle.beforeStart?.(resolvedServices)
+    await lifecycle?.beforeStart?.(resolvedServices)
     await pikkuServer.start()
-    await lifecycle.afterStart?.(resolvedServices)
+    await lifecycle?.afterStart?.(resolvedServices)
     resolvedServices.workflowService?.startRecovery?.(
       userConfig.workflow?.recovery
     )
@@ -773,11 +759,11 @@ export const dev = pikkuSessionlessFunc<
       void runningFrontends?.stop()
       try {
         resolvedServices.workflowService?.stopRecovery?.()
-        await lifecycle.beforeStop?.(resolvedServices)
+        await lifecycle?.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await watcher?.close()
         await pikkuServer.stop()
-        await lifecycle.afterStop?.(resolvedServices)
+        await lifecycle?.afterStop?.(resolvedServices)
       } catch (error) {
         logger.error(
           `Error stopping dev server: ${error instanceof Error ? error.message : String(error)}`

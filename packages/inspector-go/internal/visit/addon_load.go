@@ -67,55 +67,6 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
-// recordOptedInServices resolves wireAddon({ services }) against what the
-// addon declared. A name it does not declare is an error rather than a skip:
-// the project asked for a service and would otherwise build without it.
-func (s *Context) recordOptedInServices(ns string, decl *addonDecl, req addonResolver) {
-	registered := newOObject()
-	via := "wireAddon('" + ns + "')"
-	if path := resolveAddonMeta(req, decl.pkg, "services/pikku-services-meta"); path != "" {
-		meta, err := readJSONFile(path)
-		if err != nil {
-			s.Log.Critical(diag.AddonServiceUnknown, fmt.Sprintf(
-				"%s opts in to services, but the services manifest of %s could not be read: %s", via, decl.pkg, err.Error()))
-			return
-		}
-		if meta.get("services").isObject() {
-			registered = meta.get("services")
-		}
-	}
-	selected := newOObject()
-	for _, name := range decl.services {
-		if !registered.has(name) {
-			known := []string{}
-			registered.obj.Each(func(k string, _ *ojson) { known = append(known, k) })
-			hint := "It declares none; add a pikkuService export to the package and run pikku all in it."
-			if len(known) > 0 {
-				hint = "It declares: " + strings.Join(known, ", ") + "."
-			}
-			s.Log.Critical(diag.AddonServiceUnknown, fmt.Sprintf(
-				"%s opts in to service '%s', but %s declares no such service. %s", via, name, decl.pkg, hint))
-			continue
-		}
-		selected.set(name, registered.get(name))
-	}
-	if selected.obj.Len() == 0 {
-		return
-	}
-	entry := newOObject()
-	entry.set("packageName", ojsonString(decl.pkg))
-	entry.set("services", selected)
-
-	all := newOObject()
-	if len(s.State.OptedInServices) > 0 && string(s.State.OptedInServices) != "null" {
-		if existing, err := parseOJSON(s.State.OptedInServices); err == nil && existing.isObject() {
-			all = existing
-		}
-	}
-	all.set(ns, entry)
-	s.State.OptedInServices = all.raw()
-}
-
 // namespaceAddonWebhookSources names an addon's webhook sources after the
 // namespace it is wired under.
 func namespaceAddonWebhookSources(sources *ojson, namespace string) *state.Record[*ojson] {
@@ -293,14 +244,11 @@ func (s *Context) LoadAddonFunctionsMeta() {
 	}
 }
 
-// loadRemoteAddonLocal reads the screens and services a wireRemoteAddon
-// takes from its local package, under the remote addon's name.
+// loadRemoteAddonLocal reads the screens a wireRemoteAddon takes from its
+// local package, under the remote addon's name.
 func (s *Context) loadRemoteAddonLocal(ns string, decl *addonDecl) {
-	local := &addonDecl{pkg: decl.local.pkg, file: decl.file, ui: decl.local.ui, services: decl.local.services}
+	local := &addonDecl{pkg: decl.local.pkg, file: decl.file, ui: decl.local.ui}
 	req := addonResolver(addonResolutionDirs(s.RootDir, decl.file))
-	if len(local.services) > 0 {
-		s.recordOptedInServices(ns, local, req)
-	}
 	if local.ui {
 		if err := s.loadAddonStudio(ns, local, req); err != nil {
 			s.Log.Warn(fmt.Sprintf("Failed to load addon function metadata for '%s' (%s): %s", ns, local.pkg, err.Error()))
@@ -344,9 +292,6 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	req := addonResolver(dirs)
 
 	s.recordDeclaredUses(ns, decl, dirs)
-	if len(decl.services) > 0 {
-		s.recordOptedInServices(ns, decl, req)
-	}
 
 	if decl.ui {
 		if err := s.loadAddonStudio(ns, decl, req); err != nil {

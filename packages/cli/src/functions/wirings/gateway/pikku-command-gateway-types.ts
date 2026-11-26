@@ -1,6 +1,6 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { writeFileInDir } from '../../../utils/file-writer.js'
-import { singletonServicesTypeRef } from '../../../pikku-services/service-types-source.js'
+import { singletonServicesTypeRef } from '../../../utils/singleton-services-type-ref.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { serializeGatewayTypes } from './serialize-gateway-types.js'
 

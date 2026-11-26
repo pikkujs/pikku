@@ -24,13 +24,8 @@ import type {
   ProviderAdapter,
   RuntimeProfile,
   RuntimeTier,
-  ServiceSupport,
 } from '@pikku/deploy'
-import {
-  composedLifecycleLines,
-  entryLifecycleVariable,
-  unitWiresRemoteJobInbox,
-} from '@pikku/deploy'
+import { entryLifecycleVariable, unitWiresRemoteJobInbox } from '@pikku/deploy'
 
 export type PlatformImports = {
   cfImports: string[]
@@ -174,37 +169,7 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
     this.compatDate = options.compatDate ?? DEFAULT_COMPAT_DATE
   }
 
-  /**
-   * The keys the entry holds when the services run: what the Worker (or the
-   * Node container) builds before it calls them. A container has no bindings,
-   * so it holds only the logger and schema, and it runs the server lifecycle.
-   */
-  serviceSupport(ctx: EntryGenerationContext): ServiceSupport {
-    const container = ctx.unit.target === 'server'
-    const platform = this.resolvePlatformImports(ctx.unit)
-    const gateway = ['mcp', 'agent', 'workflow'].includes(ctx.unit.role)
-    return {
-      baseline: [
-        'logger',
-        'schema',
-        ...(container
-          ? []
-          : [
-              ...(platform.needsQueue ? ['queueService'] : []),
-              ...(platform.needsWorkflow ? ['workflowService'] : []),
-              ...(platform.needsAgent
-                ? ['agentStorage', 'agentRunService', 'agentRunState']
-                : []),
-              ...(gateway || ctx.unit.dependsOn.length > 0
-                ? ['deploymentService']
-                : []),
-            ]),
-      ],
-      runsServerLifecycle: container,
-    }
-  }
-
-  /** The import of the generated file holding the unit's services, if any. */
+  /** The import of the file that runs the host's platform services, if any. */
   private platformServicesImports(ctx: EntryGenerationContext): string[] {
     return ctx.platformServices
       ? [
@@ -214,9 +179,8 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
   }
 
   /**
-   * Runs the services against the bag the entry has built so far, which
-   * they read as `runtime`, and merges what they provide over it, so a service
-   * may replace a baseline service.
+   * Runs the host's platform services over the bag the entry has built so far
+   * and merges what they return over it, so the host may replace a service.
    */
   private platformServicesLines(ctx: EntryGenerationContext): string[] {
     return ctx.platformServices
@@ -302,18 +266,15 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
    * container that relies on a platform-provided service (kysely from
    * `DATABASE_URL`, secrets from `PIKKU_SECRET_KEK`, …) 500s on first access.
    *
-   * This override runs the SAME service-driven `createPlatformServices`
-   * the serverless workers use, but sources bindings from `process.env`
-   * instead of a CF `env` object, and merges the result into
-   * `createSingletonServices` the same way `setupServices` does on the worker.
-   * The CF-runtime service blocks (queue/workflow/AI) are intentionally
-   * omitted — those are Worker bindings a Node container never has; only the
-   * env-portable services run.
+   * This override sources bindings from `process.env` instead of a CF `env`
+   * object, runs the host's platform services over them, and passes the result
+   * into `createSingletonServices` the same way `setupServices` does on the
+   * worker. The CF-runtime service blocks (queue/workflow/AI) are intentionally
+   * omitted: those are Worker bindings a Node container never has.
    */
   generateServerEntrySource(ctx: EntryGenerationContext): string {
     const platform = this.resolvePlatformImports(ctx.unit)
     const lifecycle = entryLifecycleVariable(ctx)
-    const composed = composedLifecycleLines(ctx)
 
     const lines: string[] = [
       `// Generated server (container) entry for "${ctx.unit.name}" (${ctx.unit.role})`,
@@ -327,14 +288,11 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
             `import { ${ctx.lifecycle.variable} as __pikkuLifecycle } from '${ctx.lifecycle.importPath}'`,
           ]
         : []),
-      ...composed.imports,
       ctx.configImport,
       ctx.servicesImport,
       ctx.singletonServicesImport,
       `import '${ctx.bootstrapPath}'`,
       ``,
-      ...composed.declaration,
-      ...(composed.declaration.length > 0 ? [``] : []),
       ...this.generateServerPlatformServicesBlock(ctx, platform),
       ``,
       `const PORT = Number(process.env.PORT ?? 8080)`,

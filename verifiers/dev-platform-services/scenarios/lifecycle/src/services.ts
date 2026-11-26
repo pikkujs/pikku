@@ -11,17 +11,14 @@ export const createConfig = pikkuConfig(async () => {
   return {}
 })
 
-// Naming a service in the second parameter is what makes this project reach
-// it: a service nothing reaches is not part of the dev build.
+// `hostTag` is only there when the host passed a platform services module.
 export const createSingletonServices = pikkuServices(
-  async (
-    config,
-    { hookA, hookB, hookC }
-  ): Promise<RequiredSingletonServices> => {
+  async (config, existingServices): Promise<RequiredSingletonServices> => {
     const variables = new LocalVariablesService()
     const secrets = new LocalSecretService(variables)
     const logger = new ConsoleLogger()
     const schema = new CFWorkerSchemaService(logger)
+    const { hostTag } = (existingServices ?? {}) as { hostTag?: unknown }
 
     return {
       config,
@@ -29,11 +26,7 @@ export const createSingletonServices = pikkuServices(
       logger,
       variables,
       schema,
-      // In build order: teardown runs in reverse of the order these keys are
-      // here, so the chain stops hook-c, hook-b, hook-a.
-      hookA,
-      hookB,
-      hookC,
+      ...(hostTag ? { hostTag } : {}),
     } as RequiredSingletonServices
   }
 )

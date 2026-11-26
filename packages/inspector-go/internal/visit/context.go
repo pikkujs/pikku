@@ -41,9 +41,6 @@ type Options struct {
 	ClassificationCheck bool
 	Types               *Types
 	IsAddon             bool
-	// DeferServiceProvides skips PKU372 for a pikkuService whose provides
-	// cannot be read yet.
-	DeferServiceProvides bool
 }
 
 // Context is what every visitor receives: the TS visitors' (logger, checker,

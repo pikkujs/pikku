@@ -28,8 +28,6 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 	var authCredentialId, authSecretId *string
 	hasAuth := false
 	var local *addonLocal
-	var localServices []string
-	haveLocalServices := false
 	for _, p := range args[0].Properties() {
 		if !ast.IsPropertyAssignment(p) || !ast.IsIdentifier(p.Name()) {
 			continue
@@ -59,14 +57,6 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 				case "ui":
 					if li.Kind == ast.KindTrueKeyword {
 						l.ui = true
-					}
-				case "services":
-					if names, ok := parseStringArray(li); ok {
-						l.services = names
-						localServices = names
-						haveLocalServices = true
-					} else {
-						s.Log.Critical(diag.AddonServicesNotStatic, "wireRemoteAddon's local.services must be an array of string literals, got: "+tsutil.NodeText(li))
 					}
 				}
 			}
@@ -128,9 +118,6 @@ func (s *Context) addWireRemoteAddon(node *ast.Node) {
 		lo.set("package", local.pkg)
 		if local.ui {
 			lo.set("ui", true)
-		}
-		if haveLocalServices {
-			lo.set("services", localServices)
 		}
 		o.set("local", &lo.rec)
 	}

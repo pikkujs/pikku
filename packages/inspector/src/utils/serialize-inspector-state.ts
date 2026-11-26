@@ -174,7 +174,7 @@ export interface SerializableInspectorState {
           file?: string
           rpcEndpoint?: string
           remote?: boolean
-          local?: { package: string; ui?: boolean; services?: string[] }
+          local?: { package: string; ui?: boolean }
           hasAuth?: boolean
           authCredentialId?: string
           authSecretId?: string
@@ -188,7 +188,6 @@ export interface SerializableInspectorState {
           contentBucket?: string
           contentGrants?: Record<string, string>
           globalContent?: string
-          services?: string[]
         },
       ]
     >
@@ -319,8 +318,6 @@ export interface SerializableInspectorState {
   harness?: InspectorState['harness']
   studio?: InspectorState['studio']
   addonStudio?: InspectorState['addonStudio']
-  pikkuServices?: InspectorState['pikkuServices']
-  optedInServices?: InspectorState['optedInServices']
   projectServicesRead?: InspectorState['projectServicesRead']
   exportedContracts: InspectorState['exportedContracts']
 }
@@ -566,8 +563,6 @@ export function serializeInspectorState(
     harness: state.harness,
     studio: state.studio,
     addonStudio: state.addonStudio,
-    pikkuServices: state.pikkuServices,
-    optedInServices: state.optedInServices,
     projectServicesRead: state.projectServicesRead,
     exportedContracts: state.exportedContracts,
   }
@@ -816,8 +811,6 @@ export function deserializeInspectorState(
     ...(data.harness ? { harness: data.harness } : {}),
     studio: data.studio,
     addonStudio: data.addonStudio,
-    pikkuServices: data.pikkuServices,
-    optedInServices: data.optedInServices,
     projectServicesRead: data.projectServicesRead,
     exportedContracts: data.exportedContracts || {
       http: {},

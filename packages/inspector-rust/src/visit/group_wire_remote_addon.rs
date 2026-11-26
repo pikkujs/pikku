@@ -43,8 +43,6 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
     let (mut auth_credential_id, mut auth_secret_id): (Option<String>, Option<String>) = (None, None);
     let mut has_auth = false;
     let mut local: Option<Local> = None;
-    let mut local_services: Vec<String> = Vec::new();
-    let mut have_local_services = false;
     for p in first.properties() {
         if !is_property_assignment(*p) {
             continue;
@@ -79,19 +77,6 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
                                 l.ui = true;
                             }
                         }
-                        "services" => match parse_string_array(li) {
-                            Some(names) => {
-                                local_services = names;
-                                have_local_services = true;
-                            }
-                            None => ctx.log.critical(
-                                codes::ADDON_SERVICES_NOT_STATIC,
-                                format!(
-                                    "wireRemoteAddon's local.services must be an array of string literals, got: {}",
-                                    node_text(li)
-                                ),
-                            ),
-                        },
                         _ => {}
                     }
                 }
@@ -168,9 +153,6 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
         lo.set("package", s(&l.pkg));
         if l.ui {
             lo.set("ui", Some(Value::Bool(true)));
-        }
-        if have_local_services {
-            lo.set("services", Some(serde_json::json!(local_services)));
         }
         o.set("local", Some(lo.value()));
     }

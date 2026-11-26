@@ -219,7 +219,7 @@ const MOVED_TOP_LEVEL: Record<
   dev: (value) => {
     const entry = (value ?? {}) as Record<string, unknown>
     if ('contributors' in entry) {
-      return 'dev.contributors is no longer read. Declare each service with pikkuService and opt in to an addon service with wireAddon({ services: [...] }); see docs/MIGRATION.md'
+      return "dev.contributors is no longer read. Create the service in pikkuServices, or return it from the host's platform services module; see docs/MIGRATION.md"
     }
     return 'has moved to backends.<name>.dev, which takes `port` only (`dev.db` and `dev.contributors` are gone). Delete it and set backends.<name>.dev.port'
   },

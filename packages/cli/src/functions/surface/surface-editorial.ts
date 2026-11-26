@@ -74,12 +74,6 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'The events a project can measure, declared by name so the generated ingest knows what to accept. Where they go is an AnalyticsService on singleton services; what a function records into is the analytics service on the invocation.',
   },
-  service: {
-    step: 'enhance it',
-    skill: null,
-    summary:
-      "The project's singleton services, declared with `pikkuService`: a factory that destructures what it needs and returns what it provides, the same on every target or per `dev` and `deploy` variant. This leaf's `SingletonServices` is the project's own type plus everything those services provide. An addon declares its services with core's untyped helper instead, and a project opts in to them by name with `wireAddon`.",
-  },
   utils: {
     step: 'enhance it',
     skill: null,

@@ -22,7 +22,6 @@ export const leafEntries = [
   ['function', ['functionTypesFile']],
   ['middleware', ['middlewareTypesFile']],
   ['setup', ['setupTypesFile', 'addonSetupTypesFile']],
-  ['service', ['pikkuServiceTypesFile']],
   ['error', ['errorTypesFile']],
   ['http', ['httpTypesFile']],
   ['channel', ['channelsTypesFile']],
@@ -56,12 +55,7 @@ export const leafEntries = [
  * still has the files an earlier run wrote, which would otherwise keep the leaf
  * looking alive to `existsSync` forever.
  */
-const ADDON_RETIRED_LEAVES = new Set([
-  'queue',
-  'scheduler',
-  'gateway',
-  'service',
-])
+const ADDON_RETIRED_LEAVES = new Set(['queue', 'scheduler', 'gateway'])
 
 export const pikkuLeafIndexes = pikkuSessionlessFunc<void, void>({
   func: async ({ logger, config }) => {
