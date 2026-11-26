@@ -14,7 +14,7 @@ export const serializeCmsRuntime = ({
   NotFoundError,
   UnprocessableContentError,
 } from '${errorLeaf}'
-import { sql } from 'kysely'
+import { SqliteAdapter, sql } from 'kysely'
 import type { AuditLog, ContentService } from '@pikku/core/services'
 import type {
   CmsCollectionDescription,
@@ -312,6 +312,21 @@ export const cmsConditions = (
       }
     })
   })
+
+/**
+ * A column as a filter or a sort compares it. SQLite holds a time as text, and
+ * a column's default writes it in another form than the CMS does, so both are
+ * compared in the CMS's form there. Other engines compare times as times.
+ */
+export const cmsComparable = (
+  db: { getExecutor(): { adapter: unknown } },
+  column: string,
+  kinds: Record<string, CmsValueKind>
+) =>
+  kinds[column] === 'datetime' &&
+  db.getExecutor().adapter instanceof SqliteAdapter
+    ? sql\`strftime('%Y-%m-%dT%H:%M:%fZ', \${sql.ref(column)})\`
+    : sql.ref(column)
 
 export const CMS_SQL_OPERATORS = {
   equals: '=',

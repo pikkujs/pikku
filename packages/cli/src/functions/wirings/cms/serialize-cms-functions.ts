@@ -98,6 +98,9 @@ const constants = (collection: CmsModelCollection): string => {
     ...(list.filter.length
       ? [`const ${prefix}_FILTER_KINDS = ${kinds(collection, list.filter)}`]
       : []),
+    ...(list.sort.length
+      ? [`const ${prefix}_SORT_KINDS = ${kinds(collection, list.sort)}`]
+      : []),
   ].join('\n')
 }
 
@@ -111,7 +114,11 @@ const listSource = (collection: CmsModelCollection, alias: Alias): string => {
     ...(list.filter.length
       ? [
           `    for (const { column, operator, value } of cmsConditions(input.filter, ${prefix}_FILTER_KINDS)) {
-      query = query.where(sql.ref(column), CMS_SQL_OPERATORS[operator], value)
+      query = query.where(
+        cmsComparable(kysely, column, ${prefix}_FILTER_KINDS),
+        CMS_SQL_OPERATORS[operator],
+        value
+      )
     }`,
         ]
       : []),
@@ -135,7 +142,10 @@ ${list.search
     ...(list.sort.length
       ? [
           `    for (const { column, direction } of input.sort ?? []) {
-      query = query.orderBy(sql.ref(column), direction)
+      query = query.orderBy(
+        cmsComparable(kysely, column, ${prefix}_SORT_KINDS),
+        direction
+      )
     }`,
         ]
       : []),
@@ -718,6 +728,7 @@ export const serializeCmsFunctions = (
         'cmsAudit',
         'cmsAuditAction',
         'cmsChanged',
+        'cmsComparable',
         'cmsConditions',
         'cmsContent',
         'cmsDatetime',

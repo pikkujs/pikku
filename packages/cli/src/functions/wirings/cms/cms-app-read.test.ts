@@ -21,6 +21,158 @@ const GRANTS = {
 }
 const as = (user: keyof typeof GRANTS): Caller => ({ user })
 
+/**
+ * Rows in the form a column default stores a time, which on SQLite is not the
+ * form the CMS writes. All on one day, where the two differ as text.
+ */
+const TIMED_SEED = `
+INSERT INTO offering (id, slug, title, starts_at, updated_at) VALUES
+  ('z-seed-7', 'seed-7', 'Timed', '2026-02-01 07:00:00', '2026-01-01T00:00:00.000Z'),
+  ('z-seed-9', 'seed-9', 'Timed', '2026-02-01 09:00:00', '2026-01-01T00:00:00.000Z');
+`
+
+for (const engine of ['sqlite', 'postgres'] as Engine[]) {
+  describe(
+    `generated CMS date filters and sorts on ${engine}`,
+    { skip: !cliIsBuilt() },
+    () => {
+      let app: CmsTestApp
+
+      before(async () => {
+        app = await CmsTestApp.create(engine)
+        const tables = await app.read('db/tables.ts')
+        const column = "startsAt: { type: 'timestamp' },"
+        assert.ok(tables.includes(column))
+        await app.write(
+          'db/tables.ts',
+          tables.replace(
+            column,
+            "startsAt: { type: 'timestamp', default: { now: true } },"
+          )
+        )
+        const seed = `db/${engine}-dev-seed.sql`
+        await app.write(seed, (await app.read(seed)) + TIMED_SEED)
+        await app.build()
+        await app.grant(GRANTS)
+        await app.start()
+
+        for (const [slug, startsAt] of [
+          ['cms-8', '2026-02-01T08:00:00Z'],
+          ['cms-9', '2026-02-01T11:00:00+02:00'],
+          ['cms-10', '2026-02-01T10:00'],
+        ]) {
+          const made = await app.rpc(
+            'createCmsOffering',
+            { values: { slug, title: 'Timed', startsAt } },
+            as('super')
+          )
+          assert.equal(made.status, 200, made.text)
+        }
+      })
+      after(async () => {
+        await app?.remove()
+      })
+
+      const slugs = async (data: object) => {
+        const answer = await app.rpc('listCmsOffering', data, as('super'))
+        assert.equal(answer.status, 200, answer.text)
+        const found: string[] = []
+        for (const { id } of answer.body.rows) {
+          const record = await app.rpc('getCmsOffering', { id }, as('super'))
+          found.push(record.body.row.slug)
+        }
+        return found
+      }
+      const timed = { title: { equals: 'Timed' } }
+      const where = async (startsAt: object) =>
+        (await slugs({ filter: [timed, { startsAt }] })).sort()
+      const at = (hour: string) => `2026-02-01T${hour}:00:00Z`
+
+      test('a range holds rows stored in either form', async () => {
+        const expected: [object, string[]][] = [
+          [{ gte: '2026-02-01T08:00' }, ['cms-10', 'cms-8', 'cms-9', 'seed-9']],
+          [{ lte: '2026-02-01T08:00' }, ['cms-8', 'seed-7']],
+          [{ gt: at('09') }, ['cms-10']],
+          [{ lt: at('09') }, ['cms-8', 'seed-7']],
+          [{ gte: at('07'), lt: at('08') }, ['seed-7']],
+          [{ gte: '2026-02-02' }, []],
+          [{ lt: '2026-02-01' }, []],
+        ]
+        for (const [condition, wanted] of expected) {
+          assert.deepEqual(
+            await where(condition),
+            wanted,
+            JSON.stringify(condition)
+          )
+        }
+      })
+
+      test('equals and in match rows stored in either form', async () => {
+        assert.deepEqual(await where({ equals: at('09') }), ['cms-9', 'seed-9'])
+        assert.deepEqual(await where({ equals: at('08') }), ['cms-8'])
+        assert.deepEqual(await where({ equals: '2026-02-01 07:00' }), [
+          'seed-7',
+        ])
+        assert.deepEqual(await where({ in: [at('07'), at('08'), at('09')] }), [
+          'cms-8',
+          'cms-9',
+          'seed-7',
+          'seed-9',
+        ])
+      })
+
+      test('a sort is by the time, whatever form a row is stored in', async () => {
+        const sorted = (direction: 'asc' | 'desc') =>
+          slugs({
+            filter: [timed],
+            sort: [{ column: 'startsAt', direction }],
+          })
+        // Equal times keep the order of their keys: a made key before 'z-'.
+        assert.deepEqual(await sorted('asc'), [
+          'seed-7',
+          'cms-8',
+          'cms-9',
+          'seed-9',
+          'cms-10',
+        ])
+        assert.deepEqual(await sorted('desc'), [
+          'cms-10',
+          'cms-9',
+          'seed-9',
+          'cms-8',
+          'seed-7',
+        ])
+      })
+
+      test('a time the database filled in is found around it', async () => {
+        const made = await app.rpc(
+          'createCmsOffering',
+          { values: { slug: 'by-default', title: 'Filled' } },
+          as('super')
+        )
+        assert.equal(made.status, 200, made.text)
+        const filled = Date.parse(made.body.row.startsAt)
+        // Postgres `now()` in a column without a time zone is the database
+        // session's own clock, which is UTC only when the session is.
+        if (engine === 'sqlite') {
+          assert.ok(Math.abs(Date.now() - filled) < 60_000, made.text)
+        }
+        const around = (offset: number) =>
+          new Date(filled + offset).toISOString()
+        const found = (startsAt: object) =>
+          slugs({ filter: [{ title: { equals: 'Filled' } }, { startsAt }] })
+        assert.deepEqual(await found({ gte: around(-1000) }), ['by-default'])
+        assert.deepEqual(await found({ lte: around(1000) }), ['by-default'])
+        assert.deepEqual(await found({ gt: around(1000) }), [])
+        // SQLite fills whole seconds, so the time a record answers is exact.
+        if (engine === 'sqlite') {
+          assert.deepEqual(await found({ equals: around(0) }), ['by-default'])
+        }
+      })
+    }
+  )
+}
+
 for (const engine of ['sqlite', 'postgres'] as Engine[]) {
   describe(`generated CMS reads on ${engine}`, { skip: !cliIsBuilt() }, () => {
     let app: CmsTestApp
