@@ -63,6 +63,31 @@ export const pikkuServerLifecycle = <
   lifecycle: ServerLifecycle<SS>
 ): ServerLifecycle<SS> => lifecycle
 
+/** What a host's platform services are told about what they are built for. */
+export interface PlatformServicesContext {
+  /** The services the deployed unit, or the local server, reaches. */
+  requiredServices: readonly string[]
+}
+
+/**
+ * Types the `createPlatformServices` of a host's platform services module: the
+ * one a deploy provider names with `platformServicesModule`, or the host passes
+ * as `--platform-services`. It receives the environment and the services built so
+ * far, and returns only the services it adds or replaces.
+ *
+ * @example snippet: platformServices
+ */
+export const pikkuPlatformServices = <
+  Services extends Record<string, any> = CoreSingletonServices,
+  Env = Record<string, string | undefined>,
+>(
+  create: (
+    env: Env,
+    services: Partial<Services>,
+    context: PlatformServicesContext
+  ) => Partial<Services> | Promise<Partial<Services>>
+) => create
+
 /**
  * Calls `run` once when the process receives one of `signals` (default
  * `SIGINT` and `SIGTERM`); later signals are ignored while it runs. Does

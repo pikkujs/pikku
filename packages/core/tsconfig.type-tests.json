@@ -16,6 +16,7 @@
     "src/wirings/addon/define-plugin.types.test.ts",
     "src/wirings/agent/agent-middleware.types.test.ts",
     "src/wirings/harness/harness.test.ts",
-    "src/wirings/webhook/define-outgoing-webhook.test.ts"
+    "src/wirings/webhook/define-outgoing-webhook.test.ts",
+    "src/platform-services.types.test.ts"
   ]
 }

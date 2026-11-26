@@ -146,14 +146,20 @@ interface ServiceSupport {
 A host (a hosting platform, a local tool) can supply platform services from one ordinary module:
 
 ```ts
-export const createPlatformServices = async (
-  env,
-  services, // what the entry holds so far
-  { requiredServices } // the services this unit, or pikku dev, reaches
-) => ({
-  queueService: new HostQueueService(env),
-})
+import { pikkuPlatformServices } from '@pikku/core/lifecycle'
+
+export const createPlatformServices = pikkuPlatformServices(
+  async (
+    env,
+    services, // what the entry holds so far
+    { requiredServices } // the services this unit, or pikku dev, reaches
+  ) => ({
+    queueService: new HostQueueService(env),
+  })
+)
 ```
+
+The types default to Pikku's own services and a string `env`. Pass your own as `pikkuPlatformServices<MyServices, MyEnv>`, for example to read Cloudflare bindings.
 
 - It runs last, and what it returns replaces what the entry holds. Return only what you provide.
 - The app receives the result as `existingServices`. If the app returns its own service for one of those keys, the app's wins and `pikkuServices` logs a warning.
