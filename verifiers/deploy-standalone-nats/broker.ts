@@ -6,10 +6,22 @@
  */
 import { spawn, type ChildProcess } from 'node:child_process'
 import { RetentionPolicy } from '@nats-io/jetstream'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { createServer } from 'node:net'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
+const SCRATCH = join(import.meta.dirname, '..', '..', '.tmp')
+
+export const scratchDir = (prefix: string): string => {
+  mkdirSync(SCRATCH, { recursive: true })
+  return mkdtempSync(join(SCRATCH, prefix))
+}
 
 /**
  * One stage of one project: a broker user and the stream it owns. The broker
@@ -131,7 +143,7 @@ export const startBroker = async (
   admin: { user: string; password: string },
   stages: Stage[]
 ): Promise<Broker> => {
-  const dir = mkdtempSync(join(tmpdir(), 'pikku-nats-verifier-'))
+  const dir = scratchDir('pikku-nats-verifier-')
   const port = await freePort()
   const monitorPort = await freePort()
   const confPath = join(dir, 'nats.conf')
