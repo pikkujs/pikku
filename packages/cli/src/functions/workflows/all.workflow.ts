@@ -37,6 +37,7 @@ import {
 } from '../../utils/remote-addon-sync.js'
 import { writeAddonDeclaration } from '../db/addon-declarations.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
+import { CMS_FILE } from '../wirings/cms/load-cms-declaration.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -230,6 +231,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
         'db/schema.gen.ts could not be generated from the migrations; wrote an empty DB until `pikku db migrate` runs'
       )
     }
+
+    const hasCms = !config.addon && existsSync(join(config.rootDir, CMS_FILE))
+    await workflow.do('CMS', 'pikkuCms', null)
 
     const allImports: string[] = []
     let functionTypesFileExists = true
@@ -433,6 +437,10 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
 
     await workflow.do('Function types split', 'pikkuFunctionTypesSplit', {})
     await workflow.do('Leaf subpath entries', 'pikkuLeafIndexes', null)
+
+    if (hasCms) {
+      await workflow.do('CMS checks', 'pikkuCmsChecks', null)
+    }
 
     if (!functionTypesFileExists || missingScaffolds.length > 0) {
       logger.debug(

@@ -8,6 +8,8 @@ import {
   APP_SCOPE_ROOT,
   buildAppScopeDefinition,
 } from '@pikku/core/virtual-user'
+import { assertCmsScopeRoot } from '../cms/assert-cms-scope-root.js'
+import { cmsFiles } from '../cms/cms-project.js'
 import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { InspectorState } from '@pikku/inspector'
@@ -91,6 +93,7 @@ export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     const state = await getInspectorState(false, bootstrap, bootstrap)
 
     const definitions = projectScopeDefinitions(state, config)
+    assertCmsScopeRoot(state.scopes.definitions, cmsFiles(config).scopes)
 
     const content = serializeScopesTypes({
       definitions,

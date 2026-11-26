@@ -28,6 +28,17 @@ const wiredAddonScopeRoots = () => {
   return roots
 }
 
+/**
+ * `cms` when the project has CMS collections: only the functions `pikku all`
+ * generates from `db/cms.ts` require a scope under that root.
+ */
+const cmsScopeRoots = () =>
+  Object.values(pikkuState(null, 'function', 'meta')).some(({ scopes }) =>
+    scopes?.some((scope) => scope.startsWith('cms:'))
+  )
+    ? ['cms']
+    : []
+
 const matches = (presented: string, token: string) => {
   const a = Buffer.from(presented)
   const b = Buffer.from(token)
@@ -47,7 +58,11 @@ export const studioSession = (token: string) =>
         setInitialSession({
           ...STUDIO_SESSION,
           scopes: [
-            ...new Set([...STUDIO_SESSION.scopes, ...wiredAddonScopeRoots()]),
+            ...new Set([
+              ...STUDIO_SESSION.scopes,
+              ...wiredAddonScopeRoots(),
+              ...cmsScopeRoots(),
+            ]),
           ],
         })
       }

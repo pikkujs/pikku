@@ -1,3 +1,4 @@
+import { runCmsRoleChecks } from './cms-role-checks.js'
 import { existsSync, readFileSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
@@ -250,6 +251,12 @@ export const CHECKS: ValidateCheck[] = [
     // An addon has no scaffold to duplicate.
     applies: async ({ dir }) => isAppProject(dir),
     run: async ({ dir }) => runScaffoldDuplicateChecks(dir),
+  },
+  {
+    id: 'cms-system-role',
+    subject: 'CMS grant',
+    applies: async ({ dir }) => existsSync(join(dir, 'db', 'cms.ts')),
+    run: async ({ dir }) => runCmsRoleChecks(dir),
   },
   {
     id: 'oxlint-setup',

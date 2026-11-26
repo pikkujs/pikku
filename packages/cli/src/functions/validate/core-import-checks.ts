@@ -9,7 +9,7 @@ import type {
 } from './virtual-user-checks.js'
 
 /**
- * The one core subpath an app is meant to name.
+ * The core subpaths an app is meant to name.
  *
  * It holds concrete service implementations and the interfaces they satisfy —
  * `LocalSecretService`, `ConsoleLogger`, `JWTService`, `EmailService`. Picking
@@ -17,8 +17,11 @@ import type {
  * through a generated barrel would hide that it was a choice. Bootstrap code is
  * already outside the `#pikku` contract; it is where `process.env` is allowed
  * too.
+ *
+ * `db/cms.ts` names `@pikku/core/cms`: the CLI loads that file to generate from
+ * it, before there is a leaf to name.
  */
-const ALLOWED_SUBPATHS = ['@pikku/core/services']
+const ALLOWED_SUBPATHS = ['@pikku/core/services', '@pikku/core/cms']
 
 const isAllowed = (specifier: string) =>
   ALLOWED_SUBPATHS.some(
