@@ -9,7 +9,7 @@ export const jobsQueue = pikkuService({
   dev: ({ logger }: { logger: { info: (message: string) => void } }) => ({
     queue: { enqueue: (name: string) => logger.info(`enqueue ${name}`) },
   }),
-  deploy: (_services: object, env) => ({
+  deploy: ({}: object, env) => ({
     queue: {
       enqueue: (name: string) => {
         void fetch(`${env.JOBS_URL}/${name}`, { method: 'POST' })
