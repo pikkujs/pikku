@@ -4,7 +4,11 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { spawn } from 'node:child_process'
-import { applyPikkuSchemas, leaseSchema, workflowSchema } from '@pikku/addon-kysely'
+import {
+  applyPikkuSchemas,
+  leaseSchema,
+  workflowSchema,
+} from '@pikku/addon-kysely'
 import { loadSqliteRuntime } from '@pikku/migrator-sql/sqlite'
 import { createSqliteKysely } from '../../db/sqlite/sqlite-kysely.js'
 import {
