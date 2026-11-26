@@ -1,6 +1,11 @@
 import { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { isExpectedError } from '../../errors/error-handler.js'
-import { isStepLeaseLive } from './workflow-constants.js'
+import {
+  WORKFLOW_TERMINAL_STATES,
+  isStepLeaseLive,
+} from './workflow-constants.js'
+import { APPROVAL_STEP_RPC_NAME } from './workflow-approval.js'
+import type { PendingApproval } from './workflow-recovery.js'
 import { WorkflowStepSupersededError } from './workflow-errors.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
@@ -359,7 +364,7 @@ export class InMemoryWorkflowService
   ): Promise<Array<{ runId: string; stepId: string }>> {
     const undispatched: Array<{ runId: string; stepId: string }> = []
     for (const [runId, run] of this.runs) {
-      if (run.status !== 'running') continue
+      if (run.status !== 'running' && run.status !== 'compensating') continue
       for (const step of this.stepHistory.get(runId) ?? []) {
         if (step.status !== 'pending') continue
         if (step.updatedAt >= before) continue
@@ -370,20 +375,46 @@ export class InMemoryWorkflowService
     return undispatched
   }
 
+  private isRunningStepHeld({ childRunId, leaseExpiresAt }: StepState) {
+    if (childRunId === undefined) return isStepLeaseLive(leaseExpiresAt)
+    if (leaseExpiresAt != null && isStepLeaseLive(leaseExpiresAt)) return true
+    const child = this.runs.get(childRunId)?.status
+    return child === undefined || !WORKFLOW_TERMINAL_STATES.has(child)
+  }
+
+  protected override async findPendingApprovals(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<PendingApproval[]> {
+    const pending: PendingApproval[] = []
+    for (const [runId, run] of this.runs) {
+      if (run.status !== 'suspended' || run.updatedAt >= before) continue
+      for (const [key, step] of this.steps) {
+        if (!key.startsWith(`${runId}:`)) continue
+        if (step.status !== 'running') continue
+        if (step.rpcName !== APPROVAL_STEP_RPC_NAME) continue
+        if (step.updatedAt >= before) continue
+        pending.push({ runId, stepName: key.slice(runId.length + 1) })
+      }
+    }
+    return pending.slice(offset, offset + limit)
+  }
+
   protected async findStalledRunIds(
     before: Date,
     limit: number
   ): Promise<string[]> {
     const stalled: string[] = []
     for (const [runId, run] of this.runs) {
-      if (run.status !== 'running') continue
+      if (run.status !== 'running' && run.status !== 'compensating') continue
       const steps = this.stepHistory.get(runId) ?? []
       if (
         steps.some(
           (step) =>
             step.status === 'scheduled' ||
             step.status === 'suspended' ||
-            (step.status === 'running' && isStepLeaseLive(step.leaseExpiresAt))
+            (step.status === 'running' && this.isRunningStepHeld(step))
         )
       ) {
         continue

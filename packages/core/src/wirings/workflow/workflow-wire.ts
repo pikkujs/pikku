@@ -1,6 +1,10 @@
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import { milestoneStepName } from './workflow-constants.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
+import { assertRunSessionStore } from './workflow-graph-session.js'
+import { runTraceWire } from './workflow-run-trace.js'
+import type { PikkuRPC } from '../rpc/rpc-types.js'
+import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
 import type {
   PikkuWorkflowWire,
   StepState,
@@ -94,3 +98,59 @@ export const buildWorkflowWire = (
     return await steps.approvalStep(reason, options)
   }) as PikkuWorkflowWire['approval'],
 })
+
+export type StepRpcArgs = [
+  runId: string,
+  stepName: string,
+  stepState: StepState,
+  rpcName: string,
+  data: any,
+  rpcService: PikkuRPC,
+  knownRun?: WorkflowRun | null,
+  compensatingFor?: CompensatingFor,
+]
+
+/** Invoke a step's function as its run: on the run's trace and as its user. */
+export const invokeStepRpc = async (
+  service: {
+    getRunIdentity: (runId: string) => Promise<WorkflowRun | null>
+    createWorkflowWire: (
+      name: string,
+      runId: string,
+      rpcService: PikkuRPC
+    ) => PikkuWorkflowWire
+  },
+  ...[
+    runId,
+    stepName,
+    stepState,
+    rpcName,
+    data,
+    rpcService,
+    knownRun,
+    compensatingFor,
+  ]: StepRpcArgs
+): Promise<any> => {
+  const run = knownRun ?? (await service.getRunIdentity(runId))
+  assertRunSessionStore(run?.wire?.pikkuUserId)
+  return rpcService.rpcWithWire(rpcName, data, {
+    ...runTraceWire(run?.wire?.traceparent, {
+      runId,
+      stepId: stepState.stepId,
+    }),
+    ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
+    ...(compensatingFor
+      ? {
+          workflow: {
+            ...service.createWorkflowWire(
+              run?.workflow ?? '',
+              runId,
+              rpcService
+            ),
+            compensatingFor,
+          },
+        }
+      : {}),
+    workflowStep: buildWorkflowStepWire(runId, stepName, stepState),
+  })
+}

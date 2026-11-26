@@ -17,6 +17,7 @@ import {
   SLEEP_WAKE_GRACE_MS,
 } from './workflow-constants.js'
 import { isRunLeaseError } from './workflow-run-lease.js'
+import { approvalStateKey } from './workflow-approval.js'
 import type {
   StepState,
   WorkflowRecoveryOptions,
@@ -228,6 +229,36 @@ export const sweepUndispatchedSteps = async (
   }
 }
 
+/** An approval gate still open on a `suspended` run. */
+export type PendingApproval = { runId: string; stepName: string }
+
+const APPROVAL_PAGE_SIZE = 100
+
+/**
+ * Suspended runs whose gate has a decision it has not acted on: the resume that
+ * follows a decision was lost. An undecided gate is waiting on purpose.
+ */
+const findDecidedApprovalRunIds = async (
+  findPendingApprovals: WorkflowRecoveryHost['findPendingApprovals'],
+  getRunState: WorkflowRecoveryHost['getRunState'],
+  before: Date,
+  limit: number
+): Promise<string[]> => {
+  const runIds = new Set<string>()
+  for (let offset = 0; runIds.size < limit; offset += APPROVAL_PAGE_SIZE) {
+    const page = await findPendingApprovals(before, APPROVAL_PAGE_SIZE, offset)
+    for (const { runId, stepName } of page) {
+      if (runIds.size >= limit) break
+      const state = await getRunState(runId)
+      const record = state[approvalStateKey(stepName)] as
+        { decision?: unknown } | undefined
+      if (record?.decision !== undefined) runIds.add(runId)
+    }
+    if (page.length < APPROVAL_PAGE_SIZE) break
+  }
+  return [...runIds]
+}
+
 /** A step parked on `scheduled`, waiting for a timer or a queue job. */
 export type ScheduledStep = {
   runId: string
@@ -379,6 +410,13 @@ export type WorkflowRecoveryHost = {
     limit: number,
     offset: number
   ) => Promise<ScheduledStep[]>
+  findPendingApprovals: (
+    before: Date,
+    limit: number,
+    offset: number
+  ) => Promise<PendingApproval[]>
+  getRunState: (runId: string) => Promise<Record<string, unknown>>
+  handBackSettledChildren: (runId: string) => Promise<void>
   resumeWorkflow: (runId: string) => Promise<void>
   wakeSleep: (runId: string, stepId: string) => Promise<void>
   rearmSleep: (
@@ -433,7 +471,10 @@ export class WorkflowRecovery {
   private get sweepDeps() {
     return {
       resume: (runId: string) =>
-        this.driveUnlessOwned(runId, () => this.host.resumeWorkflow(runId)),
+        this.driveUnlessOwned(runId, async () => {
+          await this.host.handBackSettledChildren(runId)
+          await this.host.resumeWorkflow(runId)
+        }),
       logger: this.logger,
     }
   }
@@ -442,7 +483,16 @@ export class WorkflowRecovery {
     options?: StalledSweepOptions
   ): Promise<{ resumed: string[] }> {
     return sweepStalledRuns(
-      this.host.findStalledRunIds,
+      async (before, limit) => {
+        const stalled = await this.host.findStalledRunIds(before, limit)
+        const decided = await findDecidedApprovalRunIds(
+          this.host.findPendingApprovals,
+          this.host.getRunState,
+          before,
+          limit - stalled.length
+        )
+        return [...stalled, ...decided]
+      },
       this.backoff,
       options,
       this.sweepDeps

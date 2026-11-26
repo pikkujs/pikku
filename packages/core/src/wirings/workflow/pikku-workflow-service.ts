@@ -1,7 +1,10 @@
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
-import { assertRunSessionStore } from './workflow-graph-session.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import { buildWorkflowStepWire, buildWorkflowWire } from './workflow-wire.js'
+import {
+  buildWorkflowWire,
+  invokeStepRpc,
+  type StepRpcArgs,
+} from './workflow-wire.js'
 import type { CoreUserSession } from '../../types/core.types.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
@@ -118,9 +121,11 @@ import { runInlineRetryLoop } from './workflow-step-retry.js'
 import {
   runInlineChildStep,
   startQueuedChildStep,
+  handBackSettledChildren,
+  isParkedOnChild,
 } from './workflow-child-step.js'
 import { runDslWorkflowPass } from './workflow-dsl-pass.js'
-import { runLogger, runTraceWire, withRunTrace } from './workflow-run-trace.js'
+import { runLogger, withRunTrace } from './workflow-run-trace.js'
 import {
   childRunFailure,
   settleStoppedRun,
@@ -134,11 +139,11 @@ import {
   isChildWorkflowRecord,
   type CompensationApi,
 } from './workflow-compensation.js'
-import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   WorkflowRecovery,
   type ScheduledStep,
+  type PendingApproval,
   type StalledSweepOptions,
   type UndispatchedSweepOptions,
   type WorkflowRecoveryPass,
@@ -694,9 +699,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   /**
-   * Ids of runs that are stalled: still `running`, with no step something is
-   * expected to complete (`scheduled`, `suspended`, `running` under a live
-   * lease, or parked on a child run), and no step activity since `before`.
+   * Ids of runs that are stalled: `running` or `compensating`, with no step
+   * something is expected to complete (`scheduled`, `suspended`, `running` under
+   * a live lease, or parked on an unsettled child run), and no step activity
+   * since `before`.
    *
    * A lapsed lease is a dispatch that died, so it holds nothing out of the
    * sweep. Nor does a `running` step with no lease and no child run: that is
@@ -724,7 +730,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   }
 
   /**
-   * Steps parked on `scheduled` on a live run, oldest first, a page at a time.
+   * Steps parked on `scheduled` on a `running` or `compensating` run, oldest first, a page at a time.
    * Returns nothing by default, for a store whose runs die with the process.
    */
   protected async findScheduledSteps(
@@ -734,7 +740,23 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return []
   }
 
+  /**
+   * The open approval gates of `suspended` runs untouched since `before`, oldest
+   * first, a page at a time. Returns nothing by default, for a store that cannot
+   * express the query.
+   */
+  protected async findPendingApprovals(
+    _before: Date,
+    _limit: number,
+    _offset: number
+  ): Promise<PendingApproval[]> {
+    return []
+  }
+
   private readonly recovery = new WorkflowRecovery({
+    findPendingApprovals: (...args) => this.findPendingApprovals(...args),
+    getRunState: (runId) => this.getRunState(runId),
+    handBackSettledChildren: (runId) => handBackSettledChildren(this, runId),
     leases: () => this.leaseService,
     listStepStates: (runId) => this.listStepStates(runId),
     withRunLease: (runId, fn) => this.withRunLease(runId, fn),
@@ -1524,38 +1546,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
-  private async invokeStepRpc(
-    runId: string,
-    stepName: string,
-    stepState: StepState,
-    rpcName: string,
-    data: any,
-    rpcService: PikkuRPC,
-    knownRun?: WorkflowRun | null,
-    compensatingFor?: CompensatingFor
-  ): Promise<any> {
-    const run = knownRun ?? (await this.getRunIdentity(runId))
-    assertRunSessionStore(run?.wire?.pikkuUserId)
-    return rpcService.rpcWithWire(rpcName, data, {
-      ...runTraceWire(run?.wire?.traceparent, {
-        runId,
-        stepId: stepState.stepId,
-      }),
-      ...(run?.wire?.pikkuUserId ? { pikkuUserId: run.wire.pikkuUserId } : {}),
-      ...(compensatingFor
-        ? {
-            workflow: {
-              ...this.createWorkflowWire(
-                run?.workflow ?? '',
-                runId,
-                rpcService
-              ),
-              compensatingFor,
-            },
-          }
-        : {}),
-      workflowStep: buildWorkflowStepWire(runId, stepName, stepState),
-    })
+  private invokeStepRpc(...args: StepRpcArgs): Promise<any> {
+    return invokeStepRpc(this, ...args)
   }
 
   private async rpcStep(
@@ -1611,7 +1603,10 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     const lease = runningStepLease(stepState)
-    if (lease === 'held') {
+    if (
+      lease === 'held' ||
+      (isParkedOnChild(stepState) && !(await this.isInline(runId)))
+    ) {
       throw new WorkflowAsyncException(runId, stepName)
     }
 

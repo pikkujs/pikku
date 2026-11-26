@@ -17,6 +17,9 @@ import {
   WorkflowApprovalForbiddenError,
 } from './workflow-approval-policy.js'
 
+/** The function name every approval gate's step is recorded with. */
+export const APPROVAL_STEP_RPC_NAME = 'pikkuWorkflowApproval'
+
 /** The durable step name an approval point is recorded under. */
 export const approvalStepNameFor = (reason: string): string =>
   `__workflow_approval:${reason}`
@@ -176,7 +179,7 @@ export const evaluateApprovalStep = async (
     store.insertStepState(
       runId,
       approvalStepName,
-      'pikkuWorkflowApproval',
+      APPROVAL_STEP_RPC_NAME,
       {
         reason,
         expiry: options.expiry,

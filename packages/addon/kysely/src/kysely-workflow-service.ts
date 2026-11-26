@@ -30,6 +30,17 @@ import { workflowSchema } from './schema/workflow.schema.js'
  * What a step read returns, one list for the single read and the whole-run
  * read alike, so the replay snapshot cannot drift from `getStepState`.
  */
+/** Statuses of a run that still has steps to dispatch. */
+const ADVANCING_RUN_STATUSES: WorkflowStatus[] = ['running', 'compensating']
+
+const SETTLED_RUN_STATUSES: WorkflowStatus[] = [
+  'completed',
+  'failed',
+  'cancelled',
+  'compensated',
+  'compensation_failed',
+]
+
 const STEP_STATE_COLUMNS = [
   'workflowStepId',
   'status',
@@ -44,6 +55,7 @@ const STEP_STATE_COLUMNS = [
   // engine's hottest query off a table that grows for the life of the run.
   'currentAttempt',
   'leaseExpiresAt',
+  'childRunId',
   'createdAt',
   'updatedAt',
 ] as const
@@ -64,6 +76,7 @@ const toStepState = (row: StepStateRow): StepState => ({
   retries: row.retries != null ? Number(row.retries) : undefined,
   retryDelay: row.retryDelay ?? undefined,
   fromStepName: row.fromStepName ?? undefined,
+  childRunId: row.childRunId ?? undefined,
   leaseExpiresAt:
     row.leaseExpiresAt != null
       ? new Date(Number(row.leaseExpiresAt))
@@ -475,6 +488,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         status,
         result: null,
         error: null,
+        childRunId: null,
         currentAttempt: attempt,
         updatedAt: new Date(),
       })
@@ -653,6 +667,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
           status: 'running',
           result: null,
           error: null,
+          childRunId: null,
           currentAttempt: attempt,
           leaseExpiresAt: leaseUntil(now, leaseMs),
           updatedAt: new Date(),
@@ -882,7 +897,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .where('s.updatedAt', '<', before)
       // Leftover `pending` steps on a settled run are not work; only a live run
       // still has anything to dispatch.
-      .where('r.status', '=', 'running')
+      .where('r.status', 'in', ADVANCING_RUN_STATUSES)
       .orderBy('s.updatedAt', 'asc')
       .limit(limit)
       .execute()
@@ -900,7 +915,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     const rows = await this.db
       .selectFrom('workflowRuns as r')
       .select('r.workflowRunId')
-      .where('r.status', '=', 'running')
+      .where('r.status', 'in', ADVANCING_RUN_STATUSES)
       .where(({ not, exists, selectFrom }) =>
         not(
           exists(
@@ -918,7 +933,18 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
                     eb('s.status', '=', 'running'),
                     eb.or([
                       eb('s.leaseExpiresAt', '>', this.nowMs()),
-                      eb('s.childRunId', 'is not', null),
+                      eb.and([
+                        eb('s.childRunId', 'is not', null),
+                        eb.not(
+                          eb.exists(
+                            eb
+                              .selectFrom('workflowRuns as c')
+                              .select('c.workflowRunId')
+                              .whereRef('c.workflowRunId', '=', 's.childRunId')
+                              .where('c.status', 'in', SETTLED_RUN_STATUSES)
+                          )
+                        ),
+                      ]),
                     ]),
                   ]),
                 ])
@@ -947,6 +973,32 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return rows.map((row) => row.workflowRunId)
   }
 
+  protected override async findPendingApprovals(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<Array<{ runId: string; stepName: string }>> {
+    const rows = await this.db
+      .selectFrom('workflowStep as s')
+      .innerJoin('workflowRuns as r', 'r.workflowRunId', 's.workflowRunId')
+      .select(['s.workflowRunId', 's.stepName'])
+      .where('r.status', '=', 'suspended')
+      .where('r.updatedAt', '<', before)
+      .where('s.status', '=', 'running')
+      .where('s.rpcName', '=', 'pikkuWorkflowApproval')
+      .where('s.updatedAt', '<', before)
+      .orderBy('s.updatedAt', 'asc')
+      .orderBy('s.workflowStepId', 'asc')
+      .limit(limit)
+      .offset(offset)
+      .execute()
+
+    return rows.map((row) => ({
+      runId: row.workflowRunId,
+      stepName: row.stepName,
+    }))
+  }
+
   protected override async findScheduledSteps(
     limit: number,
     offset: number
@@ -966,7 +1018,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         's.updatedAt',
       ])
       .where('s.status', '=', 'scheduled')
-      .where('r.status', '=', 'running')
+      .where('r.status', 'in', ADVANCING_RUN_STATUSES)
       .orderBy('s.updatedAt', 'asc')
       .orderBy('s.workflowStepId', 'asc')
       .limit(limit)
