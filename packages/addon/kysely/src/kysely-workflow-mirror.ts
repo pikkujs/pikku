@@ -114,6 +114,7 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         status: step.status,
         retries: step.retries ?? null,
         retryDelay: step.retryDelay?.toString() ?? null,
+        timeout: step.timeout?.toString() ?? null,
         fromStepName: step.fromStepName ?? null,
         currentAttempt: 1,
         createdAt: now,

@@ -10,6 +10,7 @@ import type {
   WorkflowRunWire,
   WorkflowStatus,
   WorkflowStepOptions,
+  WorkflowRpcStepOptions,
   WorkflowVersionStatus,
 } from '@pikku/core/workflow'
 import type {
@@ -85,6 +86,8 @@ const toStepBindingName = (rpcName: string): string =>
 export class PikkuWorkflowDoService<
   Env extends PikkuWorkflowDoEnv = PikkuWorkflowDoEnv,
 > extends PikkuWorkflowService {
+  protected override readonly stepSignals = false
+
   constructor(
     protected readonly storage: DurableObjectStorage,
     protected readonly env: Env,
@@ -160,10 +163,15 @@ export class PikkuWorkflowDoService<
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions,
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     this.assertOwn(runId)
+    if (stepOptions?.timeout !== undefined) {
+      throw new Error(
+        `Workflow step '${stepName}': step timeouts are not supported on Cloudflare Durable Object workflows`
+      )
+    }
     const stepId = crypto.randomUUID()
     const now = Date.now()
     const step: DoStepRecord = {

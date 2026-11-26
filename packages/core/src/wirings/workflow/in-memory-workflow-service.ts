@@ -20,7 +20,7 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
-  WorkflowStepOptions,
+  WorkflowRpcStepOptions,
 } from './workflow.types.js'
 
 interface InternalStepData {
@@ -150,7 +150,7 @@ export class InMemoryWorkflowService
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions,
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     const stepId = globalThis.crypto.randomUUID()
@@ -163,6 +163,7 @@ export class InMemoryWorkflowService
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay,
+      timeout: stepOptions?.timeout,
       fromStepName,
       createdAt: now,
       updatedAt: now,
@@ -328,6 +329,7 @@ export class InMemoryWorkflowService
       attemptCount: failedStep.attemptCount + 1,
       retries: failedStep.retries,
       retryDelay: failedStep.retryDelay,
+      timeout: failedStep.timeout,
       fromStepName: failedStep.fromStepName,
       createdAt: now,
       updatedAt: now,

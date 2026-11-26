@@ -2,7 +2,7 @@
 
 ## Step execution: inline vs queue dispatch
 
-Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call dispatch flag. `workflow.do(...)` options are only `description`/`retries`/`retryDelay`/`compensate: false`.
+Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call dispatch flag. `workflow.do(...)` options are only `description`/`retries`/`retryDelay`/`compensate: false`, plus `timeout` on a step that runs a function (see [Cancel and step deadlines](#cancel-and-step-deadlines)).
 
 - **Steps default to inline.** Most steps don't need their own worker; running them inline avoids a queue round-trip per step, so a normally-started workflow executes its whole chain in one orchestrator pass.
 - **`workflowQueued: true` opts a function out.** Set it on the **function config** (`pikkuFunc` / `pikkuSessionlessFunc`, same level as `auth`/`expose`) to dispatch that step via the queue — for expensive/long-running steps that deserve their own worker, retry isolation, and concurrency limits. `workflowRetries` and `workflowTimeout` sit alongside it.
@@ -110,6 +110,42 @@ step, retry, sleep wake-up, resume, child workflow, recovery and job a step
 enqueues stays on it. Each hop is a new span whose parent is the span that started
 the run. An agent's tool calls are the exception: they are not on the run's trace
 yet.
+
+## Cancel and step deadlines
+
+A step that runs a function is handed `wire.workflowStep.signal`, an `AbortSignal` that is new for every attempt. Pass it to whatever can stop early:
+
+```typescript
+export const importFeed = pikkuSessionlessFunc({
+  workflowQueued: true,
+  func: async (_services, data, { workflowStep, abortScope }) => {
+    const feed = await fetch(data.url, { signal: workflowStep?.signal })
+    abortScope?.beginChanges() // throws AbandonedError once the signal is aborted
+    await save(await feed.json(), workflowStep!.invocationId)
+  },
+})
+```
+
+It aborts for three things, and `signal.reason` says which:
+
+| Cause                                                              | `signal.reason`              |
+| ------------------------------------------------------------------ | ---------------------------- |
+| The run was cancelled, including while it then compensates         | `WorkflowStepCancelledError` |
+| The attempt passed its `timeout`                                   | `WorkflowStepTimeoutError`   |
+| The worker lost the step's lease, or an inline pass lost the run's | `LeaseLostError`             |
+
+Another step failing does not abort a running step, although the run then starts compensating. A completed or failed run is not a cancel.
+
+- **Cooperative only.** Nothing is killed: a function that ignores the signal runs on. The signal does not cross a remote RPC transport, so a step served by another deployment never sees it abort.
+- **How fast.** A cancel made by the same process aborts at once. From another process, the worker reads the run every 20s, or every third of the step's lease when that is shorter.
+- **Compensation is never stopped by a cancel,** running or queued, and a second cancel changes nothing. Only a lost lease aborts its signal. It does not inherit its step's `timeout`.
+- **After a cancel,** a step that throws is recorded failed, is not retried, and the run goes on to unwind. A step that returns keeps its result, so its `compensate` has it. The run's status never moves back from `cancelled` or the unwinding statuses.
+- **A queued step delivered to a run that is `cancelled` or unwinding,** for any cause, never runs. It is recorded failed with `WorkflowRunStoppedError`. The same goes for an inline step or retry that has not started. A step refused on its first attempt never ran, so its `compensate` is not called; a refused retry follows an attempt that did run and is still compensated. Compensation jobs still run.
+- **The unwind does not wait for a step with no `compensate`** that is still running.
+
+`timeout` (`'30s'`, or milliseconds; no default) bounds one attempt of a step that runs a function, queued or inline: `workflow.do('Fetch', 'importFeed', data, { retries: 2, timeout: '30s' })`. It is stored with the step, so a job that is sent again keeps it. Past it the signal aborts and the attempt fails with `WorkflowStepTimeoutError` without waiting for the function; the usual retries apply and anything the abandoned call returns later is discarded. That call may still be running when the retry starts, so make the step's side effects idempotent on `workflowStep.invocationId`. A child-workflow step with a `timeout` fails the run, as does a value that is not at least one millisecond and under about 24.8 days. Closure and `expect*` steps do not accept it.
+
+**Not covered:** graph steps get the signal but take no `timeout`. Agent steps get no signal, and a step's abort does not reach an agent it runs, whose tool calls have their own `wire.abortScope`. Cloudflare Durable Object workflows give no signal, and setting `timeout` there is an error.
 
 ## Restarts
 

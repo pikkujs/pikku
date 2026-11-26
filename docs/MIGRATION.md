@@ -1523,6 +1523,12 @@ Declare `VIRTUAL_USER_VERIFY_KEY` as an optional variable. Delete the `SCENARIO_
 
 ## Database changes
 
+A SQL database that already has the `workflow_step` table needs the column that holds a step's `timeout`. Run this before the new version boots (on MySQL the type is `longtext`):
+
+```sql
+ALTER TABLE workflow_step ADD COLUMN timeout text;
+```
+
 Apply these renames **before** the first boot on the new version, then run `pikku db generate` and `pikku db migrate` to create what is new. The runtime no longer creates or alters tables.
 
 ```sql

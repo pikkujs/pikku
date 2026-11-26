@@ -3,6 +3,7 @@ import { milestoneStepName } from './workflow-constants.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
 import { assertRunSessionStore } from './workflow-graph-session.js'
 import { runTraceWire } from './workflow-run-trace.js'
+import { stepSignalWire } from './workflow-step-signal.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
 import type {
@@ -31,12 +32,14 @@ export type WorkflowWireSteps = {
   ) => Promise<any>
 }
 
-/** The `workflowStep` wire of one attempt of a step: its run, step, invocation id and the attempt it replays. */
+/** The `workflowStep` wire of one attempt of a step: its run, step, invocation id, the attempt it replays and its signal. */
 export const buildWorkflowStepWire = (
   runId: string,
   stepName: string,
-  stepState: StepState
+  stepState: StepState,
+  signal?: AbortSignal
 ) => ({
+  ...(signal ? { signal } : {}),
   runId,
   stepId: stepState.stepId,
   invocationId: deriveInvocationId(runId, stepName),
@@ -108,6 +111,7 @@ export type StepRpcArgs = [
   rpcService: PikkuRPC,
   knownRun?: WorkflowRun | null,
   compensatingFor?: CompensatingFor,
+  signal?: AbortSignal,
 ]
 
 /** Invoke a step's function as its run: on the run's trace and as its user. */
@@ -129,6 +133,7 @@ export const invokeStepRpc = async (
     rpcService,
     knownRun,
     compensatingFor,
+    signal,
   ]: StepRpcArgs
 ): Promise<any> => {
   const run = knownRun ?? (await service.getRunIdentity(runId))
@@ -151,6 +156,7 @@ export const invokeStepRpc = async (
           },
         }
       : {}),
-    workflowStep: buildWorkflowStepWire(runId, stepName, stepState),
+    ...stepSignalWire(signal),
+    workflowStep: buildWorkflowStepWire(runId, stepName, stepState, signal),
   })
 }

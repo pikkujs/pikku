@@ -9,6 +9,9 @@ export {
   WorkflowStepFunctionMismatchError,
   WorkflowStepLeaseExpiredError,
   WorkflowStepSupersededError,
+  WorkflowStepCancelledError,
+  WorkflowStepTimeoutError,
+  WorkflowRunStoppedError,
 } from './workflow-errors.js'
 export {
   DEFAULT_STEP_RETRIES,
@@ -86,6 +89,7 @@ export type {
 
 export type {
   WorkflowStepOptions,
+  WorkflowRpcStepOptions,
   WorkflowWireDoRPC,
   WorkflowApprovalOptions,
   ApprovalOutcome,

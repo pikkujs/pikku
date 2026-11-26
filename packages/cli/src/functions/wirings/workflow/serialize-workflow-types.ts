@@ -17,6 +17,7 @@ import type {
 } from '@pikku/core/workflow'
 import type {
   PikkuWorkflowWire,
+  WorkflowRpcStepOptions,
   WorkflowStepOptions,
 } from '@pikku/core/workflow'
 
@@ -25,6 +26,7 @@ export type {
   ApprovalOutcome,
   WorkflowApprovalOptions,
   WorkflowRunService,
+  WorkflowRpcStepOptions,
   WorkflowStepOptions,
 } from '@pikku/core/workflow'
 import type { PikkuFunctionSessionless, PikkuFunctionConfig } from '${functionTypesImportPath}'
@@ -55,7 +57,7 @@ export interface TypedWorkflow extends PikkuWorkflowWire {
     stepName: string,
     rpcName: K,
     data: FlattenedRPCMap[K]['input'],
-    options?: WorkflowStepOptions
+    options?: WorkflowRpcStepOptions
   ): Promise<FlattenedRPCMap[K]['output']>
 
   do<K extends keyof FlattenedWorkflowMap>(

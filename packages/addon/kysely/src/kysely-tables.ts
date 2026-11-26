@@ -53,6 +53,7 @@ export interface WorkflowStepTable {
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null
+  timeout: string | null
   fromStepName: string | null
   /** The history attempt currently in flight; see WorkflowStepHistoryTable.attempt. */
   currentAttempt: number | null

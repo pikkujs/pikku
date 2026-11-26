@@ -179,6 +179,56 @@ addError(WorkflowStepSupersededError, {
   message: 'Workflow step was claimed by a newer attempt.',
 })
 
+/**
+ * The abort reason of a step's `signal` once its run has been cancelled.
+ * Responds 409.
+ */
+export class WorkflowStepCancelledError extends PikkuError {
+  constructor(public readonly runId: string) {
+    super(`Workflow run ${runId} was cancelled`)
+  }
+}
+addError(WorkflowStepCancelledError, {
+  status: 409,
+  message: 'Workflow was cancelled.',
+})
+
+/**
+ * An attempt of a step ran past its `timeout`. It is the abort reason of the
+ * step's `signal`, and the error the attempt fails with.
+ */
+export class WorkflowStepTimeoutError extends PikkuError {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string,
+    public readonly timeoutMs: number
+  ) {
+    super(
+      `Workflow step '${stepName}' (run ${runId}) timed out after ${timeoutMs}ms`
+    )
+  }
+}
+addError(WorkflowStepTimeoutError, {
+  status: 500,
+  message: 'Workflow step timed out.',
+})
+
+/** A step that was not started because its run had been stopped. */
+export class WorkflowRunStoppedError extends PikkuError {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string
+  ) {
+    super(
+      `Workflow step '${stepName}' (run ${runId}) was not run: the run had been stopped`
+    )
+  }
+}
+addError(WorkflowRunStoppedError, {
+  status: 409,
+  message: 'Workflow run was stopped.',
+})
+
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: unknown) {
     super(`Workflow step name must be a string. Received: ${typeof stepName}`)

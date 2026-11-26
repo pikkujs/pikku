@@ -479,3 +479,16 @@ describe('PikkuStepWorker — trace', () => {
     assert.equal(wire.trace.parentSpanId, 'b'.repeat(16))
   })
 })
+
+describe('PikkuWorkflowDoService — step signals and deadlines', () => {
+  test('refuses a step with a timeout', async () => {
+    await assert.rejects(
+      service.insertStepState(RUN_ID, 'step', 'rpc.x', {}, { timeout: '1s' }),
+      /timeouts are not supported on Cloudflare/
+    )
+  })
+
+  test('gives its steps no abort signal', () => {
+    assert.equal(service.openInlineStepAttempt(RUN_ID, true), undefined)
+  })
+})

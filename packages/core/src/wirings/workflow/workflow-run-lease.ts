@@ -17,14 +17,14 @@ export const holdWorkflowLease = <T>(
   service: object,
   leases: LeaseService | undefined,
   key: string,
-  fn: () => Promise<T>
+  fn: (lost: AbortSignal) => Promise<T>
 ): Promise<T> => {
   if (!leases) {
     throw new Error(
       `${service.constructor.name} was constructed without a leaseService, so it cannot exclude a second process from a run or step. Pass the app's leaseService to its constructor.`
     )
   }
-  return holdLease(leases, key, () => fn())
+  return holdLease(leases, key, (_lease, lost) => fn(lost))
 }
 
 /** A step whose lease is held elsewhere belongs to another dispatch. */

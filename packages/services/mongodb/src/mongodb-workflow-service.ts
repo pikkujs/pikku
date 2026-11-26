@@ -15,6 +15,7 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
+  WorkflowRpcStepOptions,
 } from '@pikku/core/workflow'
 import type { Db, Collection } from 'mongodb'
 import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
@@ -49,6 +50,7 @@ interface WorkflowStepDoc {
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null
+  timeout?: string | null
   fromStepName?: string | null
   /** The claim that owns the step; every history document carries its own. */
   attempt: number
@@ -198,7 +200,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number },
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     const stepId = crypto.randomUUID()
@@ -216,6 +218,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       branchTaken: null,
       retries: stepOptions?.retries ?? null,
       retryDelay: stepOptions?.retryDelay?.toString() ?? null,
+      timeout: stepOptions?.timeout?.toString() ?? null,
       fromStepName: fromStepName ?? null,
       attempt: 1,
       createdAt: now,
@@ -233,6 +236,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay?.toString(),
+      timeout: stepOptions?.timeout?.toString(),
       fromStepName,
       createdAt: now,
       updatedAt: now,
@@ -264,6 +268,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       attemptCount: row.attempt,
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
+      timeout: row.timeout ?? undefined,
       fromStepName: row.fromStepName ?? undefined,
       childRunId: row.childRunId ?? undefined,
       leaseExpiresAt: row.leaseExpiresAt ?? undefined,

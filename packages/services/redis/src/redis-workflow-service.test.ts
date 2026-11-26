@@ -207,3 +207,30 @@ describe('a step parked on a child run', () => {
     assert.equal((await ws.getStepState(runId, 'child')).childRunId, undefined)
   })
 })
+
+describe('a step’s timeout in redis', () => {
+  test('is kept through insert, claim and retry', async () => {
+    const runId = await newRun()
+    const claim = () =>
+      (ws as any).claimStepForExecution(runId, 'step-1', 'rpc.fn', 60_000)
+    const inserted = await ws.insertStepState(
+      runId,
+      'step-1',
+      'rpc.fn',
+      {},
+      { retries: 2, timeout: '30000ms' }
+    )
+    assert.equal(inserted.timeout, '30000ms')
+
+    // `ioredis-mock` cannot run the history update behind the transition
+    // methods, so the lost and failed states are written to the hash.
+    const key = `${KEY_PREFIX}:step:${runId}:step-1`
+    await redis.hset(key, 'status', 'running', 'leaseExpiresAt', '1')
+    const first = await claim()
+    assert.equal(first.timeout, '30000ms')
+    await redis.hset(key, 'status', 'failed')
+    const reclaimed = await claim()
+    assert.equal(reclaimed.timeout, '30000ms')
+    assert.equal((await ws.getStepState(runId, 'step-1')).timeout, '30000ms')
+  })
+})

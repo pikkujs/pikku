@@ -3,6 +3,7 @@ import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
 import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
+  WORKFLOW_CANCELLED_CODE,
   WORKFLOW_TERMINAL_STATES,
   isRunStopped,
   compensationStepName,
@@ -10,6 +11,7 @@ import {
 import { pikkuState } from '../../pikku-state.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { runningStepLease } from './workflow-step-lease.js'
+import type { StepAttempt } from './workflow-step-signal.js'
 import { isWorkflowName } from './workflow-meta-resolver.js'
 import { planUnwind, type UnwindRecord } from './workflow-unwind-plan.js'
 import type {
@@ -140,7 +142,10 @@ export const driveUnwind = async (
         run.error
       )
     } else {
-      await host.finish(run, 'failed', undefined, run.error)
+      // A cancelled run with nothing to undo is still cancelled, not failed.
+      const status =
+        run.error?.code === WORKFLOW_CANCELLED_CODE ? 'cancelled' : 'failed'
+      await host.finish(run, status, undefined, run.error)
     }
     return 'finished'
   }
@@ -182,10 +187,11 @@ export interface CompensationApi {
   ): Promise<boolean>
   setStepScheduled(stepId: string): Promise<void>
   runInline(
+    runId: string,
     stepState: StepState,
     retries: number,
     retryDelay: WorkflowStepOptions['retryDelay'],
-    work: (current: StepState) => Promise<unknown>
+    work: (current: StepState, attempt?: StepAttempt) => Promise<unknown>
   ): Promise<unknown>
   invoke(
     runId: string,
@@ -193,7 +199,8 @@ export interface CompensationApi {
     stepState: StepState,
     rpcName: string,
     data: unknown,
-    compensatingFor: CompensatingFor
+    compensatingFor: CompensatingFor,
+    signal?: AbortSignal
   ): Promise<unknown>
   failOrUnwind(run: WorkflowRun, error: Error): Promise<unknown>
   setStepResult(stepId: string, result: unknown): Promise<void>
@@ -280,15 +287,21 @@ const compensateFunctionStep = async (
   }
 
   try {
-    await api.runInline(state, options.retries!, undefined, (current) =>
-      api.invoke(
-        runId,
-        stepName,
-        current,
-        rpcName,
-        forward.data,
-        compensatingFor
-      )
+    await api.runInline(
+      runId,
+      state,
+      options.retries!,
+      undefined,
+      (current, attempt) =>
+        api.invoke(
+          runId,
+          stepName,
+          current,
+          rpcName,
+          forward.data,
+          compensatingFor,
+          attempt?.signal
+        )
     )
     return 'done'
   } catch {
@@ -519,7 +532,7 @@ export const cancelAndUnwind = async (
   const cause: SerializedError = {
     message: reason || 'Workflow cancelled',
     stack: '',
-    code: 'WORKFLOW_CANCELLED',
+    code: WORKFLOW_CANCELLED_CODE,
   }
   await api.updateRunStatus(runId, 'cancelled', undefined, cause)
   await beginUnwind(api, host, run, cause)

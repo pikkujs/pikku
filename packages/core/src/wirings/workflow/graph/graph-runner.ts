@@ -5,9 +5,13 @@ import {
   WorkflowSuspendedException,
 } from '../workflow-errors.js'
 import { runInlineRetryLoop } from '../workflow-step-retry.js'
+import { forwardStepHooks } from '../workflow-step-refusal.js'
+import { stepSignalWire, type StepAttempt } from '../workflow-step-signal.js'
+import { buildWorkflowStepWire } from '../workflow-wire.js'
 import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
+  isRunClosedToSteps,
   isRunStopped,
 } from '../workflow-constants.js'
 import { childRunFailure } from '../workflow-compensation.js'
@@ -1009,6 +1013,13 @@ export async function continueGraph(
   }
 }
 
+/** The attempt of a step that is running a graph node. */
+type GraphStepAttempt = {
+  stepName: string
+  stepState: StepState
+  signal: AbortSignal | undefined
+}
+
 async function invokeGraphNodeRpc(
   workflowService: PikkuWorkflowService,
   rpcService: any,
@@ -1017,7 +1028,8 @@ async function invokeGraphNodeRpc(
   nodeId: string,
   rpcName: string,
   input: any,
-  graphName: string
+  graphName: string,
+  attempt?: GraphStepAttempt
 ): Promise<any> {
   const wireState: GraphWireState = {}
   const graphWire: PikkuGraphWire = {
@@ -1045,6 +1057,17 @@ async function invokeGraphNodeRpc(
     ...(owner ? { pikkuUserId: owner } : {}),
     graph: graphWire,
     workflow: workflowService.createWorkflowWire(graphName, runId, rpcService),
+    ...(attempt?.signal
+      ? {
+          ...stepSignalWire(attempt.signal),
+          workflowStep: buildWorkflowStepWire(
+            runId,
+            attempt.stepName,
+            attempt.stepState,
+            attempt.signal
+          ),
+        }
+      : {}),
   })
 
   if (wireState.branchKey) {
@@ -1062,7 +1085,8 @@ export async function executeGraphStep(
   nodeId: string,
   rpcName: string,
   data: any,
-  graphName: string
+  graphName: string,
+  attempt?: GraphStepAttempt
 ): Promise<any> {
   try {
     let result: any
@@ -1111,7 +1135,8 @@ export async function executeGraphStep(
         nodeId,
         rpcName,
         data,
-        graphName
+        graphName,
+        attempt
       )
     }
 
@@ -1126,7 +1151,10 @@ export async function executeGraphStep(
     if (error instanceof ChildWorkflowStartedException) {
       throw error
     }
-    if (error instanceof RPCNotFoundError) {
+    if (
+      error instanceof RPCNotFoundError &&
+      !isRunClosedToSteps((await workflowService.getRun(runId))?.status ?? '')
+    ) {
       await workflowService.updateRunStatus(runId, 'suspended', undefined, {
         message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
         code: 'RPC_NOT_FOUND',
@@ -1172,7 +1200,7 @@ async function executeGraphNodeInline(
   )
 
   let attempt: StepState = stepState
-  const runNode = async (current: StepState) => {
+  const runNode = async (current: StepState, stepAttempt?: StepAttempt) => {
     attempt = current
     const subWorkflowMeta = getWorkflowMeta(rpcName)
     const agentMeta = subWorkflowMeta
@@ -1213,7 +1241,12 @@ async function executeGraphNodeInline(
       nodeId,
       rpcName,
       input,
-      graphName
+      graphName,
+      {
+        stepName: instanceKey,
+        stepState: current,
+        signal: stepAttempt?.signal,
+      }
     )
   }
 
@@ -1231,7 +1264,12 @@ async function executeGraphNodeInline(
         ) {
           throw error
         }
-        if (error instanceof RPCNotFoundError) {
+        if (
+          error instanceof RPCNotFoundError &&
+          !isRunClosedToSteps(
+            (await workflowService.getRun(runId))?.status ?? ''
+          )
+        ) {
           await workflowService.setStepError(attempt.stepId, error)
           await workflowService.updateRunStatus(runId, 'suspended', undefined, {
             message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
@@ -1240,7 +1278,8 @@ async function executeGraphNodeInline(
           throw new WorkflowSuspendedException(runId, 'RPC_NOT_FOUND')
         }
       },
-      () => workflowService.throwIfRunStopped(runId)
+      () => workflowService.throwIfRunStopped(runId),
+      forwardStepHooks(workflowService, runId, instanceKey)
     )
   } catch (error) {
     if (

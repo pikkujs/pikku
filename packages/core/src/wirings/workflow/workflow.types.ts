@@ -8,6 +8,7 @@ export type { WorkflowService } from '../../services/workflow-service.js'
 
 export type {
   WorkflowStepOptions,
+  WorkflowRpcStepOptions,
   WorkflowWireDoRPC,
   WorkflowApprovalOptions,
   ApprovalOutcome,
@@ -159,6 +160,8 @@ export interface StepState {
   attemptCount: number
   retries?: number
   retryDelay?: string | number
+  /** How long one attempt may run; see `WorkflowRpcStepOptions.timeout`. */
+  timeout?: string | number
   fromStepName?: string
   createdAt: Date
   updatedAt: Date

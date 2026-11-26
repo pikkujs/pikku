@@ -13,6 +13,7 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
+  WorkflowRpcStepOptions,
 } from '@pikku/core/workflow'
 import { Redis, type RedisOptions } from 'ioredis'
 import { randomUUID } from 'crypto'
@@ -360,7 +361,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number },
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     const now = Date.now()
@@ -386,6 +387,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
     if (stepOptions?.retryDelay !== undefined) {
       fields.retryDelay = stepOptions.retryDelay.toString()
+    }
+
+    if (stepOptions?.timeout !== undefined) {
+      fields.timeout = stepOptions.timeout.toString()
     }
 
     if (fromStepName !== undefined) {
@@ -416,6 +421,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         stepOptions?.retryDelay !== undefined
           ? stepOptions.retryDelay.toString()
           : undefined,
+      timeout: stepOptions?.timeout?.toString(),
       fromStepName,
       createdAt: new Date(now),
       updatedAt: new Date(now),
@@ -441,6 +447,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       attemptCount: Number(data.attemptCount || 1),
       retries: data.retries ? Number(data.retries) : undefined,
       retryDelay: data.retryDelay,
+      timeout: data.timeout || undefined,
       fromStepName: data.fromStepName || undefined,
       childRunId: data.childRunId || undefined,
       leaseExpiresAt: data.leaseExpiresAt
@@ -780,12 +787,19 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       attemptCount: newAttemptCount,
       retries: retries,
       retryDelay: retryDelay,
+      timeout: data.timeout || undefined,
       fromStepName: data.fromStepName || undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(now),
     }
   }
 
+  /**
+   * A `running` step is decided on this one read: it belongs to its child or
+   * its lease holder, or it is lost and taken back by `ATOMIC_STEP_RECLAIM`.
+   * Reading and then resetting it would delete a child saved in between, and a
+   * second one would be started. Everything else is the engine's own claim.
+   */
   // ============================================================================
   // Workflow Graph Methods
   // ============================================================================

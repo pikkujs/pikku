@@ -67,6 +67,34 @@ export const isRunSettled = (status: string): boolean =>
 export const isRunStopped = (status: string): boolean =>
   isRunSettled(status) || status === 'compensating'
 
+/** The recorded cause of a run that was cancelled, kept while it unwinds. */
+export const WORKFLOW_CANCELLED_CODE = 'WORKFLOW_CANCELLED'
+
+const CANCEL_UNWIND_STATES: ReadonlySet<string> = new Set([
+  'compensating',
+  'compensated',
+  'compensation_failed',
+])
+
+/**
+ * True for a run that was cancelled, including while it unwinds for that
+ * cancel. A run unwinding after a failure was not.
+ */
+export const isRunCancelled = (run: {
+  status: string
+  error?: { code?: string }
+}): boolean =>
+  run.status === 'cancelled' ||
+  (CANCEL_UNWIND_STATES.has(run.status) &&
+    run.error?.code === WORKFLOW_CANCELLED_CODE)
+
+/** True for a run that starts no more forward steps: cancelled, unwinding or unwound. */
+export const isRunClosedToSteps = (status: string): boolean =>
+  status === 'cancelled' || CANCEL_UNWIND_STATES.has(status)
+
+/** The longest a step in another process takes to learn its run was cancelled. */
+export const WORKFLOW_CANCEL_CHECK_MS = 20_000
+
 export const WORKFLOW_POLL_MIN_MS = 10
 
 export const WORKFLOW_POLL_FACTOR = 1.6

@@ -36,12 +36,13 @@ export const stepLeaseMsForQueue = (queueName: string): number => {
  *
  * A refresh that resolves `false` means another dispatch has claimed the step
  * since: renewing stops there, and says so, because the step's outcome will
- * now be refused rather than recorded.
+ * now be refused rather than recorded. `onLost` is told, with the reason.
  */
 export const startStepLeaseRefresh = (
   stepId: string,
   leaseMs: number,
-  refresh: () => Promise<boolean>
+  refresh: () => Promise<boolean>,
+  onLost?: (reason: unknown) => void
 ): (() => Promise<void>) => {
   const interval = leaseRenewalIntervalMs(leaseMs)
   if (interval < STEP_LEASE_REFRESH_MIN_MS) {
@@ -61,11 +62,12 @@ export const startStepLeaseRefresh = (
       throw error
     })
   )
-  renewal.signal.addEventListener('abort', () =>
+  renewal.signal.addEventListener('abort', () => {
     getSingletonServices()?.logger?.warn(
       `Workflow step ${stepId}: lost its lease, so another dispatch may claim it; this one stops renewing and its outcome will be refused if it does`
     )
-  )
+    onLost?.(renewal.signal.reason)
+  })
   return renewal.stop
 }
 

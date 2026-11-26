@@ -86,6 +86,10 @@ export type RunContext = {
   inline?: boolean
   ordinals: Map<string, number>
   lastStep?: string
+  /** Aborts the signal of each forward step this process is running. */
+  stepCancels?: Set<() => void>
+  /** Aborts if the pass running this run's inline steps loses its lease. */
+  runLeaseLost?: AbortSignal
   replay?: {
     steps?: Map<string, StepState>
     run?: WorkflowRun

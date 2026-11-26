@@ -16,6 +16,7 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
+  WorkflowRpcStepOptions,
 } from '@pikku/core/workflow'
 import {
   sql,
@@ -75,6 +76,7 @@ const STEP_STATE_COLUMNS = [
   'error',
   'retries',
   'retryDelay',
+  'timeout',
   'fromStepName',
   // `current_attempt` is bumped alongside every history insert, so it is
   // already the count this used to aggregate — and reading it keeps the
@@ -101,6 +103,7 @@ const toStepState = (row: StepStateRow): StepState => ({
   attemptCount: Number(row.currentAttempt ?? 1),
   retries: row.retries != null ? Number(row.retries) : undefined,
   retryDelay: row.retryDelay ?? undefined,
+  timeout: row.timeout ?? undefined,
   fromStepName: row.fromStepName ?? undefined,
   childRunId: row.childRunId ?? undefined,
   leaseExpiresAt:
@@ -188,7 +191,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number },
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     const stepId = crypto.randomUUID()
@@ -205,6 +208,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         status: 'pending',
         retries: stepOptions?.retries ?? null,
         retryDelay: stepOptions?.retryDelay?.toString() ?? null,
+        timeout: stepOptions?.timeout?.toString() ?? null,
         fromStepName: fromStepName ?? null,
         currentAttempt: 1,
         createdAt: now,
@@ -223,6 +227,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay?.toString(),
+      timeout: stepOptions?.timeout?.toString(),
       fromStepName,
       createdAt: now,
       updatedAt: now,
@@ -537,6 +542,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         'error',
         'retries',
         'retryDelay',
+        'timeout',
         'fromStepName',
         'currentAttempt',
         'createdAt',
@@ -554,6 +560,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       attemptCount: Number(row.currentAttempt ?? 1),
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
+      timeout: row.timeout ?? undefined,
       fromStepName: row.fromStepName ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
