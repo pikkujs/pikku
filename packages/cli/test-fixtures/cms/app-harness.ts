@@ -121,6 +121,8 @@ export class CmsTestApp {
     return {
       ...process.env,
       CI: '1',
+      // Far from UTC, so a time read or written in the server's zone shows.
+      TZ: 'Pacific/Auckland',
       PIKKU_STUDIO_TOKEN: this.studioToken,
     }
   }
@@ -213,6 +215,15 @@ export class CmsTestApp {
   async write(path: string, content: string) {
     await mkdir(dirname(join(this.dir, path)), { recursive: true })
     await writeFile(join(this.dir, path), content)
+  }
+
+  /** The events the app's audit sink was given. */
+  async audited(): Promise<any[]> {
+    if (!existsSync(join(this.dir, 'audit.jsonl'))) return []
+    return (await this.read('audit.jsonl'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line))
   }
 
   async grant(grants: Record<string, string[]>) {

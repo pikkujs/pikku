@@ -9,9 +9,18 @@ import {
   idSchema,
   operandSchema,
   outputSchema,
+  valueSchema,
 } from './cms-columns.js'
+import { stampedColumn } from './build-cms-model.js'
 import { DESCRIBE_SCHEMA } from './serialize-cms-describe-schema.js'
-import { getFunction, listFunction, pascal } from './cms-names.js'
+import {
+  createFunction,
+  deleteFunction,
+  getFunction,
+  listFunction,
+  pascal,
+  updateFunction,
+} from './cms-names.js'
 
 export const schemaName = (functionName: string, side: 'Input' | 'Output') =>
   `${pascal(functionName)}${side}`
@@ -92,6 +101,75 @@ const getSchemas = (collection: CmsModelCollection): string[] => {
   ]
 }
 
+/**
+ * One editable field as a caller sends it. A create must name what nothing else
+ * fills; a patch names only what it changes.
+ */
+const fieldSchema = (
+  collection: CmsModelCollection,
+  name: string,
+  operation: 'create' | 'update'
+): string => {
+  const column = collection.columns[name]!
+  const field = collection.fields.find((f) => f.name === name)!
+  const value = field.image ? 'z.null()' : valueSchema(column)
+  const nullable = column.nullable && !field.image ? '.nullable()' : ''
+  const optional =
+    operation === 'update' || column.nullable || column.hasDefault
+      ? '.optional()'
+      : ''
+  return `${name}: ${value}${nullable}${optional}`
+}
+
+const valuesSchema = (
+  collection: CmsModelCollection,
+  operation: 'create' | 'update'
+) =>
+  object(
+    collection.fields.map((field) =>
+      fieldSchema(collection, field.name, operation)
+    )
+  )
+
+const writeSchemas = (collection: CmsModelCollection): string[] => {
+  const { name, primaryKey, columns } = collection
+  const id = `id: ${idSchema(columns[primaryKey]!)}`
+  const record = object([`row: ${rowType(name, 'Record')}`], false)
+  const pair = (fn: string, input: string[], output: string) => [
+    `export const ${schemaName(fn, 'Input')} = ${object(input)}`,
+    `export const ${schemaName(fn, 'Output')} = ${output}`,
+  ]
+  return [
+    ...(collection.create
+      ? pair(
+          createFunction(name),
+          [`values: ${valuesSchema(collection, 'create')}`],
+          record
+        )
+      : []),
+    ...(collection.edit
+      ? pair(
+          updateFunction(name),
+          [
+            id,
+            `patch: ${valuesSchema(collection, 'update')}`,
+            ...(stampedColumn(collection)
+              ? [`expectedUpdatedAt: z.string().max(64).optional()`]
+              : []),
+          ],
+          record
+        )
+      : []),
+    ...(collection.delete
+      ? pair(
+          deleteFunction(name),
+          [id],
+          object([`removed: z.boolean()`], false)
+        )
+      : []),
+  ]
+}
+
 export const serializeCmsSchemas = (model: CmsModel): string =>
   `import { z } from 'zod'
 
@@ -101,6 +179,7 @@ ${model.collections
   .flatMap((collection) => [
     ...listSchemas(collection),
     ...getSchemas(collection),
+    ...writeSchemas(collection),
   ])
   .join('\n\n')}
 `

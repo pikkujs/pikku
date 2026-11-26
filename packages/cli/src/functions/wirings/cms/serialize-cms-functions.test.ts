@@ -4,6 +4,7 @@ import { rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { buildCmsModel } from './build-cms-model.js'
+import { valueKind } from './cms-columns.js'
 import { describeCmsModel } from './cms-description.js'
 import { serializeCmsFunctions } from './serialize-cms-functions.js'
 import { serializeCmsSchemas } from './serialize-cms-schemas.js'
@@ -58,12 +59,35 @@ const schemas = async (built = model()) => {
 }
 
 describe('the generated CMS functions', () => {
-  test('are describeCms and a list and a get for each collection', () => {
-    const names = model().collections.flatMap((collection) => [
-      `listCms${collection.name[0]!.toUpperCase()}${collection.name.slice(1)}`,
-      `getCms${collection.name[0]!.toUpperCase()}${collection.name.slice(1)}`,
+  test('are describeCms and one for each operation a collection has', () => {
+    assert.deepEqual(exportsOf(functions()), [
+      'listCmsOffering',
+      'getCmsOffering',
+      'createCmsOffering',
+      'updateCmsOffering',
+      'listCmsTherapist',
+      'getCmsTherapist',
+      'describeCms',
     ])
-    assert.deepEqual(exportsOf(functions()), [...names, 'describeCms'])
+  })
+
+  test('a write wants read and its own grant, in the scopes and read again', () => {
+    const source = functions()
+    assert.match(
+      source,
+      /const holdsCmsOfferingEdit = pikkuAuth\(async \(\{ scopeService \}, session\) =>\s+cmsHolds\(\s*\['cms:offering:read', 'cms:offering:edit'\],/
+    )
+    assert.match(
+      sourceOf(source, 'updateCmsOffering'),
+      /audit: true,\n {2}scopes: \['cms:offering:read', 'cms:offering:edit'\],\n {2}permissions: \{ cms: \[holdsCmsOfferingEdit, appCheck0\] \},/
+    )
+    assert.doesNotMatch(sourceOf(source, 'listCmsOffering'), /holdsCms/)
+  })
+
+  test('a timestamp is stored in one form, and an unlisted column never', () => {
+    const write = sourceOf(functions(), 'createCmsOffering')
+    assert.match(write, /startsAt: cmsStoredDatetime\(values\.startsAt\),/)
+    assert.doesNotMatch(write, /\.\.\.values|apiToken|sealedNote|meta:/)
   })
 
   test('each one asks for the read scope of its own collection', () => {
@@ -84,10 +108,19 @@ describe('the generated CMS functions', () => {
     assert.doesNotMatch(source, /selectAll|apiToken|sealedNote/)
     for (const collection of built.collections) {
       const prefix = collection.name.replace(/([a-z])([A-Z])/g, '$1_$2')
+      const times = collection.readColumns.filter(
+        (column) => valueKind(collection.columns[column]!) === 'datetime'
+      )
       assert.deepEqual(
         constant(source, `${prefix.toUpperCase()}_COLUMNS`),
-        collection.readColumns
+        collection.readColumns.filter((column) => !times.includes(column))
       )
+      for (const column of times) {
+        assert.match(
+          source,
+          new RegExp(`\\.select\\(cmsText\\('${column}'\\)\\)`)
+        )
+      }
     }
   })
 

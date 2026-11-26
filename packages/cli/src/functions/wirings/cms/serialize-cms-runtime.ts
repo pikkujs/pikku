@@ -6,7 +6,9 @@ export const serializeCmsRuntime = ({
   errorLeaf,
 }: {
   errorLeaf: string
-}): string => `import { UnprocessableContentError } from '${errorLeaf}'
+}): string => `import { ConflictError, UnprocessableContentError } from '${errorLeaf}'
+import { sql } from 'kysely'
+import type { AuditLog } from '@pikku/core/services'
 import type {
   CmsCollectionDescription,
   CmsDescription,
@@ -19,11 +21,29 @@ export type CmsValueKind = 'string' | 'number' | 'boolean' | 'datetime'
 
 const TRUE: unknown[] = [true, 1, 1n, '1', 't', 'true']
 
-const fromDb = (value: unknown, kind: CmsValueKind): unknown => {
+/**
+ * A timestamp is read as the database's own text, under a name of its own. A
+ * driver that parses one reads a time without a zone in the server's zone.
+ */
+export const cmsText = <Column extends string>(column: Column) =>
+  sql<string | null>\`cast(\${sql.ref(column)} as text)\`.as(
+    \`cmsText\${column.charAt(0).toUpperCase()}\${column.slice(1)}\` as \`cmsText\${Capitalize<Column>}\`
+  )
+
+/** Stored text as a response carries it; text that is no time stays as it is. */
+export const cmsStoredValue = (
+  value: unknown,
+  kind: CmsValueKind
+): unknown => {
   if (value === null || value === undefined) return null
   if (kind === 'number') return Number(value)
   if (kind === 'boolean') return TRUE.includes(value)
-  return value instanceof Date ? value.toISOString() : value
+  if (kind !== 'datetime') return value
+  try {
+    return cmsDatetime(String(value))
+  } catch {
+    return value
+  }
 }
 
 /** A database row as a response carries it: the same on every engine. */
@@ -33,20 +53,113 @@ export const toCmsRow = <Row>(
 ): Row =>
   Object.fromEntries(
     Object.entries(kinds as Record<string, CmsValueKind>).map(
-      ([column, kind]) => [
-        column,
-        fromDb((row as Record<string, unknown>)[column], kind),
-      ]
+      ([column, kind]) => {
+        const selected =
+          kind === 'datetime'
+            ? \`cmsText\${column.charAt(0).toUpperCase()}\${column.slice(1)}\`
+            : column
+        return [
+          column,
+          cmsStoredValue((row as Record<string, unknown>)[selected], kind),
+        ]
+      }
     )
   ) as Row
 
-/** A date and time in the one form it is stored and compared in. */
+/**
+ * A date and time in the one form it is stored and compared in. One that names
+ * no zone is UTC, whatever zone the server runs in, and a day that does not
+ * exist is refused instead of rolling into the next month.
+ */
 export const cmsDatetime = (value: string): string => {
-  const time = new Date(value)
-  if (Number.isNaN(time.getTime())) {
+  const [, day = '', clock = '', zone = ''] =
+    /^([^T ]*)(?:[T ](.*?)(Z|[+-]\\d{2}(?::?\\d{2})?)?)?$/.exec(value) ?? []
+  const midnight = new Date(\`\${day}T00:00:00Z\`)
+  const time = new Date(
+    clock ? \`\${day}T\${clock}\${zone.length === 3 ? \`\${zone}:00\` : zone || 'Z'}\` : midnight
+  )
+  if (
+    Number.isNaN(midnight.getTime()) ||
+    Number.isNaN(time.getTime()) ||
+    midnight.toISOString().slice(0, 10) !== day
+  ) {
     throw new UnprocessableContentError(\`'\${value}' is not a date and time\`)
   }
   return time.toISOString()
+}
+
+/** A timestamp to store: left out stays left out, and \`null\` clears it. */
+export const cmsStoredDatetime = <Value extends string | null | undefined>(
+  value: Value
+): Value => (typeof value === 'string' ? cmsDatetime(value) : value) as Value
+
+/** The fields a patch changes, of which there must be one. */
+export const cmsChanged = (values: object): string[] => {
+  const fields = Object.entries(values)
+    .filter(([, value]) => value !== undefined)
+    .map(([field]) => field)
+  if (fields.length === 0) {
+    throw new UnprocessableContentError('The patch changes nothing')
+  }
+  return fields
+}
+
+/**
+ * Answer what a database refuses as the caller's error, without repeating the
+ * database's message, which can name tables and values.
+ */
+export const cmsWrite = async <Result>(
+  operation: 'create' | 'update' | 'delete',
+  write: () => Promise<Result>
+): Promise<Result> => {
+  try {
+    return await write()
+  } catch (error) {
+    const { code, message } = error as { code?: string; message?: string }
+    const refused = (state: string[], sqlite: RegExp) =>
+      state.includes(code ?? '') || sqlite.test(message ?? '')
+    if (refused(['23505'], /UNIQUE constraint failed/i)) {
+      throw new ConflictError('A record with one of these values already exists')
+    }
+    if (refused(['23503', '23001'], /FOREIGN KEY constraint failed/i)) {
+      if (operation === 'delete') {
+        throw new ConflictError('Other records still refer to this one')
+      }
+      throw new UnprocessableContentError(
+        'One of these values refers to a record that does not exist'
+      )
+    }
+    if (
+      refused(
+        ['23502', '23514', '22001', '22003', '22007', '22008', '22P02'],
+        /(CHECK|NOT NULL) constraint failed/i
+      )
+    ) {
+      throw new UnprocessableContentError(
+        'The database refused one of these values'
+      )
+    }
+    throw error
+  }
+}
+
+/**
+ * Record a change in the audit log, when the app has one. It names the record
+ * and the fields that changed, never a value: values can be personal data.
+ */
+export const cmsAudit = async (
+  auditLog: AuditLog | undefined,
+  change: 'created' | 'updated' | 'deleted',
+  collection: string,
+  id: string | number,
+  fields: string[] = []
+): Promise<void> => {
+  await auditLog?.write({
+    type: \`cms.record.\${change}\`,
+    source: 'explicit',
+    outcome: 'success',
+    metadata: { collection, id: String(id), fields },
+  })
 }
 
 const OPERATORS = ['equals', 'in', 'gt', 'gte', 'lt', 'lte'] as const
@@ -158,11 +271,11 @@ const cmsSessionCheck = async (
   Boolean(await check(services, undefined, { session }))
 
 export const cmsHolds = async (
-  scope: string,
+  scopes: string[],
   services: CmsScopeServices,
   session: CmsSession
 ): Promise<boolean> =>
-  hasScopes([scope], await cmsLiveScopes(services, session))
+  hasScopes(scopes, await cmsLiveScopes(services, session))
 
 
 /** The description cut down to what the caller may do. */

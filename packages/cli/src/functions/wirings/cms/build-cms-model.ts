@@ -184,6 +184,21 @@ export const versionColumn = (
     : undefined
 }
 
+/**
+ * The version column the server stamps on each write, which is also what an
+ * update compares so two editors cannot silently overwrite each other.
+ */
+export const stampedColumn = (
+  collection: Pick<CmsModelCollection, 'columns' | 'edit' | 'fields'>
+): CmsColumn | undefined => {
+  const version = versionColumn(collection.columns)
+  return version &&
+    collection.edit &&
+    !collection.fields.some((field) => field.name === version.name)
+    ? version
+    : undefined
+}
+
 const parseCheck = (value: unknown): CmsCheck | undefined => {
   if (typeof value !== 'string') return undefined
   const match =

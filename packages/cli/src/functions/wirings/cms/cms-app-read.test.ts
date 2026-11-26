@@ -170,7 +170,9 @@ for (const engine of ['sqlite', 'postgres'] as Engine[]) {
       assert.equal(get.body.row.featured, true)
       assert.equal(get.body.row.priceMinor, 1000)
       assert.equal(get.body.row.position, 1)
-      assert.match(get.body.row.startsAt, /^2026-03-01[T ]10:00:00/)
+      // Seeded without a zone, and read under a server far from UTC.
+      assert.equal(get.body.row.startsAt, '2026-03-01T10:00:00.000Z')
+      assert.equal(list.body.rows[0].startsAt, '2026-03-01T10:00:00.000Z')
       assert.ok(!('ownerSecret' in get.body.row))
       assert.doesNotMatch(list.text + get.text, /SENTINEL-SECRET/)
       assert.match(await app.read('db/' + engine + '-dev-seed.sql'), /SENTINEL/)
