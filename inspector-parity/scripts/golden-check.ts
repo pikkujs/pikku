@@ -2,15 +2,16 @@
 /**
  * Keeps the committed Go goldens honest.
  *
- *   bun golden-check.ts [goBin] [--update] [--only addon-load,trigger_feature,harness,workflow_edge]
+ *   bun golden-check.ts [goBin] [--update] [--only addon-load,trigger_feature,harness,workflow_edge,live_scopes]
  *
- * The Rust cargo tests compare against four committed files, each a slice of
+ * The Rust cargo tests compare against five committed files, each a slice of
  * what the Go inspector prints for a small fixture:
  *
  *   fixtures/addon-load/go.golden.json        tests/addons_checks.rs
  *   fixtures/trigger_feature/expected.go.json tests/trigger_feature_fixture.rs
  *   fixtures/harness/expected.go.json         tests/harness_fixture.rs
  *   fixtures/workflow_edge/golden.json        tests/workflow_fixtures.rs
+ *   fixtures/live_scopes/expected.json        tests/live_scopes_fixture.rs
  *
  * Go is the reference, so a golden that no longer matches Go is stale. This
  * runs Go on each fixture, takes the same slice the Rust test compares, and
@@ -179,6 +180,29 @@ const SPECS: Spec[] = [
   },
   srcFixture('trigger_feature'),
   srcFixture('harness'),
+  {
+    name: 'live_scopes',
+    golden: join(FIXTURES, 'live_scopes/expected.json'),
+    placeholder: '<fixture>',
+    finalize: true,
+    prepare: srcFixture('live_scopes').prepare,
+    slice(go, current) {
+      return {
+        scopes: go.state.scopes.definitions.map(
+          ({ sourceFile, origin, ...definition }: Json) => definition
+        ),
+        liveScopes: Object.fromEntries(
+          Object.keys(current.liveScopes).map((id) => [
+            id,
+            go.state.functions.meta[id]?.liveScopes ?? null,
+          ])
+        ),
+        errors: (go.diagnostics ?? [])
+          .filter((d: Json) => String(d.message).includes('`live`'))
+          .map((d: Json) => d.message),
+      }
+    },
+  },
   {
     name: 'workflow_edge',
     golden: join(FIXTURES, 'workflow_edge/golden.json'),

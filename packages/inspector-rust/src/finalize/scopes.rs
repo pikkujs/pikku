@@ -2,6 +2,8 @@
 //! (apply-declared-scopes.ts) and the scope / role validators of
 //! utils/post-process.ts.
 
+use std::collections::HashSet;
+
 use super::addons::definition_ids;
 use super::jsval::{OrderedSet, V};
 use super::utils::or_none;
@@ -73,6 +75,60 @@ fn flatten_scope_ids(definitions: &[Raw]) -> OrderedSet {
         walk(&mut ids, &d.get("scopes"), &name);
     }
     ids
+}
+
+/// `liveOr` is an explicit `live` flag, else the inherited one, so a child's
+/// `live: false` opts out of a live ancestor.
+fn live_or(flag: &V, inherited: bool) -> bool {
+    match flag {
+        V::Bool(live) => *live,
+        _ => inherited,
+    }
+}
+
+/// `liveScopeIds` is every scope id that is live, directly or through an
+/// ancestor, as core's liveScopeIds.
+fn live_scope_ids(definitions: &[Raw]) -> HashSet<String> {
+    fn walk(live: &mut HashSet<String>, nodes: &V, prefix: &str, inherited: bool) {
+        if !nodes.is_obj() {
+            return;
+        }
+        for segment in nodes.keys() {
+            let node = nodes.get(&segment);
+            let id = format!("{prefix}:{segment}");
+            let is_live = live_or(&node.get("live"), inherited);
+            if is_live {
+                live.insert(id.clone());
+            }
+            walk(live, &node.get("scopes"), &id, is_live);
+        }
+    }
+    let mut live = HashSet::new();
+    for def in definitions {
+        let d = jv(def);
+        let name = d.get("name").template_string();
+        let is_live = live_or(&d.get("live"), false);
+        if is_live {
+            live.insert(name.clone());
+        }
+        walk(&mut live, &d.get("scopes"), &name, is_live);
+    }
+    live
+}
+
+/// `markLiveScopeFunctions` flags every function that requires a live scope, so
+/// the runner re-resolves its scopes per call. Derived from the scope rather
+/// than declared on the function, so a function cannot forget it.
+pub fn mark_live_scope_functions(st: &mut State) {
+    let live = live_scope_ids(&st.scopes.definitions);
+    if live.is_empty() {
+        return;
+    }
+    for meta in st.functions.meta.values_mut() {
+        if meta.scopes.iter().any(|scope| live.contains(declared_form(scope))) {
+            meta.live_scopes = Some(true);
+        }
+    }
 }
 
 fn declared_form(scope: &str) -> &str {
