@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     env:
-      MAX_BRANCHES: 5
+      MAX_BRANCHES: 10
     steps:
       # At most MAX_BRANCHES branches (main included, changeset-release/main not) may exist on origin.
       # Merge or delete one before opening another.
