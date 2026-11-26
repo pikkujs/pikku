@@ -213,15 +213,19 @@ func (s *Context) resolveHarnessGates(obj *ast.Node, harnessName string) ([]stat
 	return gates, ok
 }
 
-func (s *Context) collectHarnessGates(list *ast.Node, harnessName string, out *[]state.HarnessGateEntry, seen map[*ast.Node]bool) bool {
-	arr := s.constArrayLiteral(list, seen)
-	if arr == nil {
+// active holds the arrays being read, so a list that spreads itself is refused
+// while one spread twice is not.
+func (s *Context) collectHarnessGates(list *ast.Node, harnessName string, out *[]state.HarnessGateEntry, active map[*ast.Node]bool) bool {
+	arr := s.constArrayLiteral(list)
+	if arr == nil || active[arr] {
 		s.notStaticGates(harnessName, list)
 		return false
 	}
+	active[arr] = true
+	defer delete(active, arr)
 	for _, el := range arr.Elements() {
 		if ast.IsSpreadElement(el) {
-			if !s.collectHarnessGates(el.Expression(), harnessName, out, seen) {
+			if !s.collectHarnessGates(el.Expression(), harnessName, out, active) {
 				return false
 			}
 			continue
@@ -244,16 +248,15 @@ func (s *Context) notStaticGates(harnessName string, n *ast.Node) {
 
 // constArrayLiteral is n when it is an inline array, or the array a const
 // identifier is initialised with.
-func (s *Context) constArrayLiteral(n *ast.Node, seen map[*ast.Node]bool) *ast.Node {
+func (s *Context) constArrayLiteral(n *ast.Node) *ast.Node {
 	n = tsutil.UnwrapAs(tsutil.UnwrapNonNullParens(n))
 	if ast.IsArrayLiteralExpression(n) {
 		return n
 	}
 	init := s.constInitializer(n)
-	if init == nil || seen[init] {
+	if init == nil {
 		return nil
 	}
-	seen[init] = true
 	init = tsutil.UnwrapAs(init)
 	if ast.IsArrayLiteralExpression(init) {
 		return init

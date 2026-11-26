@@ -57,6 +57,21 @@ for (const engine of availableEngines()) {
       )
     })
 
+    test('a const gate list spread twice is read, one that spreads itself is refused', async () => {
+      const { state, logger } = await withEngine(engine, inspectFixture)
+      assert.deepEqual(state.harness?.harnessesMeta.repeatedSpread?.gates, [
+        { name: 'lint' },
+      ])
+      assert.equal(state.harness?.harnessesMeta.selfSpread, undefined)
+      assert.ok(
+        logger.diagnostics.some((d) =>
+          d.message.startsWith(
+            "Harness 'selfSpread' lists gates that are not readable from source"
+          )
+        )
+      )
+    })
+
     test('an unknown gate, an unreadable list and a gate without a body are refused', async () => {
       const { logger } = await withEngine(engine, inspectFixture)
       const critical = logger.diagnostics

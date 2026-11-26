@@ -39,6 +39,21 @@
           "sourceFile": "<fixture>/src/gates.ts",
           "exportedName": "quickHarness"
         },
+        "repeatedSpread": {
+          "name": "repeatedSpread",
+          "description": "Spreads one const array twice",
+          "harness": true,
+          "agent": {
+            "model": "cheap"
+          },
+          "gates": [
+            {
+              "name": "lint"
+            }
+          ],
+          "sourceFile": "<fixture>/src/gates.ts",
+          "exportedName": "repeatedSpreadHarness"
+        },
         "typo": {
           "name": "typo",
           "description": "Lists a gate nobody declares",
@@ -191,6 +206,11 @@
       "level": "critical",
       "code": "PKU851",
       "message": "Harness gate agent 'check' has the name of the harness gate in '<fixture>/src/gates.ts'. A harness names its gates, so the two must differ."
+    },
+    {
+      "level": "critical",
+      "code": "PKU124",
+      "message": "Harness 'selfSpread' lists gates that are not readable from source: `selfSpread`. Use a gate name, a declared gate or gate agent (optionally `.with({ failOn })`), or a spread of a const array of these."
     },
     {
       "level": "critical",

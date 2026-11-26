@@ -58,3 +58,12 @@ export const lintGate = pikkuHarnessGate({
   writes: [],
   func: async (): Promise<Finding[]> => [],
 })
+
+const noExtraGates = [] as const
+
+export const repeatedSpreadHarness = pikkuHarness({
+  name: 'repeatedSpread',
+  description: 'Spreads one const array twice',
+  agent: { model: 'cheap' },
+  gates: [...noExtraGates, ...noExtraGates, 'lint'],
+})
