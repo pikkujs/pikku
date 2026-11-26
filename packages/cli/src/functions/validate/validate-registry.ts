@@ -1,4 +1,4 @@
-import { runCmsRoleChecks } from './cms-role-checks.js'
+import { runCrudRoleChecks } from './crud-role-checks.js'
 import { existsSync, readFileSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { join, relative } from 'node:path'
@@ -253,10 +253,10 @@ export const CHECKS: ValidateCheck[] = [
     run: async ({ dir }) => runScaffoldDuplicateChecks(dir),
   },
   {
-    id: 'cms-system-role',
-    subject: 'CMS grant',
-    applies: async ({ dir }) => existsSync(join(dir, 'db', 'cms.ts')),
-    run: async ({ dir }) => runCmsRoleChecks(dir),
+    id: 'crud-system-role',
+    subject: 'CRUD grant',
+    applies: async ({ dir }) => existsSync(join(dir, 'db', 'crud.ts')),
+    run: async ({ dir }) => runCrudRoleChecks(dir),
   },
   {
     id: 'oxlint-setup',

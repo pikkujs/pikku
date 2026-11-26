@@ -14,7 +14,7 @@ here first — several of these exist because the obvious simplification was tri
 and broke something.
 
 <!-- pikku:knowledge-index -->
-- [cms](cms/index.md) — rules about what core holds of the CMS and how its functions are guarded, and why
+- [crud](crud/index.md) — rules about what core holds of the CRUD backend and how its functions are guarded, and why
 - [internals](internals/index.md) — a rule about how it works under the hood, and why
 - [security](security/index.md) — a rule about who may do what
 <!-- /pikku:knowledge-index -->

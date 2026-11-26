@@ -103,12 +103,12 @@ describe('studio session with wired addons', () => {
     assert.deepEqual(await scopes(), ['admin', 'pikku:otlp:runs'])
   })
 
-  test('holds cms when the app has CMS functions, and only then', async () => {
-    declareScopes(null, ['billing:refund'], ['cmsExport:run'])
+  test('holds crud when the app has CRUD functions, and only then', async () => {
+    declareScopes(null, ['billing:refund'], ['crudExport:run'])
     assert.deepEqual(await scopes(), ['admin', 'pikku:otlp:runs'])
 
     resetPikkuState()
-    declareScopes(null, ['cms:offering:read', 'cms:offering:edit'])
-    assert.deepEqual(await scopes(), ['admin', 'pikku:otlp:runs', 'cms'])
+    declareScopes(null, ['crud:offering:read', 'crud:offering:edit'])
+    assert.deepEqual(await scopes(), ['admin', 'pikku:otlp:runs', 'crud'])
   })
 })

@@ -18,10 +18,10 @@ import type {
  * already outside the `#pikku` contract; it is where `process.env` is allowed
  * too.
  *
- * `db/cms.ts` names `@pikku/core/cms`: the CLI loads that file to generate from
+ * `db/crud.ts` names `@pikku/core/crud`: the CLI loads that file to generate from
  * it, before there is a leaf to name.
  */
-const ALLOWED_SUBPATHS = ['@pikku/core/services', '@pikku/core/cms']
+const ALLOWED_SUBPATHS = ['@pikku/core/services', '@pikku/core/crud']
 
 const isAllowed = (specifier: string) =>
   ALLOWED_SUBPATHS.some(

@@ -130,12 +130,12 @@ describe('core import checks', () => {
     assert.deepEqual(await runCoreImportChecks(root), [])
   })
 
-  test('accepts the CMS declaration, which the CLI loads before any leaf', async () => {
+  test('accepts the CRUD declaration, which the CLI loads before any leaf', async () => {
     const root = await project()
     await write(
       root,
-      'db/cms.ts',
-      `import { defineCmsCollections } from '@pikku/core/cms'\n`
+      'db/crud.ts',
+      `import { defineCrud } from '@pikku/core/crud'\n`
     )
     await write(root, 'db/other.ts', `import x from '@pikku/core/scope'\n`)
 

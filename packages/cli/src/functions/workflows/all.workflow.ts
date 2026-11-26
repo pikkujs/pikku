@@ -36,9 +36,9 @@ import {
   type RegistryInvoke,
 } from '../../utils/remote-addon-sync.js'
 import { writeAddonDeclaration } from '../db/addon-declarations.js'
-import { writeAddonCms } from '../wirings/cms/cms-addon.js'
+import { writeAddonCrud } from '../wirings/crud/crud-addon.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
-import { CMS_FILE } from '../wirings/cms/load-cms-declaration.js'
+import { CRUD_FILE } from '../wirings/crud/load-crud-declaration.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -233,8 +233,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
 
-    const hasCms = !config.addon && existsSync(join(config.rootDir, CMS_FILE))
-    await workflow.do('CMS', 'pikkuCms', null)
+    const hasCrud = !config.addon && existsSync(join(config.rootDir, CRUD_FILE))
+    await workflow.do('CRUD', 'pikkuCrud', null)
 
     const allImports: string[] = []
     let functionTypesFileExists = true
@@ -439,8 +439,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await workflow.do('Function types split', 'pikkuFunctionTypesSplit', {})
     await workflow.do('Leaf subpath entries', 'pikkuLeafIndexes', null)
 
-    if (hasCms) {
-      await workflow.do('CMS checks', 'pikkuCmsChecks', null)
+    if (hasCrud) {
+      await workflow.do('CRUD checks', 'pikkuCrudChecks', null)
     }
 
     if (!functionTypesFileExists || missingScaffolds.length > 0) {
@@ -793,7 +793,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       // consumer reads an absent file as a package that cannot say whether it
       // ships a schema, which is a broken publish rather than a quiet no.
       await writeAddonDeclaration(config.rootDir, config.outDir)
-      await writeAddonCms(config.rootDir, config.outDir)
+      await writeAddonCrud(config.rootDir, config.outDir)
     }
 
     const hasFunctionRegistrations = await workflow.do(

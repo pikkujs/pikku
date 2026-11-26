@@ -1,11 +1,11 @@
 ---
 type: decision
-title: The studio session holds the scope roots of wired addons and of the CMS, never the wildcard
+title: The studio session holds the scope roots of wired addons and of CRUD, never the wildcard
 description: Under pikku dev the studio session holds admin, pikku:otlp:runs and the root of each scope the functions of a wired addon require, read from runtime state when the session is set
 tags: cli, studio, auth, addons, scopes
 ---
 
-# The studio session holds the scope roots of wired addons and of the CMS, never the wildcard
+# The studio session holds the scope roots of wired addons and of CRUD, never the wildcard
 
 **Why.** An addon's screens in Studio call the project as the studio session.
 That session is not an app user, so no role grant reaches it, and without the
@@ -21,9 +21,9 @@ whoever reaches the workspace holds these roots there.
 A root covers the whole tree under it. Where an addon requires a scope under a
 root the app also uses, the session holds the app's scopes under that root too.
 
-**CMS.** The session also holds `cms` when a function of the app requires a
-scope under `cms`. Only the functions `pikku all` generates from `db/cms.ts` do:
-the CLI refuses any other `cms` root. Studio's CMS screens need it, and `admin`
+**CRUD.** The session also holds `crud` when a function of the app requires a
+scope under `crud`. Only the functions `pikku all` generates from `db/crud.ts` do:
+the CLI refuses any other `crud` root. Studio's CRUD screens need it, and `admin`
 does not include it.
 
 **What this rules out:** granting `*`; taking any other root from the app's own
