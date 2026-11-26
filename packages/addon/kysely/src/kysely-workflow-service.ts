@@ -17,7 +17,12 @@ import type {
   WorkflowStatus,
   WorkflowVersionStatus,
 } from '@pikku/core/workflow'
-import { sql, type Kysely, type Selection } from 'kysely'
+import {
+  sql,
+  type ExpressionBuilder,
+  type Kysely,
+  type Selection,
+} from 'kysely'
 import { appNowMs, leaseUntil } from './kysely-lease-clock.js'
 import type { KyselyPikkuDB } from './kysely-tables.js'
 import { KyselyWorkflowRunService } from './kysely-workflow-run-service.js'
@@ -40,6 +45,27 @@ const SETTLED_RUN_STATUSES: WorkflowStatus[] = [
   'compensated',
   'compensation_failed',
 ]
+
+/**
+ * A step whose job may be sent again: any step of a `running` run, but only the
+ * compensations of a `compensating` one, whose forward steps must not start.
+ */
+const isDispatchable = (
+  eb: ExpressionBuilder<
+    KyselyPikkuDB & {
+      s: KyselyPikkuDB['workflowStep']
+      r: KyselyPikkuDB['workflowRuns']
+    },
+    's' | 'r'
+  >
+) =>
+  eb.or([
+    eb('r.status', '=', 'running'),
+    eb.and([
+      eb('r.status', '=', 'compensating'),
+      eb('s.stepName', 'like', '%:compensate'),
+    ]),
+  ])
 
 const STEP_STATE_COLUMNS = [
   'workflowStepId',
@@ -897,7 +923,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .where('s.updatedAt', '<', before)
       // Leftover `pending` steps on a settled run are not work; only a live run
       // still has anything to dispatch.
-      .where('r.status', 'in', ADVANCING_RUN_STATUSES)
+      .where(isDispatchable)
       .orderBy('s.updatedAt', 'asc')
       .limit(limit)
       .execute()
@@ -1018,7 +1044,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         's.updatedAt',
       ])
       .where('s.status', '=', 'scheduled')
-      .where('r.status', 'in', ADVANCING_RUN_STATUSES)
+      .where(isDispatchable)
       .orderBy('s.updatedAt', 'asc')
       .orderBy('s.workflowStepId', 'asc')
       .limit(limit)

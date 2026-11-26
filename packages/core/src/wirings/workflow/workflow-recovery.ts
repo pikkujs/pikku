@@ -241,6 +241,7 @@ const APPROVAL_PAGE_SIZE = 100
 const findDecidedApprovalRunIds = async (
   findPendingApprovals: WorkflowRecoveryHost['findPendingApprovals'],
   getRunState: WorkflowRecoveryHost['getRunState'],
+  isEligible: (runId: string) => boolean,
   before: Date,
   limit: number
 ): Promise<string[]> => {
@@ -249,6 +250,7 @@ const findDecidedApprovalRunIds = async (
     const page = await findPendingApprovals(before, APPROVAL_PAGE_SIZE, offset)
     for (const { runId, stepName } of page) {
       if (runIds.size >= limit) break
+      if (!isEligible(runId)) continue
       const state = await getRunState(runId)
       const record = state[approvalStateKey(stepName)] as
         { decision?: unknown } | undefined
@@ -485,11 +487,14 @@ export class WorkflowRecovery {
     return sweepStalledRuns(
       async (before, limit) => {
         const stalled = await this.host.findStalledRunIds(before, limit)
+        // A limit of their own, spent only on runs this tick can re-drive, so
+        // runs that stay stalled cannot crowd out a decided gate.
         const decided = await findDecidedApprovalRunIds(
           this.host.findPendingApprovals,
           this.host.getRunState,
+          (runId) => this.backoff.isEligible(runId, Date.now()),
           before,
-          limit - stalled.length
+          limit
         )
         return [...stalled, ...decided]
       },

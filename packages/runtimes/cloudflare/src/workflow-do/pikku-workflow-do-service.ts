@@ -329,6 +329,7 @@ export class PikkuWorkflowDoService<
       s.status = status
       s.result = undefined
       s.error = undefined
+      s.childRunId = undefined
       s.attemptCount = (s.attemptCount ?? 1) + 1
     })
     await this.appendHistory(stepId, status)

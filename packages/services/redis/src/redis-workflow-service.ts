@@ -753,6 +753,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       'updatedAt',
       now.toString()
     )
+    await this.redis.hdel(key, 'childRunId')
 
     // Insert NEW history record for retry attempt
     await this.saveStepHistory(

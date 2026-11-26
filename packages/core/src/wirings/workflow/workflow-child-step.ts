@@ -87,6 +87,12 @@ export const startQueuedChildStep = async (
 }
 
 /**
+ * How long a `cancelled` child is left alone: `cancelRun` writes that status
+ * before it moves a child with work to undo to `compensating`.
+ */
+const CANCELLED_CHILD_SETTLE_MS = 30_000
+
+/**
  * Give every step still parked on a child that has settled the child's outcome.
  * Replay cannot do this: it would run the step again and start a second child.
  */
@@ -104,12 +110,17 @@ export const handBackSettledChildren = async (
   },
   runId: string
 ): Promise<void> => {
-  for (const { stepName, status, childRunId } of await api.getRunSteps(runId)) {
-    if (status !== 'running' || !childRunId) continue
-    const child = await api.getRun(childRunId)
+  for (const listed of await api.getRunSteps(runId)) {
+    if (!isParkedOnChild(listed)) continue
+    // One read, so the child and the attempt it is handed to belong together.
+    const step = await api.getStepState(runId, listed.stepName)
+    if (!isParkedOnChild(step) || runningStepLease(step) === 'held') continue
+    const child = await api.getRun(step.childRunId!)
     if (!child || !WORKFLOW_TERMINAL_STATES.has(child.status)) continue
-    const step = await api.getStepState(runId, stepName)
-    if (step.status !== 'running' || runningStepLease(step) === 'held') {
+    if (
+      child.status === 'cancelled' &&
+      Date.now() - child.updatedAt.getTime() < CANCELLED_CHILD_SETTLE_MS
+    ) {
       continue
     }
     const failure = childRunFailure(child)
@@ -122,12 +133,11 @@ export const handBackSettledChildren = async (
 }
 
 /**
- * A `running` step with a child run and no lease: what a worker leaves to its
- * child. In an inline run, which has no worker, it is a pass that died waiting.
+ * A `running` step with a child run is that child's to finish, whatever became
+ * of the lease of the worker that started it.
  */
 export const isParkedOnChild = ({
   status,
   childRunId,
-  leaseExpiresAt,
-}: StepState): boolean =>
-  status === 'running' && childRunId != null && leaseExpiresAt == null
+}: Pick<StepState, 'status' | 'childRunId'>): boolean =>
+  status === 'running' && childRunId != null

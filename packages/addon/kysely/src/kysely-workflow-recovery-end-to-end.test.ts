@@ -251,6 +251,58 @@ describe('recovering a parent whose child already settled', () => {
     assert.equal(await children(), 1)
   })
 
+  for (const message of ['replay of the parent', 'redelivered step job']) {
+    test(`a worker that died holding a parked step: a ${message} starts no second child`, async () => {
+      parentAndChild(() => ({}))
+      let stepJob: Job | undefined
+      loseJob = (job) => {
+        if (job.rpcName === 'childWorkflow') stepJob = job
+        return job.rpcName === 'childWork'
+      }
+      const parentId = await start('parentWorkflow')
+      await pump()
+      loseJob = () => false
+      await db
+        .updateTable('workflowStep')
+        .set({ leaseExpiresAt: Date.now() - 1000 })
+        .where('workflowRunId', '=', parentId)
+        .execute()
+
+      if (message === 'redelivered step job') queue.push(stepJob!)
+      else await service.resumeWorkflow(parentId)
+      await pump()
+
+      const children = await db
+        .selectFrom('workflowRuns')
+        .select('workflowRunId')
+        .where('workflow', '=', 'childWorkflow')
+        .execute()
+      assert.equal(children.length, 1)
+    })
+  }
+
+  test('a just-cancelled child is given time to start its unwind', async () => {
+    parentAndChild(() => ({}))
+    loseJob = (job) => job.rpcName === 'childWork'
+    const parentId = await start('parentWorkflow')
+    await pump()
+    const [parked] = await service.getRunSteps(parentId)
+    loseHandBack()
+    await service.cancelRun(parked!.childRunId!)
+    await pump()
+    await goQuiet()
+    await db
+      .updateTable('workflowRuns')
+      .set({ updatedAt: new Date() })
+      .where('workflowRunId', '=', parked!.childRunId!)
+      .execute()
+
+    await service.recoverWorkflows()
+
+    const [after] = await service.getRunSteps(parentId)
+    assert.equal(after!.status, 'running')
+  })
+
   test('a new attempt at a step does not inherit the last attempt’s child', async () => {
     const runId = await service.createRun('parentWorkflow', {}, false, 'h', {
       type: 'test',
@@ -301,6 +353,36 @@ describe('recovering a run left compensating', () => {
     assert.equal(undone, 1)
   })
 
+  test('a lost forward step of a cancelled run is not sent again', async () => {
+    step('reserve', () => ({}), { compensate: () => ({}) })
+    step('sendEmail', () => ({}))
+    workflow('mailWorkflow', async (w) => {
+      await w.do('Reserve', 'reserve', {})
+      await w.do('Email', 'sendEmail', {})
+    })
+    loseJob = (job) => job.rpcName === 'sendEmail'
+    const runId = await start('mailWorkflow')
+    await pump()
+    loseJob = (job) => job.rpcName === 'reserve:compensate'
+    await service.cancelRun(runId, rpc)
+    await pump()
+    assert.equal((await run(runId)).status, 'compensating')
+    const email = (await service.getRunSteps(runId)).find(
+      (s) => s.stepName === 'Email'
+    )
+
+    for (const status of ['scheduled', 'pending'] as const) {
+      await db
+        .updateTable('workflowStep')
+        .set({ status })
+        .where('workflowStepId', '=', email!.stepId)
+        .execute()
+      await recoverAndFinish()
+    }
+
+    assert.equal(count('sendEmail'), 0)
+  })
+
   test('a lost orchestrator job after the last undo still finishes the run', async () => {
     let undoSent = false
     const runId = await stuckUnwinding((job) => {
@@ -343,6 +425,23 @@ describe('recovering an approval whose resume was lost', () => {
 
     assert.equal((await run(runId)).status, 'completed')
     assert.equal(count('pay'), 1)
+  })
+
+  test('a decided gate is resumed however many other runs are stalled', async () => {
+    payout()
+    const runId = await start('payoutWorkflow')
+    await pump()
+    loseJob = () => true
+    await service.approveStep(runId, 'Approve payout', { ok: true })
+    loseJob = () => false
+    await service.createRun('removedWorkflow', {}, false, 'h', {
+      type: 'test',
+    } as never)
+    await goQuiet()
+
+    await service.recoverStalledRuns({ stalledAfterMs: 1000, limit: 1 })
+
+    assert.ok(queue.some((job) => job.runId === runId))
   })
 
   test('an undecided gate is left waiting', async () => {

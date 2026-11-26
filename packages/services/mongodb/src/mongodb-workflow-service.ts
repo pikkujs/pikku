@@ -480,6 +480,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
           error: null,
           updatedAt: new Date(),
         },
+        $unset: { childRunId: '' },
         $inc: { attempt: 1 },
       },
       { returnDocument: 'after' }

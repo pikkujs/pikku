@@ -2,6 +2,7 @@ import { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { isExpectedError } from '../../errors/error-handler.js'
 import {
   WORKFLOW_TERMINAL_STATES,
+  isCompensationStepName,
   isStepLeaseLive,
 } from './workflow-constants.js'
 import { APPROVAL_STEP_RPC_NAME } from './workflow-approval.js'
@@ -367,12 +368,22 @@ export class InMemoryWorkflowService
       if (run.status !== 'running' && run.status !== 'compensating') continue
       for (const step of this.stepHistory.get(runId) ?? []) {
         if (step.status !== 'pending') continue
+        if (run.status === 'compensating' && !this.isCompensation(step)) {
+          continue
+        }
         if (step.updatedAt >= before) continue
         undispatched.push({ runId, stepId: step.stepId })
         if (undispatched.length >= limit) return undispatched
       }
     }
     return undispatched
+  }
+
+  private isCompensation({ stepId }: StepState): boolean {
+    for (const [key, step] of this.steps) {
+      if (step.stepId === stepId) return isCompensationStepName(key)
+    }
+    return false
   }
 
   private isRunningStepHeld({ childRunId, leaseExpiresAt }: StepState) {

@@ -193,6 +193,7 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         status: newStep.status,
         result: null,
         error: null,
+        childRunId: null,
         currentAttempt: attempt,
         updatedAt: new Date(),
       })
