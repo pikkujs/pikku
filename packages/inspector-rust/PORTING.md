@@ -264,7 +264,8 @@ Known gaps:
   stubbed. A bare import that is not `zod` and cannot be loaded (a Node built-in, an unresolvable
   or CommonJS package) is a stub, as in Go; a stub's exports are the
   names its importer asks for, read off the importer's source (named imports, `export {..}
-  from`, and `ns.member` for `import * as ns`). A schema that touches a stub, or a module
+  from`, and `ns.member` for `import * as ns`), carried through a module whose only
+  `export * from` leads to it. QuickJS has no `Intl`, so it is a stub too. A schema that touches a stub, or a module
   that does not load, is reported as an error ("Could not convert Zod schema 'X' without Node
   ...", Go's no-Node text). Known differences: (1) CommonJS modules outside `node_modules`
   (`require`, `module.exports`) do not load; (2) `import * as ns` of a stubbed package

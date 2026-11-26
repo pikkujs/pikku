@@ -250,3 +250,87 @@ fn keeps_a_package_that_imports_node_as_a_stub() {
     assert_eq!(res.errors.len(), 1, "{:?}", res.errors);
     assert!(res.errors[0].contains("'uses-fs'"), "{}", res.errors[0]);
 }
+
+/// QuickJS links a module's imports one at a time and keeps the ones already
+/// bound when a later one is missing. Linking it again for a second schema file
+/// leaked them, and freeing the runtime then aborted the process.
+#[test]
+fn two_modules_reaching_a_half_linked_module_cost_only_their_own_schemas() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("half-linked");
+    project.link_zod(&zod, ".");
+    project.write("present.ts", "export const present = () => 1\n");
+    project.write("empty.ts", "export {}\n");
+    project.write(
+        "shared.ts",
+        "import { present } from './present.js'\nimport { missing } from './empty.js'\nexport const shared = () => [present, missing]\n",
+    );
+    for file in ["first.ts", "second.ts"] {
+        project.write(
+            file,
+            "import { z } from 'zod'\nimport { shared } from './shared.js'\nexport const Name = z.object({ name: z.string() })\nexport const use = () => shared\n",
+        );
+    }
+    project.write("fine.ts", "import { z } from 'zod'\nexport const Fine = z.object({ ok: z.boolean() })\n");
+    let res = convert(
+        &project.0,
+        &[
+            reference(&project.0, "FirstInput", "first.ts", "Name"),
+            reference(&project.0, "SecondInput", "second.ts", "Name"),
+            reference(&project.0, "FineInput", "fine.ts", "Fine"),
+        ],
+    );
+    assert_eq!(names(&res), vec!["FineInput"], "{:?}", res.errors);
+    assert_eq!(res.errors.len(), 2, "{:?}", res.errors);
+}
+
+/// A stub learns its export names from whoever imports them, which for an
+/// `export * from` is the importer of the re-exporting module.
+#[test]
+fn a_star_re_export_of_a_stubbed_package_still_links() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("star-stub");
+    project.link_zod(&zod, ".");
+    project.write(
+        "node_modules/needs-node/package.json",
+        r#"{ "name": "needs-node", "type": "module", "exports": { ".": "./index.js" } }"#,
+    );
+    project.write("node_modules/needs-node/index.js", "import { readFileSync } from 'node:fs'\nexport const client = () => readFileSync\n");
+    project.write("inner.ts", "export * from 'needs-node'\n");
+    project.write("barrel.ts", "export * from './inner.js'\n");
+    project.write("shared.ts", "import { client } from './barrel.js'\nexport const shared = () => client\n");
+    for file in ["first.ts", "second.ts"] {
+        project.write(
+            file,
+            "import { z } from 'zod'\nimport { shared } from './shared.js'\nexport const Name = z.object({ name: z.string() })\nexport const use = () => shared\n",
+        );
+    }
+    let res = convert(
+        &project.0,
+        &[reference(&project.0, "FirstInput", "first.ts", "Name"), reference(&project.0, "SecondInput", "second.ts", "Name")],
+    );
+    assert!(res.errors.is_empty(), "{:?}", res.errors);
+    assert_eq!(names(&res), vec!["FirstInput", "SecondInput"]);
+}
+
+#[test]
+fn a_module_that_uses_intl_converts_unless_a_schema_is_built_from_it() {
+    let Some(zod) = zod() else { return };
+    let project = Scratch::new("intl");
+    project.link_zod(&zod, ".");
+    project.write(
+        "schema.ts",
+        "import { z } from 'zod'\n\
+         const names = new Intl.Collator(undefined, { numeric: true })\n\
+         export const sort = (list: string[]) => list.sort(names.compare)\n\
+         export const Name = z.object({ name: z.string() })\n\
+         export const Zone = z.object({ zone: z.enum(Intl.supportedValuesOf('timeZone') as [string]) })\n",
+    );
+    let res = convert(
+        &project.0,
+        &[reference(&project.0, "NameInput", "schema.ts", "Name"), reference(&project.0, "ZoneInput", "schema.ts", "Zone")],
+    );
+    assert_eq!(names(&res), vec!["NameInput"], "{:?}", res.errors);
+    assert_eq!(res.errors.len(), 1, "{:?}", res.errors);
+    assert!(res.errors[0].contains("ZoneInput") && res.errors[0].contains("Intl"), "{}", res.errors[0]);
+}
