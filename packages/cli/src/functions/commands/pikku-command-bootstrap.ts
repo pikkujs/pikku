@@ -3,6 +3,7 @@ import { rm } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { pikkuSessionlessFunc } from '#pikku/function'
 import {
+  isServicesOnlyPackage,
   serializeLoadAddons,
   splitAddonBootstrap,
 } from './lazy-addon-bootstrap.js'
@@ -26,6 +27,14 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
       // and drag in the runtime deps remote consumption exists to avoid. The
       // consumer's own wireRemoteAddon() call registers the remote binding.
       if (decl.remote) continue
+      const manifest = await readAddonFile(
+        stateBeforeBootstrap.rootDir,
+        decl.file,
+        `${decl.package}/package.json`
+      )
+      if (manifest && isServicesOnlyPackage(JSON.parse(manifest).exports)) {
+        continue
+      }
       const bootstrapSpecifier = `${decl.package}/.pikku/pikku-bootstrap.gen.js`
       const split = config.lazyAddons
         ? await readAddonBootstrap(
@@ -148,12 +157,11 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
   },
 })
 
-const readAddonBootstrap = async (
+const readAddonFile = async (
   rootDir: string,
   declFile: string | undefined,
-  packageName: string,
-  bootstrapSpecifier: string
-) => {
+  specifier: string
+): Promise<string | null> => {
   try {
     // Dynamic, like the other inspector uses in this package: a static import
     // would load the TypeScript compiler on every command, `pikku --help`
@@ -162,9 +170,19 @@ const readAddonBootstrap = async (
       await import('@pikku/inspector')
     const path = createAddonResolver(
       addonResolutionDirs(rootDir, declFile)
-    ).resolve(bootstrapSpecifier)
-    return splitAddonBootstrap(packageName, readFileSync(path, 'utf8'))
+    ).resolve(specifier)
+    return readFileSync(path, 'utf8')
   } catch {
     return null
   }
+}
+
+const readAddonBootstrap = async (
+  rootDir: string,
+  declFile: string | undefined,
+  packageName: string,
+  bootstrapSpecifier: string
+) => {
+  const source = await readAddonFile(rootDir, declFile, bootstrapSpecifier)
+  return source === null ? null : splitAddonBootstrap(packageName, source)
 }

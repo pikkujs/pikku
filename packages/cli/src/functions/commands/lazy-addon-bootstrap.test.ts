@@ -1,6 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  isServicesOnlyPackage,
   serializeLoadAddons,
   splitAddonBootstrap,
 } from './lazy-addon-bootstrap.js'
@@ -72,5 +73,40 @@ describe('serializeLoadAddons', () => {
 
   test('is emitted with nothing to load', () => {
     assert.match(serializeLoadAddons([]), /Promise\.all\(\[\n {2}\]\)/)
+  })
+})
+
+describe('isServicesOnlyPackage', () => {
+  test('is true for a package that exports services and no bootstrap', () => {
+    assert.equal(
+      isServicesOnlyPackage({
+        '.': './dist/index.js',
+        './.pikku/services/*': './.pikku/addon/services/*',
+      }),
+      true
+    )
+  })
+
+  test('is false for an addon, which exports its whole .pikku tree', () => {
+    assert.equal(
+      isServicesOnlyPackage({ './.pikku/*': './dist/.pikku/addon/*' }),
+      false
+    )
+  })
+
+  test('is false when a bootstrap is exported beside the services', () => {
+    assert.equal(
+      isServicesOnlyPackage({
+        './.pikku/services/*': './.pikku/addon/services/*',
+        './.pikku/pikku-bootstrap.gen.js': './dist/bootstrap.js',
+      }),
+      false
+    )
+  })
+
+  test('is false for anything else, so a broken addon still fails the build', () => {
+    assert.equal(isServicesOnlyPackage({ '.': './dist/index.js' }), false)
+    assert.equal(isServicesOnlyPackage('./dist/index.js'), false)
+    assert.equal(isServicesOnlyPackage(undefined), false)
   })
 })

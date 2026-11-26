@@ -142,8 +142,20 @@ export const connectNats = async (
 }
 
 /**
- * Standalone deploys put a stage on its own JetStream stream. Deploy only, so
- * `pikku dev` keeps its in-memory queue; an app opts in with
+ * What `pikku dev` runs in place of NATS: nothing to connect, nothing to drain.
+ * `pikku dev` keeps its in-memory queue and scheduler, so only the lifecycle
+ * the server start and stop hooks read is provided.
+ */
+const devNatsLifecycle: NatsLifecycle = {
+  registerQueues: async () => undefined,
+  drainWorkers: async () => [],
+  close: async () => undefined,
+  stop: async () => undefined,
+}
+
+/**
+ * Standalone deploys put a stage on its own JetStream stream. `pikku dev` keeps
+ * its in-memory queue; an app opts in with
  * `wireAddon({ services: ['nats'] })` and builds it for a target that runs the
  * server lifecycle.
  *
@@ -151,6 +163,7 @@ export const connectNats = async (
  * `natsLifecycle.stop()`.
  */
 export const nats = pikkuService({
+  dev: () => ({ natsLifecycle: devNatsLifecycle }),
   deploy: async ({ logger }, env) => connectNats(logger, env),
   async onServerStart(services) {
     const lifecycle: NatsLifecycle = services.natsLifecycle

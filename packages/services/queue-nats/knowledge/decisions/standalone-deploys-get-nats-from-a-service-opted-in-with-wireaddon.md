@@ -1,24 +1,27 @@
 ---
 type: decision
 title: Standalone deploys get NATS from a service opted in with wireAddon
-description: '@pikku/queue-nats publishes a deploy-only service that puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
+description: '@pikku/queue-nats publishes a service that, on a deploy, puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
 tags: [nats, pikku-service, deploy, standalone, permissions]
 ---
 
 # Standalone deploys get NATS from a service opted in with wireAddon
 
 `@pikku/queue-nats` has no functions. It publishes one `pikkuService`, `nats`
-(deploy variant only, so `pikku dev` never gets it), through a `pikku all` build
-step (exports `./.pikku/services/*`). An app opts in at build time with
+(a deploy variant that connects, and a dev variant that provides only an inert
+`natsLifecycle`, so `pikku dev` keeps its in-memory queue), through a `pikku all`
+build step (exports `./.pikku/services/*`). It is not an addon: it ships no
+bootstrap, and a consumer imports none. An app opts in at build time with
 `wireAddon({ name: 'nats', package: '@pikku/queue-nats', services: ['nats'] })`.
 
 ## Which build applies it
 
-A service has no `when`, so opting in is what selects it, on every deploy of
-that source. The service is for a standalone build: its `onServerStart` registers
-the queue workers, which a target that does not run the server lifecycle (a
-Worker) rejects at build time. An app built for several providers wires it only
-where it deploys standalone.
+A service has no `when`, so a target selects it when it reaches a key the service
+provides (`queueService`, `schedulerService` or `natsLifecycle`). The service is
+for a standalone build: its `onServerStart` registers the queue workers, which a
+target that does not run the server lifecycle (a Worker) refuses at build time,
+naming the unit. An app built for several providers wires it only where it
+deploys standalone.
 
 ## One stream per stage
 

@@ -1,10 +1,10 @@
 /**
- * Verifier for the NATS contributor in a standalone deploy, two stages of one
+ * Verifier for the NATS service in a standalone deploy, two stages of one
  * project sharing one broker.
  *
  * Build side: `pikku deploy plan --provider standalone` selects the `nats`
- * contributor of @pikku/queue-nats (opted in with wireContributors); the same
- * source planned for Cloudflare, which is how the cloud builds it, does not.
+ * service of @pikku/queue-nats (opted in with wireAddon); the same
+ * source planned for Cloudflare is refused: a Worker does not run the server lifecycle.
  * Run side: against a real nats-server (2.14+, JetStream) with one stream per
  * stage created up front and one restricted user per stage (broker.ts), two copies of
  * the bundle each get only their own jobs and crons, a restart keeps a stage's
@@ -81,7 +81,7 @@ const pikku = (...args: string[]) =>
   })
 
 console.log(
-  'Setting up: pikku all + deploy plan (standalone, then cloudflare)...'
+  'Setting up: pikku all + deploy plan (standalone, then cloudflare, which must refuse)...'
 )
 rmSync(join(HERE, '.deploy'), { recursive: true, force: true })
 rmSync(join(HERE, '.pikku'), { recursive: true, force: true })
@@ -94,51 +94,48 @@ pikku(
   '--result-file',
   '.deploy/standalone/plan-result.json'
 )
-pikku(
-  'deploy',
-  'plan',
-  '--provider',
-  'cloudflare',
-  '--result-file',
-  '.deploy/cloudflare/plan-result.json'
-)
+let cloudflareRefusal = ''
+try {
+  pikku(
+    'deploy',
+    'plan',
+    '--provider',
+    'cloudflare',
+    '--result-file',
+    '.deploy/cloudflare/plan-result.json'
+  )
+} catch (error) {
+  cloudflareRefusal = String((error as { stderr?: Buffer }).stderr ?? error)
+}
 
-console.log('\nBuild: which target gets the contributor')
+console.log('\nBuild: which target gets the service')
+await check('standalone selects nats and starts it with the server', () => {
+  const generated = readFileSync(
+    join(UNIT_DIR, 'platform-services.gen.ts'),
+    'utf-8'
+  )
+  if (!/import \{ nats as service\d+ \} from ".*queue-nats/.test(generated))
+    throw new Error(`the nats service was not imported:\n${generated}`)
+  if (!generated.includes('registry.add("nats/nats"'))
+    throw new Error(`nats was not registered:\n${generated}`)
+  if (!/serverStartHooks[\s\S]*name: "nats\/nats"/.test(generated))
+    throw new Error('nats does not start with the server')
+})
 await check(
-  'standalone selects nats, and the platform knows it is standalone',
+  'the same source built for Cloudflare is refused, naming the service, rather than bundling NATS',
   () => {
-    const generated = readFileSync(
-      join(UNIT_DIR, 'platform-services.gen.ts'),
-      'utf-8'
-    )
     if (
-      !/import \{ natsDeploy as contributor0 \} from ".*queue-nats.*nats-contributor/.test(
-        generated
-      )
+      !cloudflareRefusal.includes('nats/nats') ||
+      !cloudflareRefusal.includes('does not run the server lifecycle')
     )
-      throw new Error(`natsDeploy was not imported:\n${generated}`)
-    if (!generated.includes('"provider":"standalone"'))
-      throw new Error('the platform did not name the provider')
-  }
-)
-await check(
-  'the same source built for Cloudflare (the cloud build) does not select nats',
-  () => {
-    const dir = join(HERE, '.deploy', 'cloudflare', 'units')
-    const units = readdirSync(dir)
-    if (units.length === 0) throw new Error('no cloudflare units were built')
-    for (const unit of units) {
-      const generated = join(dir, unit, 'platform-services.gen.ts')
-      if (
-        existsSync(generated) &&
-        readFileSync(generated, 'utf-8').includes('natsDeploy')
+      throw new Error(
+        `the Cloudflare plan did not refuse the nats service:\n${cloudflareRefusal}`
       )
-        throw new Error(`${unit} selected nats`)
-      const bundle = readFileSync(join(dir, unit, 'bundle.js'), 'utf-8')
-      for (const marker of ['NATS_URL', 'NATS_PASSWORD', 'PIKKU_PROJECT'])
-        if (bundle.includes(marker))
-          throw new Error(`${unit} bundle mentions ${marker}`)
-    }
+    const units = join(HERE, '.deploy', 'cloudflare', 'units')
+    for (const unit of existsSync(units) ? readdirSync(units) : [])
+      for (const built of ['bundle.js', 'platform-services.gen.ts'])
+        if (existsSync(join(units, unit, built)))
+          throw new Error(`${unit} was built although nats was refused`)
   }
 )
 
@@ -420,7 +417,7 @@ if (!natsOk || !bunOk) {
     const betaSeqBefore = await scheduleSeq(B, betaSubject)
     const alphaBefore = await scheduleSubjects(A)
     // A schedule for a task this code no longer has, left by an earlier release.
-    // The stage user cannot purge, so the contributor retires it another way.
+    // The stage user cannot purge, so the service retires it another way.
     const alphaNc = await connect({
       servers: broker.url,
       user: A.user,
