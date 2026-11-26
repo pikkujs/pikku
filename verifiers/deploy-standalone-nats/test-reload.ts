@@ -18,13 +18,11 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
 import {
   existsSync,
-  mkdtempSync,
   readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connect, headers } from '@nats-io/transport-node'
 import {
@@ -38,6 +36,7 @@ import {
 import {
   freePort,
   prefixOf,
+  scratchDir,
   stagePermissions,
   streamConfig,
   streamOf,
@@ -100,7 +99,7 @@ ${stages.map((s) => userBlock(s, tweak(s))).join('\n')}
 ]
 `
 
-const dir = mkdtempSync(join(tmpdir(), 'pikku-nats-reload-'))
+const dir = scratchDir('pikku-nats-reload-')
 const port = await freePort()
 const monitorPort = await freePort()
 const pidFile = join(dir, 'nats.pid')
@@ -470,7 +469,7 @@ await check(
           `  ${s.stage.toUpperCase()}: { jetstream: { max_store: 4MB, max_streams: 4 }, users: [ { user: "${s.user}", password: "${s.password}" } ] }`
       )
       .join('\n')
-    const accDir = mkdtempSync(join(tmpdir(), 'pikku-nats-acc-'))
+    const accDir = scratchDir('pikku-nats-acc-')
     const accPort = await freePort()
     const accMon = await freePort()
     const accPid = join(accDir, 'nats.pid')
