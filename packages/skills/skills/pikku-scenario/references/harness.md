@@ -30,6 +30,14 @@ export const typesGate = pikkuHarnessGate({
     }),
 })
 
+export const formatGate = pikkuHarnessGate({
+  name: 'format',
+  description: 'Formats the changed files',
+  failOn: 'medium',
+  writes: ['**/*.{ts,tsx}'],
+  func: async (): Promise<HarnessFinding[]> => [], // runs the formatter
+})
+
 export const reviewer = pikkuHarnessGateAgent({
   name: 'review',
   description: 'Reads the diff for dead code',
@@ -38,7 +46,7 @@ export const reviewer = pikkuHarnessGateAgent({
   failOn: 'high',
 })
 
-export const defaultGates = [typesGate, 'format'] as const
+export const defaultGates = [typesGate, formatGate] as const
 
 export const buildHarness = pikkuHarness<HarnessGateName>({
   name: 'build',
