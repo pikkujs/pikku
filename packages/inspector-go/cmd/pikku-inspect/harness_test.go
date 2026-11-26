@@ -59,7 +59,7 @@ func TestHarnessAndGateAgentMeta(t *testing.T) {
 	if h == nil {
 		t.Fatal("state.harness missing")
 	}
-	if got := marshal(t, h.HarnessesMeta.Keys()); got != `["build","quick","typo"]` {
+	if got := marshal(t, h.HarnessesMeta.Keys()); got != `["build","quick","repeatedSpread","typo"]` {
 		t.Errorf("harnesses = %s", got)
 	}
 	if got := marshal(t, h.HarnessesMeta.At("build").Gates); got != `[{"name":"check"},{"name":"format"},{"name":"review","failOn":"medium"}]` {
@@ -67,6 +67,9 @@ func TestHarnessAndGateAgentMeta(t *testing.T) {
 	}
 	if got := marshal(t, h.HarnessesMeta.At("quick").Gates); got != `[{"name":"check"}]` {
 		t.Errorf("quick gates = %s", got)
+	}
+	if got := marshal(t, h.HarnessesMeta.At("repeatedSpread").Gates); got != `[{"name":"lint"}]` {
+		t.Errorf("repeatedSpread gates = %s", got)
 	}
 	if got := h.HarnessesMeta.At("build").Agent.Model; got != "default" {
 		t.Errorf("build agent model = %s", got)
@@ -86,6 +89,7 @@ func TestHarnessAndGateAgentMeta(t *testing.T) {
 		"Harness 'computed' lists gates that are not readable from source: `makeGates()`.",
 		"Harness 'callEntry' lists gates that are not readable from source: `makeGates()[0]`.",
 		"Harness 'noModel' has no agent model readable from source.",
+		"Harness 'selfSpread' lists gates that are not readable from source: `selfSpread`.",
 		"Harness gate agent 'goalless' has no goal readable from source.",
 		"Harness gate agent 'check' has the name of the harness gate in",
 		"Harness 'typo' (src/refusals.ts) lists gate 'chek', which is not declared in this project. Declared gates: check, format, lint, review.",

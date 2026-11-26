@@ -70,3 +70,12 @@ export const clashingAgent = pikkuHarnessGateAgent({
   goal: 'Anything',
   failOn: 'low',
 })
+
+const selfSpread: string[] = [...selfSpread]
+
+export const selfSpreadHarness = pikkuHarness({
+  name: 'selfSpread',
+  description: 'Spreads a gate list into itself',
+  agent: { model: 'default' },
+  gates: selfSpread,
+})

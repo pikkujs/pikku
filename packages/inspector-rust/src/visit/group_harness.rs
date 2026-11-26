@@ -203,19 +203,21 @@ impl Context<'_> {
             return None;
         };
         let mut gates = Vec::new();
-        let mut seen = HashSet::new();
-        self.collect_harness_gates(p.initializer().unwrap(), harness_name, &mut gates, &mut seen).then_some(gates)
+        let mut active = HashSet::new();
+        self.collect_harness_gates(p.initializer().unwrap(), harness_name, &mut gates, &mut active).then_some(gates)
     }
 
-    fn collect_harness_gates(&mut self, list: P<Node>, harness_name: &str, out: &mut Vec<HarnessGateEntry>, seen: &mut HashSet<P<Node>>) -> bool {
-        let Some(arr) = self.const_array_literal(list, seen) else {
+    /// `active` holds the arrays being read, so a list that spreads itself is
+    /// refused while one spread twice is not.
+    fn collect_harness_gates(&mut self, list: P<Node>, harness_name: &str, out: &mut Vec<HarnessGateEntry>, active: &mut HashSet<P<Node>>) -> bool {
+        let Some(arr) = self.const_array_literal(list).filter(|arr| active.insert(*arr)) else {
             self.not_static_gates(harness_name, list);
             return false;
         };
         for el in arr.elements() {
             let el = *el;
             if ast::is_spread_element(el) {
-                if !self.collect_harness_gates(el.expression().unwrap(), harness_name, out, seen) {
+                if !self.collect_harness_gates(el.expression().unwrap(), harness_name, out, active) {
                     return false;
                 }
                 continue;
@@ -226,6 +228,7 @@ impl Context<'_> {
             };
             out.push(entry);
         }
+        active.remove(&arr);
         true
     }
 
@@ -241,16 +244,12 @@ impl Context<'_> {
 
     /// n when it is an inline array, or the array a const identifier is
     /// initialised with.
-    fn const_array_literal(&mut self, n: P<Node>, seen: &mut HashSet<P<Node>>) -> Option<P<Node>> {
+    fn const_array_literal(&mut self, n: P<Node>) -> Option<P<Node>> {
         let n = unwrap_as(tsutil::unwrap_non_null_parens(n));
         if ast::is_array_literal_expression(n) {
             return Some(n);
         }
-        let init = self.const_initializer(n)?;
-        if !seen.insert(init) {
-            return None;
-        }
-        let init = unwrap_as(init);
+        let init = unwrap_as(self.const_initializer(n)?);
         ast::is_array_literal_expression(init).then_some(init)
     }
 
