@@ -339,3 +339,53 @@ describe('run state and steps the unwind depends on', () => {
     assert.ok(row!.succeededAt, 'the unwind orders steps by when they finished')
   })
 })
+
+describe('a step parked on a child run', () => {
+  const park = async (retries: number) => {
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    } as any)
+    const step = await ws.insertStepState(
+      runId,
+      'child',
+      'rpc.fn',
+      {},
+      { retries }
+    )
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepChildRunId(step.stepId, 'child-1')
+    await ws.refreshStepLease(step.stepId, -1_000)
+    return { runId, stepId: step.stepId }
+  }
+
+  const claim = (runId: string) =>
+    (ws as any).claimStepForExecution(runId, 'child', 'rpc.fn', 60_000)
+
+  test('reading the step reports its child', async () => {
+    const { runId } = await park(2)
+
+    assert.equal((await ws.getStepState(runId, 'child')).childRunId, 'child-1')
+  })
+
+  for (const retries of [2, 0]) {
+    test(`is not taken back when its lease lapses (retries ${retries})`, async () => {
+      const { runId } = await park(retries)
+
+      assert.equal(await claim(runId), null)
+
+      const after = await ws.getStepState(runId, 'child')
+      assert.equal(after.status, 'running')
+      assert.equal(after.attemptCount, 1)
+    })
+  }
+
+  test('claiming a failed attempt again drops its child', async () => {
+    const { runId, stepId } = await park(2)
+    await ws.setStepError(stepId, new Error('child failed'))
+
+    const claimed = await claim(runId)
+
+    assert.equal(claimed.attemptCount, 2)
+    assert.equal((await ws.getRunSteps(runId))[0]!.childRunId, undefined)
+  })
+})

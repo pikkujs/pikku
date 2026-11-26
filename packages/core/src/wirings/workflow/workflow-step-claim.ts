@@ -1,3 +1,4 @@
+import { isParkedOnChild } from './workflow-child-step.js'
 import { DEFAULT_STEP_RETRIES, isStepLeaseLive } from './workflow-constants.js'
 import {
   WorkflowStepFunctionMismatchError,
@@ -158,7 +159,7 @@ export const claimStepByReadThenWrite = async (
   ) {
     throw new WorkflowStepFunctionMismatchError(runId, stepName)
   }
-  if (stepState.status === 'succeeded') {
+  if (stepState.status === 'succeeded' || isParkedOnChild(stepState)) {
     return null
   }
   if (stepState.status === 'running') {

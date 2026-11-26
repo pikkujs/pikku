@@ -265,6 +265,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
       fromStepName: row.fromStepName ?? undefined,
+      childRunId: row.childRunId ?? undefined,
       leaseExpiresAt: row.leaseExpiresAt ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
@@ -613,6 +614,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
           leaseExpiresAt: new Date(now.getTime() + leaseMs),
           updatedAt: now,
         },
+        $unset: { childRunId: '' },
         $inc: { attempt: 1 },
       },
       { returnDocument: 'after' }
@@ -649,8 +651,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * A `running` step matches only once its lease has lapsed; a null lease —
-   * a step parked on a child run — never does.
+   * A `running` step matches only once its lease has lapsed, and only with no
+   * child run: a step parked on a child is the child's to finish.
    */
   private claimFilter(
     stepState: StepState,
@@ -661,7 +663,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       _id: stepState.stepId,
       attempt: stepState.attemptCount,
       status: { $in: from },
-      ...(from.includes('running') ? { leaseExpiresAt: { $lt: now } } : {}),
+      ...(from.includes('running')
+        ? { leaseExpiresAt: { $lt: now }, childRunId: null }
+        : {}),
     }
   }
 

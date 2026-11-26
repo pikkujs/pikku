@@ -175,7 +175,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .updateTable('workflowRuns')
       .set({
         status,
-        output: output ? JSON.stringify(output) : null,
+        output: output !== undefined ? JSON.stringify(output) : null,
         error: error ? JSON.stringify(error) : null,
         updatedAt: new Date(),
       })
@@ -702,7 +702,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         .where('status', '=', stepState.status)
         .where(sql`coalesce(current_attempt, 1)`, '=', stepState.attemptCount)
       if (stepState.status === 'running') {
-        query = query.where('leaseExpiresAt', '<', now)
+        query = query
+          .where('leaseExpiresAt', '<', now)
+          .where('childRunId', 'is', null)
       }
       const moved = await query.executeTakeFirst()
       if (Number(moved?.numUpdatedRows ?? 0n) === 0) return false
@@ -724,8 +726,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
    * `from`, reporting whether this caller is the one that moved it.
    *
    * Claiming back a `running` step additionally requires its lease to have
-   * lapsed. A null lease never matches, which is what keeps a step parked on a
-   * child run — running, with no worker on it by design — out of reach.
+   * lapsed and no child run: a step parked on a child is the child's to finish,
+   * even one saved after the step was read.
    */
   private async claimStepStatus(
     stepId: string,
@@ -744,7 +746,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .where('status', 'in', from)
 
     if (from.includes('running')) {
-      query = query.where('leaseExpiresAt', '<', now)
+      query = query
+        .where('leaseExpiresAt', '<', now)
+        .where('childRunId', 'is', null)
     }
 
     const claimed = await query.executeTakeFirst()

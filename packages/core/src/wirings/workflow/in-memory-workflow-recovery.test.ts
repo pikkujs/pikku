@@ -92,4 +92,34 @@ describe('InMemoryWorkflowService recovery', () => {
     assert.equal((await h.run(runId)).status, 'compensated')
     assert.deepEqual(h.undone, ['undo:reserve'])
   })
+
+  for (const retries of [2, 0]) {
+    test(`a lapsed step parked on a child is not claimed again (retries ${retries})`, async () => {
+      const runId = await h.ws.createRun('flow', {}, false, 'hash', {
+        type: 'test',
+      } as never)
+      const step = await h.ws.insertStepState(
+        runId,
+        'child',
+        'flow',
+        {},
+        { retries }
+      )
+      await h.ws.setStepRunning(step.stepId)
+      await h.ws.setStepChildRunId(step.stepId, 'child-1')
+      await h.ws.refreshStepLease(step.stepId, -1_000)
+
+      const claimed = await (h.ws as any).claimStepForExecution(
+        runId,
+        'child',
+        'flow',
+        60_000
+      )
+
+      assert.equal(claimed, null)
+      const after = await h.ws.getStepState(runId, 'child')
+      assert.equal(after.status, 'running')
+      assert.equal(after.attemptCount, 1)
+    })
+  }
 })

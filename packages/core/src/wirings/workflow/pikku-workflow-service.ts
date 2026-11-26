@@ -1372,9 +1372,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     data: any,
     rpcService: PikkuRPC
   ): Promise<void> {
-    // A redelivered job must not take a step back from the child it started.
-    if (isParkedOnChild(await this.getStepState(runId, stepName))) return
-
     const leaseMs = stepLeaseMsForQueue(this.getStepWorkerQueueName(rpcName))
     const claimed = await this.claimStepForExecution(
       runId,

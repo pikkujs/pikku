@@ -194,6 +194,26 @@ describe('recovering a parent whose child already settled', () => {
     assert.equal(count('childWork'), 1)
   })
 
+  for (const result of [false, 0, '']) {
+    test(`a child that returned ${JSON.stringify(result)} hands that to its parent`, async () => {
+      step('childWork', () => result)
+      workflow('childWorkflow', (w) => w.do('Child work', 'childWork', {}))
+      pikkuState(null, 'function', 'meta')['childWorkflow'].workflowQueued =
+        true
+      workflow('parentWorkflow', async (w) => ({
+        got: await w.do('Run child', 'childWorkflow', {}),
+      }))
+      const restore = loseHandBack()
+      const parentId = await start('parentWorkflow')
+      await pump()
+      restore()
+
+      await recoverAndFinish()
+
+      assert.deepEqual((await run(parentId)).output, { got: result })
+    })
+  }
+
   test('a failed child fails the parent and is not started again', async () => {
     parentAndChild(() => {
       throw new Error('page unreachable')
@@ -281,6 +301,45 @@ describe('recovering a parent whose child already settled', () => {
     })
   }
 
+  for (const [retries, claim] of [
+    [2, 'reclaimStepAttempt'],
+    [0, 'claimStepStatus'],
+  ] as const) {
+    test(`a child saved while a claim is in flight keeps the step (${claim})`, async () => {
+      const runId = await service.createRun('parentWorkflow', {}, false, 'h', {
+        type: 'test',
+      } as never)
+      const parked = await service.insertStepState(
+        runId,
+        'child',
+        'child',
+        {},
+        { retries }
+      )
+      await service.setStepRunning(parked.stepId)
+      await service.refreshStepLease(parked.stepId, -1000)
+      const internals = service as any
+      const original = internals[claim].bind(service)
+      internals[claim] = async (...args: unknown[]) => {
+        await service.setStepChildRunId(parked.stepId, 'first-child')
+        return original(...args)
+      }
+
+      const claimed = await internals.claimStepForExecution(
+        runId,
+        'child',
+        'child',
+        HOUR
+      )
+
+      assert.equal(claimed, null)
+      const [after] = await service.getRunSteps(runId)
+      assert.equal(after!.status, 'running')
+      assert.equal(after!.childRunId, 'first-child')
+      assert.equal(after!.attemptCount, 1)
+    })
+  }
+
   test('a just-cancelled child is given time to start its unwind', async () => {
     parentAndChild(() => ({}))
     loseJob = (job) => job.rpcName === 'childWork'
@@ -353,35 +412,33 @@ describe('recovering a run left compensating', () => {
     assert.equal(undone, 1)
   })
 
-  test('a lost forward step of a cancelled run is not sent again', async () => {
-    step('reserve', () => ({}), { compensate: () => ({}) })
-    step('sendEmail', () => ({}))
-    workflow('mailWorkflow', async (w) => {
-      await w.do('Reserve', 'reserve', {})
-      await w.do('Email', 'sendEmail', {})
-    })
-    loseJob = (job) => job.rpcName === 'sendEmail'
-    const runId = await start('mailWorkflow')
-    await pump()
-    loseJob = (job) => job.rpcName === 'reserve:compensate'
-    await service.cancelRun(runId, rpc)
-    await pump()
-    assert.equal((await run(runId)).status, 'compensating')
-    const email = (await service.getRunSteps(runId)).find(
-      (s) => s.stepName === 'Email'
-    )
-
-    for (const status of ['scheduled', 'pending'] as const) {
+  for (const status of ['scheduled', 'pending'] as const) {
+    test(`a lost ${status} forward step of a cancelled run is not sent again`, async () => {
+      step('reserve', () => ({}), { compensate: () => ({}) })
+      step('sendEmail', () => ({}))
+      workflow('mailWorkflow', async (w) => {
+        await w.do('Reserve', 'reserve', {})
+        await w.do('Email', 'sendEmail', {})
+      })
+      loseJob = (job) => job.rpcName === 'sendEmail'
+      const runId = await start('mailWorkflow')
+      await pump()
+      loseJob = (job) => job.rpcName === 'reserve:compensate'
+      await service.cancelRun(runId, rpc)
+      await pump()
       await db
         .updateTable('workflowStep')
         .set({ status })
-        .where('workflowStepId', '=', email!.stepId)
+        .where('workflowRunId', '=', runId)
+        .where('stepName', '=', 'Email')
         .execute()
-      await recoverAndFinish()
-    }
+      assert.equal((await run(runId)).status, 'compensating')
 
-    assert.equal(count('sendEmail'), 0)
-  })
+      await recoverAndFinish()
+
+      assert.equal(count('sendEmail'), 0)
+    })
+  }
 
   test('a lost orchestrator job after the last undo still finishes the run', async () => {
     let undoSent = false

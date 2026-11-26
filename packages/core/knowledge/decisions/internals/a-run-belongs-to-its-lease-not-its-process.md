@@ -40,7 +40,9 @@ A child tells its parent when it settles, and that message can be lost. Replayin
 the parent cannot replace it, because running the step again starts a second
 child. So a sweep first gives each parked step its settled child's outcome, then
 resumes the parent. Replay and a redelivered step job leave a parked step alone
-whatever its lease says, and a new attempt at a step starts with no child. A
+whatever its lease says, and a new attempt at a step starts with no child. The
+claim decides this, not a read before it, because the child can be saved in
+between: a store with a conditional write puts the child check in that write. A
 `cancelled` child is left for 30s, because `cancelRun` writes that status before it
 moves a child with work to undo to `compensating`.
 

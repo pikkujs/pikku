@@ -442,6 +442,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       retries: data.retries ? Number(data.retries) : undefined,
       retryDelay: data.retryDelay,
       fromStepName: data.fromStepName || undefined,
+      childRunId: data.childRunId || undefined,
       leaseExpiresAt: data.leaseExpiresAt
         ? new Date(Number(data.leaseExpiresAt))
         : undefined,
@@ -744,16 +745,19 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     const retryDelay = data.retryDelay
 
     // Reset step to pending for retry (keeps result/error for visibility)
-    await this.redis.hmset(
-      key,
-      'status',
-      status,
-      'attemptCount',
-      newAttemptCount.toString(),
-      'updatedAt',
-      now.toString()
-    )
-    await this.redis.hdel(key, 'childRunId')
+    await this.redis
+      .multi()
+      .hmset(
+        key,
+        'status',
+        status,
+        'attemptCount',
+        newAttemptCount.toString(),
+        'updatedAt',
+        now.toString()
+      )
+      .hdel(key, 'childRunId')
+      .exec()
 
     // Insert NEW history record for retry attempt
     await this.saveStepHistory(

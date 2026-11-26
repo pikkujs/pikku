@@ -155,3 +155,55 @@ describe('RedisWorkflowService locks on the lease service it is given', () => {
     assert.equal((await ws.getStepState(runId, 'charge')).status, 'pending')
   })
 })
+
+describe('a step parked on a child run', () => {
+  const park = async (retries: number) => {
+    const runId = await newRun()
+    const step = await ws.insertStepState(
+      runId,
+      'child',
+      'flow',
+      {},
+      { retries }
+    )
+    // ioredis-mock cannot run `setStepRunning`'s history read, so the status
+    // is written as that method leaves it.
+    await redis.hset((ws as any).stepKey(runId, 'child'), 'status', 'running')
+    await ws.setStepChildRunId(step.stepId, 'child-1')
+    await redis.hset((ws as any).stepKey(runId, 'child'), 'leaseExpiresAt', '1')
+    return { runId, stepId: step.stepId }
+  }
+
+  test('reading the step reports its child', async () => {
+    const { runId } = await park(2)
+
+    assert.equal((await ws.getStepState(runId, 'child')).childRunId, 'child-1')
+  })
+
+  for (const retries of [2, 0]) {
+    test(`is not taken back when its lease lapses (retries ${retries})`, async () => {
+      const { runId } = await park(retries)
+
+      const claimed = await (ws as any).claimStepForExecution(
+        runId,
+        'child',
+        'flow',
+        60_000
+      )
+
+      assert.equal(claimed, null)
+      const after = await ws.getStepState(runId, 'child')
+      assert.equal(after.status, 'running')
+      assert.equal(after.attemptCount, 1)
+    })
+  }
+
+  test('a retry drops the failed attempt’s child', async () => {
+    const { runId, stepId } = await park(2)
+    await redis.hset((ws as any).stepKey(runId, 'child'), 'status', 'failed')
+
+    await ws.createRetryAttempt(stepId, 'pending')
+
+    assert.equal((await ws.getStepState(runId, 'child')).childRunId, undefined)
+  })
+})
