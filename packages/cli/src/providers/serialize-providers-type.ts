@@ -87,9 +87,9 @@ export const serializeProvidersType = ({
 
   const merged =
     provided.length === 0
-      ? `export type SingletonServices = BaseSingletonServices`
+      ? `/** The services every singleton function receives: the base services plus what this project's providers provide. */\nexport type SingletonServices = BaseSingletonServices`
       : [
-          `export type SingletonServices = Omit<BaseSingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}> & {`,
+          `/** The services every singleton function receives: the base services plus what this project's providers provide. */\nexport type SingletonServices = Omit<BaseSingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}> & {`,
           ...provided.map((key) => {
             const collection = collected.get(key)
             if (collection) {
@@ -232,6 +232,8 @@ type DefineProvider = {
  * object with a \`dev\`, \`deploy\`, \`deploy:<profile>\` or \`common\` factory. A
  * target's own variant overrides \`common\`. Needs that may be absent are listed
  * in \`optional\`.
+ *
+ * @example snippet: defineProvider
  */
 export const defineProvider = coreProvider as unknown as DefineProvider
 
@@ -262,6 +264,8 @@ type DefineWireProvider = {
  * the singleton services and the wire services built before it from
  * \`services\`, takes the invocation's \`wire\`, and returns what it provides.
  * Needs that may be absent, such as \`auditLog\`, are listed in \`optional\`.
+ *
+ * @example snippet: defineWireProvider
  */
 export const defineWireProvider = coreWireProvider as unknown as DefineWireProvider
 `
