@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { connectNats, nats, natsOptionsFromEnv } from './nats-service.js'
+import { connectNats, natsOptionsFromEnv } from './nats-service.js'
 
 const env = {
   NATS_URL: 'nats://localhost:4222',
@@ -36,22 +36,6 @@ const fakeFactory = () => {
   }
   return { calls, factory, queueService, schedulerService }
 }
-
-describe('nats service registration', () => {
-  test('connects on a deploy and gives pikku dev only an inert lifecycle', async () => {
-    assert.equal(typeof nats.deploy, 'function')
-    assert.equal(typeof nats.dev, 'function')
-    assert.equal('common' in nats, false)
-    const { natsLifecycle } = (nats.dev as () => { natsLifecycle: any })()
-    assert.deepEqual(await natsLifecycle.drainWorkers(1), [])
-    await natsLifecycle.registerQueues(undefined)
-    await natsLifecycle.stop()
-  })
-
-  test('registers the queue workers once the server starts', () => {
-    assert.equal(typeof nats.onServerStart, 'function')
-  })
-})
 
 describe('natsOptionsFromEnv', () => {
   test('names the stream, subjects and inbox after project and stage, and attaches to its own stream', () => {
@@ -127,7 +111,7 @@ describe('natsOptionsFromEnv', () => {
 const connect = (fake: ReturnType<typeof fakeFactory>, logger?: unknown) =>
   connectNats(logger as never, env, () => fake.factory)
 
-describe('nats service lifecycle', () => {
+describe('connectNats', () => {
   test('connecting initialises, then provides queue, scheduler and the lifecycle', async () => {
     const fake = fakeFactory()
     const provided = await connect(fake)
@@ -135,13 +119,6 @@ describe('nats service lifecycle', () => {
     assert.equal(provided.queueService, fake.queueService as never)
     assert.equal(provided.schedulerService, fake.schedulerService as never)
     assert.equal(typeof provided.natsLifecycle.stop, 'function')
-  })
-
-  test('the deploy variant builds from the logger and env', async () => {
-    await assert.rejects(
-      nats.deploy!({ logger: undefined } as never, {}),
-      /needs NATS_URL/
-    )
   })
 
   test('fails before connecting when the env is incomplete', async () => {
@@ -153,11 +130,11 @@ describe('nats service lifecycle', () => {
     assert.deepEqual(fake.calls, [])
   })
 
-  test('onServerStart registers the queue workers with the app logger', async () => {
+  test('registerQueues registers the queue workers with the logger it is given', async () => {
     const fake = fakeFactory()
     const { natsLifecycle } = await connect(fake)
     fake.calls.length = 0
-    await nats.onServerStart!({ natsLifecycle, logger: 'logger' })
+    await natsLifecycle.registerQueues('logger' as never)
     assert.deepEqual(fake.calls, ['registerQueues:true'])
   })
 

@@ -1283,9 +1283,6 @@
         "@nats-io/nats-core": "^3.4.0",
         "@nats-io/transport-node": "^3.4.0",
       },
-      "devDependencies": {
-        "@pikku/cli": "workspace:*",
-      },
       "peerDependencies": {
         "@pikku/core": "^0.12.162",
       },
@@ -2357,8 +2354,6 @@
         "@nats-io/jetstream": "^3.4.0",
         "@nats-io/transport-node": "^3.4.0",
         "@pikku/cli": "workspace:*",
-        "@pikku/cloudflare": "workspace:*",
-        "@pikku/deploy-cloudflare": "workspace:*",
         "@pikku/deploy-standalone": "workspace:*",
         "@pikku/fetch": "workspace:*",
         "@standard-schema/spec": "^1.1.0",

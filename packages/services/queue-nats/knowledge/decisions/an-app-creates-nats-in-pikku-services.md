@@ -1,27 +1,25 @@
 ---
 type: decision
-title: Standalone deploys get NATS from a service opted in with wireAddon
-description: '@pikku/queue-nats publishes a service that, on a deploy, puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
-tags: [nats, pikku-service, deploy, standalone, permissions]
+title: An app creates NATS in pikkuServices
+description: 'connectNats puts a stage on its own JetStream stream as a restricted user; it fails closed without its credentials and names everything after PIKKU_PROJECT and PIKKU_STAGE'
+tags: [nats, deploy, standalone, permissions]
 ---
 
-# Standalone deploys get NATS from a service opted in with wireAddon
+# An app creates NATS in pikkuServices
 
-`@pikku/queue-nats` has no functions. It publishes one `pikkuService`, `nats`
-(a deploy variant that connects, and a dev variant that provides only an inert
-`natsLifecycle`, so `pikku dev` keeps its in-memory queue), through a `pikku all`
-build step (exports `./.pikku/services/*`). It is not an addon: it ships no
-bootstrap, and a consumer imports none. An app opts in at build time with
-`wireAddon({ name: 'nats', package: '@pikku/queue-nats', services: ['nats'] })`.
+`@pikku/queue-nats` is a plain library. An app calls `connectNats(logger, env)`
+in `pikkuServices` and returns all three services it gives back: `queueService`
+and `schedulerService` replace the ones the entry passed in (list both under
+`allowShadowedServices` in `pikku.config.json`), and `natsLifecycle` is added to
+the app's `SingletonServices`.
 
-## Which build applies it
-
-A service has no `when`, so a target selects it when it reaches a key the service
-provides (`queueService`, `schedulerService` or `natsLifecycle`). The service is
-for a standalone build: its `onServerStart` registers the queue workers, which a
-target that does not run the server lifecycle (a Worker) refuses at build time,
-naming the unit. An app built for several providers wires it only where it
-deploys standalone.
+- Queue workers are consumed only after
+  `natsLifecycle.registerQueues(logger)`, which the app calls from
+  `pikkuServerLifecycle`'s `beforeStart`. Without that call jobs are enqueued
+  and never run.
+- Return `natsLifecycle` last. `stopSingletonServices` stops services in reverse
+  order, so jobs in flight drain while the database and the logger are still up.
+- The standalone verifier proves the drain on SIGTERM.
 
 ## One stream per stage
 
@@ -44,7 +42,7 @@ the config to reuse.
   Consumers use the library default names; the old `<project>_<stage>_` consumer
   prefix and its exact-name scoping are gone.
 - Reply inboxes use `_INBOX.<project>.<stage>`.
-- It provides `natsLifecycle`, not the factory. Its `stop()`, called by
+- `connectNats` returns `natsLifecycle`, not the factory. Its `stop()`, called by
   `stopSingletonServices`, drains the workers (10s), then closes the connection.
 
 ## Permissions
@@ -77,7 +75,8 @@ dropping the user alone leaves the stream with its messages and consumers.
   to NATS (its queue workers register on NATS, verified with a sleep step) but
   is not durable; durable needs workflowService, workflowRunService and
   leaseService on SQLite.
-- An app that does not opt in keeps the in-memory queue and scheduler.
+- An app that does not call `connectNats` keeps the in-memory queue and
+  scheduler.
 
 ## Broker operations, measured on nats-server 2.15.2
 
@@ -104,11 +103,8 @@ server with the users in an `include`d file and `--signal reload=<pidfile>`.
 ## Gaps and constraints for whoever runs the broker
 
 - Open question: the generated `RequiredSingletonServices` still requires
-  `queueService`, `schedulerService`, `workflowService` and `workflowRunService`
-  for an app that wires a queue worker, although the nats service or the deploy
-  build provides them. `SingletonServices` from `#pikku/service` carries the
-  keys a service provides, so an app that declares the services type through it
-  needs no cast.
+  `workflowService` and `workflowRunService` for an app that wires a queue
+  worker, although the deploy build provides them, so the app casts.
 - NATS permissions cannot filter reply subjects or a push consumer's
   `deliver_subject`. Observed: stage A can send a reply into B's inbox through
   its own API. The data is A's own and request tokens are random, so nothing of

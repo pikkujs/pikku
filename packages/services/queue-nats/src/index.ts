@@ -77,4 +77,5 @@ export type {
   QueueJob,
   JobOptions,
 } from '@pikku/core/queue'
-export { nats } from './nats-service.js'
+export { connectNats, natsOptionsFromEnv } from './nats-service.js'
+export type { NatsLifecycle, NatsProvided } from './nats-service.js'
