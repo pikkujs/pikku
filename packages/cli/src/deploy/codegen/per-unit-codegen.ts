@@ -10,8 +10,7 @@
 
 import { execFile } from 'node:child_process'
 import { writeFile, mkdir, rm } from 'node:fs/promises'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import { promisify } from 'node:util'
 
@@ -153,10 +152,12 @@ export async function generateBackendCodegen(
   if (backends.length === 0) return { backendDirs, errors }
 
   const stateFilePath = join(
-    tmpdir(),
+    projectDir,
+    '.tmp',
     `pikku-state-${randomBytes(8).toString('hex')}.json`
   )
   try {
+    await mkdir(dirname(stateFilePath), { recursive: true })
     await writeFile(
       stateFilePath,
       JSON.stringify(serializeInspectorState(inspectorState)),
@@ -438,11 +439,12 @@ export async function generatePerUnitCodegen(
 
   // Create a temp file for the serialized inspector state
   const stateFileName = `pikku-state-${randomBytes(8).toString('hex')}.json`
-  const stateFilePath = join(tmpdir(), stateFileName)
+  const stateFilePath = join(projectDir, '.tmp', stateFileName)
 
   try {
     // Serialize and write the inspector state once
     const serialized = serializeInspectorState(inspectorState)
+    await mkdir(dirname(stateFilePath), { recursive: true })
     await writeFile(stateFilePath, JSON.stringify(serialized), 'utf-8')
 
     // Generate codegen for each unit
