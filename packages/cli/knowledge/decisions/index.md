@@ -129,4 +129,5 @@ A rule that was chosen, and what it rules out.
 - [Mock mode is a client given to PikkuProvider, not a branch in the hooks](mock-mode-is-a-client-not-a-hook.md) — createMockPikku answers rpc.invoke from .mocks/ with a selectable scenario; flagged mode mocks only `mock: true` functions and sends the rest to a real fallback
 
 - [A services-only package has no bootstrap to import](a-services-only-package-has-no-bootstrap-to-import.md) — wireAddon on a package that exports its services meta and no bootstrap opts in to the services only; the app bootstrap imports nothing from it
+- [A heavy library is stubbed unless a required service claims it](a-library-is-stubbed-unless-a-required-service-claims-it.md) — Every SERVICE_MODULE_MAP pattern is stubbed out of a unit unless a service the unit requires claims it
 <!-- /pikku:knowledge-index -->

@@ -34,4 +34,5 @@ const AI_SDK_MODULES = [/^@pikku\/ai-vercel/, /^@ai-sdk\//, /^ai$/]
 export const SERVICE_MODULE_MAP: Record<string, RegExp[]> = {
   agentRunner: AI_SDK_MODULES,
   ai: AI_SDK_MODULES,
+  browser: [/^@cloudflare\/puppeteer$/],
 }

@@ -89,13 +89,15 @@ export async function getDeadGenFilePatterns(
     }
 
     for (const [service, required] of services) {
-      if (required) continue
       const genPattern = SERVICE_GEN_FILE_MAP[service]
-      if (genPattern) patterns.push(genPattern)
-      for (const pattern of SERVICE_MODULE_MAP[service] ?? []) {
-        if (!claimed.has(pattern.source)) patterns.push(pattern)
-      }
+      if (!required && genPattern) patterns.push(genPattern)
     }
+    const unclaimed = new Set(
+      Object.values(SERVICE_MODULE_MAP)
+        .flat()
+        .filter((pattern) => !claimed.has(pattern.source))
+    )
+    patterns.push(...unclaimed)
   } catch {
     // No services gen — no stubs needed
   }
