@@ -25,10 +25,25 @@ run owned now may lose its owner by the next tick.
 
 The cost is that a run killed mid-step waits up to the lease's 30s TTL.
 
-`findStalledRunIds` no longer reads a null step lease as owned. It only meant that
-for a step parked on a child run, so a `running` step counts as in flight only
-under a live lease or with a `childRunId`. A step worked inside a pass has neither,
-and the run lease answers for it.
+`findStalledRunIds` does not read a null step lease as owned. A `running` step
+counts as in flight only under a live lease or while parked on a child run that has
+not settled. A step worked inside a pass has neither, and the run lease answers for
+it.
+
+## What a sweep covers besides `running` runs
+
+A `compensating` run is swept like a `running` one, including its lost step jobs.
+
+A child tells its parent when it settles, and that message can be lost. Replaying
+the parent cannot replace it, because running the step again starts a second
+child. So a sweep first gives each parked step its settled child's outcome, then
+resumes the parent. Replay leaves a parked step alone, and a new attempt at a step
+starts with no child.
+
+A `suspended` run is swept only when an open approval gate holds a decision. The
+decision is saved before the run is resumed, so a saved decision on an open gate
+is a lost resume. Every other suspended run is waiting on purpose, and the run
+stays `suspended` until the pass the sweep queues moves it on.
 
 ## In-flight steps run at least once more
 
