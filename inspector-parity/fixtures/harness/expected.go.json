@@ -170,7 +170,7 @@
     {
       "level": "critical",
       "code": "PKU236",
-      "message": "Harness gate 'bodiless' has no body. A gate is decided by code, so it needs a `func` that returns its findings."
+      "message": "Harness gate 'bodiless' has no body the inspector can read. A gate is decided by code, so its `func` has to be an arrow function or function expression, inline or in a const, that returns its findings."
     },
     {
       "level": "critical",

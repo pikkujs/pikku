@@ -303,7 +303,7 @@ func (s *Context) addFunctions(node *ast.Node) {
 		handler = resolvedFunc
 	}
 	if gate != nil && (mock || !tsutil.IsFunctionLike(handler)) {
-		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("Harness gate '%s' has no body. A gate is decided by code, so it needs a `func` that returns its findings.", name))
+		s.Log.Critical(diag.MissingFunc, fmt.Sprintf("Harness gate '%s' has no body the inspector can read. A gate is decided by code, so its `func` has to be an arrow function or function expression, inline or in a const, that returns its findings.", name))
 		return
 	}
 	if mock {

@@ -83,7 +83,7 @@ func TestHarnessAndGateAgentMeta(t *testing.T) {
 	}
 
 	assertDiagnostics(t, res, []string{
-		"Harness gate 'bodiless' has no body.",
+		"Harness gate 'bodiless' has no body the inspector can read.",
 		"Harness gate 'loose' has no failOn of 'low', 'medium' or 'high' readable from source.",
 		"Harness gate 'computedWrites' has a writes that is not an inline array of path patterns: `paths`.",
 		"Harness 'computed' lists gates that are not readable from source: `makeGates()`.",
