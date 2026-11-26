@@ -35,6 +35,95 @@ const PNG = IMAGES['image/png']
 
 for (const engine of ['sqlite', 'postgres'] as Engine[]) {
   describe(
+    `generated CMS relations with and without a read check on ${engine}`,
+    { skip: !cliIsBuilt() },
+    () => {
+      let app: CmsTestApp
+      let built: string | undefined
+
+      before(async () => {
+        app = await CmsTestApp.create(engine)
+        const edit = async (path: string, after: string, added: string) => {
+          const source = await app.read(path)
+          assert.ok(source.includes(after), after)
+          await app.write(path, source.replace(after, after + added))
+        }
+        // Therapists have a read check of the app's own; offerings have none.
+        await edit(
+          'db/tables.ts',
+          "therapistId: { type: 'key', references: 'therapist.id' },",
+          "\n      parentId: { type: 'key', references: 'offering.id' },"
+        )
+        await edit(
+          'db/cms.ts',
+          "therapistId: 'relation',",
+          "\n      parentId: 'relation',"
+        )
+        try {
+          await app.build()
+          await app.grant(GRANTS)
+          await app.start()
+        } catch (error: any) {
+          built = String(error.message)
+        }
+      })
+      after(async () => {
+        await app?.remove()
+      })
+
+      test('the app builds with type checking', () => {
+        assert.equal(built, undefined)
+      })
+
+      test('create and update link to both targets, each behind its own read', async () => {
+        const create = (slug: string, caller: Caller) =>
+          app.rpc(
+            'createCmsOffering',
+            {
+              values: {
+                slug,
+                title: 'Two links',
+                therapistId: 't-ada',
+                parentId: 'o-1',
+              },
+            },
+            caller
+          )
+        const made = await create('two-links', as('linker'))
+        assert.equal(made.status, 200, made.text)
+        assert.deepEqual(
+          [made.body.row.therapistId, made.body.row.parentId],
+          ['t-ada', 'o-1']
+        )
+        const update = (patch: object, user: keyof typeof GRANTS) =>
+          app.rpc(
+            'updateCmsOffering',
+            { id: made.body.row.id, patch },
+            as(user)
+          )
+        const moved = await update({ parentId: 'o-3' }, 'offerings')
+        assert.equal(moved.status, 200, moved.text)
+        assert.equal(moved.body.row.parentId, 'o-3')
+        assert.equal(
+          (await update({ therapistId: 't-bo' }, 'offerings')).status,
+          403
+        )
+        assert.equal(
+          (await update({ therapistId: 't-bo' }, 'linker')).status,
+          200
+        )
+        assert.equal(
+          (await update({ parentId: 'no-such' }, 'linker')).status,
+          422
+        )
+        assert.equal((await create('no-link', as('offerings'))).status, 403)
+      })
+    }
+  )
+}
+
+for (const engine of ['sqlite', 'postgres'] as Engine[]) {
+  describe(
     `generated CMS relations and images on ${engine}`,
     { skip: !cliIsBuilt() },
     () => {

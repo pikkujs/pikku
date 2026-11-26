@@ -242,14 +242,16 @@ const writeSignature = (
   params: string
 ) => {
   const relations = relationFields(collection)
-  // A target's own read check may use any service, so the function takes all.
-  const every = relations.some(
-    (field) => relationTarget(model, field.target!).checks.read
+  const checked = relations.map((field) =>
+    Boolean(relationTarget(model, field.target!).checks.read)
   )
+  // A target's own read check may use any service, so the function takes all.
+  const every = checked.includes(true)
   const services = [
     'kysely',
     'auditLog',
-    ...(relations.length && !every ? ['scopeService'] : []),
+    // What a link to a target without a check of its own is asked with.
+    ...(checked.includes(false) ? ['scopeService'] : []),
     ...(imageFields(collection).length ? ['content'] : []),
   ].join(', ')
   const wire = relations.length ? ', { session }' : ''
