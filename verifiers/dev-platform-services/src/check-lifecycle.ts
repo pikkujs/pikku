@@ -203,5 +203,25 @@ for (const command of ['dev', 'serve'] as const) {
   ])
 }
 
+console.log(
+  "--- a host's devPlatformServices module replaces a service in dev and serve ---"
+)
+for (const command of ['dev', 'serve'] as const) {
+  const hosted = await run(command, {
+    config: join(scenario, 'pikku.host.config.json'),
+    env: { PIKKU_HOST_TAG: 'from-host' },
+  })
+  assert.deepEqual(
+    hosted.lines,
+    [
+      'app:beforeStart hookC=from-host',
+      'app:afterStart',
+      'app:beforeStop',
+      'app:afterStop',
+    ],
+    `${command}: the app got the host's service. Output:\n${hosted.output.slice(-2000)}`
+  )
+}
+
 await clearLog()
 console.log('lifecycle: all checks passed')

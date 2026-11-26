@@ -15,6 +15,14 @@ export interface SerializePikkuServicesOptions {
    * touched here.
    */
   coercionMap?: Record<string, Record<string, string>>
+  /**
+   * The import specifier, from the generated file, of the host's module
+   * exporting `createPlatformServices(env, services, { requiredServices })`.
+   * It runs after every service, and what it returns is merged over them.
+   */
+  hostModule?: string
+  /** The services the target reaches, handed to the host module. */
+  requiredServices?: readonly string[]
 }
 
 const importLine = (exported: string, local: string, from: string) =>
@@ -35,6 +43,8 @@ const importLine = (exported: string, local: string, from: string) =>
  * call; nothing in the file calls them. Teardown is each service's own `stop()`,
  * called by `stopSingletonServices`.
  *
+ * With a `hostModule`, a `kysely` the host creates is wrapped like a service's.
+ *
  * With a `coercionMap`, the service providing `kysely` is wrapped (see
  * `SerializePikkuServicesOptions.coercionMap`) so a deployed query returns the
  * Date, boolean and parsed JSON values `pikku dev` returns.
@@ -44,14 +54,18 @@ export const serializePikkuServices = ({
   services,
   specifier,
   coercionMap,
+  hostModule,
+  requiredServices = [],
 }: SerializePikkuServicesOptions): string => {
   const imports: string[] = []
   const adds: string[] = []
   const hooks: string[] = []
+  const mapsColumns =
+    coercionMap !== undefined && Object.keys(coercionMap).length > 0
   const coerce =
-    coercionMap !== undefined &&
-    Object.keys(coercionMap).length > 0 &&
+    mapsColumns &&
     services.some((service) => service.provides.includes('kysely'))
+  const coerceHost = mapsColumns && hostModule !== undefined
 
   services.forEach((service, index) => {
     const meta = JSON.stringify({
@@ -87,16 +101,22 @@ export const serializePikkuServices = ({
     }
   })
 
-  const coercion = coerce
+  const coercedKysely = [
+    `const coercedKysely = (kysely: any): any => {`,
+    `  const coerced = kysely.withPlugin(createCoercionPlugin({ map: coercionMap as any }))`,
+    `  return Object.assign(coerced, { stop: () => (kysely.stop ? kysely.stop() : coerced.destroy()) })`,
+    `}`,
+    ``,
+  ]
+
+  const serviceCoercion = coerce
     ? [
-        `const coercionMap = ${JSON.stringify(coercionMap)}`,
-        ``,
         `type Factory = (services: any, env: any) => any`,
         `const withKyselyCoercion = (definition: any): any => {`,
         `  const wrap = (factory: Factory): Factory => async (services, env) => {`,
         `    const provided = await factory(services, env)`,
         `    return provided?.kysely`,
-        `      ? { ...provided, kysely: provided.kysely.withPlugin(createCoercionPlugin({ map: coercionMap as any })) }`,
+        `      ? { ...provided, kysely: coercedKysely(provided.kysely) }`,
         `      : provided`,
         `  }`,
         `  if (typeof definition === 'function') return wrap(definition)`,
@@ -110,9 +130,40 @@ export const serializePikkuServices = ({
       ]
     : []
 
+  const coercion =
+    coerce || coerceHost
+      ? [
+          `const coercionMap = ${JSON.stringify(coercionMap)}`,
+          ``,
+          ...coercedKysely,
+          ...serviceCoercion,
+        ]
+      : []
+
+  const hostLines = hostModule
+    ? [
+        `  const hosted: Record<string, any> = {`,
+        `    ...(await createHostPlatformServices(env, { ...services }, { requiredServices: ${JSON.stringify(requiredServices)} })),`,
+        `  }`,
+        ...(coerceHost
+          ? [
+              `  if (hosted.kysely && hosted.kysely !== services.kysely) hosted.kysely = coercedKysely(hosted.kysely)`,
+            ]
+          : []),
+        `  Object.assign(services, hosted)`,
+      ]
+    : []
+
   return [
     `import { ServiceRegistry, runPikkuServices } from '@pikku/core/pikku-service'`,
-    ...(coerce ? [`import { createCoercionPlugin } from '@pikku/kysely'`] : []),
+    ...(coerce || coerceHost
+      ? [`import { createCoercionPlugin } from '@pikku/kysely'`]
+      : []),
+    ...(hostModule
+      ? [
+          `import { createPlatformServices as createHostPlatformServices } from ${JSON.stringify(hostModule)}`,
+        ]
+      : []),
     ...imports,
     ``,
     ...coercion,
@@ -125,6 +176,7 @@ export const serializePikkuServices = ({
     `): Promise<Record<string, unknown>> => {`,
     `  const services: Record<string, unknown> = { ...runtime }`,
     `  await runPikkuServices(registry, { target: ${JSON.stringify(target)}, services, env })`,
+    ...hostLines,
     `  return services`,
     `}`,
     ``,

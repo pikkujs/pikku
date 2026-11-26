@@ -83,6 +83,30 @@ describe('writeDevPikkuServices', () => {
     assert.equal(existsSync(file), false)
   })
 
+  test("the project's devPlatformServices module is written in with no declared services", async () => {
+    await writeDevProviders(
+      logger,
+      { ...(config() as object), devPlatformServices: '@acme/inbox' } as never,
+      state({})
+    )
+    assert.match(readFileSync(file, 'utf8'), /from "@acme\/inbox"/)
+  })
+
+  test('a devPlatformServices path is relative to the project root', async () => {
+    await writeDevProviders(
+      logger,
+      {
+        ...(config() as object),
+        devPlatformServices: './host/platform.ts',
+      } as never,
+      state({})
+    )
+    assert.match(
+      readFileSync(file, 'utf8'),
+      /from "\.\.\/host\/platform\.[tj]s"/
+    )
+  })
+
   test('a declared service is written, resolved against the dev baseline', async () => {
     await writeDevPikkuServices(
       logger,

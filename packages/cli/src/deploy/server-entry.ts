@@ -40,13 +40,16 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
     `const HOST = process.env.HOST ?? '0.0.0.0'`,
     ``,
     `async function main(): Promise<void> {`,
-    `  const config = await ${ctx.configVar}()`,
     ...(ctx.platformServices
       ? [
           `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>)`,
+          `  const config = await ${ctx.configVar}(platformServices.variables as any)`,
           `  const singletonServices = await ${ctx.servicesVar}(config, platformServices)`,
         ]
-      : [`  const singletonServices = await ${ctx.servicesVar}(config)`]),
+      : [
+          `  const config = await ${ctx.configVar}()`,
+          `  const singletonServices = await ${ctx.servicesVar}(config)`,
+        ]),
     `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
     ``,
     `  const server = new PikkuBunServer(`,

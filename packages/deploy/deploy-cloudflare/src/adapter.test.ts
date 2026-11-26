@@ -419,6 +419,15 @@ describe('CloudflareProviderAdapter container server lifecycle', () => {
       'services exist before the app builds its own'
     )
     assert.ok(
+      at(source, 'await createPlatformServices(env)') <
+        at(source, 'await createConfig('),
+      'services exist before the config is read'
+    )
+    assert.match(
+      source,
+      /const variables = platformServices\.variables \?\? new LocalVariablesService\(env\)/
+    )
+    assert.ok(
       at(source, 'server.init()') <
         at(source, '__pikkuServerLifecycle?.beforeStart') &&
         at(source, '__pikkuServerLifecycle?.beforeStart') <

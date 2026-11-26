@@ -8,7 +8,6 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   PLATFORM_SERVICES_FILE,
@@ -23,7 +22,9 @@ describe('writeUnitPlatformServices', () => {
   let unitDir: string
 
   beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), 'pikku-unit-platform-'))
+    const base = join(import.meta.dir, '..', '..', '.tmp')
+    mkdirSync(base, { recursive: true })
+    root = mkdtempSync(join(base, 'unit-platform-'))
     unitDir = join(root, 'unit')
     mkdirSync(unitDir, { recursive: true })
     mkdirSync(join(root, 'src'), { recursive: true })
@@ -248,5 +249,39 @@ describe('writeUnitPlatformServices', () => {
         undefined
       )
     })
+  })
+
+  const withHost = (module: string, base = provider()) =>
+    ({
+      ...(base as object),
+      platformServicesModule: () => module,
+    }) as never
+
+  test("a provider's platform services module is written in with no declared services", async () => {
+    const result = await run('api', state({}), withHost('@acme/host'), {
+      requiredServices: new Set(['queueService']),
+    })
+    assert.equal(result?.importPath, './platform-services.gen.js')
+    assert.match(
+      file(),
+      /import \{ createPlatformServices as createHostPlatformServices \} from "@acme\/host"/
+    )
+    assert.match(file(), /requiredServices: \["queueService"\]/)
+  })
+
+  test('what the project factory reads counts as required', async () => {
+    await run(
+      'api',
+      { ...(state({}) as object), projectServicesRead: ['kysely'] } as never,
+      withHost('@acme/host')
+    )
+    assert.match(file(), /requiredServices: \["kysely"\]/)
+  })
+
+  test('a module on a provider that builds no platform services fails the build', async () => {
+    await assert.rejects(
+      run('api', state({}), withHost('@acme/host', provider(false))),
+      /platform services module/
+    )
   })
 })
