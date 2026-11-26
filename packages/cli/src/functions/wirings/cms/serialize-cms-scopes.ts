@@ -19,6 +19,12 @@ const collectionNode = (collection: CmsModelCollection): CoreScopeNode => {
       ...(collection.create ? { create: leaf('Create', true) } : {}),
       ...(collection.edit ? { edit: leaf('Edit', true) } : {}),
       ...(collection.delete ? { delete: leaf('Delete', true) } : {}),
+      ...Object.fromEntries(
+        collection.actions.map((action) => [
+          action.name,
+          leaf(`${action.label}:`, true),
+        ])
+      ),
     },
   }
 }

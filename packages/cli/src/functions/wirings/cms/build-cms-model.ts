@@ -9,9 +9,11 @@ import type {
   CmsColumn,
   CmsColumnFamily,
   CmsModel,
+  CmsModelAction,
   CmsModelChecks,
   CmsModelCollection,
   CmsModelField,
+  CmsModelTags,
 } from './cms-model.types.js'
 import { cmsFunctionNames, humanise } from './cms-names.js'
 
@@ -21,7 +23,30 @@ export interface BuildCmsModelInput {
   tables: TablesDeclaration
   /** The root `content.buckets` of pikku.config.json. */
   buckets: readonly string[]
+  /** The wired addons that run against this project's database. */
+  addons?: CmsAddonSource[]
+  /**
+   * The declaration is an addon's own: its handlers do the reading and writing,
+   * so it may name actions and tags.
+   */
+  addon?: boolean
 }
+
+/** What a wired addon published, keyed by the name it is wired under. */
+export interface CmsAddonSource {
+  name: string
+  package: string
+  /** The tables it declares, whether or not it publishes collections. */
+  tables: TablesDeclaration
+  /** Its `db/cms.ts` as data, absent when it publishes none. */
+  collections?: Record<string, unknown>
+}
+
+const ACTION_SETTINGS = ['label', 'input', 'confirm']
+const ACTION_NAME = /^[a-z][A-Za-z0-9]{0,62}$/
+/** Names a scope leaf, a permission or a description field already has. */
+const RESERVED_ACTIONS = ['read', 'create', 'edit', 'delete', 'update']
+const TAGS = 'tags'
 
 const COLLECTION_NAME = /^[a-z][A-Za-z0-9]{0,62}$/
 
@@ -58,6 +83,7 @@ const FIELD_SETTINGS: Record<string, string[]> = {
   money: ['input', 'label', 'help', 'currency'],
   image: ['input', 'label', 'help', 'bucket', 'accept', 'maxBytes'],
 }
+const TAGS_SETTINGS = ['input', 'label', 'help', 'maxItems', 'maxLength']
 
 /** The longest an image key gets after `cms/<collection>/<field>/`: a UUID and `.webp`. */
 const IMAGE_KEY_TAIL = 41
@@ -249,7 +275,13 @@ const buildCollection = (
     )
     return undefined
   }
-  unknown(entry, COLLECTION_SETTINGS, 'setting')
+  unknown(
+    entry,
+    input.addon
+      ? [...COLLECTION_SETTINGS.filter((s) => s !== 'permissions'), 'actions']
+      : COLLECTION_SETTINGS,
+    'setting'
+  )
 
   const keys = primaryKeyColumns(table)
   if (keys.length !== 1) {
@@ -353,16 +385,47 @@ const buildCollection = (
   const remove = entry.delete === true
 
   const fields: CmsModelField[] = []
+  let tags: CmsModelTags | undefined
   if (entry.edit !== undefined && !isRecord(entry.edit)) {
     refuse(`'edit' must map columns to their inputs`)
   }
   for (const [column, raw] of Object.entries(
     isRecord(entry.edit) ? entry.edit : {}
   )) {
-    if (raw === 'tags' || (isRecord(raw) && raw.input === 'tags')) {
-      refuse(
-        `edit.${column}: 'tags' is stored by an addon's handlers, so only an addon's collection has it`
-      )
+    if (raw === TAGS || (isRecord(raw) && raw.input === TAGS)) {
+      if (!input.addon) {
+        refuse(
+          `edit.${column}: 'tags' is stored by an addon's handlers, so only an addon's collection has it`
+        )
+        continue
+      }
+      if (column !== TAGS || Object.hasOwn(table.columns, TAGS)) {
+        refuse(
+          `edit.${column}: 'tags' is a field of its own, named 'tags', and no column`
+        )
+        continue
+      }
+      const given: Record<string, unknown> = isRecord(raw) ? raw : {}
+      unknown(given, TAGS_SETTINGS, `edit.${column} setting`)
+      const limit = (key: 'maxItems' | 'maxLength', fallback: number) => {
+        const value = given[key] ?? fallback
+        if (!Number.isInteger(value) || (value as number) <= 0) {
+          refuse(`edit.tags: '${key}' must be a positive whole number`)
+        }
+        return Number(value)
+      }
+      tags = {
+        label: typeof given.label === 'string' ? given.label : 'Tags',
+        help: typeof given.help === 'string' ? given.help : undefined,
+        maxItems: limit('maxItems', 20),
+        maxLength: limit('maxLength', 50),
+      }
+      fields.push({
+        name: TAGS,
+        label: tags.label,
+        help: tags.help,
+        input: TAGS,
+      })
       continue
     }
     const settings: Record<string, unknown> | undefined =
@@ -420,6 +483,20 @@ const buildCollection = (
       help: typeof settings.help === 'string' ? settings.help : undefined,
       input:
         kind === 'derived' ? derivedInput(declared) : (kind as CmsInputKind),
+    }
+
+    // Both are served by queries and files of the host's own, which an addon's
+    // handlers do not offer.
+    if (
+      input.addon &&
+      (kind === 'image' ||
+        kind === 'relation' ||
+        (kind === 'derived' && derivedInput(declared) === 'relation'))
+    ) {
+      refuse(
+        `edit.${column}: an addon's collection has no relation or image field`
+      )
+      continue
     }
 
     const plainText = declared.family === 'text' && !declared.references
@@ -511,6 +588,42 @@ const buildCollection = (
   }
 
   const editable = fields.map((field) => field.name)
+  const editedColumns = editable.filter((name) => !(tags && name === TAGS))
+
+  const actions: CmsModelAction[] = []
+  if (entry.actions !== undefined && !isRecord(entry.actions)) {
+    refuse(`'actions' must map names to actions`)
+  }
+  for (const [action, raw] of Object.entries(
+    input.addon && isRecord(entry.actions) ? entry.actions : {}
+  )) {
+    if (!ACTION_NAME.test(action) || RESERVED_ACTIONS.includes(action)) {
+      refuse(
+        `actions.${action}: name an action in camel case, and not ${RESERVED_ACTIONS.join(', ')}`
+      )
+      continue
+    }
+    if (!isRecord(raw) || typeof raw.label !== 'string' || !raw.label.trim()) {
+      refuse(`actions.${action} needs a 'label'`)
+      continue
+    }
+    unknown(raw, ACTION_SETTINGS, `actions.${action} setting`)
+    if (raw.confirm !== undefined && typeof raw.confirm !== 'string') {
+      refuse(`actions.${action}.confirm must be a string`)
+    }
+    const taken = columnList(raw.input, `actions.${action}.input`)
+    for (const column of taken) {
+      if (columns[column]!.primaryKey || columns[column]!.inputFalse) {
+        refuse(`actions.${action}.input: '${column}' is set by the server`)
+      }
+    }
+    actions.push({
+      name: action,
+      label: raw.label,
+      confirm: typeof raw.confirm === 'string' ? raw.confirm : undefined,
+      input: taken,
+    })
+  }
   const groups: { label: string; fields: string[] }[] = []
   if (entry.groups !== undefined && !Array.isArray(entry.groups)) {
     refuse(`'groups' must be a list`)
@@ -597,11 +710,12 @@ const buildCollection = (
   ])
   const readColumns = unique([
     primaryKey,
-    ...editable,
+    ...editedColumns,
     ...fields.flatMap(currencyColumn),
     ...listColumns,
     ...detail,
     ...submitted,
+    ...actions.flatMap((action) => action.input),
     versioned ? 'updatedAt' : undefined,
   ])
 
@@ -624,7 +738,8 @@ const buildCollection = (
     }
   }
 
-  if (create) {
+  // An addon's create handler fills what it likes.
+  if (create && !input.addon) {
     for (const column of Object.keys(table.columns)) {
       const declared = readColumn(input.tables, name, column, keys)
       const required =
@@ -662,6 +777,144 @@ const buildCollection = (
     fields,
     checks,
     deletesAlso: [],
+    actions,
+    tags,
+  }
+}
+
+const OPT_IN_SETTINGS = [
+  'from',
+  'create',
+  'edit',
+  'delete',
+  'actions',
+  'permissions',
+]
+
+/**
+ * The app's entry for an addon's collection: the addon's own, checked against
+ * the tables it publishes, less what the app switches off, plus the app's
+ * checks. Nothing in the entry can add to it.
+ */
+const optIn = (
+  name: string,
+  entry: Record<string, unknown>,
+  input: BuildCmsModelInput,
+  problems: string[]
+): CmsModelCollection | undefined => {
+  const refuse = (message: string) => {
+    problems.push(`${name}: ${message}`)
+  }
+  const addon = input.addons?.find((a) => a.name === entry.from)
+  if (!addon) {
+    refuse(
+      `'from' is ${JSON.stringify(entry.from)}, and no addon wired under that name runs against this database`
+    )
+    return undefined
+  }
+  const published = addon.collections?.[name]
+  if (!isRecord(published)) {
+    refuse(
+      `the '${addon.name}' addon (${addon.package}) publishes no collection '${name}'`
+    )
+    return undefined
+  }
+  const found: string[] = []
+  const base = buildCollection(
+    name,
+    published,
+    { ...input, tables: addon.tables, addon: true },
+    found
+  )
+  if (!base || found.length > 0) {
+    problems.push(
+      ...found.map((problem) => `the '${addon.name}' addon: ${problem}`)
+    )
+    return undefined
+  }
+
+  for (const key of Object.keys(entry)) {
+    if (!OPT_IN_SETTINGS.includes(key)) {
+      refuse(
+        `'${key}' cannot be set on an addon's collection: an entry with 'from' only switches things off and adds checks`
+      )
+    }
+  }
+  const off = (key: 'create' | 'edit' | 'delete') => {
+    if (entry[key] === undefined) return false
+    if (entry[key] !== false) {
+      refuse(`'${key}' on an addon's collection can only be false`)
+    } else if (!base[key]) {
+      refuse(`'${key}' switches off an operation the collection does not have`)
+    }
+    return true
+  }
+  // Each is checked whether or not the addon has the operation.
+  const switchedOff = {
+    create: off('create'),
+    edit: off('edit'),
+    delete: off('delete'),
+  }
+  const create = base.create && !switchedOff.create
+  const edit = base.edit && !switchedOff.edit
+  const remove = base.delete && !switchedOff.delete
+
+  const switched = entry.actions ?? {}
+  if (!isRecord(switched)) refuse(`'actions' must map actions to false`)
+  for (const [action, value] of Object.entries(
+    isRecord(switched) ? switched : {}
+  )) {
+    if (!base.actions.some((a) => a.name === action)) {
+      refuse(
+        `actions.${action}: the addon's collection has no action of that name`
+      )
+    } else if (value !== false) {
+      refuse(`actions.${action} can only be false`)
+    }
+  }
+  const actions = base.actions.filter(
+    (a) => !(isRecord(switched) && switched[a.name] === false)
+  )
+
+  const permissions = entry.permissions ?? {}
+  const enabled: Record<string, boolean> = {
+    read: true,
+    create,
+    edit,
+    delete: remove,
+    ...Object.fromEntries(actions.map((a) => [a.name, true])),
+  }
+  const checks: CmsModelChecks = {}
+  if (!isRecord(permissions)) {
+    refuse(`'permissions' must map operations to checks`)
+  } else {
+    for (const [operation, value] of Object.entries(permissions)) {
+      const check = parseCheck(value)
+      if (!Object.hasOwn(enabled, operation) || !enabled[operation]) {
+        refuse(
+          `permissions.${operation} checks nothing the collection does here`
+        )
+      } else if (!check) {
+        refuse(
+          `permissions.${operation} must be '<module>#<export>', with the module's path from the project root`
+        )
+      } else {
+        checks[operation] = check
+      }
+    }
+  }
+
+  const writes = create || edit
+  return {
+    ...base,
+    from: { name: addon.name, package: addon.package },
+    create,
+    edit,
+    delete: remove,
+    actions,
+    checks,
+    fields: writes ? base.fields : [],
+    groups: writes ? base.groups : [],
   }
 }
 
@@ -671,7 +924,7 @@ const buildCollection = (
  */
 const checkAcrossCollections = (
   collections: CmsModelCollection[],
-  tables: TablesDeclaration,
+  input: BuildCmsModelInput,
   problems: string[]
 ) => {
   const byName = new Map(collections.map((c) => [c.name, c]))
@@ -680,7 +933,11 @@ const checkAcrossCollections = (
       if (field.input !== 'relation') continue
       const target = byName.get(field.target!)
       const column = collection.columns[field.name]!.references!.column
-      if (!target) {
+      if (target?.from) {
+        problems.push(
+          `${collection.name}: edit.${field.name} points at '${field.target}', which the '${target.from.name}' addon owns. Its table is read by its handlers only, so no relation can search it.`
+        )
+      } else if (!target) {
         problems.push(
           `${collection.name}: edit.${field.name} points at '${field.target}', which is not a collection. A relation shows its target's titles, behind the target's read.`
         )
@@ -690,6 +947,9 @@ const checkAcrossCollections = (
         )
       }
     }
+    const tables = collection.from
+      ? input.addons!.find((a) => a.name === collection.from!.name)!.tables
+      : input.tables
     const effects: string[] = []
     for (const [table, declaration] of Object.entries(tables)) {
       for (const entry of Object.values(declaration.columns)) {
@@ -702,7 +962,13 @@ const checkAcrossCollections = (
       }
     }
     collection.deletesAlso = [...new Set(effects)]
-    if (collection.delete && collection.deletesAlso.length > 0) {
+    // An addon's delete handler is written for what goes with a record.
+    if (
+      !collection.from &&
+      !input.addon &&
+      collection.delete &&
+      collection.deletesAlso.length > 0
+    ) {
       problems.push(
         `${collection.name}: delete is on, but deleting a record would also delete or clear rows of ${collection.deletesAlso.join(', ')} through 'cascade' or 'setNull'`
       )
@@ -724,14 +990,24 @@ export const buildCmsModel = (input: BuildCmsModelInput): CmsModel => {
       problems.push(`${name} must be an object`)
       continue
     }
-    const collection = buildCollection(name, entry, input, problems)
+    const owner = input.addons?.find((a) => Object.hasOwn(a.tables, name))
+    if (owner && entry.from === undefined) {
+      problems.push(
+        `${name}: the table belongs to the '${owner.name}' addon, whose rules are in its code. Switch its collection on with { from: '${owner.name}' }.`
+      )
+      continue
+    }
+    const collection =
+      entry.from === undefined || input.addon
+        ? buildCollection(name, entry, input, problems)
+        : optIn(name, entry, input, problems)
     if (collection) collections.push(collection)
   }
   if (Object.keys(input.declaration).length === 0) {
     problems.push('it declares no collection')
   }
   if (problems.length === 0) {
-    checkAcrossCollections(collections, input.tables, problems)
+    checkAcrossCollections(collections, input, problems)
   }
   if (problems.length === 0) {
     const owners = new Map<string, string>()

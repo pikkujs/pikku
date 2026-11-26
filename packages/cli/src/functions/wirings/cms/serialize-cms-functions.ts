@@ -30,6 +30,15 @@ import {
   uploadFunction,
 } from './cms-names.js'
 import { rowType, schemaName } from './serialize-cms-schemas.js'
+import { addonCollectionSource } from './serialize-cms-addon-functions.js'
+import {
+  guards,
+  holder,
+  holds,
+  kinds,
+  upperSnake,
+  type Alias,
+} from './serialize-cms-guards.js'
 
 export interface CmsImportPaths {
   functionLeaf: string
@@ -64,56 +73,6 @@ const checkImports = (model: CmsModel, paths: CmsImportPaths) => {
   }
   return { lines, alias }
 }
-
-type Alias = (check: CmsCheck) => string
-
-const holder = (collection: string, operation: CmsOperation) =>
-  `holdsCms${pascal(collection)}${pascal(operation)}`
-
-/** A permission that reads the caller's grants again and wants these. */
-const holds = (collection: string, operation: CmsOperation) => {
-  const scopes = [...new Set(['read', operation])]
-    .map((op) => `'cms:${collection}:${op}'`)
-    .join(', ')
-  return `const ${holder(collection, operation)} = pikkuAuth(async ({ scopeService }, session) =>
-  cmsHolds([${scopes}], { scopeService }, session)
-)`
-}
-
-/**
- * The scopes and the checks of one operation, all of which must pass. A write
- * asks for its grants a second time, read now: a session cache may still hold
- * one that has been revoked.
- */
-export const guards = (
-  collection: CmsModelCollection,
-  operation: CmsOperation,
-  alias: Alias
-): string => {
-  const { name, checks } = collection
-  const scopes = [...new Set(['read' as const, operation])].map(
-    (op) => `'cms:${name}:${op}'`
-  )
-  const required = [
-    ...(operation === 'read' ? [] : [holder(name, operation)]),
-    ...[...new Set(['read' as const, operation])].flatMap((op) =>
-      checks[op] ? [alias(checks[op]!)] : []
-    ),
-  ]
-  return [
-    `  scopes: [${scopes.join(', ')}],`,
-    // One group: the entries of a group all have to pass.
-    ...(required.length
-      ? [`  permissions: { cms: [${required.join(', ')}] },`]
-      : []),
-  ].join('\n')
-}
-
-export const upperSnake = (name: string) =>
-  name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase()
-
-const kinds = (collection: CmsModelCollection, columns: string[]) =>
-  `{ ${columns.map((c) => `${c}: '${valueKind(collection.columns[c]!)}'`).join(', ')} } as const`
 
 const isTime = (collection: CmsModelCollection, column: string) =>
   valueKind(collection.columns[column]!) === 'datetime'
@@ -630,7 +589,11 @@ ${checks.length ? `  permissions: { cms: [${checks.join(', ')}] },\n` : ''}  inp
 const describeSource = (model: CmsModel, alias: Alias): string => {
   const descriptions = describeCmsModel(model)
   const entries = model.collections.map((collection, index) => {
-    const checks = (['read', ...OPERATIONS] as CmsOperation[]).flatMap((op) =>
+    const checks = [
+      'read',
+      ...OPERATIONS,
+      ...collection.actions.map((action) => action.name),
+    ].flatMap((op) =>
       collection.checks[op] ? [`${op}: ${alias(collection.checks[op]!)}`] : []
     )
     return `  {
@@ -665,6 +628,15 @@ ${groups.join('\n')}
 })`
 }
 
+/** The grants each write and action of a collection reads again. */
+const writeHolds = (collection: CmsModelCollection) => [
+  holds(collection.name, 'read'),
+  ...(['create', 'edit', 'delete'] as const)
+    .filter((operation) => collection[operation])
+    .map((operation) => holds(collection.name, operation)),
+  ...collection.actions.map((action) => holds(collection.name, action.name)),
+]
+
 /** What a collection gets besides `describeCms`. */
 const collectionSource = (
   model: CmsModel,
@@ -673,10 +645,7 @@ const collectionSource = (
 ): string =>
   [
     constants(collection),
-    holds(collection.name, 'read'),
-    ...(['create', 'edit', 'delete'] as const)
-      .filter((operation) => collection[operation])
-      .map((operation) => holds(collection.name, operation)),
+    ...writeHolds(collection),
     listSource(collection, alias),
     getSource(collection, alias),
     ...(collection.create ? [createSource(model, collection, alias)] : []),
@@ -706,8 +675,20 @@ export const serializeCmsFunctions = (
   schemaNames: string[]
 ): string => {
   const { lines, alias } = checkImports(model, paths)
+  const packages = [
+    ...new Set(model.collections.flatMap((c) => c.from?.package ?? [])),
+  ]
   const source = [
-    ...model.collections.map((c) => collectionSource(model, c, alias)),
+    ...model.collections.map((c) =>
+      c.from
+        ? addonCollectionSource(
+            c,
+            `addonCms${packages.indexOf(c.from.package)}`,
+            writeHolds(c),
+            alias
+          )
+        : collectionSource(model, c, alias)
+    ),
     describeSource(model, alias),
   ].join('\n\n')
   return [
@@ -728,7 +709,9 @@ export const serializeCmsFunctions = (
     imports(
       [
         'CMS_SQL_OPERATORS',
+        'cmsAddonHandlers',
         'cmsAudit',
+        'cmsAuditAction',
         'cmsChanged',
         'cmsConditions',
         'cmsContent',
@@ -740,7 +723,9 @@ export const serializeCmsFunctions = (
         'cmsMayLink',
         'cmsMustPass',
         'cmsPage',
+        'cmsPick',
         'cmsPreviewUrl',
+        'cmsRecord',
         'cmsSearchPattern',
         'cmsStoredDatetime',
         'cmsStoredValue',
@@ -755,6 +740,10 @@ export const serializeCmsFunctions = (
     imports(['CmsDescribedCollection'], paths.runtime, source, 'type '),
     imports(schemaNames, paths.schemas, source),
     ...lines.map((line) => `${line}\n`),
+    ...packages.map(
+      (name, index) =>
+        `import { cmsHandlers as addonCms${index} } from '${name}/cms'\n`
+    ),
     `\n${source}\n`,
   ].join('')
 }

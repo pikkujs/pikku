@@ -8,6 +8,7 @@ import {
   filterOperators,
   idSchema,
   imageKeySchema,
+  NO_NUL,
   searchSchema,
   operandSchema,
   outputSchema,
@@ -20,6 +21,7 @@ import {
 } from './build-cms-model.js'
 import { DESCRIBE_SCHEMA } from './serialize-cms-describe-schema.js'
 import {
+  actionFunction,
   createFunction,
   deleteFunction,
   getFunction,
@@ -39,11 +41,18 @@ export const rowType = (collection: string, kind: 'ListRow' | 'Record') =>
 const object = (entries: string[], strict = true) =>
   `z.${strict ? 'strictObject' : 'object'}({\n${entries.map((e) => `  ${e},`).join('\n')}\n})`
 
-const rowSchema = (collection: CmsModelCollection, columns: string[]) =>
+const rowSchema = (
+  collection: CmsModelCollection,
+  columns: string[],
+  extra: string[] = []
+) =>
   object(
-    columns.map(
-      (column) => `${column}: ${outputSchema(collection.columns[column]!)}`
-    ),
+    [
+      ...columns.map(
+        (column) => `${column}: ${outputSchema(collection.columns[column]!)}`
+      ),
+      ...extra,
+    ],
     false
   )
 
@@ -146,7 +155,7 @@ const fieldFunctionSchemas = (
 const getSchemas = (collection: CmsModelCollection): string[] => {
   const { name, primaryKey, columns, readColumns } = collection
   return [
-    `export const ${rowType(name, 'Record')} = ${rowSchema(collection, readColumns)}`,
+    `export const ${rowType(name, 'Record')} = ${rowSchema(collection, readColumns, collection.tags ? ['tags: z.array(z.string())'] : [])}`,
     `export const ${schemaName(getFunction(name), 'Input')} = ${object([
       `id: ${idSchema(columns[primaryKey]!)}`,
     ])}`,
@@ -178,6 +187,10 @@ const fieldSchema = (
   name: string,
   operation: 'create' | 'update'
 ): string => {
+  if (name === 'tags' && collection.tags) {
+    const { maxItems, maxLength } = collection.tags
+    return `tags: z.array(z.string().min(1).max(${maxLength})${NO_NUL}).max(${maxItems}).optional()`
+  }
   const column = collection.columns[name]!
   const field = collection.fields.find((f) => f.name === name)!
   const value = field.image
@@ -200,6 +213,25 @@ const valuesSchema = (
       fieldSchema(collection, field.name, operation)
     )
   )
+
+/** An action takes a record's id and, each optional, the columns it names. */
+const actionSchemas = (collection: CmsModelCollection): string[] => {
+  const { name, primaryKey, columns } = collection
+  return collection.actions.flatMap((action) => {
+    const fn = actionFunction(name, action.name)
+    const taken = action.input.map((column) => {
+      const nullable = columns[column]!.nullable ? '.nullable()' : ''
+      return `${column}: ${valueSchema(columns[column]!)}${nullable}.optional()`
+    })
+    return [
+      `export const ${schemaName(fn, 'Input')} = ${object([
+        `id: ${idSchema(columns[primaryKey]!)}`,
+        ...(taken.length ? [`input: ${object(taken)}.optional()`] : []),
+      ])}`,
+      `export const ${schemaName(fn, 'Output')} = ${object([`row: ${rowType(name, 'Record')}`], false)}`,
+    ]
+  })
+}
 
 const writeSchemas = (collection: CmsModelCollection): string[] => {
   const { name, primaryKey, columns } = collection
@@ -250,6 +282,7 @@ ${model.collections
     ...listSchemas(collection),
     ...getSchemas(collection),
     ...writeSchemas(collection),
+    ...actionSchemas(collection),
     ...fieldFunctionSchemas(model, collection),
   ])
   .join('\n\n')}

@@ -11,6 +11,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  rename,
   rm,
   symlink,
   writeFile,
@@ -71,12 +72,28 @@ INSERT INTO course_application (id, email, first_name, motivation, status, note,
   ('a-1', 'visitor@example.com', 'Vi', '<script>alert(1)</script>', 'new', NULL, '2026-02-01 09:00:00');
 `
 
-const run = (cwd: string, args: string[], env: NodeJS.ProcessEnv) =>
+const compiler = join(packageRoot, '../../node_modules/.bin/tsc')
+
+/** The opt-ins an app adds to its `db/cms.ts` for the fixture addon. */
+const ADDON_COLLECTIONS = `  notesNote: {
+    from: 'notes',
+    permissions: { close: 'src/checks.ts#closesNotes' },
+  },
+  notesReply: { from: 'notes', delete: false },
+})
+`
+
+const run = (
+  cwd: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  command = cli
+) =>
   new Promise<{ code: number; output: string }>((resolve) => {
     // Async on purpose: bun's spawnSync can miss a child's exit and spin forever.
     execFile(
       'node',
-      [cli, ...args],
+      [command, ...args],
       { cwd, env, encoding: 'utf8', timeout: 150_000, maxBuffer: 64_000_000 },
       (error, stdout, stderr) =>
         resolve({
@@ -129,7 +146,10 @@ export class CmsTestApp {
     }
   }
 
-  static async create(engine: Engine): Promise<CmsTestApp> {
+  static async create(
+    engine: Engine,
+    { addon = false } = {}
+  ): Promise<CmsTestApp> {
     const tmp = join(packageRoot, '.tmp')
     await mkdir(tmp, { recursive: true })
     const dir = await mkdtemp(join(tmp, `cms-app-${engine}-`))
@@ -153,7 +173,66 @@ export class CmsTestApp {
         `import { pikkuConfig } from '#pikku/setup'\n\nexport const createConfig = pikkuConfig(async () => ({}))\n`
       )
     }
-    return new CmsTestApp(dir, engine)
+    const app = new CmsTestApp(dir, engine)
+    if (addon) await app.installAddon()
+    return app
+  }
+
+  /**
+   * Build the fixture addon as a package is built for publishing, install it
+   * and switch its collections on.
+   */
+  private async installAddon() {
+    const source = join(packageRoot, 'test-fixtures/cms-addon')
+    const addon = join(this.dir, 'addons/notes')
+    await cp(source, addon, { recursive: true })
+    await rename(join(addon, 'manifest.json'), join(addon, 'package.json'))
+    await this.buildAddon()
+    await mkdir(join(this.dir, 'node_modules/@cms-fixture'), {
+      recursive: true,
+    })
+    await symlink(addon, join(this.dir, 'node_modules/@cms-fixture/notes'))
+    await this.write(
+      'package.json',
+      JSON.stringify({
+        ...PACKAGE_JSON,
+        dependencies: {
+          ...PACKAGE_JSON.dependencies,
+          '@cms-fixture/notes': '*',
+        },
+      })
+    )
+    await this.write(
+      'src/notes.addon.ts',
+      `import { wireAddon } from '#pikku/addon'\n\nwireAddon({ name: 'notes', package: '@cms-fixture/notes', expose: true })\n`
+    )
+    const cms = await this.read('db/cms.ts')
+    await this.write('db/cms.ts', cms.replace(/\}\)\n$/, ADDON_COLLECTIONS))
+  }
+
+  /** `pikku all`, the compiler, and the generated output beside its result. */
+  async buildAddon() {
+    const addon = join(this.dir, 'addons/notes')
+    for (const [command, args] of [
+      [cli, ['all']],
+      [compiler, ['-p', 'tsconfig.json']],
+    ] as const) {
+      const result = await run(addon, [...args], this.env, command)
+      if (result.code !== 0) {
+        throw new Error(
+          `building the fixture addon failed:\n${result.output.slice(-6000)}`
+        )
+      }
+    }
+    await cp(join(addon, '.pikku'), join(addon, 'dist/.pikku'), {
+      recursive: true,
+    })
+  }
+
+  /** The queries a request ran on the addon's tables, as the app saw them. */
+  async addonQueries(): Promise<string[]> {
+    if (!existsSync(join(this.dir, 'addon-queries.jsonl'))) return []
+    return (await this.read('addon-queries.jsonl')).trim().split('\n')
   }
 
   async pikku(...args: string[]) {
@@ -235,12 +314,20 @@ export class CmsTestApp {
   async start() {
     const port = await freePort()
     this.url = `http://127.0.0.1:${port}`
-    // A group of its own, so stopping takes every process it started.
-    const server = spawn(
+    await this.serve(
       'node',
       [cli, 'dev', '--no-watch', '--no-frontends', '--port', String(port)],
-      { cwd: this.dir, env: this.env, detached: true }
+      this.env
     )
+  }
+
+  private async serve(command: string, args: string[], env: NodeJS.ProcessEnv) {
+    // A group of its own, so stopping takes every process it started.
+    const server = spawn(command, args, {
+      cwd: this.dir,
+      env,
+      detached: true,
+    })
     this.server = server
     for (const stream of [server.stdout, server.stderr]) {
       stream!.on('data', (chunk) => {
@@ -257,11 +344,53 @@ export class CmsTestApp {
       }
     }
     await this.stop()
-    throw new Error(`pikku dev did not answer:\n${this.serverLog.slice(-6000)}`)
+    throw new Error(`the app did not answer:\n${this.serverLog.slice(-6000)}`)
   }
 
   get log() {
     return this.serverLog
+  }
+
+  /**
+   * Build the standalone deploy bundle. `plan` stays on this machine: it builds
+   * and compares with an empty deployment, and applies nothing.
+   */
+  async bundle() {
+    // The driver a standalone build opens SQLite with.
+    await symlink(
+      join(packageRoot, '../addon/kysely-bun-sqlite'),
+      join(this.dir, 'node_modules/@pikku/addon-kysely-bun-sqlite')
+    )
+    await this.pikkuOk('deploy', 'plan', '--provider', 'standalone')
+    return join(this.dir, '.deploy/standalone/cms-test-app/bundle.js')
+  }
+
+  /** Migrate a database of the bundle's own and serve it, as a host would. */
+  async startBundle(bundle: string) {
+    const port = await freePort()
+    this.url = `http://127.0.0.1:${port}`
+    const env = {
+      ...this.env,
+      PIKKU_DATA_DIR: join(this.dir, 'bundle-data'),
+      // Run through bun, not compiled, the bundle would look beside bun itself.
+      PIKKU_MIGRATIONS_DIR: join(dirname(bundle), 'db/sqlite'),
+      HOST: '127.0.0.1',
+      PORT: String(port),
+    }
+    const migrated = await new Promise<{ failed: boolean; output: string }>(
+      (resolve) =>
+        execFile(
+          'bun',
+          [bundle, 'db', 'migrate'],
+          { cwd: this.dir, env, encoding: 'utf8', timeout: 60_000 },
+          (error, stdout, stderr) =>
+            resolve({ failed: Boolean(error), output: stdout + stderr })
+        )
+    )
+    if (migrated.failed) {
+      throw new Error(`the bundle did not migrate:\n${migrated.output}`)
+    }
+    await this.serve('bun', [bundle, 'serve'], env)
   }
 
   async stop() {

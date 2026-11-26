@@ -36,6 +36,7 @@ import {
   type RegistryInvoke,
 } from '../../utils/remote-addon-sync.js'
 import { writeAddonDeclaration } from '../db/addon-declarations.js'
+import { writeAddonCms } from '../wirings/cms/cms-addon.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
 import { CMS_FILE } from '../wirings/cms/load-cms-declaration.js'
 import {
@@ -792,6 +793,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       // consumer reads an absent file as a package that cannot say whether it
       // ships a schema, which is a broken publish rather than a quiet no.
       await writeAddonDeclaration(config.rootDir, config.outDir)
+      await writeAddonCms(config.rootDir, config.outDir)
     }
 
     const hasFunctionRegistrations = await workflow.do(

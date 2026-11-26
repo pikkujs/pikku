@@ -13,6 +13,7 @@ import type {
 } from './cms-model.types.js'
 import { derivedInput } from './build-cms-model.js'
 import {
+  actionFunction,
   createFunction,
   deleteFunction,
   getFunction,
@@ -62,6 +63,21 @@ const describeField = (
   }
 }
 
+const describeTags = (
+  collection: CmsModelCollection,
+  tags: NonNullable<CmsModelCollection['tags']>
+): CmsFieldDescription => ({
+  name: 'tags',
+  label: tags.label,
+  help: tags.help,
+  input: 'tags',
+  editable: collection.fields.some((field) => field.name === 'tags'),
+  required: false,
+  nullable: false,
+  maxItems: tags.maxItems,
+  maxLength: tags.maxLength,
+})
+
 const describeCollection = (
   model: CmsModel,
   collection: CmsModelCollection
@@ -71,10 +87,12 @@ const describeCollection = (
   const fields = [
     ...edited,
     ...collection.readColumns.filter((column) => !edited.includes(column)),
+    ...(collection.tags && !edited.includes('tags') ? ['tags'] : []),
   ]
   return {
     name,
     label: collection.label,
+    from: collection.from?.name,
     primaryKey: collection.primaryKey,
     title: collection.title,
     thumbnail: collection.thumbnail,
@@ -92,7 +110,17 @@ const describeCollection = (
       update: collection.edit ? updateFunction(name) : undefined,
       delete: collection.delete ? deleteFunction(name) : undefined,
     },
-    actions: [],
+    actions: collection.actions.map((action) => ({
+      name: action.name,
+      label: action.label,
+      function: actionFunction(name, action.name),
+      confirm: action.confirm,
+      input: action.input.map((column) => ({
+        ...describeField(model, collection, collection.columns[column]!),
+        editable: true,
+        required: false,
+      })),
+    })),
     list: collection.list,
     detail: collection.detail,
     submitted: collection.submitted,
@@ -100,7 +128,9 @@ const describeCollection = (
     pii: collection.pii,
     deletesAlso: collection.delete ? collection.deletesAlso : [],
     fields: fields.map((column) =>
-      describeField(model, collection, collection.columns[column]!)
+      column === 'tags' && collection.tags
+        ? describeTags(collection, collection.tags)
+        : describeField(model, collection, collection.columns[column]!)
     ),
   }
 }

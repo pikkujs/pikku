@@ -4,6 +4,11 @@ import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { removeFileInDir, writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
+import {
+  wiredAddons,
+  type AddonDeclaration,
+} from '../../db/addon-declarations.js'
+import { verifyCmsHandlers } from './cms-addon.js'
 import { cmsFiles, loadCmsModel } from './cms-project.js'
 import { serializeCmsFunctions } from './serialize-cms-functions.js'
 import { serializeCmsRuntime } from './serialize-cms-runtime.js'
@@ -17,12 +22,16 @@ import { verifyCmsChecks } from './verify-cms-checks.js'
  * leave functions behind that require its scopes.
  */
 export const pikkuCms = pikkuSessionlessFunc<void, boolean>({
-  func: async ({ logger, config }) => {
+  func: async ({ logger, config, getInspectorState }) => {
     // An addon publishes its collections for a host to generate.
     if (config.addon) return false
 
     const files = cmsFiles(config)
-    const model = await loadCmsModel(config)
+    // A setup-only inspection reads the `wireAddon` calls and checks nothing
+    // against scopes, which may still name a collection that has just gone.
+    const model = await loadCmsModel(config, async () =>
+      wiredAddons(await getInspectorState(false, true))
+    )
     if (!model) {
       for (const file of Object.values(files)) {
         await removeFileInDir(logger, file)
@@ -75,8 +84,14 @@ export const pikkuCms = pikkuSessionlessFunc<void, boolean>({
 
 /** Load the app's own checks, which needs the generated `#pikku` leaves. */
 export const pikkuCmsChecks = pikkuSessionlessFunc<void, void>({
-  func: async ({ config }) => {
-    const model = await loadCmsModel(config)
-    if (model) await verifyCmsChecks(config.rootDir, model)
+  func: async ({ config, getInspectorState }) => {
+    let addons: AddonDeclaration[] = []
+    const model = await loadCmsModel(config, async () => {
+      addons = wiredAddons(await getInspectorState())
+      return addons
+    })
+    if (!model) return
+    await verifyCmsHandlers(config.rootDir, model, addons)
+    await verifyCmsChecks(config.rootDir, model)
   },
 })

@@ -26,6 +26,8 @@ export const deleteFunction = (collection: string) =>
   `deleteCms${pascal(collection)}`
 export const uploadFunction = (collection: string, field: string) =>
   `createCms${pascal(collection)}${pascal(field)}Upload`
+export const actionFunction = (collection: string, action: string) =>
+  `runCms${pascal(collection)}${pascal(action)}`
 export const optionsFunction = (collection: string, field: string) =>
   `searchCms${pascal(collection)}${pascal(field)}Options`
 
@@ -39,6 +41,7 @@ export const cmsFunctionNames = (collection: CmsModelCollection): string[] => {
     ...(collection.create ? [createFunction(name)] : []),
     ...(collection.edit ? [updateFunction(name)] : []),
     ...(collection.delete ? [deleteFunction(name)] : []),
+    ...collection.actions.map((action) => actionFunction(name, action.name)),
     ...collection.fields.flatMap((field) => [
       ...(writes && field.image ? [uploadFunction(name, field.name)] : []),
       ...(writes && field.input === 'relation'

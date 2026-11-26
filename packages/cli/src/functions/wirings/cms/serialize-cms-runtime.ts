@@ -9,13 +9,16 @@ export const serializeCmsRuntime = ({
 }): string => `import {
   ConflictError,
   ForbiddenError,
+  NotFoundError,
   UnprocessableContentError,
 } from '${errorLeaf}'
 import { sql } from 'kysely'
 import type { AuditLog, ContentService } from '@pikku/core/services'
 import type {
   CmsCollectionDescription,
+  CmsCollectionHandlers,
   CmsDescription,
+  CmsHandlers,
   CmsListCondition,
   CmsOperation,
 } from '@pikku/core/cms'
@@ -96,6 +99,57 @@ export const cmsDatetime = (value: string): string => {
 export const cmsStoredDatetime = <Value extends string | null | undefined>(
   value: Value
 ): Value => (typeof value === 'string' ? cmsDatetime(value) : value) as Value
+
+/** The handlers an addon ships for one of its collections. */
+export const cmsAddonHandlers = (
+  handlers: CmsHandlers,
+  collection: string
+): CmsCollectionHandlers => handlers[collection]!
+
+/** A record a handler answered, cut down to the columns the collection shows. */
+export const cmsRecord = <Row>(
+  row: object | null | undefined,
+  kinds: Record<string, CmsValueKind>,
+  tagged = false
+): Row => {
+  if (!row) throw new NotFoundError('There is no record with that id')
+  const values = row as Record<string, unknown>
+  const record = Object.fromEntries(
+    Object.entries(kinds).map(([column, kind]) => {
+      const value = values[column]
+      return [
+        column,
+        cmsStoredValue(
+          value instanceof Date ? value.toISOString() : value,
+          kind
+        ),
+      ]
+    })
+  )
+  return (
+    tagged ? { ...record, tags: [...((values.tags as string[]) ?? [])] } : record
+  ) as Row
+}
+
+/** What a handler is handed: the named values the caller gave, key by key. */
+export const cmsPick = (
+  values: object | undefined,
+  kinds: Record<string, CmsValueKind>
+): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(kinds).flatMap(([column, kind]) => {
+      const value = (values as Record<string, unknown> | undefined)?.[column]
+      if (value === undefined) return []
+      return [
+        [
+          column,
+          kind === 'datetime' && typeof value === 'string'
+            ? cmsDatetime(value)
+            : value,
+        ],
+      ]
+    })
+  )
 
 /** The file storage an app with image fields has. */
 export const cmsContent = (
@@ -221,6 +275,21 @@ export const cmsAudit = async (
   })
 }
 
+/** Record that an addon's action ran, when the app has an audit log. */
+export const cmsAuditAction = async (
+  auditLog: AuditLog | undefined,
+  action: string,
+  collection: string,
+  id: string | number
+): Promise<void> => {
+  await auditLog?.write({
+    type: 'cms.record.action',
+    source: 'explicit',
+    outcome: 'success',
+    metadata: { collection, id: String(id), action },
+  })
+}
+
 const OPERATORS = ['equals', 'in', 'gt', 'gte', 'lt', 'lte'] as const
 
 /**
@@ -313,7 +382,8 @@ type CmsAppCheck = (services: any, data: any, wire: any) => unknown
 
 export interface CmsDescribedCollection {
   description: CmsCollectionDescription
-  checks: Partial<Record<CmsOperation, CmsAppCheck>>
+  /** The app's checks, by operation and by action. */
+  checks: Partial<Record<string, CmsAppCheck>>
 }
 
 /**
@@ -415,10 +485,20 @@ export const cmsDescribe = async (
           }
         }
         const writes = held.has('create') || held.has('edit')
+        const actions = []
+        for (const action of description.actions) {
+          if (
+            hasScopes([\`cms:\${description.name}:\${action.name}\`], scopes) &&
+            (await cmsSessionCheck(checks[action.name], services, session))
+          ) {
+            actions.push(action)
+          }
+        }
         const { functions } = description
         return {
           ...description,
           operations: description.operations.filter((op) => held.has(op)),
+          actions,
           functions: {
             list: functions.list,
             get: functions.get,

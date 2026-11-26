@@ -87,11 +87,11 @@ describe('buildCmsModel', () => {
       /declares no table 'blogPost'/,
     ],
     [
-      'an addon opt-in naming no table',
+      'an addon opt-in naming an addon that is not wired',
       (d) => {
         d.blogPost = { from: 'blog' }
       },
-      /declares no table 'blogPost'/,
+      /no addon wired under that name/,
     ],
     [
       'an unknown setting',

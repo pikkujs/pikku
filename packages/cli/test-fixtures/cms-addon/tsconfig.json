@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "rootDir": ".",
+    "outDir": "./dist",
+    "declaration": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "paths": {
+      "#pikku/*.js": ["./.pikku/*.ts"],
+      "#pikku/*": ["./.pikku/*/index.ts", "./.pikku/*"]
+    }
+  },
+  "include": ["db/**/*", "src/**/*", "types/**/*", ".pikku/**/*.ts"],
+  "exclude": ["node_modules", "dist", ".pikku/**/*.d.ts"]
+}

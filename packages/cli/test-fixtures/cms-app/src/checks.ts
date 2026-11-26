@@ -12,3 +12,7 @@ export const readsTherapists = pikkuAuth(
 export const opensOfferings = pikkuAuth(
   async (_services, session) => session?.userId !== 'trainee'
 )
+
+export const closesNotes = pikkuAuth(
+  async (_services, session) => session.userId !== 'trainee'
+)

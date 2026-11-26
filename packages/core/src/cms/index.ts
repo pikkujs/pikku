@@ -127,7 +127,7 @@ type EditableColumns<Columns> = {
     : Name
 }[ShownColumns<Columns>]
 
-interface CmsCollectionShape<Column extends string> {
+export interface CmsCollectionShape<Column extends string> {
   label: string
   /** The column that names a record. */
   title: Column

@@ -39,6 +39,18 @@ const interleaved = (db: Kysely<DB>): KyselyPlugin => ({
   },
 })
 
+/** Test only: every query that names a table of the fixture addon. */
+const addonQueries: KyselyPlugin = {
+  transformQuery: ({ node }) => {
+    const query = JSON.stringify(node)
+    if (/notes_?(note|reply)/i.test(query)) {
+      appendFileSync('addon-queries.jsonl', `${query}\n`)
+    }
+    return node
+  },
+  transformResult: async ({ result }) => result,
+}
+
 export const createSingletonServices = pikkuServices(
   async (config, existingServices) => {
     const logger = existingServices?.logger ?? new ConsoleLogger()
@@ -52,9 +64,9 @@ export const createSingletonServices = pikkuServices(
       audit: { audit: async (event) => record(event) },
       schema: existingServices?.schema ?? new CFWorkerSchemaService(logger),
       secrets: existingServices?.secrets ?? new LocalSecretService(variables),
-      kysely: (existingServices!.kysely! as Kysely<DB>).withPlugin(
-        interleaved(existingServices!.kysely! as Kysely<DB>)
-      ),
+      kysely: (existingServices!.kysely! as Kysely<DB>)
+        .withPlugin(interleaved(existingServices!.kysely! as Kysely<DB>))
+        .withPlugin(addonQueries),
       content: existingServices!.content!,
       scopeService: { resolveScopes: grantsOf } as unknown as ScopeService,
     }

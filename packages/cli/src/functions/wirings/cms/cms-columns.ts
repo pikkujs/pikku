@@ -41,7 +41,7 @@ const INTEGER = 'z.number().int().min(-2147483648).max(2147483647)'
 const BIGINT =
   'z.number().int().min(Number.MIN_SAFE_INTEGER).max(Number.MAX_SAFE_INTEGER)'
 // Postgres stores no NUL character in text.
-const NO_NUL = '.regex(/^[^\\x00]*$/)'
+export const NO_NUL = '.regex(/^[^\\x00]*$/)'
 // zod's url takes any scheme, and a `javascript:` link runs when it is clicked.
 const WEB_URL = '.regex(/^[Hh][Tt][Tt][Pp][Ss]?:\\/\\//)'
 
