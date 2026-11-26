@@ -14,4 +14,6 @@ A queued step delivered to a cancelled or unwinding run no longer runs, and is n
 
 `workflow.do` of a function takes a per-attempt `timeout` with no default. A retry can run beside the call it replaced, so make side effects idempotent on `workflowStep.invocationId`. Graph and child-workflow steps take no `timeout`, and setting one on Cloudflare is an error. Existing SQL databases need a new `workflow_step.timeout` column: see `docs/MIGRATION.md`.
 
+Redis no longer deletes a child run id saved while it was taking back a lost step.
+
 A cancelled run with nothing to compensate ends `cancelled`, not `failed`.

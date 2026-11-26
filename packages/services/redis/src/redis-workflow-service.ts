@@ -1,6 +1,8 @@
 import { RedisWorkflowRunService } from './redis-workflow-run-service.js'
 import type { SerializedError } from '@pikku/core/errors'
 import {
+  isStepLeaseLive,
+  leaseAttemptsExhausted,
   PikkuWorkflowService,
   WorkflowStepSupersededError,
 } from '@pikku/core/workflow'
@@ -56,6 +58,30 @@ if ARGV[3] == '' then
 else
   redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[3])
 end
+return 1
+`
+
+/**
+ * Takes back a lost step as a new attempt, only while it is still `running` on
+ * the attempt the claim read, its lease is still lapsed and no child run has
+ * been saved on it; otherwise nothing is written. KEYS[1] is the step hash; ARGV is the stepId, that
+ * attempt, the new attempt, the new lease expiry and the time, both in epoch
+ * milliseconds. Returns 1 when the step was taken.
+ */
+const ATOMIC_STEP_RECLAIM = `
+local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
+local lease = tonumber(redis.call('HGET', KEYS[1], 'leaseExpiresAt') or '')
+if redis.call('HGET', KEYS[1], 'stepId') ~= ARGV[1]
+  or not lease
+  or lease >= tonumber(ARGV[5])
+  or redis.call('HGET', KEYS[1], 'status') ~= 'running'
+  or current ~= tonumber(ARGV[2])
+  or redis.call('HEXISTS', KEYS[1], 'childRunId') == 1 then
+  return 0
+end
+redis.call('HSET', KEYS[1], 'attemptCount', ARGV[3])
+redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[4])
+redis.call('HSET', KEYS[1], 'updatedAt', ARGV[5])
 return 1
 `
 
@@ -800,6 +826,72 @@ export class RedisWorkflowService extends PikkuWorkflowService {
    * Reading and then resetting it would delete a child saved in between, and a
    * second one would be started. Everything else is the engine's own claim.
    */
+  protected override async claimStepForExecution(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    leaseMs: number
+  ): Promise<StepState | null> {
+    const seen = await this.getStepState(runId, stepName)
+    if (seen.status === 'running' && seen.rpcName === rpcName) {
+      if (seen.childRunId || isStepLeaseLive(seen.leaseExpiresAt)) {
+        return null
+      }
+      if (!leaseAttemptsExhausted(seen)) {
+        return this.reclaimLostStep(runId, stepName, seen, leaseMs)
+      }
+    }
+    return super.claimStepForExecution(runId, stepName, rpcName, leaseMs)
+  }
+
+  private async reclaimLostStep(
+    runId: string,
+    stepName: string,
+    seen: StepState,
+    leaseMs: number
+  ): Promise<StepState | null> {
+    const attempt = seen.attemptCount + 1
+    const claimed = await this.mirrored(
+      async () => {
+        const now = Date.now()
+        const taken = await this.redis.eval(
+          ATOMIC_STEP_RECLAIM,
+          1,
+          this.stepKey(runId, stepName),
+          seen.stepId,
+          seen.attemptCount.toString(),
+          attempt.toString(),
+          (now + leaseMs).toString(),
+          now.toString()
+        )
+        if (Number(taken) !== 1) return null
+        await this.saveStepHistory(
+          seen.stepId,
+          stepName,
+          attempt,
+          'running',
+          undefined,
+          undefined,
+          seen.retries,
+          seen.retryDelay?.toString()
+        )
+        return this.getStepState(runId, stepName)
+      },
+      async (mirror, newStep) => {
+        if (newStep) {
+          await mirror.createRetryAttempt(seen.stepId, {
+            ...newStep,
+            stepName,
+          })
+        }
+      }
+    )
+    if (claimed) {
+      await this.logStepRerun(runId, stepName, claimed.attemptCount)
+    }
+    return claimed
+  }
+
   // ============================================================================
   // Workflow Graph Methods
   // ============================================================================
