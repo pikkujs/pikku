@@ -42,7 +42,10 @@ export type CmsImageField = CmsFieldTexts & {
   /** A bucket listed in `content.buckets`. */
   bucket: string
   accept: readonly CmsImageType[]
-  /** The largest declared size an upload URL is issued for. */
+  /**
+   * The largest size an upload URL is issued for, and the largest stored file a
+   * record takes.
+   */
   maxBytes: number
 }
 

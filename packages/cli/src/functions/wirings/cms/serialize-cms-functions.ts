@@ -227,7 +227,10 @@ const fieldChecks = (
     }),
     ...imageFields(collection).map(
       (field) =>
-        `    await cmsUploaded(content, '${field.image!.bucket}', ${from}.${field.name})
+        `    await cmsUploaded(content, '${field.image!.bucket}', ${from}.${field.name}, {
+      maxBytes: ${field.image!.maxBytes},
+      extensions: ${JSON.stringify(imageExtensions(field.image!.accept))},
+    })
 `
     ),
   ].join('')

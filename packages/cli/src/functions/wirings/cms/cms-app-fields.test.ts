@@ -1,6 +1,8 @@
 import { after, before, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
+import { crc32 } from 'node:zlib'
+import { FFMPEG_AVIF, IMAGES } from '../../../../test-fixtures/cms/images.js'
 import {
   cliIsBuilt,
   CmsTestApp,
@@ -29,11 +31,7 @@ const GRANTS = {
 }
 const as = (user: keyof typeof GRANTS): Caller => ({ user })
 
-/** A real one by one PNG. */
-const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhWMjWwAAAABJRU5ErkJggg==',
-  'base64'
-)
+const PNG = IMAGES['image/png']
 
 for (const engine of ['sqlite', 'postgres'] as Engine[]) {
   describe(
@@ -366,13 +364,181 @@ for (const engine of ['sqlite', 'postgres'] as Engine[]) {
         )
       })
 
+      /** A real PNG made exactly `length` bytes by a text chunk before its end. */
+      const pngOf = (length: number) => {
+        const filler = length - PNG.length - 12
+        const chunk = Buffer.alloc(filler + 12)
+        chunk.writeUInt32BE(filler, 0)
+        chunk.write('tEXtc\0', 4, 'latin1')
+        chunk.fill('x', 10, 8 + filler)
+        chunk.writeUInt32BE(crc32(chunk.subarray(4, 8 + filler)), 8 + filler)
+        return Buffer.concat([PNG.subarray(0, -12), chunk, PNG.subarray(-12)])
+      }
+      /** Upload as `contentType`, whatever the bytes are, and answer the key. */
+      const uploadedAs = async (contentType: string, body: Buffer | string) => {
+        const upload = await ok(UPLOAD, asked({ contentType }))
+        const sent = await put(upload.uploadUrl, body)
+        assert.equal(sent.status, 200, await sent.text())
+        return upload.fileKey as string
+      }
+      /** The statuses of saving a key by a create and by an update. */
+      const save = async (imageKey: string) => {
+        const created = await app.rpc(
+          'createCmsOffering',
+          { values: values({ imageKey }) },
+          as('super')
+        )
+        const updated = await app.rpc(
+          'updateCmsOffering',
+          { id: 'o-2', patch: { imageKey } },
+          as('super')
+        )
+        return [created, updated] as const
+      }
+
       // `getUploadURL` carries neither the type nor the size to the upload
-      // route, so a field's own limits hold only for what the caller declares.
-      // The route's limit is `content.sizeLimit`.
-      test('the upload route does not hold a file to what was declared', async () => {
-        const html = '<script>alert(1)</script>'.padEnd(5000, ' ')
-        const key = await uploaded(html)
-        await ok('updateCmsOffering', { id: 'o-2', patch: { imageKey: key } })
+      // route, so the stored file is checked when a record is to take it.
+      test('a file that is not the image it was uploaded as is not saved', async () => {
+        const before = await get('o-2')
+        const count = (await ok('listCmsOffering', { limit: 100 })).rows.length
+        const html = Buffer.from('<script>alert(1)</script>')
+        const jpeg = IMAGES['image/jpeg']
+        const webp = IMAGES['image/webp']
+        const half = (bytes: Buffer) => bytes.subarray(0, bytes.length >> 1)
+        const cases: [string, string, Buffer, RegExp][] = [
+          ['HTML as a PNG', 'image/png', html, /not a complete image/],
+          [
+            'HTML behind a PNG signature',
+            'image/png',
+            Buffer.concat([PNG.subarray(0, 8), html]),
+            /not a complete image/,
+          ],
+          [
+            'a GIF, which the field does not take',
+            'image/png',
+            IMAGES['image/gif'],
+            /not a complete image/,
+          ],
+          [
+            'a JPEG, which the field takes, as a PNG',
+            'image/png',
+            jpeg,
+            /not a complete image/,
+          ],
+          [
+            'a PNG without its last byte',
+            'image/png',
+            PNG.subarray(0, -1),
+            /not a complete image/,
+          ],
+          ['half a JPEG', 'image/jpeg', half(jpeg), /not a complete image/],
+          ['half a WebP', 'image/webp', half(webp), /not a complete image/],
+          ['an empty file', 'image/png', Buffer.alloc(0), /not a complete/],
+          [
+            'a real PNG one byte over the limit',
+            'image/png',
+            pngOf(2001),
+            /larger than this field takes/,
+          ],
+          [
+            '900 kB declared as a few bytes',
+            'image/png',
+            pngOf(900_000),
+            /larger than this field takes/,
+          ],
+        ]
+        for (const [what, contentType, body, message] of cases) {
+          const key = await uploadedAs(contentType, body)
+          for (const answer of await save(key)) {
+            assert.equal(answer.status, 422, `${what}: ${answer.text}`)
+            assert.match(answer.text, message, what)
+          }
+        }
+        assert.deepEqual(await get('o-2'), before)
+        assert.equal(
+          (await ok('listCmsOffering', { limit: 100 })).rows.length,
+          count
+        )
+      })
+
+      test('the real image of each type the field takes is saved', async () => {
+        for (const [contentType, body] of [
+          ['image/png', PNG],
+          ['image/png', pngOf(2000)],
+          ['image/jpeg', IMAGES['image/jpeg']],
+          ['image/webp', IMAGES['image/webp']],
+        ] as const) {
+          const key = await uploadedAs(contentType, body)
+          for (const answer of await save(key)) {
+            assert.equal(answer.status, 200, `${contentType}: ${answer.text}`)
+            assert.equal(answer.body.row.imageKey, key)
+          }
+        }
+      })
+
+      test('a refused file stays in storage', async () => {
+        const html = '<script>alert(1)</script>'
+        const upload = await ok(UPLOAD, asked())
+        await put(upload.uploadUrl, html)
+        const [first] = await save(upload.fileKey)
+        const [second] = await save(upload.fileKey)
+        // Still "not an image", not "nothing was uploaded".
+        assert.match(first.text, /not a complete image/)
+        assert.match(second.text, /not a complete image/)
+      })
+
+      // A gap that is stated, not fixed: the check is of the file as it is at
+      // the save, and its upload URL keeps working until it expires.
+      test('the upload URL of a saved image can still replace the file', async () => {
+        const upload = await ok(UPLOAD, asked())
+        await put(upload.uploadUrl, PNG)
+        const { row } = await ok('createCmsOffering', {
+          values: values({ imageKey: upload.fileKey }),
+        })
+        const again = await put(upload.uploadUrl, '<script>alert(2)</script>')
+        assert.equal(again.status, 200)
+        const { previewUrls } = await ok('getCmsOffering', { id: row.id })
+        const shown = await fetch(new URL(previewUrls.imageKey, app.url))
+        assert.equal(await shown.text(), '<script>alert(2)</script>')
+        // Local content serves every file as plain bytes, which a browser does
+        // not render as a page.
+        assert.equal(
+          shown.headers.get('content-type'),
+          'application/octet-stream'
+        )
+      })
+
+      // Last: it widens the field to every type and builds the app again.
+      test('real GIF and AVIF uploads are saved by a field that takes them', async () => {
+        await app.stop()
+        const cms = await app.read('db/cms.ts')
+        const accept = "accept: ['image/png', 'image/jpeg', 'image/webp'],"
+        assert.ok(cms.includes(accept))
+        await app.write(
+          'db/cms.ts',
+          cms.replace(
+            accept,
+            "accept: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'],"
+          )
+        )
+        await app.strictBuild()
+        await app.start()
+        for (const [contentType, body] of [
+          ['image/gif', IMAGES['image/gif']],
+          ['image/avif', IMAGES['image/avif']],
+          ['image/avif', FFMPEG_AVIF],
+        ] as const) {
+          const key = await uploadedAs(contentType, body)
+          const [created] = await save(key)
+          assert.equal(created.status, 200, `${contentType}: ${created.text}`)
+          const cut = await uploadedAs(contentType, body.subarray(0, -1))
+          const [refused] = await save(cut)
+          assert.equal(
+            refused.status,
+            422,
+            `${contentType} cut: ${refused.text}`
+          )
+        }
       })
     }
   )

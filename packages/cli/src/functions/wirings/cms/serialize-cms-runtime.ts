@@ -1,3 +1,5 @@
+import { CMS_IMAGE_CHECK } from './serialize-cms-image-check.js'
+
 /**
  * The code the generated functions share. It is written into the project, so
  * what a request may do is readable there beside the functions.
@@ -168,25 +170,7 @@ export const cmsImageKey = (
   contentType: string
 ): string => \`\${prefix}\${crypto.randomUUID()}.\${extensions[contentType]}\`
 
-/** A record only takes the key of a file that has been uploaded. */
-export const cmsUploaded = async (
-  content: ContentService | undefined,
-  bucket: string,
-  key: string | null | undefined
-): Promise<void> => {
-  if (typeof key !== 'string') return
-  const found = await cmsContent(content).listFilesByPrefix(
-    bucket,
-    key,
-    'private'
-  )
-  if (!found.includes(key)) {
-    throw new UnprocessableContentError(
-      'No file has been uploaded under this key'
-    )
-  }
-}
-
+${CMS_IMAGE_CHECK}
 /**
  * A short-lived link to show an image. Only a key of the field's own is signed:
  * whatever else a column holds gets none.
