@@ -114,9 +114,7 @@
     "reconstructStateAt"
   ],
   "./workflow/types": [],
-  "./virtual-user/conversation": [
-    "runConversation"
-  ],
+  "./virtual-user/conversation": ["runConversation"],
   "./virtual-user": [
     "APP_SCOPE_ROOT",
     "DEFAULT_MAX_INTERVAL_MS",
@@ -174,10 +172,7 @@
     "virtualUserTarget",
     "writeVirtualUserSchedule"
   ],
-  "./channel/local": [
-    "PikkuLocalChannelHandler",
-    "runLocalChannel"
-  ],
+  "./channel/local": ["PikkuLocalChannelHandler", "runLocalChannel"],
   "./channel/serverless": [
     "runChannelConnect",
     "runChannelDisconnect",
@@ -199,9 +194,7 @@
     "wireHTTP",
     "wireHTTPRoutes"
   ],
-  "./mesh": [
-    "buildMeshHeaders"
-  ],
+  "./mesh": ["buildMeshHeaders"],
   "./queue": [
     "QueueJobDiscardedError",
     "QueueJobFailedError",
@@ -262,10 +255,7 @@
     "setDefaultHostResolver",
     "validateHostPattern"
   ],
-  "./node-host-resolver": [
-    "installNodeHostResolver",
-    "nodeHostResolver"
-  ],
+  "./node-host-resolver": ["installNodeHostResolver", "nodeHostResolver"],
   "./mcp": [
     "MCPEndpointRegistry",
     "MCPError",
@@ -335,11 +325,7 @@
     "pikkuAttentionFunc",
     "refreshAttention"
   ],
-  "./harness": [
-    "pikkuHarness",
-    "pikkuHarnessGate",
-    "pikkuHarnessGateAgent"
-  ],
+  "./harness": ["pikkuHarness", "pikkuHarnessGate", "pikkuHarnessGateAgent"],
   "./analytics": [
     "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
@@ -373,10 +359,7 @@
     "wantsStackTrace",
     "wireCLI"
   ],
-  "./cli/command-parser": [
-    "generateCommandHelp",
-    "parseCLIArguments"
-  ],
+  "./cli/command-parser": ["generateCommandHelp", "parseCLIArguments"],
   "./cli/channel": [
     "executeCLIViaChannel",
     "executeRawCLIViaChannel",
@@ -425,23 +408,15 @@
     "sealedKid",
     "signJws"
   ],
-  "./keys/file": [
-    "FileCustody",
-    "FileKeyStore"
-  ],
+  "./keys/file": ["FileCustody", "FileKeyStore"],
   "./secret": [
     "SECRET_GENERATE_MIN_SIZE",
     "defineSecret",
     "deriveOAuth2AppSecrets",
     "validateAndBuildSecretDefinitionsMeta"
   ],
-  "./variable": [
-    "defineVariable",
-    "validateAndBuildVariableDefinitionsMeta"
-  ],
-  "./webhook": [
-    "defineOutgoingWebhook"
-  ],
+  "./variable": ["defineVariable", "validateAndBuildVariableDefinitionsMeta"],
+  "./webhook": ["defineOutgoingWebhook"],
   "./oauth2": [],
   "./errors": [
     "AIProviderAuthError",
@@ -609,27 +584,13 @@
     "subjectIdOf",
     "validateAndBuildFeatureFlagDefinitionsMeta"
   ],
-  "./services/local-meta": [
-    "LocalMetaService"
-  ],
-  "./services/in-memory-queue": [
-    "InMemoryQueueService"
-  ],
-  "./services/in-memory-trigger": [
-    "InMemoryTriggerService"
-  ],
-  "./services/in-memory-workflow": [
-    "InMemoryWorkflowService"
-  ],
-  "./services/local-gateway": [
-    "LocalGatewayService"
-  ],
-  "./services/v8-coverage": [
-    "V8CoverageService"
-  ],
-  "./services/istanbul-coverage": [
-    "IstanbulCoverageService"
-  ],
+  "./services/local-meta": ["LocalMetaService"],
+  "./services/in-memory-queue": ["InMemoryQueueService"],
+  "./services/in-memory-trigger": ["InMemoryTriggerService"],
+  "./services/in-memory-workflow": ["InMemoryWorkflowService"],
+  "./services/local-gateway": ["LocalGatewayService"],
+  "./services/v8-coverage": ["V8CoverageService"],
+  "./services/istanbul-coverage": ["IstanbulCoverageService"],
   "./services/local-content": [
     "CONTENT_VISIBILITIES",
     "LocalContent",
@@ -737,10 +698,7 @@
     "runPikkuServices"
   ],
   "./telemetry-store": [],
-  "./telemetry-store/testing": [
-    "MemoryTelemetryStore",
-    "conformance"
-  ],
+  "./telemetry-store/testing": ["MemoryTelemetryStore", "conformance"],
   "./lifecycle": [
     "composeServerLifecycle",
     "onShutdownSignals",
@@ -756,9 +714,7 @@
     "getSchema",
     "validateSchema"
   ],
-  "./db": [
-    "defineTables"
-  ],
+  "./db": ["defineTables"],
   "./testing": [
     "RecordingTracer",
     "clearPikkuRuntimeState",
@@ -770,9 +726,5 @@
     "defineQueueTraceConformance",
     "defineServiceTests"
   ],
-  "./dev": [
-    "pikkuDevReloader",
-    "reconcileAddonRegistry",
-    "reloadGeneratedMeta"
-  ]
+  "./dev": ["pikkuDevReloader", "reconcileAddonRegistry", "reloadGeneratedMeta"]
 }
