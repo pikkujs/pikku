@@ -310,4 +310,99 @@ export const inbox = {
       )
     })
   })
+
+  describe('a host platform services module', () => {
+    let dir: string
+    beforeEach(() => {
+      const base = join(import.meta.dir, '..', '..', '.tmp')
+      mkdirSync(base, { recursive: true })
+      dir = mkdtempSync(join(base, 'host-'))
+      const stub = join(dir, 'node_modules', '@pikku', 'kysely')
+      mkdirSync(stub, { recursive: true })
+      writeFileSync(
+        join(stub, 'package.json'),
+        '{"name":"@pikku/kysely","type":"module","main":"index.js"}'
+      )
+      writeFileSync(
+        join(stub, 'index.js'),
+        'export const createCoercionPlugin = ({ map }) => ({ map })\n'
+      )
+    })
+    afterEach(() => rmSync(dir, { recursive: true, force: true }))
+
+    const load = async (
+      host: string,
+      options: Partial<Parameters<typeof serializePikkuServices>[0]> = {}
+    ) => {
+      writeFileSync(join(dir, 'host.ts'), host)
+      writeFileSync(
+        join(dir, 'services.ts'),
+        `export const mailer = () => ({ mailer: 'provided' })\n`
+      )
+      writeFileSync(
+        join(dir, 'runner.ts'),
+        serializePikkuServices({
+          target: 'deploy',
+          specifier: () => './services.ts',
+          services: [],
+          hostModule: './host.ts',
+          ...options,
+        })
+      )
+      return await import(pathToFileURL(join(dir, 'runner.ts')).href)
+    }
+
+    test('runs last with env, the services so far and what the unit requires, and replaces them', async () => {
+      const runner = await load(
+        `export const createPlatformServices = async (env, services, context) => ({
+  mailer: env.FROM + ' over ' + services.mailer + ' over ' + services.logger,
+  seen: context.requiredServices,
+})\n`,
+        {
+          services: [
+            resolved({ name: 'mailer', provides: ['mailer'], module: 'x' }),
+          ],
+          requiredServices: ['mailer'],
+        }
+      )
+      assert.deepEqual(
+        await runner.createPlatformServices(
+          { FROM: 'host' },
+          { logger: 'entry', kept: 1 }
+        ),
+        {
+          logger: 'entry',
+          kept: 1,
+          mailer: 'host over provided over entry',
+          seen: ['mailer'],
+        }
+      )
+    })
+
+    test('the kysely it creates carries the coercion plugin and keeps its own stop', async () => {
+      const map = { users: { created_at: 'date' } }
+      const runner = await load(
+        `export const stopped = []
+export const createPlatformServices = () => ({
+  kysely: { plugins: [], withPlugin(p) { return { plugins: [p] } }, stop() { stopped.push('own') } },
+})\n`,
+        { coercionMap: map }
+      )
+      const services = await runner.createPlatformServices({}, {})
+      assert.deepEqual(services.kysely.plugins, [{ map }])
+      await services.kysely.stop()
+      const host = await import(pathToFileURL(join(dir, 'host.ts')).href)
+      assert.deepEqual(host.stopped, ['own'])
+    })
+
+    test('a kysely it only passes through is not wrapped again', async () => {
+      const runner = await load(
+        `export const createPlatformServices = (env, services) => ({ kysely: services.kysely })\n`,
+        { coercionMap: { users: { created_at: 'date' } } }
+      )
+      const kysely = {}
+      const services = await runner.createPlatformServices({}, { kysely })
+      assert.equal(services.kysely, kysely)
+    })
+  })
 })

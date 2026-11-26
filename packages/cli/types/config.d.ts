@@ -262,6 +262,7 @@ export interface PikkuCLICoreOutputFiles {
   // The services `pikku dev` runs: what the project declares with
   // `pikkuService` and opted in to with `wireAddon({ services })`
   devPikkuServicesFile: string
+  devPlatformServices?: string
 
   // The services this package declares — present when it calls pikkuService
   pikkuServicesMetaJsonFile: string
@@ -1128,6 +1129,16 @@ export type PikkuCLIInput = {
   addonMetaJsonFile?: string
 
   globalHTTPPrefix?: string
+
+  /**
+   * A module exporting `createPlatformServices(env, services, { requiredServices })`
+   * that `pikku dev` and `pikku serve` run before the app's
+   * `createSingletonServices`: what it returns replaces the local services. A
+   * host uses it to swap one, such as the email service. A package specifier, or
+   * a path starting with `.` read from the project root. A deploy takes its
+   * module from the deploy provider instead.
+   */
+  devPlatformServices?: string
 
   binary?: {
     entrypoint: string

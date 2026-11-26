@@ -39,6 +39,15 @@ describe('generateServerEntrySource', () => {
       /const platformServices = await createPlatformServices\(process\.env/
     )
     assert.match(source, /createSingletonServices\(config, platformServices\)/)
+    assert.ok(
+      source.indexOf('await createPlatformServices(') <
+        source.indexOf('await createConfig('),
+      'services exist before the config is read'
+    )
+    assert.match(
+      source,
+      /await createConfig\(platformServices\.variables as any\)/
+    )
     assert.match(
       source,
       /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/

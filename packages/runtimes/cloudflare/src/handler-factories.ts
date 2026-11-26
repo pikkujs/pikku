@@ -1,5 +1,6 @@
 import { LocalVariablesService, LocalSecretService } from '@pikku/core/services'
 import type { CoreSingletonServices } from '@pikku/core/types'
+import type { VariablesService } from '@pikku/core/services'
 import { setSingletonServices } from '@pikku/core/state'
 import type { ScheduledController } from '@cloudflare/workers-types'
 import { WorkerEntrypoint } from 'cloudflare:workers'
@@ -27,7 +28,7 @@ export { getCloudflareEnv, type CloudflareEnv }
 
 export interface ServiceFactories {
   createConfig: (
-    variables: LocalVariablesService,
+    variables: VariablesService,
     ...args: unknown[]
   ) => Promise<unknown>
   createSingletonServices: (
@@ -59,20 +60,21 @@ export async function setupServices(
 ): Promise<CoreSingletonServices> {
   setCloudflareEnv(env)
   if (cachedServices && cachedFactories === factories) return cachedServices
-  const variables = new LocalVariablesService(
-    env as Record<string, string | undefined>
-  )
-  const config = await factories.createConfig(variables)
-  const secrets = new LocalSecretService(variables)
+  const platformServices: Partial<CoreSingletonServices> =
+    factories.createPlatformServices
+      ? await factories.createPlatformServices(env)
+      : {}
 
-  const platformServices = factories.createPlatformServices
-    ? await factories.createPlatformServices(env)
-    : {}
+  const variables: VariablesService =
+    platformServices.variables ??
+    new LocalVariablesService(env as Record<string, string | undefined>)
+  const config = await factories.createConfig(variables)
+  const secrets = platformServices.secrets ?? new LocalSecretService(variables)
 
   const services = await factories.createSingletonServices(config, {
+    ...platformServices,
     variables,
     secrets,
-    ...platformServices,
   })
   // A worker has no filesystem: the declared events reach it only through the
   // bootstrap, and a sink with none to receive would drop everything silently.

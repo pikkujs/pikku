@@ -85,7 +85,13 @@ export async function writeUnitPlatformServices(options: {
   const support = options.genericServerEntry
     ? genericServerEntrySupport()
     : provider.serviceSupport?.(ctx)
+  const hostModule = provider.platformServicesModule?.(ctx)
   if (!support) {
+    if (hostModule) {
+      throw new Error(
+        `The ${provider.name} deploy names a platform services module (unit '${ctx.unit.name}'), but its entry builds no platform services: it needs serviceSupport.`
+      )
+    }
     if (collectServiceSources(state, projectDir).length > 0) {
       throw new Error(
         `The ${provider.name} deploy cannot run the services the project declares with pikkuService or opts in to with wireAddon (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them, or deploy with a provider that supports them.`
@@ -106,7 +112,7 @@ export async function writeUnitPlatformServices(options: {
     targetLabel: `The ${provider.name} deploy`,
     unitLabel: `unit '${ctx.unit.name}'`,
   })
-  if (ordered.length === 0) {
+  if (ordered.length === 0 && !hostModule) {
     await remove()
     return undefined
   }
@@ -118,6 +124,13 @@ export async function writeUnitPlatformServices(options: {
       services: ordered,
       specifier: (module) => module.replace(/\\/g, '/'),
       coercionMap: ctx.coercionMap,
+      hostModule,
+      requiredServices: [
+        ...new Set([
+          ...options.requiredServices,
+          ...(state.projectServicesRead ?? []),
+        ]),
+      ].sort(),
     }),
     'utf-8'
   )

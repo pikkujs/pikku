@@ -174,6 +174,7 @@ const SHAPE: Shape = obj({
   allow: obj({ permissionsInBody: 'any', complexWorkflows: 'any' }),
   addonMetaJsonFile: 'any',
   globalHTTPPrefix: 'any',
+  devPlatformServices: 'any',
   binary: obj({ entrypoint: 'any', output: 'any', targets: 'any' }),
   // deploy is checked key by key in pikku-cli-config.ts (assertDeployShape).
   deploy: 'any',

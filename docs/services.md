@@ -141,6 +141,33 @@ interface ServiceSupport {
 - `runsServerLifecycle` is required, so a new provider has to decide. `false` makes `onServerStart` a build error.
 - The build writes `platform-services.gen.ts` beside each unit's entry and sets `ctx.platformServices`. The entry imports `createPlatformServices(env, runtime)`, calls it, and passes the result to `createSingletonServices`. `@pikku/deploy` exports `entryLifecycleVariable` and `composedLifecycleLines` so an entry wires the composed lifecycle the same way every other entry does. The file is removed when no service is selected.
 
+## Host platform services
+
+A host (a hosting platform, a local tool) can supply platform services from one ordinary module:
+
+```ts
+export const createPlatformServices = async (
+  env,
+  services, // what the entry holds so far
+  { requiredServices } // the services this unit, or pikku dev, reaches
+) => ({
+  queueService: new HostQueueService(env),
+})
+```
+
+- It runs last, and what it returns replaces what the entry holds. Return only what you provide.
+- The app receives the result as `existingServices`. If the app returns its own service for one of those keys, the app's wins and `pikkuServices` logs a warning.
+- A `kysely` it creates gets the same column coercion as `pikku dev`.
+- Teardown is each service's `stop()`.
+- It is host code and reads the whole `env`. An addon's services never do.
+
+**Choosing the module:**
+
+- Deploy: the deploy provider implements `platformServicesModule(ctx)`.
+- `pikku dev` and `pikku serve`: set `devPlatformServices` in `pikku.config.json` to a package specifier, or a path starting with `.`. Not loaded under `NODE_ENV=production`.
+
+On Cloudflare Workers, Cloudflare containers and the server entry, `createConfig` receives the `variables` the module returns. In `pikku dev`, `pikku serve` and standalone, the database is set up from the config before the module runs, so `createConfig` does not see them.
+
 ## Column coercion
 
 When the app has a coercion map (from `pikku db generate`) and a service provides `kysely`, the generated runner wraps that service so the `kysely` it returns carries `createCoercionPlugin` from `@pikku/kysely`, before any service that needs `kysely` runs. A deployed query then returns the same Date, boolean and parsed JSON values it does under `pikku dev`. No provider selects anything for this, and a baseline `kysely` is the entry's own and is not wrapped. See [`db-column-annotations.md`](./db-column-annotations.md).
