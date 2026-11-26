@@ -46,11 +46,14 @@ export const serializeSingletonServicesType = ({
   }
   const provided = [...keys.keys()].sort()
 
+  const doc =
+    "/** This project's singleton services: its own type, with what each pikkuService provides. */\n"
+
   const merged =
     provided.length === 0
-      ? `export type SingletonServices = BaseSingletonServices`
+      ? `${doc}export type SingletonServices = BaseSingletonServices`
       : [
-          `export type SingletonServices = Omit<BaseSingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}> & {`,
+          `${doc}export type SingletonServices = Omit<BaseSingletonServices, ${provided.map((key) => JSON.stringify(key)).join(' | ')}> & {`,
           ...provided.map(
             (key) =>
               `  ${JSON.stringify(key)}: Provided<${typeOf(keys.get(key)!)}, ${JSON.stringify(key)}>`
