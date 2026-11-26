@@ -120,7 +120,8 @@ const srcFixture = (name: string): Spec => ({
   },
   slice(go, current) {
     const state: Json = {}
-    for (const key of Object.keys(current.state ?? {})) state[key] = stateAt(go.state, key)
+    for (const key of Object.keys(current.state ?? {}))
+      state[key] = stateAt(go.state, key)
     // trigger_feature's Rust test drops the virtual-user role check from both
     // sides, so the golden keeps it.
     return { state, diagnostics: go.diagnostics ?? [] }
