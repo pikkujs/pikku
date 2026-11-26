@@ -1,7 +1,6 @@
 import { after, before, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { buildCmsModel } from './build-cms-model.js'
 import {
@@ -9,6 +8,7 @@ import {
   testTables,
 } from '../../../../test-fixtures/cms/model-fixtures.js'
 import { verifyCmsChecks } from './verify-cms-checks.js'
+import { cmsTempDir } from '../../../../test-fixtures/cms/temp-dir.js'
 
 let base: string
 let root: string
@@ -21,7 +21,7 @@ export const notACheck = true
 `
 
 before(async () => {
-  base = await mkdtemp(join(tmpdir(), 'pikku-cms-checks-'))
+  base = await cmsTempDir('pikku-cms-checks-')
   root = join(base, 'project')
   await mkdir(join(root, 'src'), { recursive: true })
   await writeFile(join(root, 'src/checks.mjs'), CHECKS)

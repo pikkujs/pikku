@@ -1,9 +1,9 @@
 import { after, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { runCmsRoleChecks } from './cms-role-checks.js'
+import { cmsTempDir } from '../../../test-fixtures/cms/temp-dir.js'
 
 const roots: string[] = []
 after(async () => {
@@ -11,7 +11,7 @@ after(async () => {
 })
 
 const project = async (roles?: Record<string, { scopes: string[] }>) => {
-  const root = await mkdtemp(join(tmpdir(), 'pikku-cms-roles-'))
+  const root = await cmsTempDir('pikku-cms-roles-')
   roots.push(root)
   if (roles) {
     await mkdir(join(root, '.pikku/scopes'), { recursive: true })

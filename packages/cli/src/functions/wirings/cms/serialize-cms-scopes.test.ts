@@ -1,5 +1,6 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
+import { runInNewContext } from 'node:vm'
 import { buildCmsModel } from './build-cms-model.js'
 import {
   testDeclaration,
@@ -41,11 +42,16 @@ const GOLDEN = {
 }
 
 /** The argument of the one `defineScope` call. */
-const evaluate = (content: string): unknown =>
-  new Function(
-    'defineScope',
-    `let tree\n${content.slice(content.indexOf('\n') + 1).replace('defineScope(', 'tree = (')}\nreturn tree`
-  )()
+const evaluate = (content: string): unknown => {
+  let tree: unknown
+  runInNewContext(content.slice(content.indexOf('\n') + 1), {
+    defineScope: (declared: unknown) => {
+      tree = declared
+    },
+  })
+  // Its objects come from another realm, which strict equality tells apart.
+  return structuredClone(tree)
+}
 
 describe('serializeCmsScopes', () => {
   test('writes the golden tree as one literal defineScope', () => {

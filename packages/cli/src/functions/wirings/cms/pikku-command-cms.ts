@@ -1,8 +1,13 @@
 import { pikkuSessionlessFunc } from '#pikku/function'
+import { join } from 'node:path'
+import { getFileImportRelativePath } from '../../../utils/file-import-path.js'
 import { getLeafImportPath } from '../../../utils/leaf-import-path.js'
 import { removeFileInDir, writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { cmsFiles, loadCmsModel } from './cms-project.js'
+import { serializeCmsFunctions } from './serialize-cms-functions.js'
+import { serializeCmsRuntime } from './serialize-cms-runtime.js'
+import { serializeCmsSchemas } from './serialize-cms-schemas.js'
 import { serializeCmsScopes } from './serialize-cms-scopes.js'
 import { verifyCmsChecks } from './verify-cms-checks.js'
 
@@ -25,12 +30,37 @@ export const pikkuCms = pikkuSessionlessFunc<void, boolean>({
       return false
     }
 
+    const leaf = (from: string, name: string) =>
+      getLeafImportPath(from, name, config)
+    const sibling = (file: string) =>
+      getFileImportRelativePath(files.functions, file, config.packageMappings)
+    const schemas = serializeCmsSchemas(model)
+
     await writeFileInDir(
       logger,
       files.scopes,
-      serializeCmsScopes(
+      serializeCmsScopes(model, leaf(files.scopes, 'scopes'))
+    )
+    await writeFileInDir(logger, files.schemas, schemas)
+    await writeFileInDir(
+      logger,
+      files.runtime,
+      serializeCmsRuntime({ errorLeaf: leaf(files.runtime, 'error') })
+    )
+    await writeFileInDir(
+      logger,
+      files.functions,
+      serializeCmsFunctions(
         model,
-        getLeafImportPath(files.scopes, 'scopes', config)
+        {
+          functionLeaf: leaf(files.functions, 'function'),
+          authLeaf: leaf(files.functions, 'auth'),
+          errorLeaf: leaf(files.functions, 'error'),
+          schemas: sibling(files.schemas),
+          runtime: sibling(files.runtime),
+          checkModule: (module) => sibling(join(config.rootDir, module)),
+        },
+        [...schemas.matchAll(/^export const (\w+)/gm)].map((m) => m[1]!)
       )
     )
     return true

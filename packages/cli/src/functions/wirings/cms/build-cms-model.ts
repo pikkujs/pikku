@@ -152,7 +152,7 @@ const readColumn = (
   }
 }
 
-const derivedInput = (column: CmsColumn): CmsInputKind => {
+export const derivedInput = (column: CmsColumn): CmsInputKind => {
   if (column.references) return 'relation'
   if (column.enum) return 'select'
   if (column.family === 'boolean' || column.kind === 'bool') return 'toggle'

@@ -1,9 +1,9 @@
 import { after, describe, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { loadCmsDeclaration } from './load-cms-declaration.js'
+import { cmsTempDir } from '../../../../test-fixtures/cms/temp-dir.js'
 
 const roots: string[] = []
 after(async () => {
@@ -11,7 +11,7 @@ after(async () => {
 })
 
 const project = async (source?: string) => {
-  const root = await mkdtemp(join(tmpdir(), 'pikku-cms-load-'))
+  const root = await cmsTempDir('pikku-cms-load-')
   roots.push(root)
   await mkdir(join(root, 'db'))
   if (source !== undefined) await writeFile(join(root, 'db/cms.ts'), source)

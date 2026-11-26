@@ -9,11 +9,14 @@ import type { CmsModel } from './cms-model.types.js'
 import { CMS_FILE, loadCmsDeclaration } from './load-cms-declaration.js'
 
 /** The files `pikku all` writes for a project with a `db/cms.ts`. */
-export const cmsFiles = (
-  config: Pick<Config, 'resolvedScaffoldDir'>
-): { scopes: string } => {
+export const cmsFiles = (config: Pick<Config, 'resolvedScaffoldDir'>) => {
   const dir = join(config.resolvedScaffoldDir!, 'cms')
-  return { scopes: join(dir, 'cms-scopes.gen.ts') }
+  return {
+    scopes: join(dir, 'cms-scopes.gen.ts'),
+    schemas: join(dir, 'cms.schemas.gen.ts'),
+    runtime: join(dir, 'cms-runtime.gen.ts'),
+    functions: join(dir, 'cms.gen.ts'),
+  }
 }
 
 /** The checked CMS of a project, or `null` when it has none. */

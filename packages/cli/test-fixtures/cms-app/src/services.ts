@@ -6,6 +6,7 @@ import {
   LocalVariablesService,
   type ScopeService,
 } from '@pikku/core/services'
+import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 
 /** Test only: each user's grants, read from a file the test rewrites. */
 const grantsOf = async (userId: string): Promise<string[]> => {
@@ -22,6 +23,7 @@ export const createSingletonServices = pikkuServices(
       config,
       logger,
       variables,
+      schema: existingServices?.schema ?? new CFWorkerSchemaService(logger),
       secrets: existingServices?.secrets ?? new LocalSecretService(variables),
       kysely: existingServices!.kysely!,
       content: existingServices!.content!,
