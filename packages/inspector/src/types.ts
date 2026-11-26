@@ -395,10 +395,10 @@ export type InspectorOptions = Partial<{
   baseDir: string
   isAddon: boolean
   /**
-   * Set while `#pikku/provider` does not exist yet: a service whose return type
+   * Set while `#pikku/service` does not exist yet: a service whose return type
    * depends on it cannot be read, so PKU372 waits for the pass that has it.
    */
-  deferProviderProvides?: boolean
+  deferServiceProvides?: boolean
   /**
    * Fail the build on quality gates the runtime can live without: an agent tool
    * with no description (the runtime falls back to the tool's own name), and a
@@ -775,28 +775,13 @@ export type StudioMeta = {
   scopes?: string[]
 }
 
-export const PROVIDER_PROFILES = [
-  'standalone',
-  'cloudflare-worker',
-  'cloudflare-container',
-  'server',
-] as const
-export type ProviderProfile = (typeof PROVIDER_PROFILES)[number]
-
-export type ProviderVariantName =
-  'dev' | 'deploy' | `deploy:${ProviderProfile}` | 'common'
-
 /**
- * What the inspector read of one `defineProvider` variant: the keys its factory
+ * What the inspector read of one `pikkuService` variant: the keys its factory
  * destructures from `services`, and the keys of its return type.
  */
-export type ProviderVariantMeta = {
+export type PikkuServiceVariantMeta = {
   needs: string[]
-  /** Subset of `needs` the provider works without. Written into the published meta. */
-  optional?: string[]
   provides: string[]
-  /** Subset of `provides` that is optional in the return type. Written into the published meta. */
-  optionalProvides?: string[]
   /**
    * Set when the variant is a reference to an exported const rather than
    * written inline: where a build imports just that variant from.
@@ -806,54 +791,37 @@ export type ProviderVariantMeta = {
 }
 
 /**
- * One `defineProvider` declaration. `module` is the source file that declares it
+ * One `pikkuService` declaration. `module` is the source file that declares it
  * (absolute while it is in inspector state, relative to the addon package in
  * the published meta); `export` is the name that module exports it under, which
- * is also the name a `wireAddon({ providers })` opts in by. A function provider
+ * is also the name a `wireAddon({ services })` opts in by. A function service
  * has only `common`.
  */
-export type ProviderMeta = {
-  kind?: 'singleton' | 'wire'
+export type PikkuServiceMeta = {
   module: string
   export: string
-  variants: Partial<Record<ProviderVariantName, ProviderVariantMeta>>
-  /** The collection an item provider adds to; its variants provide no key. */
-  addTo?: string
-  /** Protected keys this provider deliberately provides, sorted. */
-  replaces?: string[]
+  variants: {
+    dev?: PikkuServiceVariantMeta
+    deploy?: PikkuServiceVariantMeta
+    common?: PikkuServiceVariantMeta
+  }
   /** True when the object form carries an `onServerStart`. */
   onServerStart?: boolean
 }
 
-export type ProviderCollectionMeta = {
-  name: string
-  module: string
-  export: string
-}
+/** The services a package declares, keyed by exported name. */
+export type PikkuServicesManifestMeta = Record<string, PikkuServiceMeta>
 
-/** What an addon publishes at `.pikku/providers/pikku-providers-meta.gen.json`. */
-export type ProvidersManifest = {
-  metaVersion: 2
-  providers: Record<string, ProviderMeta>
-  collections: Record<string, ProviderCollectionMeta>
-}
-
-/** The providers a project opted in to for one wired addon. */
-export type OptedInProvidersMeta = {
+/** The services a project opted in to for one wired addon. */
+export type OptedInServicesMeta = {
   packageName: string
   /** Each opted-in name with what the addon recorded; `module` is relative to the addon package. */
-  providers: Record<string, ProviderMeta>
-  /** The collections the addon declares, by name. */
-  collections: Record<string, ProviderCollectionMeta>
+  services: PikkuServicesManifestMeta
 }
-
-export type ProjectFactoryKeys = { keys: string[]; optional: string[] }
 
 export interface InspectorServiceTypes {
   /** Property names of the project's SingletonServices type, sorted. */
   singletonServices: string[] | null
-  /** The SingletonServices properties declared optional, sorted. */
-  singletonOptional: string[]
   /** Property names of the project's Services type, unfiltered. */
   services: string[] | null
   /** Singleton services that are a `SecretService` under another name. */
@@ -865,16 +833,10 @@ export interface InspectorState {
   studio?: StudioMeta
   /** The `definePlugin` metadata of the addons this project wires with `ui: true`, by namespace. */
   addonStudio?: Record<string, StudioMeta>
-  /** The providers this package declares with `defineProvider`, by exported name. */
-  providers?: Record<string, ProviderMeta>
-  /** Per wired addon namespace, the providers `wireAddon({ providers })` opted in to. */
-  optedInProviders?: Record<string, OptedInProvidersMeta>
-  /** The provider collections this package declares with `defineProviderCollection`, by name. */
-  providerCollections?: Record<string, ProviderCollectionMeta>
-  /** The keys the project's `pikkuServices` factory returns, and which of them may be absent. */
-  projectServicesProvided?: ProjectFactoryKeys
-  /** The keys the project's `pikkuWireServices` factory returns, and which of them may be absent. */
-  projectWireServicesProvided?: ProjectFactoryKeys
+  /** The services this package declares with `pikkuService`, by exported name. */
+  pikkuServices?: PikkuServicesManifestMeta
+  /** Per wired addon namespace, the services `wireAddon({ services })` opted in to. */
+  optedInServices?: Record<string, OptedInServicesMeta>
   /** The services the project's `pikkuServices` factory destructures from `existingServices`, sorted. */
   projectServicesRead?: string[]
   rootDir: string // Root directory inferred from source files
@@ -1025,9 +987,9 @@ export interface InspectorState {
         /**
          * wireRemoteAddon: a package installed in this project that carries the
          * screens and services for this name, when they live apart from the
-         * contract package. `ui` and `providers` are read from it.
+         * contract package. `ui` and `services` are read from it.
          */
-        local?: { package: string; ui?: boolean; providers?: string[] }
+        local?: { package: string; ui?: boolean; services?: string[] }
         /** True when declared via `wireRemoteAddon` — import the addon's `.remote.gen` map, not `.internal.gen` */
         remote?: boolean
         /**
@@ -1066,6 +1028,8 @@ export interface InspectorState {
          * `ContentService` instead of one scoped to its own folder.
          */
         globalContent?: string
+        /** The addon service names this project opted in to, as `wireAddon({ services })` listed them. */
+        services?: string[]
       }
     >
     wireAddonFiles: Set<string>

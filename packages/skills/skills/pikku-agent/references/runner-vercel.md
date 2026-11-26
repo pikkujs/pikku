@@ -1,5 +1,6 @@
 # Pikku AI Vercel (Agent Runner)
 
+
 ## Installation
 
 ```bash
@@ -44,7 +45,7 @@ that genuinely accepts arbitrary model names (a gateway, or a scripted test
 provider); aimed at a single vendor, an `anthropic/...` string silently reaching
 OpenAI is a bug, not a fallback.
 
-`providers` is public and mutable so a deploy-time `defineProvider` can swap in
+`providers` is public and mutable so a deploy-time `pikkuService` can swap in
 gateway-routed providers after construction.
 
 ## Usage Patterns

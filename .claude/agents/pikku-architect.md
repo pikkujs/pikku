@@ -21,13 +21,13 @@ You are an expert Pikku framework architect. You design service topologies, choo
 
 ### Database Selection
 
-| Option              | Package                        | Best For                                                 |
-| ------------------- | ------------------------------ | -------------------------------------------------------- |
-| PostgreSQL + Kysely | `@pikku/addon-kysely-postgres` | Most apps — relational data, workflows, secrets, ACID    |
-| MySQL + Kysely      | `@pikku/addon-kysely-mysql`    | MySQL-first shops                                        |
-| SQLite + Kysely     | `@pikku/addon-kysely-sqlite`   | Local dev, embedded, edge, single-instance               |
-| MongoDB             | `@pikku/mongodb`               | Document-heavy workloads, flexible schemas               |
-| Redis               | `@pikku/redis`                 | Ephemeral state, caching, high-throughput channel stores |
+| Option              | Package                  | Best For                                                 |
+| ------------------- | ------------------------ | -------------------------------------------------------- |
+| PostgreSQL + Kysely | `@pikku/kysely-postgres` | Most apps — relational data, workflows, secrets, ACID    |
+| MySQL + Kysely      | `@pikku/kysely-mysql`    | MySQL-first shops                                        |
+| SQLite + Kysely     | `@pikku/kysely-sqlite`   | Local dev, embedded, edge, single-instance               |
+| MongoDB             | `@pikku/mongodb`         | Document-heavy workloads, flexible schemas               |
+| Redis               | `@pikku/redis`           | Ephemeral state, caching, high-throughput channel stores |
 
 All provide the same service interfaces (ChannelStore, WorkflowService, SecretService, etc.), so switching databases is a config change, not a rewrite.
 

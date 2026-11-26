@@ -1,9 +1,6 @@
 import { PikkuExpressServer } from '@pikku/express'
-import {
-  PikkuKysely,
-  PgKyselyDeploymentService,
-} from '@pikku/addon-kysely-postgres'
-import type { KyselyPikkuDB } from '@pikku/addon-kysely-postgres'
+import { PikkuKysely, PgKyselyDeploymentService } from '@pikku/kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 import { ConsoleLogger } from '@pikku/core/services'
 import { createSingletonServices } from '../../functions/src/services.js'
 import { createConfig, connectionString } from './config.js'

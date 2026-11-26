@@ -174,7 +174,7 @@ export interface SerializableInspectorState {
           file?: string
           rpcEndpoint?: string
           remote?: boolean
-          local?: { package: string; ui?: boolean; providers?: string[] }
+          local?: { package: string; ui?: boolean; services?: string[] }
           hasAuth?: boolean
           authCredentialId?: string
           authSecretId?: string
@@ -319,12 +319,9 @@ export interface SerializableInspectorState {
   harness?: InspectorState['harness']
   studio?: InspectorState['studio']
   addonStudio?: InspectorState['addonStudio']
-  providers?: InspectorState['providers']
-  providerCollections?: InspectorState['providerCollections']
-  optedInProviders?: InspectorState['optedInProviders']
+  pikkuServices?: InspectorState['pikkuServices']
+  optedInServices?: InspectorState['optedInServices']
   projectServicesRead?: InspectorState['projectServicesRead']
-  projectServicesProvided?: InspectorState['projectServicesProvided']
-  projectWireServicesProvided?: InspectorState['projectWireServicesProvided']
   exportedContracts: InspectorState['exportedContracts']
 }
 
@@ -569,12 +566,9 @@ export function serializeInspectorState(
     harness: state.harness,
     studio: state.studio,
     addonStudio: state.addonStudio,
-    providers: state.providers,
-    providerCollections: state.providerCollections,
-    optedInProviders: state.optedInProviders,
+    pikkuServices: state.pikkuServices,
+    optedInServices: state.optedInServices,
     projectServicesRead: state.projectServicesRead,
-    projectServicesProvided: state.projectServicesProvided,
-    projectWireServicesProvided: state.projectWireServicesProvided,
     exportedContracts: state.exportedContracts,
   }
 }
@@ -822,12 +816,9 @@ export function deserializeInspectorState(
     ...(data.harness ? { harness: data.harness } : {}),
     studio: data.studio,
     addonStudio: data.addonStudio,
-    providers: data.providers,
-    providerCollections: data.providerCollections,
-    optedInProviders: data.optedInProviders,
+    pikkuServices: data.pikkuServices,
+    optedInServices: data.optedInServices,
     projectServicesRead: data.projectServicesRead,
-    projectServicesProvided: data.projectServicesProvided,
-    projectWireServicesProvided: data.projectWireServicesProvided,
     exportedContracts: data.exportedContracts || {
       http: {},
       cli: {},

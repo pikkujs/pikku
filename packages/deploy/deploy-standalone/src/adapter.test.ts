@@ -245,7 +245,7 @@ describe(`StandaloneProviderAdapter postgres wiring`, () => {
 
     assert.match(
       source,
-      /import \{ PikkuKysely \} from '@pikku\/addon-kysely-postgres'/
+      /import \{ PikkuKysely \} from '@pikku\/kysely-postgres'/
     )
     assert.match(source, /process\.env\.DATABASE_URL/)
   })
@@ -813,24 +813,17 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     )
   })
 
-  test('the telemetry registry is created before the services and wins over what the app returns', () => {
+  test('the runtime registries are created before the services and win over what the app returns', () => {
     const source = generate(baseContext)
     assert.match(source, /otlpSinks: __pikkuTelemetry\.otlpSinks,/)
-    assert.doesNotMatch(source, /createAnalyticsSinks|__pikkuAnalyticsSinks/)
-    assert.match(
-      source,
-      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, \.\.\.eventHubServices \}\)/
+    assert.match(source, /analyticsSinks: __pikkuAnalyticsSinks,/)
+    assert.ok(
+      source.indexOf('createAnalyticsSinks()') <
+        source.indexOf('createSingletonServices(')
     )
-  })
-
-  test('the sinks the providers built win over what the app returns', () => {
-    const source = generate({
-      ...baseContext,
-      platformServices: { importPath: './platform-services.gen.js' },
-    })
     assert.match(
       source,
-      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: singletonServices\.analyticsSinks \?\? platformServices\.analyticsSinks, \.\.\.eventHubServices \}\)/
+      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, \.\.\.eventHubServices \}\)/
     )
   })
 
@@ -838,10 +831,10 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     const source = generate(baseContext)
     assert.match(
       source,
-      /import \{ assertAnalyticsSinksDeclared \} from '@pikku\/core\/analytics'/
+      /import \{ assertAnalyticsSinksDeclared, createAnalyticsSinks \} from '@pikku\/core\/analytics'/
     )
     const check = source.indexOf(
-      'assertAnalyticsSinksDeclared(singletonServices.analyticsSinks)'
+      'assertAnalyticsSinksDeclared(__pikkuAnalyticsSinks)'
     )
     assert.ok(check > source.indexOf('Object.assign(singletonServices'))
     assert.ok(check < source.indexOf('new PikkuBunServer('))
@@ -896,7 +889,7 @@ describe(`StandaloneProviderAdapter workflow service`, () => {
 
     assert.match(
       source,
-      /import \{ PgKyselyWorkflowService, PgKyselyWorkflowRunService, PgKyselyLeaseService \} from '@pikku\/addon-kysely-postgres'/
+      /import \{ PgKyselyWorkflowService, PgKyselyWorkflowRunService, PgKyselyLeaseService \} from '@pikku\/kysely-postgres'/
     )
     assert.match(source, /= new PgKyselyLeaseService\(kysely\)/)
     assert.match(

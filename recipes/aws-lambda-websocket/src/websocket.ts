@@ -15,8 +15,8 @@ import type {
 } from '../../functions/types/application-types.d.js'
 import { createSingletonServices } from '../../functions/src/services.js'
 import { createConfig } from '../../functions/src/config.js'
-import { PikkuKysely, PgKyselyChannelStore } from '@pikku/addon-kysely-postgres'
-import type { KyselyPikkuDB } from '@pikku/addon-kysely-postgres'
+import { PikkuKysely, PgKyselyChannelStore } from '@pikku/kysely-postgres'
+import type { KyselyPikkuDB } from '@pikku/kysely-postgres'
 
 let state:
   | {

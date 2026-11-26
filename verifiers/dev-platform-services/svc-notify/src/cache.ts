@@ -1,11 +1,11 @@
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 
 /**
  * Provides the `events` list the other services append to, so a check can read
  * the order hooks and teardown ran in. Teardown is the provided value's own
  * `stop()`.
  */
-export const cache = defineProvider({
+export const cache = pikkuService({
   common: () => {
     const events: string[] = []
     return {

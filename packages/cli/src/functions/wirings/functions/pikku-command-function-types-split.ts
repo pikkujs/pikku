@@ -12,11 +12,7 @@ import {
 import { serializeMiddlewareTypes } from '../middleware/serialize-middleware-types.js'
 import { serializeSetupTypes } from '../setup/serialize-setup-types.js'
 import { serializeAuthGuards } from '../auth/serialize-auth-guards.js'
-import {
-  providedServiceKeys,
-  providedWireServiceKeys,
-  providerTypesSource,
-} from '../../../providers/provider-types-source.js'
+import { serviceTypesSource } from '../../../pikku-services/service-types-source.js'
 
 export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
   { bootstrap?: boolean },
@@ -65,9 +61,6 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
         ? `import type { CredentialsMap } from '${getFileImportRelativePath(functionTypesFile, credentialsFile, packageMappings)}'`
         : undefined
 
-    const providerWire =
-      !config.addon &&
-      providedWireServiceKeys(visitState, config.rootDir).length > 0
     const configTypeImport = pikkuConfigType
       ? `import type { ${pikkuConfigType.type} } from '${getFileImportRelativePath(functionTypesFile, pikkuConfigType.typePath, packageMappings)}'`
       : '// Config type not found, will use fallback'
@@ -79,10 +72,10 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
       // its services provide, from the service leaf; an addon declares only its own.
       config.addon
         ? `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, singletonServicesType.typePath, packageMappings)}'`
-        : `import type { SingletonServices } from '${getFileImportRelativePath(functionTypesFile, config.providerTypesFile, packageMappings)}'`,
+        : `import type { SingletonServices } from '${getFileImportRelativePath(functionTypesFile, config.pikkuServiceTypesFile, packageMappings)}'`,
       config.addon ? singletonServicesType.type : 'SingletonServices',
-      `import type { ${wireServicesType.type}${providerWire ? ' as UserServices' : ''} } from '${getFileImportRelativePath(functionTypesFile, wireServicesType.typePath, packageMappings)}'`,
-      providerWire ? 'UserServices' : wireServicesType.type,
+      `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, wireServicesType.typePath, packageMappings)}'`,
+      wireServicesType.type,
       `import type { TypedPikkuRPC, FlattenedRPCMap } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
       `import type { RequiredSingletonServices } from '${getFileImportRelativePath(functionTypesFile, servicesFile, packageMappings)}'`,
       configTypeImport,
@@ -101,12 +94,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
         middlewareTypesFile,
         packageMappings
       ),
-      {
-        addon: !!config.addon,
-        providerWireServicesImport: providerWire
-          ? `import type { WireServices as ProviderWireServices } from '${getFileImportRelativePath(functionTypesFile, config.providerTypesFile, packageMappings)}'`
-          : undefined,
-      }
+      { addon: !!config.addon }
     )
 
     await writeFileInDir(
@@ -138,15 +126,7 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
         pikkuConfigType?.type,
         `import type { RequiredSingletonServices, RequiredWireServices } from '${getFileImportRelativePath(setupTypesFile, servicesFile, packageMappings)}'`,
         config.allowShadowedServices,
-        {
-          addon: !!config.addon,
-          injectedKeys: config.addon
-            ? []
-            : providedServiceKeys(visitState, config.rootDir).sort(),
-          providerWireServicesImport: providerWire
-            ? `import type { WireServices as ProviderWireServices } from '${getFileImportRelativePath(setupTypesFile, config.providerTypesFile, packageMappings)}'`
-            : undefined,
-        }
+        { addon: !!config.addon }
       )
     )
 
@@ -156,8 +136,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
     if (!config.addon) {
       await writeFileInDir(
         logger,
-        config.providerTypesFile,
-        providerTypesSource(visitState, config)
+        config.pikkuServiceTypesFile,
+        serviceTypesSource(visitState, config)
       )
     }
 

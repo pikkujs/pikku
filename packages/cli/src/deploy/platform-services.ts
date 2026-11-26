@@ -1,6 +1,5 @@
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { InspectorState } from '@pikku/inspector'
 import type {
   EntryGenerationContext,
   EntryPlatformServices,
@@ -8,19 +7,17 @@ import type {
   ServiceSupport,
 } from '@pikku/deploy'
 import {
-  collectProviderSources,
-  functionNeedsOf,
-  resolveProviders,
-  runsNothing,
-} from '../providers/resolve-providers.js'
-import { serializeProviderRunner } from '../providers/serialize-provider-runner.js'
+  collectServiceSources,
+  resolvePikkuServices,
+} from '../pikku-services/resolve-pikku-services.js'
+import { serializePikkuServices } from '../pikku-services/serialize-pikku-services.js'
 
 export const PLATFORM_SERVICES_FILE = 'platform-services.gen.ts'
 
 /**
- * The services (singleton and per-request) a unit's own generated
- * `pikku-services.gen.ts` marks as required: what the functions, middleware and
- * permissions it bundles destructure. Empty when the file is missing.
+ * The services a unit's own generated `pikku-services.gen.ts` marks as
+ * required: what the functions, middleware and permissions it bundles
+ * destructure. Empty when the file is missing.
  */
 export const readUnitRequiredServices = async (
   pikkuDir: string
@@ -31,14 +28,12 @@ export const readUnitRequiredServices = async (
       join(pikkuDir, 'pikku-services.gen.ts'),
       'utf-8'
     )
-    for (const map of ['requiredSingletonServices', 'requiredWireServices']) {
-      const block = content.match(
-        new RegExp(`export const ${map} = \\{([^}]+)\\}`)
-      )
-      for (const line of block?.[1]!.split('\n') ?? []) {
-        const kv = line.match(/'([^']+)':\s*true/)
-        if (kv) required.add(kv[1]!)
-      }
+    const block = content.match(
+      /export const requiredSingletonServices = \{([^}]+)\}/
+    )
+    for (const line of block?.[1]!.split('\n') ?? []) {
+      const kv = line.match(/'([^']+)':\s*true/)
+      if (kv) required.add(kv[1]!)
     }
   } catch {
     // No services map: the unit reaches nothing.
@@ -46,8 +41,7 @@ export const readUnitRequiredServices = async (
   return required
 }
 
-type ProvidersState = Parameters<typeof resolveProviders>[0]['state'] &
-  Pick<InspectorState, 'functions'>
+type ServicesState = Parameters<typeof resolvePikkuServices>[0]['state']
 
 /**
  * What the provider-agnostic server entry holds when services run: nothing (it
@@ -55,8 +49,6 @@ type ProvidersState = Parameters<typeof resolveProviders>[0]['state'] &
  */
 export const genericServerEntrySupport = (): ServiceSupport => ({
   baseline: [],
-  profile: 'server',
-  entryOwned: [],
   runsServerLifecycle: true,
 })
 
@@ -68,14 +60,14 @@ export const genericServerEntrySupport = (): ServiceSupport => ({
  * The provider says what its runtime holds and supports (`serviceSupport`); this
  * is the one place that turns it and the project's services into the file, so
  * every adapter gets the same selection, ordering and errors. Only the services
- * the unit reaches are selected (see `resolveProviders`). A provider with no
+ * the unit reaches are selected (see `resolvePikkuServices`). A provider with no
  * `serviceSupport` cannot run a service, so a project that declares one it
  * would run fails the build there rather than shipping without it.
  */
 export async function writeUnitPlatformServices(options: {
   provider: ProviderAdapter
   ctx: EntryGenerationContext
-  state: ProvidersState
+  state: ServicesState
   projectDir: string
   /** The services the unit's functions, middleware and permissions destructure. */
   requiredServices: ReadonlySet<string>
@@ -94,42 +86,36 @@ export async function writeUnitPlatformServices(options: {
     ? genericServerEntrySupport()
     : provider.serviceSupport?.(ctx)
   if (!support) {
-    if (collectProviderSources(state, projectDir).length > 0) {
+    if (collectServiceSources(state, projectDir).length > 0) {
       throw new Error(
-        `The ${provider.name} deploy cannot run the services the project declares with defineProvider or opts in to with wireAddon (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them, or deploy with a provider that supports them.`
+        `The ${provider.name} deploy cannot run the services the project declares with pikkuService or opts in to with wireAddon (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them, or deploy with a provider that supports them.`
       )
     }
     await remove()
     return undefined
   }
 
-  const resolved = resolveProviders({
+  const { ordered } = resolvePikkuServices({
     state,
     rootDir: projectDir,
     target: 'deploy',
-    profile: support.profile,
     baseline: support.baseline,
-    entryOwned: support.entryOwned,
     requiredServices: options.requiredServices,
     factoryServices: state.projectServicesRead,
-    functions: functionNeedsOf(state.functions.meta, ctx.unit.functionIds),
     runsServerLifecycle: support.runsServerLifecycle,
-    targetLabel: `the ${provider.name} deploy`,
+    targetLabel: `The ${provider.name} deploy`,
     unitLabel: `unit '${ctx.unit.name}'`,
   })
-  if (runsNothing(resolved)) {
+  if (ordered.length === 0) {
     await remove()
     return undefined
   }
 
   await writeFile(
     file,
-    serializeProviderRunner({
+    serializePikkuServices({
       target: 'deploy',
-      profile: support.profile,
-      services: resolved.ordered,
-      wire: resolved.wire,
-      collections: resolved.collections,
+      services: ordered,
       specifier: (module) => module.replace(/\\/g, '/'),
       coercionMap: ctx.coercionMap,
     }),

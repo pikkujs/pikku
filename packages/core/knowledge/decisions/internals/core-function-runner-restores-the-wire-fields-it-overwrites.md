@@ -25,9 +25,7 @@ wire's audit config was unset (the generated `rpcCaller` declares none), and
 every write from the audited inner function would be silently dropped. The runner
 compares config identity (`services.auditLog?.config !== resolvedAuditConfig`)
 and binds a fresh invocation audit when they differ, then closes it in the
-`finally` before wire services are stopped. The runner builds that audit before
-the per-request providers and `createWireServices` run, so a provider that
-declares `auditLog` optional reads core's.
+`finally` before wire services are closed.
 
 Authorization order in `executeFunction` is also deliberate: session resolution,
 then the auth/readonly checks, then `verifyScopes` — all of which depend only on

@@ -12,7 +12,6 @@ use super::order;
 use super::{Context, Phase, Registry, Visitor};
 use crate::diag::codes;
 use crate::remotesdk;
-use crate::tsutil;
 
 pub fn register(r: &mut Registry) {
     r.register(Visitor {
@@ -36,7 +35,7 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
         return;
     }
     let args = node.arguments();
-    let Some(first) = args.first().copied().map(tsutil::unwrap_as).filter(|a| is_object_literal(*a)) else { return };
+    let Some(first) = args.first().copied().filter(|a| is_object_literal(*a)) else { return };
     let mut name = String::new();
     let mut pkg = String::new();
     let mut pkg_node: Option<P<Node>> = None;
@@ -44,8 +43,8 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
     let (mut auth_credential_id, mut auth_secret_id): (Option<String>, Option<String>) = (None, None);
     let mut has_auth = false;
     let mut local: Option<Local> = None;
-    let mut local_providers: Vec<String> = Vec::new();
-    let mut have_local_providers = false;
+    let mut local_services: Vec<String> = Vec::new();
+    let mut have_local_services = false;
     for p in first.properties() {
         if !is_property_assignment(*p) {
             continue;
@@ -80,15 +79,15 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
                                 l.ui = true;
                             }
                         }
-                        "providers" => match parse_string_array(li) {
+                        "services" => match parse_string_array(li) {
                             Some(names) => {
-                                local_providers = names;
-                                have_local_providers = true;
+                                local_services = names;
+                                have_local_services = true;
                             }
                             None => ctx.log.critical(
-                                codes::ADDON_PROVIDERS_NOT_STATIC,
+                                codes::ADDON_SERVICES_NOT_STATIC,
                                 format!(
-                                    "wireRemoteAddon's local.providers must be an array of string literals, got: {}",
+                                    "wireRemoteAddon's local.services must be an array of string literals, got: {}",
                                     node_text(li)
                                 ),
                             ),
@@ -104,15 +103,6 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
                         format!("wireRemoteAddon's local.package must be a string literal, got: {}", node_text(init)),
                     );
                 }
-            }
-            "providers" => {
-                let label = if name.is_empty() { "…".to_string() } else { format!("'{name}'") };
-                ctx.log.critical(
-                    codes::REMOTE_ADDON_PROVIDERS,
-                    format!(
-                        "wireRemoteAddon({label}) takes no providers: providers run in this process, and a remote addon runs elsewhere. Put an in-process package in local: {{ package, providers }}."
-                    ),
-                );
             }
             "auth" if is_object_literal(init) => {
                 has_auth = true;
@@ -179,8 +169,8 @@ fn add_wire_remote_addon(ctx: &mut Context<'_>, node: P<Node>) {
         if l.ui {
             lo.set("ui", Some(Value::Bool(true)));
         }
-        if have_local_providers {
-            lo.set("providers", Some(serde_json::json!(local_providers)));
+        if have_local_services {
+            lo.set("services", Some(serde_json::json!(local_services)));
         }
         o.set("local", Some(lo.value()));
     }

@@ -26,7 +26,7 @@ Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the ses
 
 Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop-assistant`). Nothing under `.pikku/agent` needs opening.
 
-`pikku dev` supplies `agentStorage` itself. A runtime that does not (Next.js, a deployed app) registers `agentStorage: new KyselyAgentStorageService(kysely)` from `@pikku/addon-kysely` in `createSingletonServices`, or runs save and load no history. The hook's `run` resolves to `{ result, runId, usage }`, and `result` is the agent's text, or its `output` shape when it has one. Server-side, `wire.rpc.agent.run` returns `text` and `object` instead, so read the field that belongs to the caller you are in. `ref()` takes the name from `pikku meta functions`.
+`pikku dev` supplies `agentStorage` itself. A runtime that does not (Next.js, a deployed app) registers `agentStorage: new KyselyAgentStorageService(kysely)` from `@pikku/kysely` in `createSingletonServices`, or runs save and load no history. The hook's `run` resolves to `{ result, runId, usage }`, and `result` is the agent's text, or its `output` shape when it has one. Server-side, `wire.rpc.agent.run` returns `text` and `object` instead, so read the field that belongs to the caller you are in. `ref()` takes the name from `pikku meta functions`.
 
 `model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). `pikku doc models` has the shape. If none fits, add one there and stop looking: take them from the project map if you have one, otherwise read `pikku.config.json` once, never services or `.env`. The runner is already wired. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
 
@@ -43,8 +43,7 @@ import { ref } from '#pikku/function'
 
 export const ordersHelper = pikkuAgent({
   name: 'orders-helper',
-  description:
-    "Answers questions about this team's orders from its own records.",
+  description: "Answers questions about this team's orders from its own records.",
   role: 'You answer questions about orders.',
   goal: 'Call a tool first. State only what a tool returned, and say so when none has it.',
   model: 'fast',
@@ -62,17 +61,11 @@ export const ordersHelper = pikkuAgent({
 // or a refresh, keep the threadId somewhere stable and load its messages through the generated thread APIs.
 const agent = usePikkuAgent('ordersHelper')
 const [threadId] = useState(() => crypto.randomUUID())
-const [turns, setTurns] = useState<
-  { role: 'user' | 'assistant'; text: string }[]
->([])
+const [turns, setTurns] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
 
 const ask = async (message: string) => {
   setTurns((t) => [...t, { role: 'user', text: message }])
-  const { result } = await agent.run({
-    message,
-    threadId,
-    resourceId: 'orders-help',
-  })
+  const { result } = await agent.run({ message, threadId, resourceId: 'orders-help' })
   setTurns((t) => [...t, { role: 'assistant', text: String(result ?? '') }])
 }
 ```

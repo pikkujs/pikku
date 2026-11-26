@@ -144,7 +144,7 @@ const DEFAULT_DATABASE_FILENAME = 'pikku.db'
 
 /** The dialect factory the entry opens SQLite with: `bun:sqlite`. */
 const SQLITE_FACTORY = {
-  specifier: '@pikku/addon-kysely-bun-sqlite',
+  specifier: '@pikku/kysely-bun-sqlite',
   fn: 'createBunSqliteKysely',
 } as const
 
@@ -158,7 +158,7 @@ const DATABASE_URL_VAR = 'DATABASE_URL'
 
 /** Imports the coercion plugin, for an app that generated a map. */
 const coercionImportLines = (coercionImportPath: string): string[] => [
-  `import { createCoercionPlugin } from '@pikku/addon-kysely'`,
+  `import { createCoercionPlugin } from '@pikku/kysely'`,
   `import { coercionMap as __pikkuCoercionMap } from '${coercionImportPath}'`,
 ]
 
@@ -182,7 +182,7 @@ const dbImportLines = (
             ]
           : []),
       ]
-    : [`import { PikkuKysely } from '@pikku/addon-kysely-postgres'`]),
+    : [`import { PikkuKysely } from '@pikku/kysely-postgres'`]),
   ...(db.coercionImportPath ? coercionImportLines(db.coercionImportPath) : []),
 ]
 
@@ -218,13 +218,13 @@ const workflowServiceImport = (
 } =>
   engine === 'sqlite'
     ? {
-        line: `import { KyselyWorkflowService, KyselyWorkflowRunService, KyselyLeaseService } from '@pikku/addon-kysely'`,
+        line: `import { KyselyWorkflowService, KyselyWorkflowRunService, KyselyLeaseService } from '@pikku/kysely'`,
         service: 'KyselyWorkflowService',
         runService: 'KyselyWorkflowRunService',
         leaseService: 'KyselyLeaseService',
       }
     : {
-        line: `import { PgKyselyWorkflowService, PgKyselyWorkflowRunService, PgKyselyLeaseService } from '@pikku/addon-kysely-postgres'`,
+        line: `import { PgKyselyWorkflowService, PgKyselyWorkflowRunService, PgKyselyLeaseService } from '@pikku/kysely-postgres'`,
         service: 'PgKyselyWorkflowService',
         runService: 'PgKyselyWorkflowRunService',
         leaseService: 'PgKyselyLeaseService',
@@ -550,15 +550,13 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
   }
 
   /**
-   * The entry holds `kysely` when it opens a database and builds its own
-   * services on it, so a provider may need it but never replace it. The server
-   * lifecycle runs here, so `onServerStart` is supported.
+   * The entry holds `kysely` when it opens a database; a service may need it,
+   * or replace it. The server lifecycle runs here, so `onServerStart` is
+   * supported.
    */
   serviceSupport(ctx: EntryGenerationContext): ServiceSupport {
     return {
       baseline: runtimeServiceNames(ctx),
-      profile: 'standalone',
-      entryOwned: ctx.db ? ['kysely'] : [],
       runsServerLifecycle: true,
     }
   }
@@ -592,10 +590,10 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`,
       `import { AsyncLocalStorage as __pikkuAsyncLocalStorage } from 'node:async_hooks'`,
       `import { asContextStorage as __pikkuAsContextStorage, createRuntimeTelemetry } from '@pikku/core/otlp'`,
-      `import { assertAnalyticsSinksDeclared } from '@pikku/core/analytics'`,
+      `import { assertAnalyticsSinksDeclared, createAnalyticsSinks } from '@pikku/core/analytics'`,
       ...(ctx.db
         ? [
-            `import { KyselyTriggerSourceStore } from '@pikku/addon-kysely'`,
+            `import { KyselyTriggerSourceStore } from '@pikku/kysely'`,
             workflowServiceImport(ctx.db.engine).line,
             `import { InMemoryLeaseService } from '@pikku/core/services'`,
           ]
@@ -658,6 +656,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...triggerSourceStoreLines(ctx.db !== undefined),
       ...commandDispatchLines(ctx),
       ...this.platformServicesCallLines(ctx),
+      `  const __pikkuAnalyticsSinks = createAnalyticsSinks()`,
       `  const singletonServices = await ${ctx.servicesVar}(config, {`,
       `    logger,`,
       ...(ctx.db ? [`    kysely,`] : []),
@@ -671,11 +670,12 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       `    eventHubRegistry,`,
       `    ...(__pikkuTelemetry.enabled ? { tracer: __pikkuTelemetry.tracer } : {}),`,
       `    otlpSinks: __pikkuTelemetry.otlpSinks,`,
+      `    analyticsSinks: __pikkuAnalyticsSinks,`,
       ...this.platformServicesSpreadLines(ctx),
       `  })`,
-      `  // The runtime's registry wins: the tracer reads it. The sinks the providers built are used unless the app returned its own.`,
-      `  Object.assign(singletonServices, { otlpSinks: __pikkuTelemetry.otlpSinks, ${ctx.platformServices ? 'analyticsSinks: singletonServices.analyticsSinks ?? platformServices.analyticsSinks, ' : ''}...eventHubServices })`,
-      `  assertAnalyticsSinksDeclared(singletonServices.analyticsSinks)`,
+      `  // The runtime's registries win: the tracer and the analytics fan-out read these instances.`,
+      `  Object.assign(singletonServices, { otlpSinks: __pikkuTelemetry.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, ...eventHubServices })`,
+      `  assertAnalyticsSinksDeclared(__pikkuAnalyticsSinks)`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
       ...(ctx.frontend

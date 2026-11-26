@@ -144,10 +144,10 @@ describe('pikkuServices', () => {
       forceRequiredServices: [],
       packageMappings: {},
       servicesFile,
-      providerTypesFile: join(
+      pikkuServiceTypesFile: join(
         dirname(servicesFile),
-        'provider',
-        'provider-types.gen.ts'
+        'service',
+        'pikku-service-types.gen.ts'
       ),
       rootDir: dirname(servicesFile),
       outDir: dirname(servicesFile),
@@ -190,7 +190,7 @@ describe('pikkuServices', () => {
       'utf8'
     )
     assert.match(content, /export const createLocalServices/)
-    assert.doesNotMatch(content, /from '@pikku\/addon-kysely'/)
+    assert.doesNotMatch(content, /from '@pikku\/kysely'/)
     assert.doesNotMatch(content, /from '@pikku\/schedule'/)
   })
 

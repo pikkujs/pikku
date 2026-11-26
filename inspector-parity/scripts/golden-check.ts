@@ -2,13 +2,12 @@
 /**
  * Keeps the committed Go goldens honest.
  *
- *   bun golden-check.ts [goBin] [--update] [--only addon-load,providers,trigger_feature,harness,workflow_edge]
+ *   bun golden-check.ts [goBin] [--update] [--only addon-load,trigger_feature,harness,workflow_edge]
  *
- * The Rust cargo tests compare against five committed files, each a slice of
+ * The Rust cargo tests compare against four committed files, each a slice of
  * what the Go inspector prints for a small fixture:
  *
  *   fixtures/addon-load/go.golden.json        tests/addons_checks.rs
- *   fixtures/providers/expected.go.json       tests/providers_fixture.rs
  *   fixtures/trigger_feature/expected.go.json tests/trigger_feature_fixture.rs
  *   fixtures/harness/expected.go.json         tests/harness_fixture.rs
  *   fixtures/workflow_edge/golden.json        tests/workflow_fixtures.rs
@@ -172,7 +171,7 @@ const SPECS: Spec[] = [
       }
       out.diagnostics = (go.diagnostics ?? []).filter(
         (d: Json) =>
-          codeIn(['PKU356', 'PKU363', 'PKU343', 'PKU364', 'PKU374'])(d) ||
+          codeIn(['PKU356', 'PKU363', 'PKU343', 'PKU364'])(d) ||
           String(d.message).startsWith('wireAddon(')
       )
       return out
@@ -180,26 +179,6 @@ const SPECS: Spec[] = [
   },
   srcFixture('trigger_feature'),
   srcFixture('harness'),
-  {
-    name: 'providers',
-    golden: join(FIXTURES, 'providers/expected.go.json'),
-    placeholder: '<fixture>',
-    finalize: false,
-    prepare() {
-      const root = join(FIXTURES, 'providers')
-      return {
-        root,
-        routeFiles: tsFiles(join(root, 'src')),
-        options: { rootDir: root, tsconfig: join(root, 'tsconfig.json') },
-      }
-    },
-    slice(go, current) {
-      const state: Json = {}
-      for (const key of Object.keys(current.state ?? {}))
-        state[key] = stateAt(go.state, key)
-      return { state, diagnostics: go.diagnostics ?? [] }
-    },
-  },
   {
     name: 'workflow_edge',
     golden: join(FIXTURES, 'workflow_edge/golden.json'),

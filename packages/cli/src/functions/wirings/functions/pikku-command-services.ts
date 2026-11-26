@@ -5,12 +5,11 @@ import { checkRequiredTypes } from '../../../utils/check-required-types.js'
 import { writeFileInDir } from '../../../utils/file-writer.js'
 import { logCommandInfoAndTime } from '../../../middleware/log-command-info-and-time.js'
 import { writeLocalServices } from '../cli/write-local-services.js'
-import { writeDevProviders } from '../cli/write-dev-providers.js'
+import { writeDevPikkuServices } from '../cli/write-dev-pikku-services.js'
 import {
   providedServiceKeys,
-  providedWireServiceKeys,
   singletonServicesTypeRef,
-} from '../../../providers/provider-types-source.js'
+} from '../../../pikku-services/service-types-source.js'
 
 export const serializeServicesMap = (
   allSingletonServices: string[],
@@ -21,8 +20,7 @@ export const serializeServicesMap = (
   wireServicesImport: string,
   addonRequiredParentServices: string[] = [],
   authInjected: boolean = false,
-  agentScaffoldEnabled: boolean = false,
-  providerWireKeys: readonly string[] = []
+  agentScaffoldEnabled: boolean = false
 ): string => {
   // Use pre-aggregated services from inspector state
   // This includes services from:
@@ -77,8 +75,7 @@ export const serializeServicesMap = (
 
   // Installed by the runner, so destructuring one must not make it required of
   // `createSingletonServices` — the generated analytics ingest does exactly that.
-  // `analyticsSinks` is the collection the providers fill, read by the fan-out.
-  const runnerInstalledServices = ['analytics', 'auditLog', 'analyticsSinks']
+  const runnerInstalledServices = ['analytics', 'auditLog']
   runnerInstalledServices.forEach((service) => usedServices.delete(service))
 
   // Create singleton services map: all singleton services with true/false based on usage
@@ -100,10 +97,8 @@ export const serializeServicesMap = (
   const requiredSingletonServiceNames = Object.keys(singletonServicesMap)
     .filter((key) => singletonServicesMap[key])
     .sort()
-  // What the project's own `createWireServices` has to return. A key a wire
-  // provider builds is not its to return.
   const requiredWireServiceNames = Object.keys(wireServicesMap)
-    .filter((key) => wireServicesMap[key] && !providerWireKeys.includes(key))
+    .filter((key) => wireServicesMap[key])
     .sort()
 
   const code = [
@@ -211,12 +206,11 @@ export const pikkuServices = pikkuSessionlessFunc<void, void>({
       Boolean(
         config.scaffold?.agent &&
         Object.keys(visitState.agents?.agentsMeta ?? {}).length > 0
-      ),
-      config.addon ? [] : providedWireServiceKeys(visitState, config.rootDir)
+      )
     )
     await writeFileInDir(logger, config.servicesFile, servicesCode)
     await writeLocalServices(logger, config, visitState)
-    await writeDevProviders(logger, config, visitState)
+    await writeDevPikkuServices(logger, config, visitState)
   },
   middleware: [
     logCommandInfoAndTime({

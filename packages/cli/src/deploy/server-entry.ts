@@ -45,7 +45,6 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
       ? [
           `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>)`,
           `  const singletonServices = await ${ctx.servicesVar}(config, platformServices)`,
-          `  Object.assign(singletonServices, { analyticsSinks: singletonServices.analyticsSinks ?? platformServices.analyticsSinks })`,
         ]
       : [`  const singletonServices = await ${ctx.servicesVar}(config)`]),
     `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,

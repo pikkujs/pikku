@@ -1,4 +1,4 @@
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 
 export const deployVariant = async ({
   logger,
@@ -12,4 +12,4 @@ export const deployVariant = async ({
 })
 
 // PKU376: the exported name queue is already taken by ./flags.ts.
-export const queue = defineProvider(() => ({ queue: 1 }))
+export const queue = pikkuService(() => ({ queue: 1 }))

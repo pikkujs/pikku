@@ -15,7 +15,7 @@
     ".pikku"
   ],
   "dependencies": {
-    "@pikku/addon-kysely-sqlite": "workspace:*"
+    "@pikku/kysely-sqlite": "workspace:*"
   },
   "scripts": {
     "pikku": "pikku all"

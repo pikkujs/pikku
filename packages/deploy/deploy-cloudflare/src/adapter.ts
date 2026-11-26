@@ -200,8 +200,6 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
                 : []),
             ]),
       ],
-      profile: container ? 'cloudflare-container' : 'cloudflare-worker',
-      entryOwned: [],
       runsServerLifecycle: container,
     }
   }
@@ -352,7 +350,6 @@ export class CloudflareProviderAdapter implements ProviderAdapter {
       `    secrets: new LocalSecretService(variables),`,
       `    ...platformServices,`,
       `  })`,
-      `  Object.assign(singletonServices, { analyticsSinks: singletonServices.analyticsSinks ?? platformServices.analyticsSinks })`,
       `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
       ``,
       `  const server = new PikkuBunServer(`,

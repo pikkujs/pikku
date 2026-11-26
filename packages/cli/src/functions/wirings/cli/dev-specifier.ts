@@ -9,11 +9,11 @@ export interface DevServicesTarget {
 }
 
 /**
- * The services `pikku dev` holds before any `defineProvider` runs: what
+ * The services `pikku dev` holds before any `pikkuService` runs: what
  * `createLocalServices` assembles and the dev server passes in beside it. Keys
  * that are only sometimes present (`secrets` from a vault, `tracer`,
  * `coverageService`, `scopeService`, `featureFlags`) are left out, because a
- * service cannot depend on a key a project may not have. `loadDevProviders`
+ * service cannot depend on a key a project may not have. `loadDevPikkuServices`
  * checks the list against what dev really injected, so the two cannot drift.
  */
 export const devBaselineServices = (options: {
@@ -27,6 +27,7 @@ export const devBaselineServices = (options: {
   'agentRunService',
   'agentRunState',
   'agentStorage',
+  'analyticsSinks',
   'content',
   'emailService',
   'eventHub',

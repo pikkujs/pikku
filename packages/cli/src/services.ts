@@ -498,9 +498,9 @@ export const createSingletonServices: CreateSingletonServices<
         rootDir,
         baseDir: config.mainPackage?.dir,
         isAddon: !!config.addon,
-        // PKU372 waits for the pass that has the `#pikku/provider` leaf.
-        deferProviderProvides:
-          !config.addon && !existsSync(config.providerTypesFile),
+        // PKU372 waits for the pass that has the `#pikku/service` leaf.
+        deferServiceProvides:
+          !config.addon && !existsSync(config.pikkuServiceTypesFile),
         tsconfig: config.tsconfig,
         types: {
           configFileType: config.configFile,

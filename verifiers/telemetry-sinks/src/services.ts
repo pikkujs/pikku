@@ -5,12 +5,14 @@ import {
   LocalVariablesService,
 } from '@pikku/core/services'
 import type { OpenSpan, OtlpSinkBase } from '@pikku/core/otlp'
+import type { AnalyticsEventSink, AnalyticsRecord } from '@pikku/core/analytics'
 import { CFWorkerSchemaService } from '@pikku/schema-cfworker'
 import type { RequiredSingletonServices } from '#pikku/pikku-services.gen.js'
 
 export const started: OpenSpan[] = []
 export const ended: Parameters<OtlpSinkBase['exportSpans']>[0] = []
 export const resources: string[] = []
+export const conversions: AnalyticsRecord[] = []
 
 /** An in-process OTLP sink: the app's own code, registered in plain code. */
 const recordingSink: OtlpSinkBase = {
@@ -21,6 +23,10 @@ const recordingSink: OtlpSinkBase = {
   exportMetrics() {},
   flush: async () => {},
   close: async () => {},
+}
+
+const conversionSink: AnalyticsEventSink = {
+  write: async (batch) => void conversions.push(...batch),
 }
 
 export const createConfig = pikkuConfig(async () => ({}))
@@ -34,6 +40,9 @@ export const createSingletonServices = pikkuServices(
     const schema = new CFWorkerSchemaService(logger)
 
     existingServices!.otlpSinks!.add(recordingSink)
+    existingServices!.analyticsSinks!.add(conversionSink, {
+      checkout_completed: true,
+    })
 
     return {
       ...existingServices,

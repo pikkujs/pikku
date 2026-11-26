@@ -16,7 +16,7 @@
 import type { Kysely } from 'kysely'
 import { runPikkuFunc } from '@pikku/core/function'
 import { LocalVariablesService } from '@pikku/core/services'
-import { requirePikkuSchema, pikkuSchemas } from '@pikku/addon-kysely'
+import { requirePikkuSchema, pikkuSchemas } from '@pikku/kysely'
 import { createConfig } from './config.js'
 import { createSingletonServices, createWireServices } from './services.js'
 

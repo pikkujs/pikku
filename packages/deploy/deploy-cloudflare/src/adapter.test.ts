@@ -87,18 +87,6 @@ describe('CloudflareProviderAdapter services', () => {
     } as never)
     assert.deepEqual([...support.baseline], ['logger', 'schema'])
   })
-
-  test('a worker and a container are different profiles and own nothing', () => {
-    const support = (target: string) =>
-      new CloudflareProviderAdapter({}).serviceSupport({
-        ...(ctx as object),
-        unit: { ...(unit as object), target },
-      } as never)
-    assert.equal(support('serverless').profile, 'cloudflare-worker')
-    assert.equal(support('server').profile, 'cloudflare-container')
-    assert.deepEqual([...support('serverless').entryOwned], [])
-    assert.deepEqual([...support('server').entryOwned], [])
-  })
 })
 
 describe('CloudflareProviderAdapter addon registration', () => {

@@ -1,4 +1,4 @@
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 
 const engineOf = (kysely: any): 'postgres' | 'sqlite' | 'unknown' => {
   const adapter: string = kysely.getExecutor().adapter.constructor.name
@@ -13,7 +13,7 @@ const engineOf = (kysely: any): 'postgres' | 'sqlite' | 'unknown' => {
  * told apart by a `when`. A target with no database has no `kysely`, so the
  * need is unmet and the build says so.
  */
-export const store = defineProvider({
+export const store = pikkuService({
   dev: ({ kysely }) => ({ store: { engine: engineOf(kysely), target: 'dev' } }),
   deploy: ({ kysely }) => ({
     store: { engine: engineOf(kysely), target: 'deploy' },

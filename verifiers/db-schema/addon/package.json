@@ -42,6 +42,6 @@
     "zod": "^4"
   },
   "dependencies": {
-    "@pikku/addon-kysely": "^0.13.47"
+    "@pikku/kysely": "^0.13.47"
   }
 }

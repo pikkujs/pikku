@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { KyselyCredentialService } from '@pikku/addon-kysely'
+import { KyselyCredentialService } from '@pikku/kysely'
 import {
   LocalCredentialService,
   type CredentialService,

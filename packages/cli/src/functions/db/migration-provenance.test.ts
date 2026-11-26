@@ -31,7 +31,7 @@ test('a generated migration attributes the tables it creates', () => {
       'CREATE TABLE "user" (id TEXT PRIMARY KEY);\n\nCREATE TABLE session (id TEXT PRIMARY KEY);'
     ),
     '0002-pikku-runtime.sql': generated(
-      "@pikku/addon-kysely's runtime services",
+      "@pikku/kysely's runtime services",
       'CREATE TABLE IF NOT EXISTS secrets (name TEXT PRIMARY KEY);'
     ),
   })
@@ -45,7 +45,7 @@ test('a generated migration attributes the tables it creates', () => {
   assert.equal(provenance.get('session')?.source, 'better-auth')
   assert.deepEqual(provenance.get('secrets'), {
     source: 'pikku-runtime',
-    origin: "@pikku/addon-kysely's runtime services",
+    origin: "@pikku/kysely's runtime services",
   })
 })
 
@@ -81,7 +81,7 @@ test('a project with no migrations directory yields an empty map', () => {
 test('a CREATE TABLE quoted inside a REVIEW comment is not a declaration', () => {
   const dir = migrationsDir({
     '0001-pikku-runtime.sql': generated(
-      "@pikku/addon-kysely's runtime services",
+      "@pikku/kysely's runtime services",
       '-- REVIEW: channels is new. Copy its CREATE TABLE from the source.\n' +
         'CREATE TABLE channels (id TEXT PRIMARY KEY);'
     ),
@@ -95,7 +95,7 @@ test('a CREATE TABLE quoted inside a REVIEW comment is not a declaration', () =>
 test('a schema-qualified or quoted name reduces to its bare form', () => {
   const dir = migrationsDir({
     '0001-pikku-runtime.sql': generated(
-      "@pikku/addon-kysely's runtime services",
+      "@pikku/kysely's runtime services",
       'CREATE TABLE "app"."webhook_delivery" (id TEXT PRIMARY KEY);'
     ),
   })
@@ -115,7 +115,7 @@ test('the migration that creates a table owns it, not one that recreates it', ()
       'CREATE TABLE account (id TEXT PRIMARY KEY);'
     ),
     '0002-pikku-runtime.sql': generated(
-      "@pikku/addon-kysely's runtime services",
+      "@pikku/kysely's runtime services",
       'CREATE TABLE IF NOT EXISTS account (id TEXT PRIMARY KEY);'
     ),
   })

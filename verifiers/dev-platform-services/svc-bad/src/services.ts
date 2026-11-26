@@ -1,18 +1,18 @@
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 
 // Two services, same key, nothing to tell them apart.
-export const dupA = defineProvider({ common: () => ({ shared: 'a' }) })
-export const dupB = defineProvider({ common: () => ({ shared: 'b' }) })
+export const dupA = pikkuService({ common: () => ({ shared: 'a' }) })
+export const dupB = pikkuService({ common: () => ({ shared: 'b' }) })
 
 // A need nothing provides.
-export const needsGhost = defineProvider({
+export const needsGhost = pikkuService({
   common: ({ ghost }) => ({ ghostUser: ghost }),
 })
 
 // A cycle.
-export const cycleA = defineProvider({
+export const cycleA = pikkuService({
   common: ({ cycleB }) => ({ cycleA: cycleB }),
 })
-export const cycleB = defineProvider({
+export const cycleB = pikkuService({
   common: ({ cycleA }) => ({ cycleB: cycleA }),
 })

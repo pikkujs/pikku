@@ -50,7 +50,7 @@ async function setup(backend: Backend): Promise<{
 
   if (backend === 'pg') {
     const { PgKyselyWorkflowService, PgKyselyLeaseService } =
-      await import('@pikku/addon-kysely-postgres')
+      await import('@pikku/kysely-postgres')
     const { PgBossServiceFactory } = await import('@pikku/queue-pg-boss')
     const { Kysely, CamelCasePlugin } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')

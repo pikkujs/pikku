@@ -6,7 +6,6 @@ use std::collections::HashSet;
 
 use tsrs_ast::Node;
 use tsrs_checker::{SignatureKind, Type, TypeFlags};
-use tsrs_ast::SymbolFlags;
 use tsrs_core::P;
 
 use super::Context;
@@ -102,18 +101,12 @@ impl Context<'_> {
         let services_map = self.state.wire_services_type_import_map.clone();
         let singleton = self.resolve_core_type(&singleton_map);
         let services = self.resolve_core_type(&services_map);
-        let mut out = ServiceTypes { singleton_services: None, singleton_optional: vec![], services: None, secret_aliases: vec![] };
+        let mut out = ServiceTypes { singleton_services: None, services: None, secret_aliases: vec![] };
         if let Some(s) = singleton {
             let mut names = self.ts_property_names(s);
             names.sort();
             out.singleton_services = Some(names);
             out.secret_aliases = self.find_secret_alias_services(s);
-            for p in self.checker.get_properties_of_type_exported(s) {
-                if p.flags().intersects(SymbolFlags::Optional) {
-                    out.singleton_optional.push(p.name().to_string());
-                }
-            }
-            out.singleton_optional.sort();
         }
         if let Some(s) = services {
             out.services = Some(self.ts_property_names(s));

@@ -3,7 +3,7 @@ import {
   defineVirtualUsers,
   defineAnalyticsEvents,
 } from '@pikku/core'
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 import {
   devVariant,
   devVariantTwo,
@@ -72,13 +72,13 @@ declare const z: any, login: any, config: any
 declare const dynamic: any
 
 // Variants given by reference live in their own modules.
-export const queue = defineProvider({ dev: devVariant, deploy: deployVariant })
+export const queue = pikkuService({ dev: devVariant, deploy: deployVariant })
 // One factory is the same on every target; needs are the destructured names.
-export const aliased = defineProvider(({ kysely: db, logger }) => {
+export const aliased = pikkuService(({ kysely: db, logger }) => {
+  void db
   logger.info('aliased')
-  return { aliased: db }
 })
-export const clock = defineProvider({
+export const clock = pikkuService({
   common: () => ({ clock: () => 0 }),
   dev: ({ logger }) => ({ clock: () => logger }),
   onServerStart(services) {
@@ -86,22 +86,22 @@ export const clock = defineProvider({
   },
 })
 // PKU375: both variants are exported from the same module.
-export const twin = defineProvider({ dev: devVariant, deploy: devVariantTwo })
+export const twin = pikkuService({ dev: devVariant, deploy: devVariantTwo })
 // PKU369
-const hidden = defineProvider(() => ({ hidden: 1 }))
+const hidden = pikkuService(() => ({ hidden: 1 }))
 void hidden
-export const fromDynamic = defineProvider(dynamic)
-export const neither = defineProvider({})
-export const stray = defineProvider({ prod: () => ({}) })
-export const unresolved = defineProvider({ dev: notExported })
-export const notInline = defineProvider({ dev: notAFunction })
-export const shorthand = defineProvider({ dev: devVariant, deploy })
-defineProvider(() => ({ loose: 1 }))
+export const fromDynamic = pikkuService(dynamic)
+export const neither = pikkuService({})
+export const stray = pikkuService({ prod: () => ({}) })
+export const unresolved = pikkuService({ dev: notExported })
+export const notInline = pikkuService({ dev: notAFunction })
+export const shorthand = pikkuService({ dev: devVariant, deploy })
+pikkuService(() => ({ loose: 1 }))
 // PKU371
-export const whole = defineProvider((services) => ({ whole: services }))
-export const rest = defineProvider(({ logger, ...others }) => ({
+export const whole = pikkuService((services) => ({ whole: services }))
+export const rest = pikkuService(({ logger, ...others }) => ({
   logger,
   others,
 }))
 // PKU372
-export const untyped = defineProvider(() => dynamic)
+export const untyped = pikkuService(() => dynamic)

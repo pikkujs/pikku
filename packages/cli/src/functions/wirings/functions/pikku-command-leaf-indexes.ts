@@ -22,7 +22,7 @@ export const leafEntries = [
   ['function', ['functionTypesFile']],
   ['middleware', ['middlewareTypesFile']],
   ['setup', ['setupTypesFile', 'addonSetupTypesFile']],
-  ['provider', ['providerTypesFile']],
+  ['service', ['pikkuServiceTypesFile']],
   ['error', ['errorTypesFile']],
   ['http', ['httpTypesFile']],
   ['channel', ['channelsTypesFile']],
@@ -60,7 +60,7 @@ const ADDON_RETIRED_LEAVES = new Set([
   'queue',
   'scheduler',
   'gateway',
-  'provider',
+  'service',
 ])
 
 export const pikkuLeafIndexes = pikkuSessionlessFunc<void, void>({

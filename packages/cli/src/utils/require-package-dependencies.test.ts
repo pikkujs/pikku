@@ -43,11 +43,11 @@ describe('requirePackageDependencies', () => {
       requirePackageDependencies(sdk.file, [
         '@pikku/fetch',
         '@pikku/websocket',
-        '@pikku/addon-kysely',
+        '@pikku/kysely',
       ]),
       (error: Error) =>
         error.message.includes('@pikku/websocket') &&
-        error.message.includes('@pikku/addon-kysely') &&
+        error.message.includes('@pikku/kysely') &&
         !error.message.includes('"@pikku/fetch"')
     )
   })
@@ -57,11 +57,6 @@ describe('requirePackageDependencies', () => {
       name: 'sdk',
       peerDependencies: { '@pikku/websocket': '*' },
     })
-    await requirePackageDependencies(sdk.file, ['@pikku/websocket'])
-  })
-
-  test('accepts the package importing itself', async () => {
-    const sdk = await sdkPackage({ name: '@pikku/websocket' })
     await requirePackageDependencies(sdk.file, ['@pikku/websocket'])
   })
 

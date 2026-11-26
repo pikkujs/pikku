@@ -7,7 +7,7 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
-    "@pikku/addon-kysely": "^0.13.39",
-    "@pikku/addon-kysely-sqlite": "workspace:*"
+    "@pikku/kysely": "^0.13.39",
+    "@pikku/kysely-sqlite": "workspace:*"
   }
 }

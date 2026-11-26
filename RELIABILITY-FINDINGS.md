@@ -56,8 +56,8 @@ The requested module '@pikku/core' does not provide an export named 'createSecre
 
 The CLI bootstraps itself with a _published_ CLI in a throwaway npm tree,
 pinning `@pikku/cli`, `@pikku/inspector`, `@pikku/better-auth` and
-`@pikku/core` — but not `@pikku/addon-kysely`, which arrives transitively at a
-floating `^0.13.7`. `@pikku/addon-kysely@0.13.10` imports `createSecretValue` at
+`@pikku/core` — but not `@pikku/kysely`, which arrives transitively at a
+floating `^0.13.7`. `@pikku/kysely@0.13.10` imports `createSecretValue` at
 module load; the pinned `@pikku/core@0.12.74` predates that export (added in
 HEAD's #1126). npm resolved 0.13.10 and the bootstrap CLI died importing its own
 dependency graph.
@@ -66,7 +66,7 @@ This is the failure class `build.sh`'s own comment warns about — "a pin is onl
 as good as the exports that tree depends on" — recurring through a package the
 comment does not cover.
 
-**Fix:** core pin → 0.12.77, and `@pikku/addon-kysely` pinned alongside it in both
+**Fix:** core pin → 0.12.77, and `@pikku/kysely` pinned alongside it in both
 `dependencies` and `overrides`.
 
 ## 2. Codegen names a schema it never generates — FIXED (new PKU463)

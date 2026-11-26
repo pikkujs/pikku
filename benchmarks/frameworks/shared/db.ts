@@ -1,4 +1,4 @@
-import { createNodeSqliteKysely } from '@pikku/addon-kysely-node-sqlite'
+import { createNodeSqliteKysely } from '@pikku/kysely-node-sqlite'
 import type { Kysely } from 'kysely'
 
 /** One driver for every adapter: node:sqlite through the Pikku Kysely dialect (also runs under Bun). No column renaming, no tracing. */

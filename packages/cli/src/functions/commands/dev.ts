@@ -35,6 +35,7 @@ import {
 import { stopSingletonServices } from '@pikku/core/utils'
 import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
+import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 import { createDevTelemetry } from '../../server/dev-telemetry.js'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
@@ -57,8 +58,8 @@ import {
   loadUserModule,
 } from './load-user-project.js'
 import { createDevCredentialService } from './dev-credentials.js'
-import { loadDevProviders } from './dev-providers.js'
-import { devBaselineFor } from '../wirings/cli/write-dev-providers.js'
+import { loadDevPikkuServices } from './dev-pikku-services.js'
+import { devBaselineFor } from '../wirings/cli/write-dev-pikku-services.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
@@ -245,6 +246,7 @@ export const dev = pikkuSessionlessFunc<
       backend: plan.mode === 'inline' ? plan.backend : undefined,
       version: resolveProjectVersion(config.rootDir),
     })
+    const analyticsSinks = createAnalyticsSinks()
     // Created before the app's services so a relay can be added from
     // `createSingletonServices`; the distributor stays here and is reached by
     // the transports, while services get the publisher and the registry.
@@ -591,6 +593,7 @@ export const dev = pikkuSessionlessFunc<
       {
         kysely: kysely ?? null,
         otlpSinks: telemetry.otlpSinks,
+        analyticsSinks,
         logger: telemetry.enabled ? telemetry.logger : new ConsoleLogger(),
         ...(telemetry.enabled ? { tracer: telemetry.tracer } : {}),
         ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
@@ -626,10 +629,10 @@ export const dev = pikkuSessionlessFunc<
       }
     )
 
-    const { services: localServices, startHooks } = await loadDevProviders(
+    const { services: localServices, startHooks } = await loadDevPikkuServices(
       baseLocalServices,
       config.rootDir,
-      config.devProvidersFile,
+      config.devPikkuServicesFile,
       devBaselineFor(config, inspectorState, 'dev'),
       process.env
     )
@@ -638,13 +641,13 @@ export const dev = pikkuSessionlessFunc<
       userConfig,
       localServices
     )
-    // The runtime's own registry wins: the tracer reads it, so an app that returned another would lose its sinks,
+    // The runtime's own registries win: the tracer and the analytics fan-out
+    // read these instances, so an app that returned others would lose its sinks,
     // and the event hub's publisher and registry are the distributor's own.
     const resolvedServices = {
       ...singletonServices,
       otlpSinks: telemetry.otlpSinks,
-      analyticsSinks:
-        singletonServices.analyticsSinks ?? localServices.analyticsSinks,
+      analyticsSinks,
       ...eventHubServices,
       getInspectorState,
       ...(coverageService ? { coverageService } : {}),

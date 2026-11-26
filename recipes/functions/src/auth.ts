@@ -2,7 +2,7 @@ import { betterAuth } from 'better-auth'
 import { pikkuBetterAuth } from '@pikku/better-auth'
 import type { CoreConfig, CoreSingletonServices } from '@pikku/core/types'
 import type { Kysely } from 'kysely'
-import type { KyselyPikkuDB } from '@pikku/addon-kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 
 /**
  * Better Auth configuration.

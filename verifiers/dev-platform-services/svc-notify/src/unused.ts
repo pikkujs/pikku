@@ -1,6 +1,6 @@
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 
 /** Declared, never opted in to: its module must not appear in any generated file. */
-export const unused = defineProvider({
+export const unused = pikkuService({
   dev: () => ({ unused: true }),
 })
