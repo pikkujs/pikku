@@ -1,5 +1,13 @@
 import { builtinModules } from 'node:module'
 
+/** What Bun adds to `builtinModules` that Node does not build in. */
+const BUN_ONLY = new Set(['bun', 'undici', 'ws'])
+
+/** Node's own built-ins, whichever runtime the build runs on. */
+export const NODE_BUILTIN_MODULES: readonly string[] = builtinModules.filter(
+  (name) => !BUN_ONLY.has(name) && !name.startsWith('bun:')
+)
+
 /**
  * esbuild externals covering every Node.js builtin, under both spellings.
  *
@@ -14,6 +22,6 @@ import { builtinModules } from 'node:module'
  */
 export const nodeBuiltinExternals = (...extra: string[]): string[] => [
   'node:*',
-  ...builtinModules,
+  ...NODE_BUILTIN_MODULES,
   ...extra,
 ]
