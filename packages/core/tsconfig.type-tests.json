@@ -18,6 +18,7 @@
     "src/wirings/harness/harness.test.ts",
     "src/wirings/webhook/define-outgoing-webhook.test.ts",
     "src/provider/define-provider.types.test.ts",
-    "src/types/create-wire-services.types.test.ts"
+    "src/types/create-wire-services.types.test.ts",
+    "src/cms/define-cms-collections.types.test.ts"
   ]
 }

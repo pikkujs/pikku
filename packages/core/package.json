@@ -110,6 +110,7 @@
     "./lifecycle": "./dist/lifecycle.js",
     "./schema": "./dist/schema.js",
     "./db": "./dist/db/index.js",
+    "./cms": "./dist/cms/index.js",
     "./testing": "./dist/testing/index.js",
     "./dev": "./dist/dev/hot-reload.js",
     "./package.json": "./package.json"
