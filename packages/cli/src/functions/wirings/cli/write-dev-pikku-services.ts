@@ -1,4 +1,3 @@
-import { resolve } from 'node:path'
 import type { InspectorState } from '@pikku/inspector'
 import { removeFileInDir, writeFileInDir } from '../../../utils/file-writer.js'
 import type { Config } from '../../../../types/application-types.js'
@@ -36,11 +35,9 @@ export const writeDevPikkuServices = async (
   visitState: InspectorState
 ): Promise<void> => {
   const file = config.devPikkuServicesFile
-  const hostModule = config.devPlatformServices
   if (
     config.addon ||
-    (!hostModule &&
-      Object.keys(visitState.pikkuServices ?? {}).length === 0 &&
+    (Object.keys(visitState.pikkuServices ?? {}).length === 0 &&
       Object.keys(visitState.optedInServices ?? {}).length === 0)
   ) {
     await removeFileInDir(logger, file, { logRemove: false })
@@ -56,7 +53,7 @@ export const writeDevPikkuServices = async (
     factoryServices: visitState.projectServicesRead,
     targetLabel: 'pikku dev',
   })
-  if (ordered.length === 0 && !hostModule) {
+  if (ordered.length === 0) {
     await removeFileInDir(logger, file, { logRemove: false })
     return
   }
@@ -68,15 +65,6 @@ export const writeDevPikkuServices = async (
       target: 'dev',
       services: ordered,
       specifier: (module) => localSpecifier(module, target),
-      hostModule: hostModule?.startsWith('.')
-        ? localSpecifier(resolve(config.rootDir, hostModule), target)
-        : hostModule,
-      requiredServices: [
-        ...new Set([
-          ...visitState.serviceAggregation.requiredServices,
-          ...(visitState.projectServicesRead ?? []),
-        ]),
-      ].sort(),
     })
   )
 }

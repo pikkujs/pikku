@@ -164,7 +164,7 @@ export const createPlatformServices = async (
 **Choosing the module:**
 
 - Deploy: the deploy provider implements `platformServicesModule(ctx)`.
-- `pikku dev` and `pikku serve`: set `devPlatformServices` in `pikku.config.json` to a package specifier, or a path starting with `.`. Not loaded under `NODE_ENV=production`.
+- `pikku dev` and `pikku serve`: whoever starts the command passes `--platform-services <module>`, a package specifier resolved from the project, or a path. There is no config key: the host chooses. It may not replace `kysely` when the project has a `db` section.
 
 On Cloudflare Workers, Cloudflare containers and the server entry, `createConfig` receives the `variables` the module returns. In `pikku dev`, `pikku serve` and standalone, the database is set up from the config before the module runs, so `createConfig` does not see them.
 

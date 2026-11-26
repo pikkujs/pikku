@@ -5,4 +5,4 @@
 '@pikku/cloudflare': patch
 ---
 
-A host can supply platform services from one module exporting `createPlatformServices(env, services, { requiredServices })`: a deploy provider names it with `platformServicesModule(ctx)`, and `devPlatformServices` in `pikku.config.json` names it for `pikku dev` and `pikku serve`. On Cloudflare Workers, Cloudflare containers and the server entry, platform services are now built before `createConfig`, which receives the `variables` they provide.
+A host can supply platform services from one module exporting `createPlatformServices(env, services, { requiredServices })`: a deploy provider names it with `platformServicesModule(ctx)`, and whoever starts `pikku dev` or `pikku serve` passes it with `--platform-services <module>`. On Cloudflare Workers, Cloudflare containers and the server entry, platform services are now built before `createConfig`, which receives the `variables` they provide.

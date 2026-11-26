@@ -78,6 +78,7 @@ describe('planDev', () => {
         test: true,
         model: 'a:b/c',
         hmr: false,
+        platformServices: './host.ts',
       },
     })
     assert.equal(plan.mode, 'parent')
@@ -89,6 +90,7 @@ describe('planDev', () => {
         '--test',
         '--model=a:b/c',
         '--no-hmr',
+        '--platform-services=./host.ts',
       ]) {
         assert.ok(args.includes(flag), `${flag} in ${args.join(' ')}`)
       }

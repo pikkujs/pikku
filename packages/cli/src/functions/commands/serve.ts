@@ -35,6 +35,7 @@ import {
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { createDevAgentRunner } from './dev-agent-runner.js'
 import { loadDevPikkuServices } from './dev-pikku-services.js'
+import { loadPlatformServicesOption } from './platform-services-option.js'
 import { devBaselineFor } from '../wirings/cli/write-dev-pikku-services.js'
 import { resolveFrontendMount } from './serve-frontend.js'
 import { servedFrontend } from '../../utils/frontend.js'
@@ -54,7 +55,12 @@ import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 
 export const serve = pikkuSessionlessFunc<
-  { port?: string; model?: string; backend?: string },
+  {
+    port?: string
+    model?: string
+    backend?: string
+    platformServices?: string
+  },
   void
 >({
   remote: true,
@@ -67,7 +73,7 @@ export const serve = pikkuSessionlessFunc<
       variables,
       devServerRunner,
     },
-    { port, model, backend }
+    { port, model, backend, platformServices }
   ) => {
     assertBackendToServe(config)
     disableDevVirtualUserSignIn(logger)
@@ -243,12 +249,28 @@ export const serve = pikkuSessionlessFunc<
       }
     )
 
-    const { services: localServices, startHooks } = await loadDevPikkuServices(
-      baseLocalServices,
-      config.rootDir,
-      config.devPikkuServicesFile,
-      devBaselineFor(config, inspectorState, 'serve'),
-      process.env
+    const { services: providedServices, startHooks } =
+      await loadDevPikkuServices(
+        baseLocalServices,
+        config.rootDir,
+        config.devPikkuServicesFile,
+        devBaselineFor(config, inspectorState, 'serve'),
+        process.env
+      )
+
+    const localServices = await loadPlatformServicesOption(
+      platformServices,
+      providedServices,
+      {
+        rootDir: config.rootDir,
+        env: process.env,
+        requiredServices: [
+          ...new Set([
+            ...requiredServices,
+            ...(inspectorState.projectServicesRead ?? []),
+          ]),
+        ],
+      }
     )
 
     const singletonServices = await userCreateSingletonServices(
