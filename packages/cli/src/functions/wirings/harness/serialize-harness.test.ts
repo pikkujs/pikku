@@ -72,8 +72,17 @@ describe('serializeHarnessGateNames', () => {
   test('is the union of gate and gate agent names', () => {
     assert.match(
       serializeHarnessGateNames(state),
-      /export type HarnessGateName = 'check' \| 'review'\n/
+      /export type HarnessGateName = "check" \| "review"\n/
     )
+  })
+
+  test('writes a name holding quotes or backslashes as a valid literal', () => {
+    const name = 'review\'s \\ "diff"'
+    const code = serializeHarnessGateNames({
+      functions: { meta: { [name]: { pikkuFuncId: name, harness: true } } },
+    } as any)
+    const literal = code.match(/export type HarnessGateName = (.*)\n/)![1]!
+    assert.equal(JSON.parse(literal), name)
   })
 
   test('is never when nothing is declared, so any name is refused', () => {

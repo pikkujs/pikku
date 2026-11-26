@@ -44,7 +44,9 @@ export const serializeHarnessGateNames = (
  */
 
 export type HarnessGateName = ${
-    names.length === 0 ? 'never' : names.map((name) => `'${name}'`).join(' | ')
+    names.length === 0
+      ? 'never'
+      : names.map((name) => JSON.stringify(name)).join(' | ')
   }
 `
 }
