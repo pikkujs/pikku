@@ -59,6 +59,7 @@ import {
 } from './load-user-project.js'
 import { createDevCredentialService } from './dev-credentials.js'
 import { loadDevPikkuServices } from './dev-pikku-services.js'
+import { loadPlatformServicesOption } from './platform-services-option.js'
 import { devBaselineFor } from '../wirings/cli/write-dev-pikku-services.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
@@ -159,6 +160,7 @@ export const dev = pikkuSessionlessFunc<
     frontend?: string
     backend?: string
     serveOnly?: boolean
+    platformServices?: string
   },
   void
 >({
@@ -184,6 +186,7 @@ export const dev = pikkuSessionlessFunc<
       frontend,
       backend,
       serveOnly,
+      platformServices,
     }
   ) => {
     // Which backends this process carries is settled before anything starts, so
@@ -198,6 +201,7 @@ export const dev = pikkuSessionlessFunc<
         test,
         model,
         hmr,
+        platformServices,
       },
     })
     if (serveOnly && plan.mode !== 'inline') {
@@ -629,12 +633,28 @@ export const dev = pikkuSessionlessFunc<
       }
     )
 
-    const { services: localServices, startHooks } = await loadDevPikkuServices(
-      baseLocalServices,
-      config.rootDir,
-      config.devPikkuServicesFile,
-      devBaselineFor(config, inspectorState, 'dev'),
-      process.env
+    const { services: providedServices, startHooks } =
+      await loadDevPikkuServices(
+        baseLocalServices,
+        config.rootDir,
+        config.devPikkuServicesFile,
+        devBaselineFor(config, inspectorState, 'dev'),
+        process.env
+      )
+
+    const localServices = await loadPlatformServicesOption(
+      platformServices,
+      providedServices,
+      {
+        rootDir: config.rootDir,
+        env: process.env,
+        requiredServices: [
+          ...new Set([
+            ...requiredServices,
+            ...(inspectorState.projectServicesRead ?? []),
+          ]),
+        ],
+      }
     )
 
     const singletonServices = await userCreateSingletonServices(

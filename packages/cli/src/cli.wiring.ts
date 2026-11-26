@@ -648,6 +648,11 @@ wireCLI({
             'Internal: serve the named backend without running codegen or watching; the parent pikku dev does both and signals reloads',
           default: false,
         },
+        platformServices: {
+          description:
+            'Set by a host: a module (package or path) whose createPlatformServices replaces local services before the app builds its own',
+          type: 'string',
+        },
       },
     }),
     serve: pikkuCLICommand({
@@ -663,6 +668,11 @@ wireCLI({
         backend: {
           description:
             'Which backend (a key of "backends" in pikku.config.json) this server is. Sets the content settings it uses; optional when one backend is declared',
+          type: 'string',
+        },
+        platformServices: {
+          description:
+            'Set by a host: a module (package or path) whose createPlatformServices replaces local services before the app builds its own',
           type: 'string',
         },
         model: {

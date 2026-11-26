@@ -37,6 +37,7 @@ const run = async (
   options: {
     env?: Record<string, string>
     config?: string
+    platformServices?: string
     expectStartFailure?: boolean
   } = {}
 ): Promise<Run> => {
@@ -50,6 +51,9 @@ const run = async (
         '--port',
         '0',
         ...(options.config ? ['-c', options.config] : []),
+        ...(options.platformServices
+          ? ['--platform-services', options.platformServices]
+          : []),
       ],
       {
         cwd: scenario,
@@ -204,11 +208,12 @@ for (const command of ['dev', 'serve'] as const) {
 }
 
 console.log(
-  "--- a host's devPlatformServices module replaces a service in dev and serve ---"
+  '--- a module passed with --platform-services replaces a service in dev and serve ---'
 )
 for (const command of ['dev', 'serve'] as const) {
   const hosted = await run(command, {
-    config: join(scenario, 'pikku.host.config.json'),
+    config: join(scenario, 'pikku.off.config.json'),
+    platformServices: './host/platform-services.ts',
     env: { PIKKU_HOST_TAG: 'from-host' },
   })
   assert.deepEqual(
