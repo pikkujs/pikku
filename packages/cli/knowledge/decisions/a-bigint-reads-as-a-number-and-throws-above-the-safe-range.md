@@ -11,7 +11,7 @@ The vocabulary follows Better Auth's convention (a number type plus a `bigint`
 flag) rather than adding a second family of names. `integer` stays the default
 number type, 32-bit storage read as `number`. `bigint` stays in `ColumnType` as
 the opt-in 64-bit variant and is **still read as a `number`**: the column gets the
-coercion kind `bigint`, and the plugin in `@pikku/addon-kysely` throws a `RangeError`
+coercion kind `bigint`, and the plugin in `@pikku/kysely` throws a `RangeError`
 naming the column when a value is outside `Number.MIN_SAFE_INTEGER` to
 `Number.MAX_SAFE_INTEGER`, instead of rounding it. The kind is implied by
 `type: 'bigint'`; on a `declareOnly` table that has no `type` it is written

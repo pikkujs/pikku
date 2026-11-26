@@ -20,7 +20,7 @@ func TestWiringsAreTopLevel(t *testing.T) {
 import { wireHTTP } from '@pikku/core/http'
 
 export function optInToJobs() {
-  wireAddon({ name: 'shop', package: '@fixture/shop-addon', providers: ['jobs'] })
+  wireAddon({ name: 'shop', package: '@fixture/shop-addon', services: ['jobs'] })
 }
 
 export const addRoute = () => {
@@ -49,7 +49,7 @@ export const wireHTTP = (config: any) => {
 `,
 		"src/top.ts": `import { wireAddon } from '@pikku/core/addon'
 
-wireAddon({ name: 'top', package: '@fixture/top-addon', providers: ['inbox'] })
+wireAddon({ name: 'top', package: '@fixture/top-addon', services: ['inbox'] })
 `,
 	}
 	for name, text := range files {

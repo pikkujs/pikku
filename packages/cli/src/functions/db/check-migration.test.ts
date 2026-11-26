@@ -16,7 +16,7 @@ import {
   type CheckProbe,
 } from '@pikku/migrator-sql'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
-import { checkName } from '@pikku/addon-kysely'
+import { checkName } from '@pikku/kysely'
 import {
   addCheckStatements,
   checkChangeStatements,

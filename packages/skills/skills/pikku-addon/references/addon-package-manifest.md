@@ -5,7 +5,7 @@
 - Package Structure
 - pikku.config.json
 - package.json (key fields)
-- Platform services (`defineProvider`)
+- Platform services (`pikkuService`)
 - tsconfig.json (key fields)
 
 `npx pikku new addon` scaffolds these files. You rarely hand-edit them — consult this when wiring exports or config by hand.
@@ -103,13 +103,13 @@ live in a file that never imports `#pikku` — see "Functions" in the skill.
 writes `@my-org/addon-todos/.pikku/rpc/...`, exactly as it would in an
 application, and the leaf stays the package's own business.
 
-## Platform services (`defineProvider`)
+## Platform services (`pikkuService`)
 
 An addon can ship code that builds services for the **host's** target — a log
 source over the host's database, a client built from a host secret. The addon
-declares them in code with `defineProvider`; nothing goes in `package.json` and
+declares them in code with `pikkuService`; nothing goes in `package.json` and
 `wireAddon` of the addon itself has no field for it. A host that wants one opts
-in by name with `wireAddon({ providers: ['logSources'] })`, and gets nothing it
+in by name with `wireAddon({ services: ['logSources'] })`, and gets nothing it
 did not list. An opted-in service is not run everywhere: a target (`pikku dev`,
 or one deploy unit) selects it only when a key it provides is destructured by the
 functions, middleware or permissions that target includes, or by another selected
@@ -118,11 +118,11 @@ error and no import, so wiring it once does not need per-build wiring.
 
 ```ts
 // src/services.ts
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 import { logSourcesDev } from './log-sources-dev.js'
 import { logSourcesDeploy } from './log-sources-deploy.js'
 
-export const logSources = defineProvider({
+export const logSources = pikkuService({
   dev: logSourcesDev,
   deploy: logSourcesDeploy,
 })
@@ -157,9 +157,9 @@ Rules the inspector and the build enforce:
 - A service with no variant for a target is simply not part of it, unless it
   provides a key that target needs: then the build fails.
 - Run `pikku all` in the addon: it writes
-  `.pikku/providers/pikku-providers-meta.gen.json`, which a host reads to opt in
+  `.pikku/services/pikku-services-meta.gen.json`, which a host reads to opt in
   (an unknown name is PKU374). Ship `.pikku` in `files` and export
-  `./.pikku/*`.
+  `./.pikku/services/*`.
 - A plain package that is not an addon declares services the same way and is
   wired with `wireAddon`; it needs a `pikku.config.json` with `"addon": true`.
 - Services run after every service providing one of their needs. A target's
@@ -176,20 +176,6 @@ Rules the inspector and the build enforce:
   build error. Teardown is the provided value's own `stop()`, called in reverse
   build order.
 - Fail closed: a service whose bindings are missing at startup throws.
-- **Declare every variable and secret an addon provider reads** with
-  `defineVariable` / `defineSecret`: its `env` holds only those names (and the
-  host's `variableOverrides` / `secretOverrides`), and anything else is
-  `env-denied`.
-- A provider that provides `logger`, `secrets`, `variables`, `credentialService`,
-  `auth` or `jwt` must say `replaces: [...]` (PKU394), and the host's
-  `pikku-addons.lock` records it. Adding a need, a provided key or a `replaces`
-  in a later version is PKU395 for the host until it runs
-  `pikku all --approve-providers`; a host in CI (`--frozen`) fails (PKU396).
-- Contribute to a list with `defineProvider({ addTo: collection })`, importing the
-  collection (core's `analyticsSinks`, or one the addon declares with
-  `defineProviderCollection`). A database addon has no `deploy:standalone`
-  variant (the standalone entry opens its own, PKU397). Providers run in the host's
-  process, so `wireRemoteAddon` cannot take them (PKU381).
 
 Full reference: `docs/services.md` in the pikku repo.
 

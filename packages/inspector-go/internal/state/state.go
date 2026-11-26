@@ -87,22 +87,14 @@ type State struct {
 	RemoteAddonFunctions *Record[*Record[*FunctionMeta]] `json:"remoteAddonFunctions,omitempty"`
 	Studio               Raw                             `json:"studio,omitempty"`
 	AddonStudio          Raw                             `json:"addonStudio,omitempty"`
-	// Providers is what defineProvider and defineWireProvider declare;
-	// ProviderCollections is what defineProviderCollection declares;
-	// OptedInProviders is what wireAddon({ providers }) selected from each
-	// addon's manifest.
-	Providers           Raw `json:"providers,omitempty"`
-	ProviderCollections Raw `json:"providerCollections,omitempty"`
-	OptedInProviders    Raw `json:"optedInProviders,omitempty"`
+	// PikkuServices is what pikkuService declares; OptedInServices is what
+	// wireAddon({ services }) selected from each addon's manifest.
+	PikkuServices     Raw               `json:"pikkuServices,omitempty"`
+	OptedInServices   Raw               `json:"optedInServices,omitempty"`
 	// ProjectServicesRead is the top-level names the project's pikkuServices
 	// factory destructures from its second parameter, sorted and unique.
 	ProjectServicesRead Strings `json:"projectServicesRead,omitempty"`
-	// ProjectServicesProvided and ProjectWireServicesProvided are the keys the
-	// project's pikkuServices and pikkuWireServices factories return, and the
-	// subset of them that may be absent: { keys, optional }.
-	ProjectServicesProvided     Raw               `json:"projectServicesProvided,omitempty"`
-	ProjectWireServicesProvided Raw               `json:"projectWireServicesProvided,omitempty"`
-	ExportedContracts           ExportedContracts `json:"exportedContracts"`
+	ExportedContracts ExportedContracts `json:"exportedContracts"`
 
 	// CoreTypeProperties replaces the live `typesLookup` entries for the core
 	// interfaces (CoreConfig / CoreSingletonServices / CoreServices /
@@ -347,9 +339,6 @@ type ServiceAggregation struct {
 type ServiceTypes struct {
 	// SingletonServices is sorted; nil (JSON null) when the type is unresolved.
 	SingletonServices *Strings `json:"singletonServices"`
-	// SingletonOptional is the sorted names of the SingletonServices
-	// properties declared optional.
-	SingletonOptional Strings `json:"singletonOptional"`
 	// Services is unfiltered, in property order; nil when unresolved.
 	Services      *Strings `json:"services"`
 	SecretAliases Strings  `json:"secretAliases"`

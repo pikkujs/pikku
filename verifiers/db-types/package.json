@@ -9,9 +9,9 @@
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/addon-kysely": "workspace:*",
-    "@pikku/addon-kysely-sqlite": "workspace:*",
-    "@pikku/addon-kysely-postgres": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/kysely-sqlite": "workspace:*",
+    "@pikku/kysely-postgres": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "kysely": "^0.29.6"
   },

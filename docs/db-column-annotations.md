@@ -32,11 +32,7 @@ export const tables = defineTables({
         form: 'wrapped',
         keyId: 'api',
       },
-      settings: {
-        type: 'json',
-        kind: 'json',
-        tsType: '{ theme: string; locale: string }',
-      },
+      settings: { type: 'json', kind: 'json', tsType: '{ theme: string; locale: string }' },
       createdAt: { type: 'timestamp', kind: 'date' },
     },
   },
@@ -89,7 +85,7 @@ read and refuse plaintext writes, and Better Auth writes these tables through
 its own adapter. Every built-in secret states its `form`, so none raises
 PKU483.
 
-The runtime tables (`@pikku/addon-kysely`) annotate their columns on the declaration
+The runtime tables (`@pikku/kysely`) annotate their columns on the declaration
 itself, like any table. `secrets` and `credentials` mark `ciphertext` and
 `wrapped_dek` as `security: 'secret'`, `form: 'plain'`: the services seal those
 values with their own envelope encryption before they reach the row, and
@@ -126,10 +122,10 @@ Key files (all under `packages/cli/src/functions/db/`):
 | `db-codegen.ts`                                            | `schema.gen.d.ts` typing, coercion map, manifest, **owns snake→Pascal/camel name mapping**  |
 | `zod-codegen.ts`                                           | parses `schema.gen.d.ts` textually → `zod.gen.ts`; **owns the canonical `ZOD_FORMATS` map** |
 
-The runtime Kysely plugin lives outside the CLI, in `@pikku/addon-kysely`
-(`packages/addon/kysely/src/coercion-plugin.ts`): `ColumnKind`, `CoercionMap`
-and the `fromDb()` coercion. The CLI, `@pikku/addon-kysely-node-sqlite` and
-`@pikku/addon-kysely-bun-sqlite` all use that one implementation, so a fix cannot
+The runtime Kysely plugin lives outside the CLI, in `@pikku/kysely`
+(`packages/services/kysely/src/coercion-plugin.ts`): `ColumnKind`, `CoercionMap`
+and the `fromDb()` coercion. The CLI, `@pikku/kysely-node-sqlite` and
+`@pikku/kysely-bun-sqlite` all use that one implementation, so a fix cannot
 land in one and miss the others.
 
 The map only takes effect where something attaches the plugin to the `kysely`
@@ -140,7 +136,7 @@ an app is handed:
 - Standalone deploys — the entry imports the map (`db.coercionImportPath`).
 - Deploys where a service provides `kysely` (Cloudflare, for one) — the
   generated runner wraps that service with `createCoercionPlugin` from
-  `@pikku/addon-kysely` and the map. See [`services.md`](./services.md).
+  `@pikku/kysely` and the map. See [`services.md`](./services.md).
 
 ## Two axes: what changes the _type_ vs only the _validator_
 
@@ -200,7 +196,7 @@ body: { type: 'text', security: 'secret', form: 'wrapped', keyId: 'notes' }
 ```
 
 Absent means the deployment's default key (`DEFAULT_KEY_ID`, exported from
-`@pikku/core/classification` and re-exported by `@pikku/addon-kysely` so the two cannot
+`@pikku/core/classification` and re-exported by `@pikku/kysely` so the two cannot
 drift). `keyId` reaches `classification.gen.ts` only for `wrapped`/`sealed` —
 emitting one on a plain or hashed column would claim a protection it has not got,
 and a hash has no key to be opened with in the first place.
@@ -267,7 +263,7 @@ Example: `kind: 'bigint'` typing a column as `bigint` + `z.bigint()`.
 
 1. **`annotation-parser.ts` — `AnnotationKind`**: add `'bigint'`. If it needs
    runtime coercion (DB returns a string/number you must convert), it is also a
-   `ColumnKind`: add it to the union in `@pikku/addon-kysely`'s `coercion-plugin.ts`
+   `ColumnKind`: add it to the union in `@pikku/kysely`'s `coercion-plugin.ts`
    and add a `case` to `fromDb()`. If the driver already returns the right JS
    type, leave `ColumnKind` alone and exclude the kind in db-codegen's coercion
    loop (as `uuid` is excluded).
@@ -339,7 +335,7 @@ decimal. Pattern mirrors how enum/uuid/timestamp already work.
   is a separate, worthwhile task.
 - **Typing kinds and coercion kinds are two unions, not one.** `AnnotationKind`
   (`annotation-parser.ts`) is what a column may declare in `db/tables.ts`;
-  `ColumnKind` (`@pikku/addon-kysely`) is the value type of the generated
+  `ColumnKind` (`@pikku/kysely`) is the value type of the generated
   `CoercionMap`, so it may only name kinds `fromDb()` actually acts on.
   `AnnotationKind` is the superset: `uuid` types a column as `Uuid` but needs no
   coercion, so it is excluded from the coercion map in `db-codegen` and absent

@@ -21,8 +21,8 @@ export const createSingletonServices = pikkuServices(
 
     // The generated RequiredSingletonServices still demands queueService,
     // schedulerService, workflowService and workflowRunService, which the nats
-    // service (queue, scheduler) and the deploy build provide. The cast only
-    // silences that type gap; it supplies no fallback, so a service that was
+    // contributor (queue, scheduler) and the deploy build provide. The cast only
+    // silences that type gap; it supplies no fallback, so a contributor that was
     // not applied still fails the verifier at run time. See the open question in
     // the queue-nats decision note.
     return {

@@ -1,15 +1,11 @@
 #!/bin/bash
 set -e
-cd "$(dirname "$0")"
-# The scenarios write pikku-addons.lock as they build; CI=true would freeze it.
-unset CI
-rm -f scenarios/*/pikku-addons.lock
 
 echo "=== Dev Platform Services Verifier ==="
 echo "--- a project that declares and opts in to nothing generates no services file ---"
 rm -rf .pikku
 npx pikku
-if [ -e .pikku/providers/pikku-dev-providers.gen.ts ]; then
+if [ -e .pikku/services/pikku-dev-services.gen.ts ]; then
   echo "✗ a services file was generated for a project that declares no service"
   exit 1
 fi
@@ -18,12 +14,12 @@ echo "✓ no services, no generated file"
 echo "--- opted-in services: dev and deploy variants across addons ---"
 for addon in svc-notify svc-select svc-bad; do
   (cd "$addon" && npx pikku all >/dev/null)
-  test -f "$addon/.pikku/addon/providers/pikku-providers-meta.gen.json"
+  test -f "$addon/.pikku/addon/services/pikku-services-meta.gen.json"
 done
 for scenario in multi pg sqlite lifecycle; do
   rm -rf "scenarios/$scenario/.pikku"
   (cd "scenarios/$scenario" && npx pikku all >/dev/null)
-  test -f "scenarios/$scenario/.pikku/providers/pikku-dev-providers.gen.ts"
+  test -f "scenarios/$scenario/.pikku/services/pikku-dev-services.gen.ts"
 done
 (cd scenarios/multi && npx tsc --noEmit -p .)
 echo "--- wireAddon service names are typed from the addon's meta ---"
@@ -36,7 +32,7 @@ rm -rf scenarios/remote-local/.pikku
 (cd scenarios/remote-local && npx pikku all >/dev/null)
 npx tsx src/check-remote-local.ts
 
-echo "--- #pikku/provider: typed services for a project, erased at runtime ---"
+echo "--- #pikku/service: typed services for a project, erased at runtime ---"
 rm -rf scenarios/typed/.pikku
 (cd scenarios/typed && npx pikku all >/dev/null)
 (cd scenarios/typed && npx tsc --noEmit -p tsconfig.type-tests.json)
@@ -49,8 +45,8 @@ npx tsx src/check-lifecycle.ts
 
 echo "--- the generated file is removed once no services remain ---"
 (cd scenarios/multi && npx pikku all -c "$PWD/pikku.off.config.json" >/dev/null)
-if [ -e scenarios/multi/.pikku/providers/pikku-dev-providers.gen.ts ]; then
-  echo "✗ a stale pikku-dev-providers.gen.ts survived"
+if [ -e scenarios/multi/.pikku/services/pikku-dev-services.gen.ts ]; then
+  echo "✗ a stale pikku-dev-services.gen.ts survived"
   exit 1
 fi
 echo "✓ stale generated file removed"
@@ -68,9 +64,9 @@ expect_failure() { # scenario, message
   fi
   echo "✓ $1: $2"
 }
-expect_failure dup "Providers 'bad/dupA' and 'bad/dupB' both provide 'shared' on pikku dev"
-expect_failure ghost "Provider 'bad/needsGhost' needs 'ghost' on pikku dev, which nothing provides"
-expect_failure cycle "Providers depend on each other in a cycle on pikku dev: bad/cycle"
+expect_failure dup "Services 'bad/dupA' and 'bad/dupB' both provide 'shared' on dev"
+expect_failure ghost "Service 'bad/needsGhost' needs 'ghost' on dev, which nothing provides"
+expect_failure cycle "Services depend on each other in a cycle on dev: bad/cycle"
 echo "--- removed contributor config is refused, not silently dropped ---"
 for section in dev deploy; do
   node -e '
@@ -103,7 +99,7 @@ import { wireAddon } from '#pikku/addon'
 wireAddon({
   name: 'select',
   package: '@verifier/svc-select',
-  providers: ['store-mysql'],
+  services: ['store-mysql'],
 })
 TS
 rm -rf scenarios/multi/.pikku

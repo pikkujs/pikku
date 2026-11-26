@@ -7,8 +7,8 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
-    "@pikku/addon-kysely-postgres": "workspace:*",
     "@pikku/core": "workspace:*",
+    "@pikku/kysely-postgres": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*"
   },
   "devDependencies": {
@@ -21,7 +21,7 @@
     "@verifier/svc-select": "workspace:*",
     "@verifier/svc-bad": "workspace:*",
     "@pikku/deploy-standalone": "workspace:*",
-    "@pikku/addon-kysely": "workspace:*",
+    "@pikku/kysely": "workspace:*",
     "@pikku/deploy-cloudflare": "workspace:*"
   },
   "scripts": {

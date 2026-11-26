@@ -16,7 +16,7 @@ import type { AnalyticsEvent } from '../pikku/analytics/analytics.gen.js'
 import type { TodoStore } from '../src/services/store.service.ts'
 import type { auth } from '../src/auth.ts'
 import type { Kysely } from 'kysely'
-import type { KyselyPikkuDB } from '@pikku/addon-kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 
 export interface Config extends CoreConfig {
   awsRegion: string

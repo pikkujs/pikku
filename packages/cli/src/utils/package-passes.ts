@@ -40,14 +40,13 @@ export class PikkuPackagePassError extends Error {
  */
 export const runPikkuPackagePasses = async (
   packages: ListedPackage[],
-  onPass?: (pkg: ListedPackage) => void,
-  args: string[] = []
+  onPass?: (pkg: ListedPackage) => void
 ): Promise<void> => {
   const pikkuBin = resolvePikkuBin()
   for (const pkg of packages) {
     onPass?.(pkg)
     try {
-      await runPikkuAllChild(pikkuBin, pkg.dir, args, {
+      await runPikkuAllChild(pikkuBin, pkg.dir, [], {
         deployCodegen: false,
         timeoutMs: 0,
         env: {

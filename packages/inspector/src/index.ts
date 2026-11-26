@@ -13,14 +13,10 @@ export type {
   StudioThingMeta,
   StudioArrangedScreenMeta,
   StudioNavMeta,
-  OptedInProvidersMeta,
-  ProjectFactoryKeys,
-  ProviderMeta,
-  ProviderProfile,
-  ProviderVariantMeta,
-  ProviderVariantName,
-  ProviderCollectionMeta,
-  ProvidersManifest,
+  OptedInServicesMeta,
+  PikkuServiceMeta,
+  PikkuServiceVariantMeta,
+  PikkuServicesManifestMeta,
   InspectorDiagnostic,
   InspectorFilters,
   InspectorHTTPState,
@@ -35,7 +31,6 @@ export type {
   MiddlewareRegistration,
   SchemaRef,
 } from './types.js'
-export { PROVIDER_PROFILES } from './types.js'
 export { ErrorCode } from './error-codes.js'
 export type { DiagnosticSeverity, CodedDiagnostic } from './error-codes.js'
 export { AUTH_HANDLER_FUNC_ID } from './utils/inspector-constants.js'
@@ -110,7 +105,6 @@ export {
 export type {
   AddonsLock,
   AddonsLockEntry,
-  ProviderLockEntry,
   RemoteAddonSdkManifest,
   RemoteAddonPackageSpec,
   LockedSdk,

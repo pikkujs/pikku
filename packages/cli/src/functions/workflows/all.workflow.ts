@@ -1,7 +1,5 @@
 import { existsSync, readdirSync } from 'fs'
 import { join, relative } from 'path'
-import type { Config } from '../../../types/application-types.js'
-import { syncProvidersLock } from '../../providers/providers-lock.js'
 import { loadUserConfigForDb } from '../commands/db-shared.js'
 import {
   ErrorCode,
@@ -106,20 +104,6 @@ const scaffoldFiles = (
   return files
 }
 
-/** `--frozen`, which `CI=true` implies. */
-const isFrozen = (config: Config): boolean =>
-  Boolean(config.frozen) || process.env.CI === 'true' || process.env.CI === '1'
-
-/** The lock flags a package pass inherits from the run that spawned it. */
-const providerLockArgs = (config: Config): string[] => [
-  ...(isFrozen(config) ? ['--frozen'] : []),
-  ...(Array.isArray(config.approveProviders)
-    ? [`--approve-providers=${config.approveProviders.join(',')}`]
-    : config.approveProviders
-      ? ['--approve-providers']
-      : []),
-]
-
 const RUN_RECORDS_DIR = 'runs'
 // The remote addon sync writes SDKs into .pikku/remote before anything is
 // generated, so its presence says nothing about whether codegen has run.
@@ -176,8 +160,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
               ? [{ ...config.mainPackage, rootConfig: config.configPath }]
               : []),
           ],
-          (pkg) => logger.info(`• pikku all in ${pkg.entry}`),
-          providerLockArgs(config)
+          (pkg) => logger.info(`• pikku all in ${pkg.entry}`)
         )
       })
     }
@@ -190,7 +173,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await workflow.do('Sync remote addon SDKs', async () => {
       try {
         await runAddonSync({
-          config: { ...config, frozen: isFrozen(config) },
+          config,
           logger,
           // Typed by the registry's synced SDK (see RegistryInvoke); a lock hit never calls it.
           resolveSdk: (request) =>
@@ -443,27 +426,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       })
     }
 
-    // The addon providers the project opted in to are checked against the lock
-    // before any generator reads them: a changed surface fails the build until
-    // it is approved, and a deploy pass only reads the lock the build wrote.
-    const runsOwnLock =
-      process.env.PIKKU_DEPLOY_CODEGEN !== '1' &&
-      !(config.mainPackage && process.env[PACKAGE_PASS_ENV] !== '1')
-    if (runsOwnLock) {
-      await workflow.do('Provider lock', async () => {
-        await syncProvidersLock({
-          state: await getInspectorState(),
-          rootDir: config.rootDir,
-          frozen: isFrozen(config),
-          approval: config.approveProviders,
-          log: (message) => logger.info(message),
-        })
-      })
-    }
-
     // What a service provides is read from its return type, which can depend on
     // the leaf this writes, so it runs until a pass changes nothing.
-    await workflow.do('Provider types', 'providerTypes', null)
+    await workflow.do('Service types', 'pikkuServiceTypes', null)
 
     // Type generators are independent of each other
     // These write the addon-safe subset of their leaf when the project is an
@@ -569,7 +534,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       workflow.do('Outgoing webhooks', 'pikkuOutgoingWebhooks', null),
       workflow.do('Addon types', 'pikkuAddonTypes', {}),
       workflow.do('Screens', 'pikkuScreens', null),
-      workflow.do('Providers meta', 'providersMeta', null),
+      workflow.do('Services meta', 'pikkuServicesMeta', null),
     ])
 
     if (hasInternalRPCs) {

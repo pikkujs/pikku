@@ -16,8 +16,7 @@ export const openSqliteDatabase = async (
 ): Promise<SqliteDatabase> => {
   const isBun = typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined'
   if (isBun) {
-    const { openBunSqliteDatabase } =
-      await import('@pikku/addon-kysely-bun-sqlite')
+    const { openBunSqliteDatabase } = await import('@pikku/kysely-bun-sqlite')
     return openBunSqliteDatabase(path)
   }
   const { default: Database } = await import('better-sqlite3')

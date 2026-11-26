@@ -15,7 +15,7 @@ wireAddon({
     oauth: { name: 'myOauth', mode: 'wire' },
     plain: 'plainName',
   },
-  providers: ['c1', 'missing'],
+  services: ['c1', 'missing'],
   tags: ['t'],
   auth: false,
   rpcEndpoint: '/rpc/ext',
@@ -33,13 +33,6 @@ wireAddon({
 wireRemoteAddon({
   name: 'rem',
   package: '@acme/remote@^1.2.0',
-  local: { package: '@acme/addon', ui: true, providers: ['c1'] },
+  local: { package: '@acme/addon', ui: true, services: ['c1'] },
   auth: { credentialId: 'x' },
-})
-wireAddon({ name: 'stale', package: '@acme/addon3', providers: ['old'] })
-wireAddon({ name: 'nullversion', package: '@acme/addon4', providers: ['old'] })
-wireAddon({
-  name: 'objectversion',
-  package: '@acme/addon5',
-  providers: ['old'],
 })

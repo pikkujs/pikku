@@ -37,7 +37,7 @@ describe('writeUnitPlatformServices', () => {
     >
   ) =>
     ({
-      providers: Object.fromEntries(
+      pikkuServices: Object.fromEntries(
         Object.entries(services).map(([name, service]) => [
           name,
           {
@@ -48,8 +48,7 @@ describe('writeUnitPlatformServices', () => {
           },
         ])
       ),
-      optedInProviders: {},
-      functions: { meta: {} },
+      optedInServices: {},
       rpc: { wireAddonDeclarations: new Map() },
     }) as never
 
@@ -63,8 +62,6 @@ describe('writeUnitPlatformServices', () => {
         : {
             serviceSupport: () => ({
               baseline: options.baseline ?? ['logger'],
-              profile: 'standalone',
-              entryOwned: [],
               runsServerLifecycle: options.runsServerLifecycle ?? true,
             }),
           }),
@@ -83,8 +80,8 @@ describe('writeUnitPlatformServices', () => {
       projectDir: root,
       requiredServices: new Set(
         Object.values(
-          (st as { providers: Record<string, { variants: Variants }> })
-            .providers
+          (st as { pikkuServices: Record<string, { variants: Variants }> })
+            .pikkuServices
         ).flatMap((meta) =>
           Object.values(meta.variants).flatMap((variant) => variant!.provides)
         )
@@ -111,7 +108,7 @@ describe('writeUnitPlatformServices', () => {
     assert.match(source, /target: "deploy"/)
     assert.match(
       source,
-      /registry\.add\("mailer", service0, \{"deploy":\{"needs":\["logger"\],"optional":\[\],"provides":\["mailer"\],"optionalProvides":\[\]\}\}, \{"kind":"singleton"\}\)/
+      /registry\.add\("mailer", service0, \{"deploy":\{"needs":\["logger"\],"provides":\["mailer"\]\}\}\)/
     )
   })
 
@@ -143,7 +140,7 @@ describe('writeUnitPlatformServices', () => {
           mailer: { variants: { dev: { needs: [], provides: ['mailer'] } } },
         })
       ),
-      /\[PKU388\].*no variant for the fake deploy \(unit 'api'\) \(looked for deploy:standalone, deploy, common\).*'mailer'/s
+      /no deploy variant and no common variant.*'mailer'/s
     )
   })
 
@@ -157,7 +154,7 @@ describe('writeUnitPlatformServices', () => {
           },
         })
       ),
-      /\[PKU386\].*'mailer' needs 'kysely' on the fake deploy \(unit 'api'\)/
+      /'mailer' needs 'kysely' on deploy/
     )
   })
 
@@ -190,9 +187,8 @@ describe('writeUnitPlatformServices', () => {
   test('nothing declared writes nothing and removes a stale file', async () => {
     writeFileSync(join(unitDir, PLATFORM_SERVICES_FILE), 'stale')
     const none = {
-      providers: {},
-      optedInProviders: {},
-      functions: { meta: {} },
+      pikkuServices: {},
+      optedInServices: {},
       rpc: { wireAddonDeclarations: new Map() },
     } as never
     assert.equal(await run('api', none), undefined)
@@ -211,7 +207,7 @@ describe('writeUnitPlatformServices', () => {
     test('onServerStart where the target runs no server lifecycle is a build error naming service and unit', async () => {
       await assert.rejects(
         run('worker-unit', starts(), provider({ runsServerLifecycle: false })),
-        /\[PKU389\].*onServerStart would never be called: provider 'queue' in unit 'worker-unit'/
+        /onServerStart would never be called: service 'queue' in unit 'worker-unit'/
       )
     })
 
@@ -235,17 +231,14 @@ describe('writeUnitPlatformServices', () => {
       assert.ok(result)
       assert.deepEqual(genericServerEntrySupport(), {
         baseline: [],
-        profile: 'server',
-        entryOwned: [],
         runsServerLifecycle: true,
       })
     })
 
     test('the generic server entry with nothing declared writes no file', async () => {
       const none = {
-        providers: {},
-        optedInProviders: {},
-        functions: { meta: {} },
+        pikkuServices: {},
+        optedInServices: {},
         rpc: { wireAddonDeclarations: new Map() },
       } as never
       assert.equal(

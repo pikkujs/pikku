@@ -96,7 +96,7 @@ fn run_inner(
                 allow_permissions_in_body: allow.permissions_in_body,
                 classification_check: req.options.classification_check,
                 is_addon: req.options.is_addon,
-                defer_provider_provides: req.options.defer_provider_provides,
+                defer_service_provides: req.options.defer_service_provides,
                 types: None,
             },
         );

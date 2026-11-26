@@ -1,9 +1,9 @@
-// Type-level checks that `#pikku/provider` types `services` as the project's own
+// Type-level checks that `#pikku/service` types `services` as the project's own
 // SingletonServices plus what each service provides. Compiled by tsc only
 // (tsconfig.type-tests.json); never executed. Every check fails if `services`
 // were `any`.
-import { defineProvider } from '#pikku/provider'
-import type { SingletonServices } from '#pikku/provider'
+import { pikkuService } from '#pikku/service'
+import type { SingletonServices } from '#pikku/service'
 import type { SingletonServices as FunctionServices } from '#pikku/function'
 import type { Ledger } from '../types/application-types.js'
 
@@ -22,7 +22,7 @@ assertType<Mutual<SingletonServices['ledger'], Ledger>>()
 // A function sees the same merged type without a cast.
 assertType<Equal<FunctionServices, SingletonServices>>()
 
-export const wrong = defineProvider({
+export const wrong = pikkuService({
   common: (services) => {
     // @ts-expect-error not a service of this project
     void services.noSuchService

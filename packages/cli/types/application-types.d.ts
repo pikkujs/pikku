@@ -23,10 +23,6 @@ export interface Config extends CoreConfig<PikkuCLIConfig> {
    *  from an exported `loadAddons()` rather than at module load (--lazy-addons).
    *  Per-unit deploy codegen sets it for providers that cap startup CPU. */
   lazyAddons?: boolean
-  /** `pikku all --frozen`: pikku-addons.lock is never written and any drift fails. */
-  frozen?: boolean
-  /** `pikku all --approve-providers`: `true` when given bare (every changed provider), else the ids it names. */
-  approveProviders?: true | string[]
 }
 
 export interface SingletonServices extends CoreSingletonServices<Config> {

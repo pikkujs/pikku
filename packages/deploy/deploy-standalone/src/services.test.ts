@@ -45,7 +45,7 @@ describe(`StandaloneProviderAdapter services`, () => {
     )
     assert.match(
       source,
-      /otlpSinks: __pikkuTelemetry\.otlpSinks,\n    \.\.\.platformServices,\n  \}\)/,
+      /analyticsSinks: __pikkuAnalyticsSinks,\n    \.\.\.platformServices,\n  \}\)/,
       'provided services must be spread last so they override the defaults'
     )
     assert.doesNotMatch(source, /const createPlatformServices = async/)
@@ -79,18 +79,6 @@ describe(`StandaloneProviderAdapter services`, () => {
         } as never)
         .baseline.includes('kysely')
     )
-  })
-
-  test('serviceSupport names the standalone profile and owns kysely only when it opens a database', () => {
-    const adapter = new StandaloneProviderAdapter({})
-    const without = adapter.serviceSupport(ctx as never)
-    assert.equal(without.profile, 'standalone')
-    assert.deepEqual([...without.entryOwned], [])
-    const withDb = adapter.serviceSupport({
-      ...(ctx as object),
-      db: { engine: 'sqlite' },
-    } as never)
-    assert.deepEqual([...withDb.entryOwned], ['kysely'])
   })
 })
 

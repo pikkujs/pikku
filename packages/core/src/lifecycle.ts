@@ -4,21 +4,14 @@ import type {
   ServerLifecycle,
 } from './types/core.types.js'
 import { getSingletonServices, getAllPackageStates } from './pikku-state.js'
-import { ProviderError } from './provider/provider-error.js'
-import { readHeldKeys, readStopOrder } from './provider/stop-order.js'
 
 const stopService = async (
   logger: Logger,
   name: string,
-  service: any,
-  stopped?: WeakSet<object>
+  service: any
 ): Promise<void> => {
   const stop = service?.stop
   if (stop) {
-    if (stopped && typeof service === 'object') {
-      if (stopped.has(service)) return
-      stopped.add(service)
-    }
     logger.info(`Stopping singleton service: ${name}`)
     try {
       await stop.call(service)
@@ -30,10 +23,7 @@ const stopService = async (
 
 /**
  * Stops addon package services first, then the parent singleton services.
- * Addon package services stop in reverse of the order they were built. The
- * parent's stop in the order the provider runner recorded (latest provider
- * first, a collection's items each in their place), then the rest in reverse insertion order. An object held under two
- * keys is stopped once.
+ * Within each group services stop in reverse of the order they were built.
  */
 export const stopSingletonServices = async (): Promise<void> => {
   const singletonServices = getSingletonServices()
@@ -57,39 +47,8 @@ export const stopSingletonServices = async (): Promise<void> => {
     }
   }
 
-  const stopped = new WeakSet<object>()
-  const held = new Map(Object.entries(singletonServices))
-  const handled = new Set<string>()
-  const runnerHeld = readHeldKeys()
-  if (runnerHeld) {
-    const heldByRunner = new Set(runnerHeld)
-    for (const [name, service] of [...held].reverse()) {
-      if (heldByRunner.has(name)) continue
-      handled.add(name)
-      await stopService(logger, name, service, stopped)
-    }
-  }
-  for (const entry of readStopOrder()) {
-    if (typeof entry !== 'string') {
-      const items = held.get(entry.collection)
-      const found = Array.isArray(items)
-        ? items.find((candidate) => candidate?.label === entry.label)
-        : undefined
-      await stopService(
-        logger,
-        `${entry.collection}/${entry.label}`,
-        found?.item,
-        stopped
-      )
-      continue
-    }
-    if (!held.has(entry)) continue
-    handled.add(entry)
-    await stopService(logger, entry, held.get(entry), stopped)
-  }
-  for (const [name, service] of [...held].reverse()) {
-    if (handled.has(name)) continue
-    await stopService(logger, name, service, stopped)
+  for (const [name, service] of Object.entries(singletonServices).reverse()) {
+    await stopService(logger, name, service)
   }
 }
 
@@ -161,9 +120,8 @@ export const composeServerLifecycle = <
       try {
         await hook.run(services)
       } catch (error) {
-        throw new ProviderError(
-          'start-failed',
-          `Provider '${hook.name}' failed in onServerStart: ${describeError(error)}`,
+        throw new Error(
+          `Service '${hook.name}' failed in onServerStart: ${describeError(error)}`,
           { cause: error }
         )
       }

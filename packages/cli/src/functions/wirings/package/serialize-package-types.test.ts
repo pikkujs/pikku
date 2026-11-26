@@ -88,9 +88,9 @@ describe('definition types', () => {
       'AnalyticsClientContext',
       'AnalyticsLog',
       'AnalyticsEventSink',
-      'AnalyticsSinkItem',
+      'AnalyticsSinkRegistry',
       'LoggerAnalyticsService',
-      'analyticsSinks',
+      'createAnalyticsSinks',
     ]) {
       assert.ok(
         analytics.includes(name),

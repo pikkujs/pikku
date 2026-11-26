@@ -1,5 +1,3 @@
-import type { ProviderProfile } from '@pikku/core/provider'
-
 /** What a provider tells service resolution about one unit's target. */
 export interface ServiceSupport {
   /**
@@ -8,17 +6,6 @@ export interface ServiceSupport {
    * one service providing the same key.
    */
   baseline: readonly string[]
-  /**
-   * The deploy runtime, which picks a provider's `deploy:<profile>` variant
-   * over its plain `deploy` one.
-   */
-  profile: ProviderProfile
-  /**
-   * The keys the generated entry opens itself and builds the rest of its
-   * baseline on (the standalone entry's `kysely`). No provider may replace
-   * one, or the entry and the provider would each own a copy.
-   */
-  entryOwned: readonly string[]
   /**
    * Whether the unit's entry runs the server lifecycle, and so calls a
    * service's `onServerStart` (a server or container entry does; a Worker or

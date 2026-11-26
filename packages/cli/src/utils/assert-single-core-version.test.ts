@@ -177,7 +177,7 @@ describe('assertSingleCoreVersion', () => {
     mkdirSync(path.join(dependent, 'kysely'), { recursive: true })
     writeFileSync(
       path.join(dependent, 'kysely', 'package.json'),
-      JSON.stringify({ name: '@pikku/addon-kysely', version: '0.13.0' })
+      JSON.stringify({ name: '@pikku/kysely', version: '0.13.0' })
     )
     symlinkSync(
       path.join(

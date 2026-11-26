@@ -77,9 +77,7 @@ import {
   resolveAddonTagMiddleware,
 } from '../wirings/addon/wire-addon.js'
 import type { AddonInstance } from '../wirings/addon/addon-runner.js'
-import { stopWireServices } from '../utils.js'
-import { ProviderError } from '../provider/provider-error.js'
-import type { WireProviderRun } from '../provider/provider.types.js'
+import { closeWireServices } from '../utils.js'
 import {
   assertFunctionTelemetry,
   decideFunctionTrace,
@@ -627,72 +625,34 @@ export const runPikkuFunc = async <In = any, Out = any>(
     }
 
     let wireServices: Record<string, unknown> | undefined
-    let wireProviderRun: WireProviderRun | undefined
     let invocationAuditLog: AuditLog | undefined
     let invocationAnalytics: AnalyticsLog | undefined
     try {
-      // Core builds `auditLog` first, so a per-request provider can need it
-      // and the project's `createWireServices` sees it.
-      if (resolvedAuditConfig && resolvedSingletonServices.audit) {
-        invocationAuditLog = createInvocationAudit(
-          resolvedSingletonServices.audit,
-          invocationWire,
-          resolvedSingletonServices.logger
-        )
-      }
-      const createProviderWireServices = funcPackageName
-        ? undefined
-        : pikkuState(null, 'package', 'wireProviders')
-      if (createProviderWireServices && !funcMeta.singletonServicesOnly) {
-        wireProviderRun = await createProviderWireServices(
-          resolvedSingletonServices,
-          invocationWire,
-          {
-            needs: funcMeta.services?.optimized
-              ? funcMeta.services.services
-              : undefined,
-            held: invocationAuditLog
-              ? { auditLog: invocationAuditLog }
-              : undefined,
-          }
-        )
-      }
-      const singletonsAndProvided = wireProviderRun
-        ? { ...resolvedSingletonServices, ...wireProviderRun.services }
-        : resolvedSingletonServices
       if (!funcMeta.singletonServicesOnly && !reusedWireServices) {
         wireServices = (await resolvedCreateWireServices?.(
-          singletonsAndProvided,
+          resolvedSingletonServices,
           invocationWire
         )) as Record<string, unknown> | undefined
       }
       const invocationWireServices = funcMeta.singletonServicesOnly
         ? undefined
         : (reusedWireServices ?? wireServices)
-      if (wireProviderRun && invocationWireServices) {
-        const repeated = Object.keys(invocationWireServices).filter(
-          (key) => key in wireProviderRun!.services
-        )
-        if (repeated.length > 0) {
-          throw new ProviderError(
-            'duplicate-provider',
-            `createWireServices returned ${repeated.map((key) => `'${key}'`).join(', ')}, which a wire provider already provides. Each key has one provider.`
-          )
-        }
-      }
       let services =
         invocationWireServices && Object.keys(invocationWireServices).length > 0
-          ? { ...singletonsAndProvided, ...invocationWireServices }
-          : singletonsAndProvided
+          ? { ...resolvedSingletonServices, ...invocationWireServices }
+          : resolvedSingletonServices
       // knowledge: decisions/internals/core-function-runner-restores-the-wire-fields-it-overwrites.md
-      if (invocationAuditLog) {
-        if (services.auditLog?.config === resolvedAuditConfig) {
-          // Wire providers may have written to core's buffer; it is still
-          // flushed in `finally`, though the function reads the project's.
-          if (!wireProviderRun) invocationAuditLog = undefined
-        } else {
-          services = { ...services, auditLog: invocationAuditLog }
-        }
+      if (
+        resolvedAuditConfig &&
+        resolvedSingletonServices.audit &&
+        services.auditLog?.config !== resolvedAuditConfig
+      ) {
+        invocationAuditLog = createInvocationAudit(
+          resolvedSingletonServices.audit,
+          invocationWire,
+          resolvedSingletonServices.logger
+        )
+        services = { ...services, auditLog: invocationAuditLog }
       }
       const boundaryTracing = {
         tracer: resolvedSingletonServices.tracer,
@@ -783,9 +743,8 @@ export const runPikkuFunc = async <In = any, Out = any>(
       await invocationAuditLog?.close()
       await invocationAnalytics?.close()
       if (wireServices && Object.keys(wireServices).length > 0) {
-        await stopWireServices(resolvedSingletonServices.logger, wireServices)
+        await closeWireServices(resolvedSingletonServices.logger, wireServices)
       }
-      await wireProviderRun?.stop()
     }
   }
 

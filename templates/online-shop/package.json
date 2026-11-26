@@ -4,8 +4,6 @@
   "private": true,
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.71",
-    "@pikku/addon-kysely": "workspace:^",
-    "@pikku/addon-kysely-sqlite": "workspace:^",
     "@pikku/addon-stripe": "^0.1.8",
     "@pikku/ai-vercel": "workspace:*",
     "@pikku/better-auth": "^0.12.66",
@@ -13,6 +11,7 @@
     "@pikku/core": "^0.12.162",
     "@pikku/fetch": "^0.12.16",
     "@pikku/jose": "^0.12.11",
+    "@pikku/kysely": "workspace:^",
     "@pikku/schema-cfworker": "^0.12.9",
     "@pikku/websocket": "^0.12.7",
     "@standard-schema/spec": "^1.1.0",

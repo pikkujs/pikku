@@ -249,10 +249,6 @@ func (s *Context) addFileWithFactory(node *ast.Node, methods *state.PathToNameAn
 				fn := functionNodeOf(init.Arguments()[0])
 				if wrapper == "pikkuServices" && fn != nil {
 					s.State.ProjectServicesRead = projectServicesRead(fn)
-					s.State.ProjectServicesProvided = s.factoryProvided(fn)
-				}
-				if wrapper == "pikkuWireServices" && fn != nil {
-					s.State.ProjectWireServicesProvided = s.factoryProvided(fn)
 				}
 				if expected == "CreateWireServices" && fn != nil {
 					s.State.WireServicesMeta.Set(variableName, extractServicesFromFunction(fn))

@@ -1,7 +1,7 @@
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 
 /** Stands in for the platform's own `kysely` so column coercion has something to decorate. */
-export const kyselyFake = defineProvider({
+export const kyselyFake = pikkuService({
   deploy: () => {
     const db = {
       plugins: [] as unknown[],

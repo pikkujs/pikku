@@ -301,10 +301,6 @@ impl Context<'_> {
                         if let Some(f) = f {
                             if wrapper == "pikkuServices" {
                                 self.state.project_services_read = project_services_read(f);
-                                self.state.project_services_provided = self.factory_provided(f);
-                            }
-                            if wrapper == "pikkuWireServices" {
-                                self.state.project_wire_services_provided = self.factory_provided(f);
                             }
                             if expected == "CreateWireServices" {
                                 self.state.wire_services_meta.set(variable_name, extract_services_from_function(f));

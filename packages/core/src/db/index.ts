@@ -3,7 +3,7 @@
  *
  * Nothing here knows about a database engine. A declaration says what a column
  * holds and how it relates to others; turning that into DDL for sqlite,
- * postgres or MySQL is the compiler's job (`compileTables` in `@pikku/addon-kysely`),
+ * postgres or MySQL is the compiler's job (`compileTables` in `@pikku/kysely`),
  * so the same object can be serialised for the console or an agent, and read
  * back without running anything.
  *

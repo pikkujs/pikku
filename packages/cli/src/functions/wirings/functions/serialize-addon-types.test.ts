@@ -135,15 +135,15 @@ describe('installing an addon reaches core through its own subpath', () => {
 })
 
 describe('the service leaf', () => {
-  test('is reached as #pikku/provider from providerTypesFile', () => {
-    const leaf = leafEntries.find(([name]) => name === 'provider')
+  test('is reached as #pikku/service from pikkuServiceTypesFile', () => {
+    const leaf = leafEntries.find(([name]) => name === 'service')
 
-    assert.deepEqual(leaf?.[1], ['providerTypesFile'])
+    assert.deepEqual(leaf?.[1], ['pikkuServiceTypesFile'])
   })
 })
 
-describe('typed provider names on wireAddon', () => {
-  test('an addon with providers types the names of its package', () => {
+describe('typed service names on wireAddon', () => {
+  test('an addon with services types the names of its package', () => {
     const content = serializeAddonInstallTypes(
       {},
       { '@scope/mail': ['mailer', 'audit-log'], '@scope/db': ['pg'] }
@@ -151,10 +151,10 @@ describe('typed provider names on wireAddon', () => {
 
     assert.match(
       content,
-      /type AddonProviders = \{\n  "@scope\/mail": "mailer" \| "audit-log"\n  "@scope\/db": "pg"\n\}/
+      /type AddonServices = \{\n  "@scope\/mail": "mailer" \| "audit-log"\n  "@scope\/db": "pg"\n\}/
     )
-    assert.match(content, /providers\?: AddonProviderName<Package>\[\]/)
-    assert.ok(content.includes("'package' | 'mcp' | 'expose' | 'providers'"))
+    assert.match(content, /services\?: AddonServiceName<Package>\[\]/)
+    assert.ok(content.includes("'package' | 'mcp' | 'expose' | 'services'"))
   })
 
   test('a package with no meta falls back to string, so builds do not break', () => {
@@ -165,11 +165,11 @@ describe('typed provider names on wireAddon', () => {
 
     assert.match(
       content,
-      /Package extends keyof AddonProviders \? AddonProviders\[Package\] : string/
+      /Package extends keyof AddonServices \? AddonServices\[Package\] : string/
     )
   })
 
-  test('providers alone are enough to get the typed wrapper', () => {
+  test('services alone are enough to get the typed wrapper', () => {
     const content = serializeAddonInstallTypes(
       {},
       { '@scope/mail': ['mailer'] }
@@ -184,7 +184,7 @@ describe('typed provider names on wireAddon', () => {
   test('functions alone leave the service map empty, not absent', () => {
     const content = serializeAddonInstallTypes({ '@scope/mail': ['send'] })
 
-    assert.match(content, /type AddonProviders = \{\n  \/\/ none\n\}/)
+    assert.match(content, /type AddonServices = \{\n  \/\/ none\n\}/)
   })
 
   test('nothing installed keeps the plain re-export', () => {

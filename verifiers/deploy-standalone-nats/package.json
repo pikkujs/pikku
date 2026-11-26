@@ -10,11 +10,11 @@
     "pikku": "echo 'skip'",
     "tsc": "tsc --noEmit -p tsconfig.check.json",
     "build": "echo 'skip'",
-    "test": "rm -f pikku-addons.lock && env -u CI npx tsx test-nats.ts && env -u CI npx tsx test-permissions.ts && env -u CI npx tsx test-reload.ts"
+    "test": "npx tsx test-nats.ts && npx tsx test-permissions.ts && npx tsx test-reload.ts"
   },
   "dependencies": {
     "@pikku/core": "workspace:*",
-    "@pikku/addon-queue-nats": "workspace:*",
+    "@pikku/queue-nats": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/schedule": "workspace:*",
     "@pikku/bun-server": "workspace:*"

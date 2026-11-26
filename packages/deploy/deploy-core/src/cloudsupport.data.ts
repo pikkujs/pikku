@@ -212,7 +212,7 @@ export const CLOUDSUPPORT: CloudSupportData = {
         },
       },
     ],
-    '@pikku/addon-kysely': [
+    '@pikku/kysely': [
       {
         versions: '*',
         cloud: {
@@ -221,7 +221,7 @@ export const CLOUDSUPPORT: CloudSupportData = {
         },
       },
     ],
-    '@pikku/addon-kysely-postgres': [
+    '@pikku/kysely-postgres': [
       {
         versions: '*',
         cloud: {
@@ -232,7 +232,7 @@ export const CLOUDSUPPORT: CloudSupportData = {
           'Carried over from the declaration in pikkujs/pikku#1962 (pikku-edge); not re-audited since.',
       },
     ],
-    '@pikku/addon-kysely-sqlite': [
+    '@pikku/kysely-sqlite': [
       {
         versions: '*',
         cloud: {

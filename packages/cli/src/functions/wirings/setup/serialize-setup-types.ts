@@ -11,15 +11,7 @@ export const serializeSetupTypes = (
   configTypeName: string | undefined,
   requiredServicesTypeImport: string,
   allowShadowedServices: string[] = [],
-  {
-    addon = false,
-    injectedKeys = [],
-    providerWireServicesImport,
-  }: {
-    addon?: boolean
-    injectedKeys?: readonly string[]
-    providerWireServicesImport?: string
-  } = {}
+  { addon = false }: { addon?: boolean } = {}
 ) => {
   return `/**
  * Config and service factory definitions, declared once per application
@@ -30,14 +22,6 @@ import { CreateWireServices${addon ? '' : ', ServerLifecycle'} } from '@pikku/co
 import type { SingletonServices } from '${functionTypesImportPath}'
 ${configTypeImport}
 ${requiredServicesTypeImport}
-${providerWireServicesImport ?? ''}
-/**
- * The singleton services a provider injects before \`pikkuServices\` runs. Each
- * is present in \`existingServices\` by type, so a factory that needs one is
- * checked at build time and returns only what it adds itself.
- */
-export type InjectedServices = ${injectedKeys.length === 0 ? 'Record<never, never>' : `Pick<SingletonServices, ${injectedKeys.map((key) => `'${key}'`).join(' | ')}>`}
-
 /**
  * This project's own config — whatever \`createConfig\` returns. Every singleton
  * service is built from it.
@@ -76,13 +60,10 @@ export const pikkuConfig = (
  * \`\`\`
  */
 export const pikkuServices = (
-  func: (config: Config, existingServices: InjectedServices & Partial<SingletonServices>) => Promise<Partial<Omit<SingletonServices, 'auth' | keyof InjectedServices>>>
+  func: (config: Config, existingServices: Partial<SingletonServices>) => Promise<Partial<Omit<RequiredSingletonServices, 'auth'>>>
 ) => {
   return async (config: Config, existingServices: Partial<SingletonServices> = {}) => {
-    const createdServices = await func(
-      config,
-      existingServices as InjectedServices & Partial<SingletonServices>
-    )
+    const createdServices = await func(config, existingServices)
     const services = { ...existingServices, ...createdServices }
     const allowedToShadow = new Set<string>(${JSON.stringify(allowShadowedServices)})
     const shadowed = Object.keys(createdServices).filter(
@@ -126,7 +107,7 @@ export const pikkuServices = (
  */
 export const pikkuWireServices = (
   func: (
-    services: SingletonServices${providerWireServicesImport ? ' & ProviderWireServices' : ''},
+    services: SingletonServices,
     wire: any
   ) => Promise<RequiredWireServices>
 ): CreateWireServices => {

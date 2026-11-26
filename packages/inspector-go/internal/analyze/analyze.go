@@ -61,7 +61,7 @@ func Run(req protocol.Request, cache *program.Cache) (resp *protocol.Response, e
 		AllowPermissionsInBody: req.Options.Allow != nil && req.Options.Allow.PermissionsInBody,
 		ClassificationCheck:    req.Options.ClassificationCheck,
 		IsAddon:                req.Options.IsAddon,
-		DeferProviderProvides:  req.Options.DeferProviderProvides,
+		DeferServiceProvides:   req.Options.DeferServiceProvides,
 	})
 
 	ctx.SweepUsage(prog.ProjectFiles)

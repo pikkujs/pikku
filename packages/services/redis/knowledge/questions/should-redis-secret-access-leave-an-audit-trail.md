@@ -15,7 +15,7 @@ reads and decrypts (`redis-secret-service.ts:97-105`), `setSecret` writes
 audit reference at all.
 
 The Kysely and MongoDB secret services both have an audit option and record writes,
-deletes and rotations when it is on (`packages/addon/kysely/src/kysely-secret-service.ts:21`,
+deletes and rotations when it is on (`packages/services/kysely/src/kysely-secret-service.ts:21`,
 `packages/services/mongodb/src/mongodb-secret-service.ts:17`).
 
 Current behaviour: secret reads, writes, deletes and KEK rotations leave no record in

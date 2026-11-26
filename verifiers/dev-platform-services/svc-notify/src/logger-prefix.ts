@@ -1,5 +1,5 @@
 import { ConsoleLogger } from '@pikku/core/services'
-import { defineProvider } from '@pikku/core/provider'
+import { pikkuService } from '@pikku/core/pikku-service'
 
 // ConsoleLogger keeps its own private `prefix`; the checks read the public one
 // set here, so the value is typed as the logger it still is.
@@ -14,8 +14,7 @@ const prefixed = (prefix: string): { logger: ConsoleLogger } => ({
  * exactly one service. It cannot also need `logger`: a service that provides
  * what it needs depends on itself.
  */
-export const loggerPrefix = defineProvider({
-  replaces: ['logger'],
+export const loggerPrefix = pikkuService({
   dev: () => prefixed('dev'),
   deploy: () => prefixed('deploy'),
 })

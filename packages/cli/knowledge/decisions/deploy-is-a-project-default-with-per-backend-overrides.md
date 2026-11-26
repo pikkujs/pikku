@@ -20,7 +20,7 @@ merges them.
 - `serverlessIncompatible`, `bundler`, `mangleIdentifiers`, `db`, `cloud` and
   `release` stay project-level. `cloud` holds only `projectId`, a committed
   identifier; nothing secret is in config.
-- `deploy.contributors` stays refused: services come from `defineProvider` and,
+- `deploy.contributors` stays refused: services come from `pikkuService` and,
   for an addon's, `wireAddon`, so there is no per-backend services key.
 - A unit with no provider anywhere resolves to `standalone` with target
   `server`; `-p` still beats the override chain (unit `deploy`, then project

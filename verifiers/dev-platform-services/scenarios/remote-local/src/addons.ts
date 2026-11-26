@@ -8,6 +8,6 @@ wireRemoteAddon({
   serverUrl: 'https://cloud.example.com',
   local: {
     package: '@verifier/svc-notify',
-    providers: ['notifier', 'loggerPrefix'],
+    services: ['notifier', 'loggerPrefix'],
   },
 })
