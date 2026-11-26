@@ -139,7 +139,7 @@ describe('the workflow services', () => {
     const code = emit({ engine: 'sqlite' })
     assert.match(
       code,
-      /import \{[^}]*\bKyselyLeaseService,[^}]*\} from '@pikku\/addon-kysely'/
+      /import \{[^}]*\bKyselyLeaseService,[^}]*\} from '@pikku\/kysely'/
     )
     assert.match(
       code,
