@@ -56,19 +56,6 @@ export const splitAddonBootstrap = (
 }
 
 /**
- * A package that ships `pikkuService`s without being an addon: it exports the
- * services meta and has no bootstrap for a consumer to import.
- */
-export const isServicesOnlyPackage = (exports: unknown): boolean => {
-  if (!exports || typeof exports !== 'object') return false
-  return (
-    './.pikku/services/*' in exports &&
-    !('./.pikku/*' in exports) &&
-    !('./.pikku/pikku-bootstrap.gen.js' in exports)
-  )
-}
-
-/**
  * The `loadAddons` export a lazy bootstrap ends with. Always emitted in lazy
  * mode, even with nothing to load, so an entry can await it unconditionally.
  */

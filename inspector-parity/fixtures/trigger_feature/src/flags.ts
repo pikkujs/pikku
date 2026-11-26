@@ -3,14 +3,6 @@ import {
   defineVirtualUsers,
   defineAnalyticsEvents,
 } from '@pikku/core'
-import { pikkuService } from '@pikku/core/pikku-service'
-import {
-  devVariant,
-  devVariantTwo,
-  notAFunction,
-  notExported,
-} from './service-dev.js'
-import { deployVariant } from './service-deploy.js'
 
 const beta = { description: 'Beta', anyOf: ['a:read', 'b:write'] }
 const dead = { anyOf: [] }
@@ -68,40 +60,3 @@ export const dup = defineAnalyticsEvents({ signup: z.object({}) })
 export const empty = defineAnalyticsEvents({})
 export const notLit = defineAnalyticsEvents(config)
 declare const z: any, login: any, config: any
-
-declare const dynamic: any
-
-// Variants given by reference live in their own modules.
-export const queue = pikkuService({ dev: devVariant, deploy: deployVariant })
-// One factory is the same on every target; needs are the destructured names.
-export const aliased = pikkuService(({ kysely: db, logger }) => {
-  void db
-  logger.info('aliased')
-})
-export const clock = pikkuService({
-  common: () => ({ clock: () => 0 }),
-  dev: ({ logger }) => ({ clock: () => logger }),
-  onServerStart(services) {
-    void services
-  },
-})
-// PKU375: both variants are exported from the same module.
-export const twin = pikkuService({ dev: devVariant, deploy: devVariantTwo })
-// PKU369
-const hidden = pikkuService(() => ({ hidden: 1 }))
-void hidden
-export const fromDynamic = pikkuService(dynamic)
-export const neither = pikkuService({})
-export const stray = pikkuService({ prod: () => ({}) })
-export const unresolved = pikkuService({ dev: notExported })
-export const notInline = pikkuService({ dev: notAFunction })
-export const shorthand = pikkuService({ dev: devVariant, deploy })
-pikkuService(() => ({ loose: 1 }))
-// PKU371
-export const whole = pikkuService((services) => ({ whole: services }))
-export const rest = pikkuService(({ logger, ...others }) => ({
-  logger,
-  others,
-}))
-// PKU372
-export const untyped = pikkuService(() => dynamic)

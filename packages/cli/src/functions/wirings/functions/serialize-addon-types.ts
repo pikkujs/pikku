@@ -44,17 +44,15 @@ export const serializeAddonsMeta = (
  * leaving the resolver to fall back to Node's per-package `imports`.
  */
 export const serializeAddonInstallTypes = (
-  addonFunctionNames: Record<string, string[]> = {},
-  addonServiceNames: Record<string, string[]> = {}
+  addonFunctionNames: Record<string, string[]> = {}
 ) => {
-  const nonEmpty = (byPackage: Record<string, string[]>) =>
-    Object.entries(byPackage).filter(([, names]) => names.length > 0)
-  const packages = nonEmpty(addonFunctionNames)
-  const servicePackages = nonEmpty(addonServiceNames)
+  const packages = Object.entries(addonFunctionNames).filter(
+    ([, names]) => names.length > 0
+  )
 
   // Nothing installed yet — the bootstrap run writes this before any addon's
   // metadata has been read, and a project with no addons never gets more.
-  if (packages.length === 0 && servicePackages.length === 0) {
+  if (packages.length === 0) {
     return `/**
  * Installing an addon into this application
  */
@@ -63,14 +61,12 @@ export { wireAddon, wireRemoteAddon } from '@pikku/core/addon'
 `
   }
 
-  const union = (names: string[]) =>
-    names.map((name) => JSON.stringify(name)).join(' | ')
-  const entries = (byPackage: [string, string[]][]) =>
-    byPackage.length === 0
-      ? '  // none'
-      : byPackage
-          .map(([pkg, names]) => `  ${JSON.stringify(pkg)}: ${union(names)}`)
-          .join('\n')
+  const entries = packages
+    .map(
+      ([pkg, names]) =>
+        `  ${JSON.stringify(pkg)}: ${names.map((name) => JSON.stringify(name)).join(' | ')}`
+    )
+    .join('\n')
 
   return `/**
  * Installing an addon into this application
@@ -85,24 +81,11 @@ export { wireRemoteAddon } from '@pikku/core/addon'
  * The functions each installed addon publishes. \`mcp\` and \`expose\` name them.
  */
 type AddonFunctions = {
-${entries(packages)}
+${entries}
 }
 
 type AddonFunctionName<Package extends string> =
   Package extends keyof AddonFunctions ? AddonFunctions[Package] : string
-
-/**
- * The services each installed addon declares with \`pikkuService\`, read from
- * the addon's generated services meta. \`services\` names them. An addon whose
- * meta is not installed is not listed here, so its names fall back to
- * \`string\` and the build-time check (PKU374) is what catches a typo.
- */
-type AddonServices = {
-${entries(servicePackages)}
-}
-
-type AddonServiceName<Package extends string> =
-  Package extends keyof AddonServices ? AddonServices[Package] : string
 
 /**
  * Installs an addon into this project: its functions, wirings and scopes become
@@ -111,20 +94,14 @@ type AddonServiceName<Package extends string> =
  * \`mcp: true\` offers every function the addon itself declared as a tool; a list
  * names the functions to offer, checked against the ones the addon publishes.
  * \`expose\` works the same way for \`rpc.exposed\`, and \`false\` exposes none.
- * \`services\` names the services the addon declares; a name it does not
- * declare is a type error.
  *
  * @example snippet: addonWiring
  */
 export const wireAddon = <Package extends string>(
-  config: Omit<
-    WireAddonConfig,
-    'package' | 'mcp' | 'expose' | 'services'
-  > & {
+  config: Omit<WireAddonConfig, 'package' | 'mcp' | 'expose'> & {
     package: Package
     mcp?: boolean | AddonFunctionName<Package>[]
     expose?: boolean | AddonFunctionName<Package>[]
-    services?: AddonServiceName<Package>[]
   }
 ): void => wireAddonCore(config)
 `

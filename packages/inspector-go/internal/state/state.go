@@ -87,14 +87,10 @@ type State struct {
 	RemoteAddonFunctions *Record[*Record[*FunctionMeta]] `json:"remoteAddonFunctions,omitempty"`
 	Studio               Raw                             `json:"studio,omitempty"`
 	AddonStudio          Raw                             `json:"addonStudio,omitempty"`
-	// PikkuServices is what pikkuService declares; OptedInServices is what
-	// wireAddon({ services }) selected from each addon's manifest.
-	PikkuServices     Raw               `json:"pikkuServices,omitempty"`
-	OptedInServices   Raw               `json:"optedInServices,omitempty"`
 	// ProjectServicesRead is the top-level names the project's pikkuServices
 	// factory destructures from its second parameter, sorted and unique.
-	ProjectServicesRead Strings `json:"projectServicesRead,omitempty"`
-	ExportedContracts ExportedContracts `json:"exportedContracts"`
+	ProjectServicesRead Strings           `json:"projectServicesRead,omitempty"`
+	ExportedContracts   ExportedContracts `json:"exportedContracts"`
 
 	// CoreTypeProperties replaces the live `typesLookup` entries for the core
 	// interfaces (CoreConfig / CoreSingletonServices / CoreServices /

@@ -27,10 +27,8 @@ type addonDecl struct {
 	auth        *bool
 	scopes      []string
 	uses        *state.Record[string]
-	// services are the addon service names the project opted in to.
-	services []string
-	// local is a wireRemoteAddon's local package: the screens and services
-	// shown under the remote name are read from it.
+	// local is a wireRemoteAddon's local package: the screens shown under the
+	// remote name are read from it.
 	local *addonLocal
 	// secretOverrides / variableOverrides / credentialOverrides. A
 	// credential override is a string or an object { name?, mode? }.
@@ -38,9 +36,8 @@ type addonDecl struct {
 }
 
 type addonLocal struct {
-	pkg      string
-	ui       bool
-	services []string
+	pkg string
+	ui  bool
 }
 
 func init() {
@@ -169,7 +166,6 @@ func (s *Context) addWireAddon(node *ast.Node) {
 		tags, scopes, secretGrants, credentialGrants any
 		uses, secretOv, variableOv, contentGrants    *state.Record[string]
 		credentialOv                                 *state.Record[*ojson]
-		serviceNames                                 []string
 	)
 	decl := &addonDecl{}
 	strp := func(v string) *string { return &v }
@@ -241,13 +237,6 @@ func (s *Context) addWireAddon(node *ast.Node) {
 			contentGrants = parseStringRecord(init)
 		case key == "globalContent":
 			globalCont = strp(literalOrText(init))
-		case key == "services":
-			if names, ok := parseStringArray(init); ok {
-				decl.services = names
-				serviceNames = names
-			} else {
-				s.Log.Critical(diag.AddonServicesNotStatic, "wireAddon's services must be an array of string literals, got: "+tsutil.NodeText(init))
-			}
 		}
 	}
 	if name == "" || pkg == "" {
@@ -287,9 +276,6 @@ func (s *Context) addWireAddon(node *ast.Node) {
 	o.set("contentBucket", nilIfNil(contentBucket))
 	o.set("contentGrants", nilIfNil(contentGrants))
 	o.set("globalContent", nilIfNil(globalCont))
-	if serviceNames != nil {
-		o.set("services", serviceNames)
-	}
 	s.declareAddon(name, decl, o.raw())
 }
 

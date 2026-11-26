@@ -15,7 +15,13 @@ generated platform-services file imports it, so every entry gets it the same
 way; the two local commands load it themselves.
 
 It is ordinary code: order and dependencies are written in the module, and
-`requiredServices` says what to construct.
+`requiredServices` says what to construct. A deploy unit whose provider names no
+module gets no platform-services file, and a stale one is removed.
+
+When the app has a column coercion map and the module returns a `kysely`, the
+generated file attaches the coercion plugin to it, so every deploy target
+returns the same Date, boolean and parsed JSON values `pikku dev` does. That is
+the build's job, not each host's.
 
 **What this rules out:** service construction emitted as strings by an adapter,
 an addon-level version of this module (addon code never receives the host's

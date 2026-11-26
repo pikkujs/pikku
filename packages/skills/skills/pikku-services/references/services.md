@@ -4,7 +4,7 @@
 
 - [Before You Start](#before-you-start)
 - [API Reference](#api-reference)
-- [`pikkuService` and the generated `SingletonServices`](#pikkuservice-and-the-generated-singletonservices)
+- [Host platform services](#host-platform-services)
 - [Usage Patterns](#usage-patterns)
 - [Complete Example](#complete-example)
 
@@ -110,57 +110,34 @@ export type RequiredSingletonServices = Pick<
   Partial<Omit<SingletonServices, 'database' | 'audit' | 'jwt'>>
 ```
 
-## `pikkuService` and the generated `SingletonServices`
+## Host platform services
 
-`pikkuService` declares a target-owned service: one whose construction depends on
-where the app runs (`pikku dev`, a standalone bundle, a Cloudflare unit). Services
-every target builds the same way stay in `createSingletonServices`.
+There are three layers: platform services, singletons and wire services. The
+first belongs to whoever runs the app. A hosting platform or local tool names one
+module that exports `createPlatformServices`, typed with `pikkuPlatformServices`
+from `@pikku/core/lifecycle`:
 
 ```typescript
-import { pikkuService } from '#pikku/service'
+import { pikkuPlatformServices } from '@pikku/core/lifecycle'
 
-// The same on every target.
-export const mailer = pikkuService(async ({ logger }, env) => {
-  if (!env.SMTP_URL) throw new Error('mailer: SMTP_URL is missing')
-  return { mailer: makeMailer(env.SMTP_URL, logger) }
-})
-
-// Per target. `common` applies where there is no variant of the target's own.
-export const queue = pikkuService({
-  dev: ({ logger }) => ({ queueService: new InMemoryQueueService(logger) }),
-  deploy: async ({ logger }, env) => ({
-    queueService: await connectQueue(env.QUEUE_URL, logger),
-  }),
-  async onServerStart(services) {
-    // runs where the server lifecycle runs, before the app's beforeStart
-  },
-})
+export const createPlatformServices = pikkuPlatformServices(
+  async (env, services, { requiredServices }) => ({
+    queueService: new HostQueueService(env),
+  })
+)
 ```
 
-- What it **needs** are the keys it destructures from `services`; what it
-  **provides** are the keys it returns. Neither is declared twice: the inspector
-  reads them, so the factory must be inline, destructure by plain name (no rest,
-  no `(services) =>`) and return an object type with known keys.
-- A service runs after the services providing what it needs. Two services
-  providing one key, an unmet need and a cycle are build errors. A target's
-  baseline key (what `pikku dev` injects, or what a deploy entry holds first) may
-  be replaced by exactly one service.
-- Teardown is the provided value's own `stop()`, called by `stopSingletonServices`
-  in reverse of build order.
-- Put each `dev` / `deploy` variant given by reference in a module of its own, or
-  both reach every bundle (PKU375).
-- Fail closed: throw from the factory when a binding is missing.
-- A project takes an addon's services by name with
-  `wireAddon({ name, package, services: ['queue'] })`. Nothing is injected
-  without that list.
+- A deploy provider names it with `platformServicesModule(ctx)`; `pikku dev` and
+  `pikku serve` take `--platform-services <module>`. There is no config key: the
+  host chooses, not the project.
+- It is the only layer that reads the raw `env`. Addons have singleton and wire
+  services only, and never receive it.
+- What it returns arrives in `createSingletonServices` as `existingServices`. An
+  app that returns its own service for one of those keys wins, with a warning.
+- A service that varies by where the app runs belongs here. Everything else
+  stays in `createSingletonServices`.
 
-`pikku all` generates `#pikku/service`. Its `SingletonServices` is the type you
-declared plus every key a service provides, as required properties with no `any`,
-and `SingletonServices` from `#pikku/function` is the same merged type. A function
-therefore sees `services.mailer` without a cast or a null check. `pikku dev` and
-`pikku serve` build the services over the local services before
-`createSingletonServices` runs, and each deploy unit gets its own generated
-runner. Reference: `docs/services.md`.
+Reference: `docs/services.md`.
 
 ## Usage Patterns
 

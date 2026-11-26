@@ -12,7 +12,6 @@ import {
 import { serializeMiddlewareTypes } from '../middleware/serialize-middleware-types.js'
 import { serializeSetupTypes } from '../setup/serialize-setup-types.js'
 import { serializeAuthGuards } from '../auth/serialize-auth-guards.js'
-import { serviceTypesSource } from '../../../pikku-services/service-types-source.js'
 
 export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
   { bootstrap?: boolean },
@@ -68,12 +67,8 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
     const content = serializeFunctionTypes(
       `import type { ${userSessionType.type} } from '${getFileImportRelativePath(functionTypesFile, userSessionType.typePath, packageMappings)}'`,
       userSessionType.type,
-      // An application's `SingletonServices` is the one it declared plus what
-      // its services provide, from the service leaf; an addon declares only its own.
-      config.addon
-        ? `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, singletonServicesType.typePath, packageMappings)}'`
-        : `import type { SingletonServices } from '${getFileImportRelativePath(functionTypesFile, config.pikkuServiceTypesFile, packageMappings)}'`,
-      config.addon ? singletonServicesType.type : 'SingletonServices',
+      `import type { ${singletonServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, singletonServicesType.typePath, packageMappings)}'`,
+      singletonServicesType.type,
       `import type { ${wireServicesType.type} } from '${getFileImportRelativePath(functionTypesFile, wireServicesType.typePath, packageMappings)}'`,
       wireServicesType.type,
       `import type { TypedPikkuRPC, FlattenedRPCMap } from '${getFileImportRelativePath(functionTypesFile, rpcInternalMapDeclarationFile, packageMappings)}'`,
@@ -129,17 +124,6 @@ export const pikkuFunctionTypesSplit = pikkuSessionlessFunc<
         { addon: !!config.addon }
       )
     )
-
-    // An addon has no singleton services type of its own to merge services
-    // into, so only an application gets the leaf (and a stale one is removed by
-    // the leaf-index command). `pikku all` writes it again until it settles.
-    if (!config.addon) {
-      await writeFileInDir(
-        logger,
-        config.pikkuServiceTypesFile,
-        serviceTypesSource(visitState, config)
-      )
-    }
 
     await writeFileInDir(
       logger,

@@ -11,13 +11,8 @@
  * bundle into a single self-contained executable via `bun build --compile`.
  * No runtime needed on the target host.
  */
-import type {
-  EntryGenerationContext,
-  ProviderAdapter,
-  ServiceSupport,
-} from '@pikku/deploy'
+import type { EntryGenerationContext, ProviderAdapter } from '@pikku/deploy'
 import {
-  composedLifecycleLines,
   entryLifecycleVariable,
   nodeBuiltinExternals,
   SERVER_READY_MARKER,
@@ -549,18 +544,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
     this.nativeSidecars = options.nativeSidecars ?? []
   }
 
-  /**
-   * The entry holds `kysely` when it opens a database; a service may need it,
-   * or replace it. The server lifecycle runs here, so `onServerStart` is
-   * supported.
-   */
-  serviceSupport(ctx: EntryGenerationContext): ServiceSupport {
-    return {
-      baseline: runtimeServiceNames(ctx),
-      runsServerLifecycle: true,
-    }
-  }
-
   private platformServicesImportLines(ctx: EntryGenerationContext): string[] {
     if (!ctx.platformServices) return []
     return [
@@ -620,7 +603,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ...(ctx.db ? dbImportLines(ctx.db) : []),
       ...(ctx.lifecycle ? lifecycleImportLines(ctx.lifecycle) : []),
       ...this.platformServicesImportLines(ctx),
-      ...composedLifecycleLines(ctx).imports,
       ``,
       ctx.configImport,
       ctx.servicesImport,
@@ -628,8 +610,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ctx.mcpImport,
       `import '${ctx.bootstrapPath}'`,
       ``,
-      ...composedLifecycleLines(ctx).declaration,
-      ...(ctx.platformServices ? [``] : []),
       `const baseLogger = new ConsoleLogger()`,
       `const port = parseInt(process.env.PORT || '${this.port}', 10)`,
       `const hostname = process.env.HOST || '0.0.0.0'`,

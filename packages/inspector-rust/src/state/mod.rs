@@ -106,12 +106,6 @@ pub struct State {
     pub studio: Raw,
     #[serde(skip_serializing_if = "Raw::is_empty")]
     pub addon_studio: Raw,
-    /// What pikkuService declares.
-    #[serde(skip_serializing_if = "Raw::is_empty")]
-    pub pikku_services: Raw,
-    /// What `wireAddon({ services })` selected from each addon's manifest.
-    #[serde(skip_serializing_if = "Raw::is_empty")]
-    pub opted_in_services: Raw,
     /// The top-level names the project's pikkuServices factory destructures
     /// from its second parameter, sorted and unique.
     #[serde(skip_serializing_if = "Vec::is_empty")]

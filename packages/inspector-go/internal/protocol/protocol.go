@@ -24,8 +24,8 @@ type Request struct {
 
 // Options is the serializable subset of InspectorOptions the analysis reads.
 type Options struct {
-	Tsconfig  string `json:"tsconfig,omitempty"`
-	RootDir   string `json:"rootDir,omitempty"`
+	Tsconfig string `json:"tsconfig,omitempty"`
+	RootDir  string `json:"rootDir,omitempty"`
 	// BaseDir is the root project's base package, a nested project whose
 	// source is still inspected.
 	BaseDir   string `json:"baseDir,omitempty"`
@@ -33,10 +33,6 @@ type Options struct {
 	// IsAddon is InspectorOptions.isAddon: the project is an addon package,
 	// so checkAddonBans applies.
 	IsAddon bool `json:"isAddon,omitempty"`
-	// DeferServiceProvides is set while `#pikku/service` does not exist yet: a
-	// pikkuService whose return type depends on the merged type cannot be read,
-	// so PKU372 waits for the pass that has the leaf.
-	DeferServiceProvides bool `json:"deferServiceProvides,omitempty"`
 	// Types is InspectorOptions.types. Only finalize reads it; it is
 	// accepted and passed through untouched.
 	Types json.RawMessage `json:"types,omitempty"`

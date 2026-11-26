@@ -24,7 +24,6 @@ const OWNED_NAMES = [
   'HttpRouteInfo',
   'MCPEndpointDefinition',
   'EntryPlatformServices',
-  'ServiceSupport',
   'ProviderAdapter',
   'QueueDefinition',
   'ScheduledTaskDefinition',

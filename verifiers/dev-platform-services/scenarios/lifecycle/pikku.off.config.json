@@ -1,9 +1,0 @@
-{
-  "ignoreFiles": ["src-wiring/**", "**/*.test.ts", "**/*.spec.ts"],
-  "tsconfig": "./tsconfig.json",
-  "backends": {
-    "api": {
-      "filter": {}
-    }
-  }
-}

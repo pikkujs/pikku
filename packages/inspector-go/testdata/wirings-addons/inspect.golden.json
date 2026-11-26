@@ -805,11 +805,6 @@
             "contentGrants": {
               "images": "read"
             },
-            "services": [
-              "inbox",
-              "cache",
-              "mailer"
-            ],
             "declaredUses": [
               "kysely",
               "email"
@@ -1799,139 +1794,6 @@
         ]
       }
     },
-    "pikkuServices": {
-      "cache": {
-        "module": "<fixture>/src/services.ts",
-        "export": "cache",
-        "variants": {
-          "common": {
-            "needs": [
-              "kysely"
-            ],
-            "provides": [
-              "cache"
-            ]
-          }
-        }
-      },
-      "clock": {
-        "module": "<fixture>/src/services.ts",
-        "export": "clock",
-        "variants": {
-          "common": {
-            "needs": [],
-            "provides": [
-              "clock"
-            ]
-          },
-          "dev": {
-            "needs": [
-              "logger"
-            ],
-            "provides": [
-              "clock"
-            ]
-          }
-        },
-        "onServerStart": true
-      },
-      "billing": {
-        "module": "<fixture>/src/services.ts",
-        "export": "billing",
-        "variants": {
-          "dev": {
-            "needs": [
-              "logger"
-            ],
-            "provides": [
-              "billing"
-            ],
-            "module": "<fixture>/src/services/billing-dev.ts",
-            "export": "billingDev"
-          },
-          "deploy": {
-            "needs": [
-              "kysely"
-            ],
-            "provides": [
-              "billing"
-            ],
-            "module": "<fixture>/src/services/billing-deploy.ts",
-            "export": "billingDeploy"
-          }
-        }
-      },
-      "aliased": {
-        "module": "<fixture>/src/services.ts",
-        "export": "aliased",
-        "variants": {
-          "common": {
-            "needs": [
-              "kysely",
-              "logger"
-            ],
-            "provides": []
-          }
-        }
-      },
-      "inbox": {
-        "module": "<fixture>/src/services.ts",
-        "export": "inbox",
-        "variants": {
-          "common": {
-            "needs": [],
-            "provides": [
-              "inbox"
-            ]
-          }
-        }
-      }
-    },
-    "optedInServices": {
-      "shop": {
-        "packageName": "@fixture/shop-addon",
-        "services": {
-          "inbox": {
-            "module": "src/services/inbox.ts",
-            "export": "inbox",
-            "variants": {
-              "dev": {
-                "needs": [
-                  "logger"
-                ],
-                "provides": [
-                  "inbox"
-                ]
-              },
-              "deploy": {
-                "needs": [
-                  "kysely",
-                  "logger"
-                ],
-                "provides": [
-                  "inbox",
-                  "inboxMetrics"
-                ]
-              }
-            }
-          },
-          "cache": {
-            "module": "src/services.ts",
-            "export": "cache",
-            "variants": {
-              "common": {
-                "needs": [
-                  "kysely"
-                ],
-                "provides": [
-                  "cache"
-                ]
-              }
-            }
-          }
-        }
-      }
-    },
     "exportedContracts": {
       "http": {},
       "cli": {},
@@ -2013,11 +1875,6 @@
     }
   },
   "diagnostics": [
-    {
-      "level": "critical",
-      "code": "PKU373",
-      "message": "wireAddon's services must be an array of string literals, got: someList"
-    },
     {
       "level": "critical",
       "code": "PKU344",
@@ -2125,73 +1982,8 @@
     },
     {
       "level": "critical",
-      "code": "PKU375",
-      "message": "Service 'twin': dev and deploy are both exported from <fixture>/src/services/twin-variants.ts. Each variant lives in its own module, so a build imports only the variant it runs."
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Service 'hidden': 'hidden' is not exported by <fixture>/src/services.ts, so a host cannot import it"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Service 'fromDynamic': pikkuService takes a factory function or an object with dev, deploy or common, got: dynamic"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Service 'neither': an object declares none of dev, deploy or common"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Service 'stray': pikkuService takes only dev, deploy, common and onServerStart, got: prod"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Service 'byReference': dev 'someFactory' is not exported by <fixture>/src/services.ts, so a host cannot import it"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "pikkuService must be assigned to an exported const so a host can import it, got: pikkuService(() => ({ loose: 1 }))"
-    },
-    {
-      "level": "critical",
-      "code": "PKU371",
-      "message": "Service 'whole' common must destructure its services parameter, so the build can read what it depends on, got: services"
-    },
-    {
-      "level": "critical",
-      "code": "PKU371",
-      "message": "Service 'rest' common cannot collect services with a rest element, got: ...others"
-    },
-    {
-      "level": "critical",
-      "code": "PKU372",
-      "message": "Service 'untyped' common must return an object type with known keys, so the build can read what it provides, got: any"
-    },
-    {
-      "level": "critical",
-      "code": "PKU372",
-      "message": "Service 'either' common must return an object type with known keys, so the build can read what it provides, got: { a: number; b?: undefined; } | { b: number; a?: undefined; }"
-    },
-    {
-      "level": "critical",
-      "code": "PKU376",
-      "message": "Service 'inbox' is declared twice. A service name belongs to one pikkuService export."
-    },
-    {
-      "level": "critical",
       "code": "PKU348",
       "message": "@fixture/shop-addon needs email, but wireAddon('shop') does not map it. Wire email and add uses: { 'email': '<name>' } to this wireAddon."
-    },
-    {
-      "level": "critical",
-      "code": "PKU374",
-      "message": "wireAddon('shop') opts in to service 'mailer', but @fixture/shop-addon declares no such service. It declares: inbox, cache."
     },
     {
       "level": "critical",
@@ -2519,7 +2311,7 @@
     }
   ],
   "validationPass": {
-    "start": 92,
-    "end": 107
+    "start": 78,
+    "end": 93
   }
 }

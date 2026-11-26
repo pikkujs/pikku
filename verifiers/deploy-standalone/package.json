@@ -12,7 +12,6 @@
     "@pikku/cli": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/deploy-standalone": "workspace:*",
-    "@types/node": "^26",
-    "@verifier/service-marker": "workspace:*"
+    "@types/node": "^26"
   }
 }
