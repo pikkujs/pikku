@@ -211,6 +211,10 @@ calls. That was the right answer, but it was a design decision made mid-build be
 not asked what the wire would accept. Before you write a wire, name what that wire hands the
 function and what it does with the answer; where the two disagree, plan BOTH halves.
 
+**Records the owner or staff edit come from the CRUD backend** (`defineCrud` in `db/crud.ts`, over the tables in
+`db/tables.ts`): plan no hand-written list, get, create, update or delete functions for them. The `/admin` screens call
+the generated ones, and are still yours to plan. A public form's submit function is planned as usual.
+
 `permission` is a SENTENCE, not a role name — "only the person who wrote it can edit it". The roles
 are the engineer's choice; the rule is the part that has to survive being implemented, in the
 function's `permissions` field and never in its body. `null` means open to anyone signed in, and

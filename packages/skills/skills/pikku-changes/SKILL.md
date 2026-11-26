@@ -54,6 +54,25 @@ signatures (name, input, output) of every function the screens call as `mock: tr
 ]
 ```
 
+**Records the owner or staff edit after launch use the CRUD backend**, not hand-written admin functions. The data change
+declares their tables in `db/tables.ts` (`defineTables`) and a collection for each in `db/crud.ts` (`defineCrud`);
+`pikku all` generates the functions that list, read and write them, so those get no signature, `mock: true` or `.mocks/`.
+No CRUD screens ship yet: a `frontend` change still builds the `/admin` pages, which call the generated functions. A
+public form's submit function is still hand-written. Plan within these limits:
+
+- Create and delete are off unless a collection turns them on, and only the fields it lists for editing can change.
+  Visitor submissions are a collection with the submitted columns read-only and no create.
+- A field is one column: text, long or rich (Markdown) text, a choice from a fixed list, yes/no, number, date or time,
+  email, URL, money (whole minor units with a currency), image, or a relation to another collection. No JSON columns,
+  other file uploads or many-to-many fields.
+- Each table has a single-column primary key. In the app's own tables, a record cannot be deletable here if deleting it
+  would cascade to, or clear, other rows.
+- An addon's table is edited only through a collection the addon publishes: the app can switch its operations and actions
+  off and add checks, nothing more, and it has no image or relation fields.
+- It needs Better Auth and the scope tables: whoever uses `/admin` is granted the collections' `crud:` scopes. Keep the
+  whole `crud` scope out of system roles.
+- SQLite and Postgres only.
+
 The command checks the plan and, if it refuses, names every problem: fix those and run it again.
 There is no field for questions: where you are unsure, write "Decision: ..." in the body. When it
 prints that filing is complete, stop: do not `claim`, `plan`, build or mark anything `done`.
