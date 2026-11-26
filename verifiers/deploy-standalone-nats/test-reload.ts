@@ -44,7 +44,7 @@ import {
   type Stage,
 } from './broker.js'
 import { NatsServiceFactory } from '../../packages/services/queue-nats/src/nats-service-factory.js'
-import { natsOptionsFromEnv } from '../../packages/services/queue-nats/src/nats-contributor.js'
+import { natsOptionsFromEnv } from '../../packages/services/queue-nats/src/nats-service.js'
 import { consumeQueue } from '../../packages/services/queue-nats/src/consume.js'
 import { mapPikkuWorkerToNats } from '../../packages/services/queue-nats/src/nats-queue-worker.js'
 import {

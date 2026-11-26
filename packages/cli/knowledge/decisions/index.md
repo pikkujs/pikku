@@ -128,4 +128,5 @@ A rule that was chosen, and what it rules out.
 - [A column named like sensitive data warns until it is annotated](a-column-named-like-sensitive-data-warns-until-it-is-annotated.md) — PKU486 pii / PKU487 secret on whole-token name matches in db codegen; default stays private; only an annotation silences; framework tables skipped
 - [Mock mode is a client given to PikkuProvider, not a branch in the hooks](mock-mode-is-a-client-not-a-hook.md) — createMockPikku answers rpc.invoke from .mocks/ with a selectable scenario; flagged mode mocks only `mock: true` functions and sends the rest to a real fallback
 
+- [A services-only package has no bootstrap to import](a-services-only-package-has-no-bootstrap-to-import.md) — wireAddon on a package that exports its services meta and no bootstrap opts in to the services only; the app bootstrap imports nothing from it
 <!-- /pikku:knowledge-index -->

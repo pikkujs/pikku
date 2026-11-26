@@ -38,10 +38,14 @@ const fakeFactory = () => {
 }
 
 describe('nats service registration', () => {
-  test('is a deploy-only service: pikku dev never gets it', () => {
+  test('connects on a deploy and gives pikku dev only an inert lifecycle', async () => {
     assert.equal(typeof nats.deploy, 'function')
-    assert.equal('dev' in nats, false)
+    assert.equal(typeof nats.dev, 'function')
     assert.equal('common' in nats, false)
+    const { natsLifecycle } = (nats.dev as () => { natsLifecycle: any })()
+    assert.deepEqual(await natsLifecycle.drainWorkers(1), [])
+    await natsLifecycle.registerQueues(undefined)
+    await natsLifecycle.stop()
   })
 
   test('registers the queue workers once the server starts', () => {
