@@ -36,7 +36,9 @@ node scripts/embed-examples.mjs
 # when the install did not produce a CLI that loads.
 echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
-_bootstrap_dir=$(mktemp -d)
+_bootstrap_dir="$PWD/.tmp/build/bootstrap"
+rm -rf -- "$_bootstrap_dir"
+mkdir -p "$_bootstrap_dir"
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 cat > "$_bootstrap_dir/package.json" <<JSON
 {
@@ -76,7 +78,8 @@ fi
 # the registry at runtime, through the wiring imported by hand.
 # knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
 _registry_wirings="registry cloud-api"
-_registry_hidden_dir=$(mktemp -d)
+_registry_hidden_dir="$PWD/.tmp/build/registry-hidden"
+mkdir -p "$_registry_hidden_dir"
 _hide_registry_wiring() {
   for w in $_registry_wirings; do
     mv "src/$w.wiring.ts" "$_registry_hidden_dir/$w.wiring.ts"
@@ -142,7 +145,8 @@ npx tsc -b || true
 # below, which read the addons' contract metadata. On a clean checkout an addon
 # has no dist yet, so a placeholder bootstrap lets the CLI start long enough to
 # build it.
-_shim_dir=$(mktemp -d)
+_shim_dir="$PWD/.tmp/build/shim"
+mkdir -p "$_shim_dir"
 printf '#!/bin/sh\nexec node "%s" "$@"\n' "$PWD/dist/bin/pikku.js" > "$_shim_dir/pikku"
 chmod +x "$_shim_dir/pikku"
 for _addon in ../addon/pikku-changes-cli ../addon/pikku-cloud-cli; do
