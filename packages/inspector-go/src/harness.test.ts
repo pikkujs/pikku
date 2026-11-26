@@ -80,7 +80,7 @@ for (const engine of availableEngines()) {
       for (const expected of [
         "PKU157 Harness 'typo' (src/refusals.ts) lists gate 'chek'",
         "PKU124 Harness 'computed' lists gates that are not readable from source",
-        "PKU236 Harness gate 'bodiless' has no body.",
+        "PKU236 Harness gate 'bodiless' has no body the inspector can read.",
       ]) {
         assert.ok(
           critical.some((line) => line.startsWith(expected)),

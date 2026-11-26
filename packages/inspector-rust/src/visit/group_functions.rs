@@ -371,7 +371,7 @@ impl Context<'_> {
         if gate.is_some() && (mock || !is_function_like(handler_or_object)) {
             self.log.critical(
                 codes::MISSING_FUNC,
-                format!("Harness gate '{name}' has no body. A gate is decided by code, so it needs a `func` that returns its findings."),
+                format!("Harness gate '{name}' has no body the inspector can read. A gate is decided by code, so its `func` has to be an arrow function or function expression, inline or in a const, that returns its findings."),
             );
             return;
         }
