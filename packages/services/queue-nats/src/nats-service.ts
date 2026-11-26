@@ -1,4 +1,3 @@
-import { pikkuService } from '@pikku/core/pikku-service'
 import type { Logger } from '@pikku/core/services'
 import type { NatsQueueService } from './nats-queue-service.js'
 import type { NatsSchedulerService } from './nats-scheduler-service.js'
@@ -49,7 +48,7 @@ const required = (env: Env, name: string, why: string): string => {
   const value = env[name]
   if (!value) {
     throw new Error(
-      `The nats service needs ${name} (${why}). It never falls back to the in-memory queue: set ${name}, or remove 'nats' from wireAddon({ services }).`
+      `NATS needs ${name} (${why}). It never falls back to the in-memory queue: set ${name}.`
     )
   }
   return value
@@ -107,6 +106,11 @@ export const natsOptionsFromEnv = (env: Env): NatsServiceFactoryOptions => {
 /**
  * Connects to the stage's stream and provides the queue and scheduler over it.
  * Fails before connecting when the environment is incomplete.
+ *
+ * Call it in `pikkuServices` and return all three services, `natsLifecycle`
+ * among them: `stopSingletonServices` calls its `stop()`, which drains the jobs
+ * in flight. Register the queue workers from the server lifecycle's
+ * `beforeStart` with `natsLifecycle.registerQueues(logger)`.
  */
 export const connectNats = async (
   logger: Logger | undefined,
@@ -140,33 +144,3 @@ export const connectNats = async (
     natsLifecycle,
   }
 }
-
-/**
- * What `pikku dev` runs in place of NATS: nothing to connect, nothing to drain.
- * `pikku dev` keeps its in-memory queue and scheduler, so only the lifecycle
- * the server start and stop hooks read is provided.
- */
-const devNatsLifecycle: NatsLifecycle = {
-  registerQueues: async () => undefined,
-  drainWorkers: async () => [],
-  close: async () => undefined,
-  stop: async () => undefined,
-}
-
-/**
- * Standalone deploys put a stage on its own JetStream stream. `pikku dev` keeps
- * its in-memory queue; an app opts in with
- * `wireAddon({ services: ['nats'] })` and builds it for a target that runs the
- * server lifecycle.
- *
- * Queue workers register once the server starts. Teardown is
- * `natsLifecycle.stop()`.
- */
-export const nats = pikkuService({
-  dev: () => ({ natsLifecycle: devNatsLifecycle }),
-  deploy: async ({ logger }, env) => connectNats(logger, env),
-  async onServerStart(services) {
-    const lifecycle: NatsLifecycle = services.natsLifecycle
-    await lifecycle.registerQueues(services.logger)
-  },
-})
