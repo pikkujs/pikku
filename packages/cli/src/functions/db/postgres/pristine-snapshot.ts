@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
 import type { PGlite } from '@electric-sql/pglite'
 
@@ -14,16 +14,21 @@ import type { PGlite } from '@electric-sql/pglite'
  * The copy on disk lives in the user's own cache directory, never in the
  * project, so that a checked-out repository cannot supply a database.
  */
+// A relative XDG_CACHE_HOME is ignored, as the XDG spec asks: it would resolve
+// against the working directory, which can be the project.
+export const userCacheDir = (): string => {
+  const configured = process.env.XDG_CACHE_HOME
+  return configured && isAbsolute(configured)
+    ? configured
+    : join(homedir(), '.cache')
+}
+
 const snapshotFile = (): string => {
   const entry = createRequire(import.meta.url).resolve('@electric-sql/pglite')
   const { version } = JSON.parse(
     readFileSync(join(dirname(entry), '..', 'package.json'), 'utf8')
   )
-  return join(
-    process.env.XDG_CACHE_HOME || join(homedir(), '.cache'),
-    'pikku',
-    `pglite-${version}.tar.gz`
-  )
+  return join(userCacheDir(), 'pikku', `pglite-${version}.tar.gz`)
 }
 
 const asTar = (bytes: Uint8Array): Blob =>

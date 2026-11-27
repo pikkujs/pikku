@@ -13,7 +13,7 @@ command needs several scratch databases. `pristine-snapshot.ts` in
 ones from that dump.
 
 The copy on disk is `pikku/pglite-<version>.tar.gz` under `XDG_CACHE_HOME`, or
-`~/.cache` when that is unset. It is a whole database that the CLI loads and
+`~/.cache` when that is unset or relative. It is a whole database that the CLI loads and
 then computes schemas in, so whoever supplies it can affect the result. A path
 inside the project would let a checked-out repository supply it.
 

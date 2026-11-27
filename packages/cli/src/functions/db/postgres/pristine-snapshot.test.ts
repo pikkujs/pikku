@@ -8,9 +8,10 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
+import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
-import { createPristineOpener } from './pristine-snapshot.js'
+import { createPristineOpener, userCacheDir } from './pristine-snapshot.js'
 import { writeSourceMigrations, type ResolvedDb } from '../local-db.js'
 
 const scratch = join(import.meta.dirname, '..', '..', '..', '..', '.tmp')
@@ -81,6 +82,16 @@ describe('the pristine PGlite snapshot', () => {
     assert.equal(attempts, 2)
     assert.deepEqual(await tables(db), [])
     await db.close()
+  })
+
+  test('a relative XDG_CACHE_HOME never places the cache in the project', () => {
+    const configured = process.env.XDG_CACHE_HOME
+    try {
+      process.env.XDG_CACHE_HOME = '.cache'
+      assert.equal(userCacheDir(), join(homedir(), '.cache'))
+    } finally {
+      process.env.XDG_CACHE_HOME = configured
+    }
   })
 
   test('a new process starts from the copy on disk', async () => {
