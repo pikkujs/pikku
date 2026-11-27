@@ -169,7 +169,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const context = this.runContexts.get(runId)
     if (!context) return
     if (context.activeExecutions > 0) return
-    if (context.stepCancels?.size || context.runLeaseLost) return
+    if (context.stepCancels?.size || context.runLeases?.size) return
     this.runContexts.delete(runId)
   }
 
@@ -570,11 +570,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       `workflow-run:${id}`,
       async (lost) => {
         const context = this.contextFor(id)
-        context.runLeaseLost = lost
+        const runLeases = (context.runLeases ??= new Set())
+        runLeases.add(lost)
         try {
           return await fn()
         } finally {
-          context.runLeaseLost = undefined
+          runLeases.delete(lost)
           this.releaseIdleContext(id)
         }
       }
@@ -1461,8 +1462,13 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       runId,
       forward,
       this.cancelCheckIntervalMs,
-      this.runContexts.get(runId)?.runLeaseLost
+      this.newestRunLease(runId)
     )
+  }
+
+  /** A newer pass can only have the run because an older one lost it. */
+  private newestRunLease(runId: string): AbortSignal | undefined {
+    return [...(this.runContexts.get(runId)?.runLeases ?? [])].at(-1)
   }
 
   public async orchestrateWorkflow(
