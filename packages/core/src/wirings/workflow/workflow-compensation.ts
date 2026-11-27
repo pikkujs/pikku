@@ -14,6 +14,7 @@ import {
 import { pikkuState } from '../../pikku-state.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { runningStepLease } from './workflow-step-lease.js'
+import { isQueuedFunction } from './workflow-queue-routing.js'
 import {
   isOwnershipError,
   throwIfLeaseLost,
@@ -75,6 +76,20 @@ export const skippedSteps = (state: Record<string, unknown>): Set<string> =>
       .map((k) => k.slice(NO_COMPENSATE_STATE_PREFIX.length))
   )
 
+/**
+ * A compensation run here that is `failed` with retries left lost its driver
+ * before the next attempt was created. The queue spends a queued one's.
+ */
+const failedCompensationResumes = ({
+  rpcName,
+  attemptCount,
+  retries = DEFAULT_STEP_RETRIES,
+}: Pick<UnwindRecord, 'rpcName' | 'attemptCount' | 'retries'>): boolean =>
+  !!rpcName &&
+  attemptCount !== undefined &&
+  attemptCount <= retries &&
+  !isQueuedFunction(rpcName)
+
 export const wouldCompensate = async (
   host: UnwindHost,
   runId: string
@@ -88,6 +103,7 @@ export const wouldCompensate = async (
     skip: skippedSteps(state),
     hasCompensation: host.hasCompensation,
     isChildWorkflow: host.isChildWorkflow,
+    resumesFailed: failedCompensationResumes,
   })
   return plan.candidates.length > 0 || plan.forwardInFlight || !!plan.restedAt
 }
@@ -109,6 +125,7 @@ export const driveUnwind = async (
       skip: skippedSteps(state),
       hasCompensation: host.hasCompensation,
       isChildWorkflow: host.isChildWorkflow,
+      resumesFailed: failedCompensationResumes,
     })
 
     throwIfLeaseLost(host.leaseLost)
@@ -196,6 +213,11 @@ export interface CompensationApi {
     fromStepName: string
   ): Promise<boolean>
   setStepScheduled(stepId: string): Promise<void>
+  createRetryAttempt(
+    failedStepId: string,
+    status: 'pending' | 'running',
+    attempt?: number
+  ): Promise<StepState>
   /** A row left `running` was lost mid-way, and is retried as a new attempt. */
   runInline(
     runId: string,
@@ -296,7 +318,12 @@ const compensateFunctionStep = async (
     )
   )
   if (state.status === 'succeeded') return 'done'
-  if (state.status === 'failed') return 'stuck'
+  if (
+    state.status === 'failed' &&
+    !failedCompensationResumes({ ...state, rpcName, retries: options.retries })
+  ) {
+    return 'stuck'
+  }
   if (state.status === 'scheduled') return 'waiting'
   const lease = runningStepLease(state)
   if (lease === 'held') return 'waiting'
@@ -314,11 +341,22 @@ const compensateFunctionStep = async (
     return 'waiting'
   }
 
+  // Outside the try: `stuck` for a row the plan still sees retries on would
+  // bring the drive straight back to it.
+  const current =
+    state.status === 'failed'
+      ? await api.createRetryAttempt(
+          state.stepId,
+          'pending',
+          state.attemptCount
+        )
+      : state
+
   try {
     await api.runInline(
       runId,
       stepName,
-      state,
+      current,
       options.retries!,
       undefined,
       (current, attempt) =>

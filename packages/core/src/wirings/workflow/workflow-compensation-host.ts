@@ -71,6 +71,7 @@ export const createCompensationApi = (
     insertStepState: (...args) => service.insertStepState(...args),
     dispatchStep: deps.dispatchStep,
     setStepScheduled: (id) => service.setStepScheduled(id),
+    createRetryAttempt: (...args) => service.createRetryAttempt(...args),
     setStepResult: (...args) => service.setStepResult(...args),
     setStepError: (...args) => service.setStepError(...args),
     runInline: async (runId, stepName, step, retries, retryDelay, work) =>

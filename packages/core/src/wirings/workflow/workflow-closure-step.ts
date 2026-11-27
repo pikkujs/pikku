@@ -1,6 +1,9 @@
 import { WorkflowAsyncException } from './workflow-errors.js'
 import { refuseStep } from './workflow-step-refusal.js'
-import { takeBackLostInlineStep } from './workflow-step-claim.js'
+import {
+  resumeInlineStep,
+  takeBackLostInlineStep,
+} from './workflow-step-claim.js'
 import { throwIfNotOwned } from './workflow-lost-lease.js'
 import type { OpenSteps } from './workflow-open-steps.js'
 import {
@@ -100,11 +103,7 @@ const attemptClosureStep = async (
       throw recordedStepError(stepName, stepState)
     }
     await host.throwIfRunStopped(runId)
-    startFrom = await host.createRetryAttempt(
-      stepState.stepId,
-      'pending',
-      stepState.attemptCount
-    )
+    startFrom = await resumeInlineStep(host, runId, stepName, stepState)
   }
 
   // `running` here is a pass that was lost mid-step.

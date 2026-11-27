@@ -19,6 +19,7 @@ export interface UnwindRecord {
   childRunId?: string
   data?: unknown
   retries?: number
+  attemptCount?: number
 }
 
 export type UnwindStepState =
@@ -46,6 +47,8 @@ export interface PlanUnwindInput {
   skip: ReadonlySet<string>
   hasCompensation: (record: UnwindRecord) => boolean
   isChildWorkflow: (record: UnwindRecord) => boolean
+  /** Whether the unwind itself runs a `failed` compensation row again. */
+  resumesFailed?: (compensation: UnwindRecord) => boolean
 }
 
 export function planUnwind(input: PlanUnwindInput): UnwindPlan {
@@ -117,7 +120,7 @@ export function planUnwind(input: PlanUnwindInput): UnwindPlan {
       const restedAt = (comp.result as { restedAt?: string } | undefined)
         ?.restedAt
       state = restedAt ? 'rested' : 'done'
-    } else if (comp?.status === 'failed') {
+    } else if (comp?.status === 'failed' && !input.resumesFailed?.(comp)) {
       state = 'stuck'
     } else if (comp?.status === 'scheduled') {
       state = 'running'

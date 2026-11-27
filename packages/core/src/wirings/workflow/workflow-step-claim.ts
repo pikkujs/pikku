@@ -156,6 +156,25 @@ export const takeBackLostInlineStep = async (
 }
 
 /**
+ * The attempt an inline pass goes on from. A `failed` step reaches here only
+ * with retries left: whatever recorded the failure ended before it created the
+ * next attempt.
+ */
+export const resumeInlineStep = async (
+  store: Parameters<typeof takeBackLostInlineStep>[0],
+  runId: string,
+  stepName: string,
+  stepState: StepState
+): Promise<StepState> =>
+  stepState.status === 'failed'
+    ? store.createRetryAttempt(
+        stepState.stepId,
+        'pending',
+        stepState.attemptCount
+      )
+    : takeBackLostInlineStep(store, runId, stepName, stepState)
+
+/**
  * The part of a claim every store shares: whether the step is one no dispatch
  * may run. Resolves `true` when there is nothing to claim.
  *

@@ -1582,7 +1582,17 @@ export abstract class PikkuWorkflowService
       return stepState.result
     }
 
-    if (stepState.status === 'failed') {
+    const retries = resolvedStepOptions.retries ?? this.getConfig().retries
+    // A queued step's retries are the queue's to spend. One run here with
+    // retries left lost its pass before the next attempt was created.
+    if (
+      stepState.status === 'failed' &&
+      (stepState.attemptCount > retries ||
+        (!resolvedStepOptions.virtualUser &&
+          (await stepDispatchTarget(rpcName, stepName, () =>
+            this.isInline(runId)
+          )) === 'queue'))
+    ) {
       throw recordedStepError(stepName, stepState)
     }
 
@@ -1615,23 +1625,35 @@ export abstract class PikkuWorkflowService
       throw new WorkflowAsyncException(runId, stepName)
     }
 
-    return runInlineRpcStep(
-      {
-        service: this,
-        invoke: (...args) => this.invokeStepRpc(...args),
-        awaitChildEnd: (id) => this.awaitRunEnd(id, WORKFLOW_CHILD_POLL_MAX_MS),
-      },
-      {
-        runId,
-        stepName,
-        stepState,
-        rpcName,
-        data,
-        rpcService,
-        options: resolvedStepOptions,
-        retries: resolvedStepOptions.retries ?? this.getConfig().retries,
-        leaseLost: pass.leaseLost,
-      }
+    // Without a run lease, a pass may be between two attempts of this step.
+    if (
+      stepState.status === 'failed' &&
+      !pass.leaseLost &&
+      this.openSteps.has(runId, stepName)
+    ) {
+      throw new WorkflowAsyncException(runId, stepName)
+    }
+
+    return this.openSteps.hold(runId, stepName, () =>
+      runInlineRpcStep(
+        {
+          service: this,
+          invoke: (...args) => this.invokeStepRpc(...args),
+          awaitChildEnd: (id) =>
+            this.awaitRunEnd(id, WORKFLOW_CHILD_POLL_MAX_MS),
+        },
+        {
+          runId,
+          stepName,
+          stepState,
+          rpcName,
+          data,
+          rpcService,
+          options: resolvedStepOptions,
+          retries,
+          leaseLost: pass.leaseLost,
+        }
+      )
     )
   }
 

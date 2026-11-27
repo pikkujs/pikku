@@ -4,7 +4,7 @@ import type { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { runInlineChildStep } from './workflow-child-step.js'
 import { isRunClosedToSteps } from './workflow-constants.js'
 import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
-import { takeBackLostInlineStep } from './workflow-step-claim.js'
+import { resumeInlineStep } from './workflow-step-claim.js'
 import { forwardStepHooks } from './workflow-step-refusal.js'
 import {
   childStepRetryStore,
@@ -54,10 +54,12 @@ export const runInlineRpcStep = async (
   }: InlineRpcStep
 ): Promise<any> => {
   const startsChildRun = !options.virtualUser && !!resolveWorkflowMeta(rpcName)
+  // A stopped run gets no further attempt.
+  if (stepState.status === 'failed') await service.throwIfRunStopped(runId)
 
   return runInlineRetryLoop(
     startsChildRun ? childStepRetryStore(service) : service,
-    await takeBackLostInlineStep(service, runId, stepName, stepState),
+    await resumeInlineStep(service, runId, stepName, stepState),
     retries,
     options.retryDelay,
     (currentStepState, attempt) =>
