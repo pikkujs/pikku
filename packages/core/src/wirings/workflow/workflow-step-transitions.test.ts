@@ -51,6 +51,40 @@ describe('a step outcome written late', () => {
   })
 })
 
+describe('a cancel that lands just after a lost step is claimed', () => {
+  test('records the lost attempt, not a refusal of the new one', async () => {
+    class CancelledAfterClaim extends InMemoryWorkflowService {
+      protected override async claimStepForExecution(
+        ...args: [string, string, string, number]
+      ) {
+        const claimed = await super.claimStepForExecution(...args)
+        if (claimed) await this.updateRunStatus(args[0], 'compensating')
+        return claimed
+      }
+    }
+    ws = new CancelledAfterClaim()
+    h = new QueuedWorkflowHarness(ws)
+    h.register('work', h.ok())
+    const runId = await newRun()
+    const step = await ws.insertStepState(
+      runId,
+      'work',
+      'work',
+      {},
+      { retries: 3 }
+    )
+    await ws.setStepRunning(step.stepId)
+    await ws.refreshStepLease(step.stepId, -1000)
+
+    await ws.executeWorkflowStep(runId, 'work', 'work', {}, h.rpc as never)
+
+    const after = await ws.getStepState(runId, 'work')
+    assert.deepEqual(h.log, [])
+    assert.equal(after.status, 'failed')
+    assert.match(after.error?.message ?? '', /lost its worker on attempt 1/)
+  })
+})
+
 describe('an inline closure step that has failed', () => {
   test('is not run again by a replay once its retries are spent', async () => {
     let calls = 0

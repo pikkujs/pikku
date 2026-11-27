@@ -84,6 +84,14 @@ function registerTests(name: string, getDb: () => Db) {
                 { $set: { leaseExpiresAt: new Date(1) } }
               )
           },
+          forceStepStatus: async (runId, stepName, status) => {
+            await getDb()
+              .collection('workflow_step')
+              .updateOne(
+                { workflowRunId: runId, stepName },
+                { $set: { status } }
+              )
+          },
         }
       },
     },

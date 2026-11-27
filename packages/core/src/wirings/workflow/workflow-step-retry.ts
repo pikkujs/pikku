@@ -4,13 +4,22 @@ import {
   WorkflowStepSupersededError,
 } from './workflow-errors.js'
 import type { StepAttempt } from './workflow-step-signal.js'
-import type { StepState, WorkflowStepOptions } from './workflow.types.js'
+import type {
+  StepState,
+  StepStatus,
+  WorkflowStepOptions,
+} from './workflow.types.js'
 
 /** What running a step's retries in-process needs from the workflow service. */
 export type StepRetryStore = {
   setStepRunning(stepId: string, attempt?: number): Promise<void>
   setStepResult(stepId: string, result: any, attempt?: number): Promise<void>
-  setStepError(stepId: string, error: Error, attempt?: number): Promise<void>
+  setStepError(
+    stepId: string,
+    error: Error,
+    attempt?: number,
+    from?: readonly StepStatus[]
+  ): Promise<void>
   createRetryAttempt(
     failedStepId: string,
     status: 'pending' | 'running',

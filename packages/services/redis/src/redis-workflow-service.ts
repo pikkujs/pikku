@@ -1,10 +1,6 @@
 import { RedisWorkflowRunService } from './redis-workflow-run-service.js'
 import type { SerializedError } from '@pikku/core/errors'
-import {
-  isStepLeaseLive,
-  leaseAttemptsExhausted,
-  PikkuWorkflowService,
-} from '@pikku/core/workflow'
+import { isStepLeaseLive, PikkuWorkflowService } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
   WorkflowServiceOptions,
@@ -96,6 +92,42 @@ end
 redis.call('HSET', KEYS[1], 'attemptCount', ARGV[3])
 redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[4])
 redis.call('HSET', KEYS[1], 'updatedAt', ARGV[5])
+return 1
+`
+
+/**
+ * Takes a step under a fresh lease, only while it is on the attempt the claim
+ * read and in one of the named statuses; a `running` one only once its lease has
+ * lapsed and with no child run. KEYS[1] is the step hash; ARGV is the stepId, the
+ * attempt, the new lease expiry and the time, both in epoch milliseconds, then
+ * the statuses. Returns 1 when the step was taken.
+ */
+const ATOMIC_STEP_CLAIM = `
+local status = redis.call('HGET', KEYS[1], 'status')
+local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
+if redis.call('HGET', KEYS[1], 'stepId') ~= ARGV[1]
+  or current ~= tonumber(ARGV[2]) then
+  return 0
+end
+local allowed = false
+for i = 5, #ARGV do
+  if ARGV[i] == status then
+    allowed = true
+  end
+end
+if not allowed then
+  return 0
+end
+if status == 'running' then
+  local lease = tonumber(redis.call('HGET', KEYS[1], 'leaseExpiresAt') or '')
+  if not lease or lease >= tonumber(ARGV[4])
+    or redis.call('HEXISTS', KEYS[1], 'childRunId') == 1 then
+    return 0
+  end
+end
+redis.call('HSET', KEYS[1], 'status', 'running')
+redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[3])
+redis.call('HSET', KEYS[1], 'updatedAt', ARGV[4])
 return 1
 `
 
@@ -850,9 +882,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       if (seen.childRunId || isStepLeaseLive(seen.leaseExpiresAt)) {
         return null
       }
-      if (!leaseAttemptsExhausted(seen)) {
-        return this.reclaimLostStep(runId, stepName, seen, leaseMs)
+      if (await this.settleUnclaimableStep(runId, stepName, seen, leaseMs)) {
+        return null
       }
+      return this.reclaimLostStep(runId, stepName, seen, leaseMs)
     }
     return super.claimStepForExecution(runId, stepName, rpcName, leaseMs)
   }
@@ -904,10 +937,29 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         }
       }
     )
-    if (claimed) {
-      await this.logStepRerun(runId, stepName, claimed.attemptCount)
-    }
-    return claimed
+    if (!claimed) return null
+    await this.logStepRerun(runId, stepName, claimed.attemptCount)
+    return { ...claimed, lapsedAttempt: seen.attemptCount }
+  }
+
+  protected async claimStepStatus(
+    seen: StepState,
+    from: readonly StepStatus[],
+    leaseMs: number
+  ): Promise<boolean> {
+    const { runId, stepName } = this.parseStepId(seen.stepId)
+    const now = Date.now()
+    const taken = await this.redis.eval(
+      ATOMIC_STEP_CLAIM,
+      1,
+      this.stepKey(runId, stepName),
+      seen.stepId,
+      seen.attemptCount.toString(),
+      (now + leaseMs).toString(),
+      now.toString(),
+      ...from
+    )
+    return Number(taken) === 1
   }
 
   // ============================================================================

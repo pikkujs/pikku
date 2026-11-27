@@ -146,6 +146,11 @@ export interface WorkflowRun {
 
 /** One stored attempt at a workflow step. */
 export interface StepState {
+  /**
+   * Set only on what a claim returns when it took over an attempt whose worker
+   * was lost: the number of that attempt.
+   */
+  lapsedAttempt?: number
   stepId: string
   status: StepStatus
   /**

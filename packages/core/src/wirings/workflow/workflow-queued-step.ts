@@ -14,6 +14,7 @@ import {
 } from './workflow-constants.js'
 import {
   ChildWorkflowStartedException,
+  WorkflowStepLeaseExpiredError,
   WorkflowStepTimeoutError,
 } from './workflow-errors.js'
 import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
@@ -97,7 +98,22 @@ export const runQueuedStep = async (
     }
 
     if (forward && isRunClosedToSteps(run.status)) {
-      await refuseStep(service, runId, stepName, stepState, attempt)
+      const { lapsedAttempt } = stepState
+      if (lapsedAttempt === undefined) {
+        await refuseStep(service, runId, stepName, stepState, attempt)
+      } else {
+        // Stopped after the claim: what the step ran is the lost attempt.
+        await service.setStepError(
+          stepState.stepId,
+          new WorkflowStepLeaseExpiredError(
+            runId,
+            stepName,
+            lapsedAttempt,
+            false
+          ),
+          attempt
+        )
+      }
       await service.resumeWorkflow(runId)
       return
     }

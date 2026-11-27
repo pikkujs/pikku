@@ -1,9 +1,7 @@
 import type { SerializedError } from '@pikku/core/errors'
 import {
-  leaseAttemptsExhausted,
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
-  WorkflowStepLeaseExpiredError,
   STEP_SOURCES,
 } from '@pikku/core/workflow'
 import type {
@@ -546,39 +544,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       throw new WorkflowStepFunctionMismatchError(runId, stepName)
     }
 
-    if (stepState.status === 'succeeded') {
-      return null
-    }
-
-    if (stepState.status === 'running' && leaseAttemptsExhausted(stepState)) {
-      // Fail it only if its lease is still lapsed at the moment of writing:
-      // a worker that renewed since the read above still owns the step.
-      if (!(await this.claimStepStatus(stepState, ['running'], leaseMs))) {
-        return null
-      }
-      await this.setStepError(
-        stepState.stepId,
-        new WorkflowStepLeaseExpiredError(
-          runId,
-          stepName,
-          stepState.attemptCount
-        ),
-        stepState.attemptCount
-      )
-      await this.logStepAttemptsExhausted(
-        runId,
-        stepName,
-        stepState.attemptCount
-      )
-      // A null claim reads as "another dispatch owns it", so nothing else
-      // would requeue the orchestrator to see this failure.
-      await this.resumeWorkflow(runId)
-      return null
-    }
-
-    // A step that has spent every attempt is settled, however it failed; a
-    // redelivered message must not buy it another one.
-    if (stepState.status === 'failed' && leaseAttemptsExhausted(stepState)) {
+    const { status } = stepState
+    if (await this.settleUnclaimableStep(runId, stepName, stepState, leaseMs)) {
       return null
     }
 
@@ -595,27 +562,19 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
         }
       )
       // A `failed` step threw, and this is its ordinary retry.
-      if (reclaimed && stepState.status === 'running') {
-        await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
-      }
-      return reclaimed
+      if (!reclaimed || status !== 'running') return reclaimed
+      await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
+      return { ...reclaimed, lapsedAttempt: stepState.attemptCount }
     }
 
-    if (stepState.status === 'pending' || stepState.status === 'scheduled') {
-      if (
-        !(await this.claimStepStatus(
-          stepState,
-          ['pending', 'scheduled'],
-          leaseMs
-        ))
-      ) {
-        return null
-      }
-      await this.setStepRunning(stepState.stepId)
-      return { ...stepState, status: 'running' }
+    // `pending` or `scheduled`: the claimable statuses left.
+    if (
+      !(await this.claimStepStatus(stepState, STEP_SOURCES.unclaimed, leaseMs))
+    ) {
+      return null
     }
-
-    return stepState
+    await this.setStepRunning(stepState.stepId, stepState.attemptCount)
+    return { ...stepState, status: 'running' }
   }
 
   /**
@@ -649,14 +608,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.toStepState(row)
   }
 
-  /**
-   * Move a step to `running` under a fresh lease, only if it is still the
-   * attempt that was read and in one of `from`, reporting whether this caller
-   * is the one that moved it.
-   */
-  private async claimStepStatus(
+  protected async claimStepStatus(
     stepState: StepState,
-    from: StepStatus[],
+    from: readonly StepStatus[],
     leaseMs: number
   ): Promise<boolean> {
     const now = new Date()
@@ -680,13 +634,13 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
    */
   private claimFilter(
     stepState: StepState,
-    from: StepStatus[],
+    from: readonly StepStatus[],
     now: Date
   ): Record<string, unknown> {
     return {
       _id: stepState.stepId,
       attempt: stepState.attemptCount,
-      status: { $in: from },
+      status: { $in: [...from] },
       ...(from.includes('running')
         ? { leaseExpiresAt: { $lt: now }, childRunId: null }
         : {}),

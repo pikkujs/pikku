@@ -318,6 +318,22 @@ export class PikkuWorkflowDoService<
     }))
   }
 
+  protected async claimStepStatus(
+    seen: StepState,
+    from: readonly StepStatus[],
+    _leaseMs: number
+  ): Promise<boolean> {
+    // With no step lease to lapse, a `running` step is never taken back.
+    return !!(await this.writeStepIf(
+      seen.stepId,
+      from.filter((status) => status !== 'running'),
+      (s) => {
+        s.status = 'running'
+      },
+      seen.attemptCount
+    ))
+  }
+
   /** A Durable Object records no step lease: only the status is checked. */
   public override async refreshStepLease(
     stepId: string,

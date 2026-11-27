@@ -2,9 +2,7 @@ import type { SerializedError } from '@pikku/core/errors'
 import {
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
-  WorkflowStepLeaseExpiredError,
   STEP_SOURCES,
-  leaseAttemptsExhausted,
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
@@ -641,44 +639,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       throw new WorkflowStepFunctionMismatchError(runId, stepName)
     }
 
-    if (stepState.status === 'succeeded') {
-      return null
-    }
-
-    if (stepState.status === 'running') {
-      if (leaseAttemptsExhausted(stepState)) {
-        // Fail it only if its lease is still lapsed at the moment of writing:
-        // a worker that renewed since the read above still owns the step.
-        if (
-          !(await this.claimStepStatus(stepState.stepId, ['running'], leaseMs))
-        ) {
-          return null
-        }
-        await this.setStepError(
-          stepState.stepId,
-          new WorkflowStepLeaseExpiredError(
-            runId,
-            stepName,
-            stepState.attemptCount
-          ),
-          stepState.attemptCount
-        )
-        await this.logStepAttemptsExhausted(
-          runId,
-          stepName,
-          stepState.attemptCount
-        )
-        // `executeWorkflowStepInner` reads a null claim as "another dispatch
-        // owns it" and returns without resuming, so the run would stay
-        // `running` until a stalled sweep. Requeue the orchestrator here.
-        await this.resumeWorkflow(runId)
-        return null
-      }
-    }
-
-    // A failed step that has spent every attempt is settled, however it failed;
-    // a redelivered message must not buy it another one.
-    if (stepState.status === 'failed' && leaseAttemptsExhausted(stepState)) {
+    const { status } = stepState
+    if (await this.settleUnclaimableStep(runId, stepName, stepState, leaseMs)) {
       return null
     }
 
@@ -696,27 +658,19 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         }
       )
       // A `failed` step threw, and this is its ordinary retry.
-      if (reclaimed && stepState.status === 'running') {
-        await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
-      }
-      return reclaimed
+      if (!reclaimed || status !== 'running') return reclaimed
+      await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
+      return { ...reclaimed, lapsedAttempt: stepState.attemptCount }
     }
 
-    if (stepState.status === 'pending' || stepState.status === 'scheduled') {
-      if (
-        !(await this.claimStepStatus(
-          stepState.stepId,
-          ['pending', 'scheduled'],
-          leaseMs
-        ))
-      ) {
-        return null
-      }
-      await this.setStepRunning(stepState.stepId)
-      return { ...stepState, status: 'running' }
+    // `pending` or `scheduled`: the claimable statuses left.
+    if (
+      !(await this.claimStepStatus(stepState, STEP_SOURCES.unclaimed, leaseMs))
+    ) {
+      return null
     }
-
-    return stepState
+    await this.setStepRunning(stepState.stepId, stepState.attemptCount)
+    return { ...stepState, status: 'running' }
   }
 
   /**
@@ -768,16 +722,13 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * Move a step to `running` under a fresh lease, only if it is still in one of
-   * `from`, reporting whether this caller is the one that moved it.
-   *
-   * Claiming back a `running` step additionally requires its lease to have
-   * lapsed and no child run: a step parked on a child is the child's to finish,
-   * even one saved after the step was read.
+   * A claim never mixes `running` with other sources, so asking for it also
+   * requires the lease to have lapsed and no child run: a step parked on a child
+   * is the child's to finish, even one saved after the step was read.
    */
-  private async claimStepStatus(
-    stepId: string,
-    from: StepStatus[],
+  protected async claimStepStatus(
+    seen: StepState,
+    from: readonly StepStatus[],
     leaseMs: number
   ): Promise<boolean> {
     const now = this.nowMs()
@@ -788,7 +739,8 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         leaseExpiresAt: leaseUntil(now, leaseMs),
         updatedAt: new Date(),
       })
-      .where('workflowStepId', '=', stepId)
+      .where('workflowStepId', '=', seen.stepId)
+      .where(sql`coalesce(current_attempt, 1)`, '=', seen.attemptCount)
       .where('status', 'in', from)
 
     if (from.includes('running')) {

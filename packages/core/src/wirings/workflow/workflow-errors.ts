@@ -139,24 +139,27 @@ addError(WorkflowStepFunctionMismatchError, {
 })
 
 /**
- * Every dispatch that took this step lost its worker before finishing it, and
- * the step has no attempts left to hand out. Failing here is the loud end of
- * the loop: without it the step would be re-claimed and abandoned forever.
+ * The step's worker was lost and nothing will run the step again: it has no
+ * attempts left to hand out, or its run was stopped. Failing here is the loud end
+ * of the loop: without it the step would be re-claimed and abandoned forever.
  */
 export class WorkflowStepLeaseExpiredError extends PikkuError {
   constructor(
     public readonly runId: string,
     public readonly stepName: string,
-    public readonly attemptCount: number
+    public readonly attemptCount: number,
+    outOfAttempts = true
   ) {
     super(
-      `Workflow step '${stepName}' (run ${runId}) lost its worker on every one of its ${attemptCount} attempts: the last lease expired with the step still running`
+      outOfAttempts
+        ? `Workflow step '${stepName}' (run ${runId}) lost its worker on every one of its ${attemptCount} attempts: the last lease expired with the step still running`
+        : `Workflow step '${stepName}' (run ${runId}) lost its worker on attempt ${attemptCount} and is not run again, because the run was stopped: the lease expired with the step still running`
     )
   }
 }
 addError(WorkflowStepLeaseExpiredError, {
   status: 500,
-  message: 'Workflow step lost its worker and has no attempts left.',
+  message: 'Workflow step lost its worker and is not run again.',
 })
 
 /**

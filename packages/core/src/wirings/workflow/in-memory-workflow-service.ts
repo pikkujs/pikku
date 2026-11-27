@@ -231,6 +231,25 @@ export class InMemoryWorkflowService
     return true
   }
 
+  protected async claimStepStatus(
+    seen: StepState,
+    from: readonly StepStatus[],
+    leaseMs: number
+  ): Promise<boolean> {
+    const step = this.writableStep(seen.stepId, from, seen.attemptCount)
+    if (!step) return false
+    if (
+      step.status === 'running' &&
+      (step.childRunId != null || isStepLeaseLive(step.leaseExpiresAt))
+    ) {
+      return false
+    }
+    step.status = 'running'
+    step.leaseExpiresAt = new Date(Date.now() + leaseMs)
+    step.updatedAt = new Date()
+    return true
+  }
+
   public override async refreshStepLease(
     stepId: string,
     leaseMs: number | null,

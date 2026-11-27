@@ -74,6 +74,19 @@ export abstract class WorkflowStepWrites {
     return true
   }
 
+  /**
+   * Take a step under a fresh lease, only while it is still on the attempt in
+   * `seen` and in one of `from`, reporting whether this caller moved it to
+   * `running`. A `running` step is taken only once its lease has lapsed, on the
+   * clock the store judges leases by, and only with no child run. The check and
+   * the write must be one atomic operation.
+   */
+  protected abstract claimStepStatus(
+    seen: StepState,
+    from: readonly StepStatus[],
+    leaseMs: number
+  ): Promise<boolean>
+
   /** Does nothing to a step a worker has already claimed. */
   public async setStepScheduled(stepId: string): Promise<void> {
     await this.stepWrite(

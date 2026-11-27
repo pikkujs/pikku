@@ -345,6 +345,13 @@ defineServiceTests({
           '1'
         )
       },
+      forceStepStatus: async (runId, stepName, status) => {
+        await new Redis().hset(
+          `fencing-${fencingCount}:step:${runId}:${stepName}`,
+          'status',
+          status
+        )
+      },
     }),
   },
 })

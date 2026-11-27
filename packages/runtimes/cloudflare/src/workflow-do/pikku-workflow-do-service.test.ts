@@ -675,3 +675,53 @@ describe('PikkuWorkflowDoService — conditional step writes', () => {
     assert.equal((await step()).result, 'first')
   })
 })
+
+describe('PikkuWorkflowDoService — step claims', () => {
+  beforeEach(async () => {
+    await service.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+    await service.insertStepState(RUN_ID, 'step1', 'rpc.x', {}, { retries: 3 })
+  })
+
+  const claim = () =>
+    service['claimStepForExecution'](RUN_ID, 'step1', 'rpc.x', 60_000)
+  const step = () => service.getStepState(RUN_ID, 'step1')
+
+  for (const status of ['cancelled', 'cancelling', 'from-the-future']) {
+    test(`a step stored as '${status}' is not claimed`, async () => {
+      const { stepId } = await step()
+      const record = storage.data.get(`step:${stepId}`) as any
+      assert.ok(record, 'the step record moved from the key this test uses')
+      record.status = status
+
+      assert.equal(await claim(), null)
+
+      assert.equal((await step()).status, status)
+    })
+  }
+
+  for (const from of ['pending', 'failed'] as const) {
+    test(`two dispatches racing for a ${from} step: one gets it`, async () => {
+      if (from === 'failed') {
+        const first = (await claim())!
+        await service.setStepError(first.stepId, new Error('no'), 1)
+      }
+
+      const claims = await Promise.all([claim(), claim()])
+
+      assert.equal(claims.filter(Boolean).length, 1)
+      assert.equal((await step()).status, 'running')
+      assert.equal((await step()).attemptCount, from === 'failed' ? 2 : 1)
+    })
+  }
+
+  test('a running step, which has no lease to lapse, is left alone', async () => {
+    assert.ok(await claim())
+
+    assert.equal(await claim(), null)
+
+    assert.equal((await step()).attemptCount, 1)
+  })
+})

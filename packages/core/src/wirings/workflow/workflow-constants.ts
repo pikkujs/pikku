@@ -54,9 +54,19 @@ export const STEP_SOURCES = {
   outcome: ['running'],
   unsettled: ['pending', 'scheduled', 'running'],
   retry: ['running', 'failed'],
+  /** A step no dispatch has taken yet. */
+  unclaimed: ['pending', 'scheduled'],
   /** A child run, a branch or a lease, which only work in flight takes. */
   inFlight: ['running'],
 } as const satisfies Record<string, readonly StepStatus[]>
+
+/**
+ * The only statuses a dispatch may take a step from. One it does not know is
+ * left alone.
+ */
+export const CLAIMABLE_STEP_STATUSES: ReadonlySet<string> = new Set<StepStatus>(
+  ['pending', 'scheduled', 'running', 'failed']
+)
 
 /** Step statuses that mean the step has not settled yet. */
 export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([

@@ -18,6 +18,12 @@ export type WorkflowFencingHarness = {
    * whichever clock the store judges leases by.
    */
   lapseLease: (runId: string, stepName: string) => Promise<void>
+  /** Store `status` on a step as it stands, whatever the engine would allow. */
+  forceStepStatus: (
+    runId: string,
+    stepName: string,
+    status: string
+  ) => Promise<void>
 }
 
 const STEP = 'charge'
@@ -463,6 +469,131 @@ export const defineWorkflowFencingTests = (
       assert.equal(after.childRunId ?? undefined, undefined)
       const graph = await h.service.getCompletedGraphState(runId)
       assert.equal(graph.branchKeys[STEP], undefined)
+    })
+
+    /** Records the runs a claim asks to have resumed, instead of resuming. */
+    const watchResumes = ({ service }: WorkflowFencingHarness) => {
+      const resumed: string[] = []
+      service.resumeWorkflow = async (runId) => {
+        resumed.push(runId)
+      }
+      return resumed
+    }
+
+    for (const status of ['cancelled', 'cancelling', 'from-the-future']) {
+      test(`a step stored as '${status}' is not claimed`, async () => {
+        const h = await create()
+        const runId = await startRun(h)
+        await h.forceStepStatus(runId, STEP, status)
+
+        assert.equal(await claim(h, runId), null)
+
+        const step = await stepOf(h, runId)
+        assert.equal(step.status, status)
+        assert.equal(step.attemptCount, 1)
+      })
+    }
+
+    for (const from of ['pending', 'failed'] as const) {
+      test(`two dispatches racing for a ${from} step: one gets it`, async () => {
+        const h = await create()
+        for (let i = 0; i < RACES; i++) {
+          const runId = await startRun(h)
+          if (from === 'failed') {
+            const first = (await claim(h, runId))!
+            await h.service.setStepError(first.stepId, new Error('no'), 1)
+          }
+
+          const claims = await Promise.all([claim(h, runId), claim(h, runId)])
+
+          assert.equal(claims.filter(Boolean).length, 1, `race ${i}`)
+          const step = await stepOf(h, runId)
+          assert.equal(step.status, 'running', `race ${i}`)
+          assert.equal(step.attemptCount, from === 'failed' ? 2 : 1)
+        }
+      })
+    }
+
+    for (const closed of ['compensating', 'cancelled'] as const) {
+      test(`a lost step of a ${closed} run is failed, not run again`, async () => {
+        const h = await create()
+        const runId = await startRun(h)
+        assert.ok(await claim(h, runId))
+        await h.service.updateRunStatus(runId, closed, undefined, {
+          message: 'stop',
+          stack: '',
+          code: 'WORKFLOW_CANCELLED',
+        })
+        await h.lapseLease(runId, STEP)
+        const resumed = watchResumes(h)
+
+        assert.equal(await quietly(() => claim(h, runId)), null)
+
+        const step = await stepOf(h, runId)
+        assert.equal(step.status, 'failed')
+        assert.equal(step.attemptCount, 1)
+        assert.match(step.error?.message ?? '', /lost its worker/)
+        assert.deepEqual(resumed, [runId])
+      })
+
+      test(`a live step of a ${closed} run is left alone`, async () => {
+        const h = await create()
+        const runId = await startRun(h)
+        assert.ok(await claim(h, runId))
+        await h.service.updateRunStatus(runId, closed)
+        const resumed = watchResumes(h)
+
+        assert.equal(await claim(h, runId), null)
+
+        assert.equal((await stepOf(h, runId)).status, 'running')
+        assert.deepEqual(resumed, [])
+      })
+    }
+
+    test('a lost compensation of a run unwinding is run again', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const name = `${STEP}:compensate`
+      await h.service.insertStepState(runId, name, RPC, {}, { retries: 5 })
+      const claimUndo = () =>
+        h.service['claimStepForExecution'](runId, name, RPC, LEASE_MS)
+      assert.ok(await claimUndo())
+      await h.service.updateRunStatus(runId, 'compensating')
+      await h.lapseLease(runId, name)
+
+      assert.equal((await quietly(claimUndo))?.attemptCount, 2)
+    })
+
+    test('a claim says which lost attempt it took over', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const first = (await claim(h, runId))!
+      assert.equal(first.lapsedAttempt, undefined)
+      await h.lapseLease(runId, STEP)
+
+      assert.equal((await quietly(() => claim(h, runId)))?.lapsedAttempt, 1)
+    })
+
+    test('a worker that renews as its lost step is being failed keeps it', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      await h.service.insertStepState(runId, 'last', RPC, {}, { retries: 0 })
+      const claimLast = () =>
+        h.service['claimStepForExecution'](runId, 'last', RPC, LEASE_MS)
+      const holder = (await claimLast())!
+      await h.lapseLease(runId, 'last')
+      const read = h.service.getStepState.bind(h.service)
+      // The renewal lands right after the claim has read the lapsed lease.
+      h.service.getStepState = async (id, name) => {
+        const seen = { ...(await read(id, name)) }
+        h.service.getStepState = read
+        await h.service.refreshStepLease(holder.stepId, LEASE_MS, 1)
+        return seen
+      }
+
+      assert.equal(await quietly(claimLast), null)
+
+      assert.equal((await read(runId, 'last')).status, 'running')
     })
 
     test('a superseded dispatch whose RPC is missing neither fails the step nor suspends the run', async () => {

@@ -364,8 +364,10 @@ describe('a step transition on Postgres', () => {
   test('two attempts in the same millisecond still resolve the newer row', async () => {
     const { runId, step } = await seedStep()
 
+    await service.setStepRunning(step.stepId)
     await service.setStepError(step.stepId, new Error('first go'))
     await service.createRetryAttempt(step.stepId, 'pending')
+    await service.setStepRunning(step.stepId)
     await service.setStepResult(step.stepId, 'second go')
 
     const history = await service.getRunHistory(runId)
@@ -651,6 +653,14 @@ defineServiceTests({
       await service.init()
       return {
         service,
+        forceStepStatus: async (runId, stepName, status) => {
+          await fenced
+            .updateTable('workflowStep')
+            .set({ status })
+            .where('workflowRunId', '=', runId)
+            .where('stepName', '=', stepName)
+            .execute()
+        },
         lapseLease: async (runId, stepName) => {
           await fenced
             .updateTable('workflowStep')

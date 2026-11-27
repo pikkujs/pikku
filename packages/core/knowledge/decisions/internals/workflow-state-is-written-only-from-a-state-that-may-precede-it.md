@@ -46,6 +46,17 @@ step's `record` accept that refusal. A Durable Object's step worker claims
 nothing, so `recordDispatchedOutcome` marks the step running first. It names no
 attempt, so a report from an older attempt can still land on a retry.
 
+## Claims
+
+`CLAIMABLE_STEP_STATUSES` lists what a dispatch may take a step from; a status
+it does not name is left alone. `claimStepStatus` is each store's atomic take.
+`settleUnclaimableStep` also fails a lost forward step of a stopped run instead of
+running it again, after taking it, so a worker that renewed in the meantime keeps
+it. A cancel can still land between that check and the reclaim. The claim then
+marks the step with the attempt it took over (`lapsedAttempt`) and the queued
+step records that attempt as lost. By then the store has moved the step to a new
+attempt number, so the number sits in the error and not in `attemptCount`.
+
 ## A child is linked before it can start
 
 `cancelRun` writes the parent `cancelled` and only then reads the parent's steps

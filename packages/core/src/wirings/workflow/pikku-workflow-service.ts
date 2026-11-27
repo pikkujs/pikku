@@ -98,7 +98,9 @@ import { auditApprovalDecision } from './workflow-approval-audit.js'
 import { recordSuspension, suspendStepNameFor } from './workflow-suspend.js'
 import {
   claimStepByReadThenWrite,
+  settleUnclaimableStep,
   takeBackLostInlineStep,
+  type StepClaimStore,
   warnStepAttemptsExhausted,
   warnStepRerun,
 } from './workflow-step-claim.js'
@@ -121,7 +123,7 @@ import {
   trackStepCancel,
   type StepAttempt,
 } from './workflow-step-signal.js'
-import { forwardStepHooks, refuseStep } from './workflow-step-refusal.js'
+import { forwardStepHooks } from './workflow-step-refusal.js'
 import { runQueuedStep, type QueuedStepHost } from './workflow-queued-step.js'
 import {
   runInlineChildStep,
@@ -144,6 +146,11 @@ import {
 } from './workflow-compensation.js'
 import { RunUnwinds, type RunUnwindHost } from './workflow-unwind-lease.js'
 import { WorkflowStepWrites } from './workflow-step-writes.js'
+import {
+  recordedStepError,
+  runClosureStep,
+  type ClosureStepHost,
+} from './workflow-closure-step.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   WorkflowRecovery,
@@ -155,17 +162,6 @@ import {
 } from './workflow-recovery.js'
 
 /** The workflow engine; subclasses supply storage. Leases serialise runs and step claims over a shared store. */
-const recordedStepError = (stepName: string, step: StepState): Error => {
-  const error = new Error(
-    step.error?.message ||
-      `Step '${stepName}' failed after exhausting all retries`
-  )
-  if (step.error) {
-    Object.assign(error, step.error)
-  }
-  return error
-}
-
 export abstract class PikkuWorkflowService
   extends WorkflowStepWrites
   implements WorkflowService
@@ -1316,6 +1312,38 @@ export abstract class PikkuWorkflowService
    * unconditional rejection of `running` would then wedge it beyond the reach
    * of both this claim and the stalled-run sweep.
    */
+  private get stepClaimStore(): StepClaimStore {
+    return {
+      getStepState: (...args) => this.getStepState(...args),
+      getRun: (id) => this.getRun(id),
+      claimStepStatus: (...args) => this.claimStepStatus(...args),
+      setStepRunning: (...args) => this.setStepRunning(...args),
+      setStepError: (...args) => this.setStepError(...args),
+      refreshStepLease: (...args) => this.refreshStepLease(...args),
+      createRetryAttempt: (...args) => this.createRetryAttempt(...args),
+      resumeWorkflow: (runId) => this.resumeWorkflow(runId),
+      logStepRerun: (...args) => this.logStepRerun(...args),
+      logStepAttemptsExhausted: (...args) =>
+        this.logStepAttemptsExhausted(...args),
+    }
+  }
+
+  /** See `settleUnclaimableStep`: every claim starts here. */
+  protected settleUnclaimableStep(
+    runId: string,
+    stepName: string,
+    stepState: StepState,
+    leaseMs: number
+  ): Promise<boolean> {
+    return settleUnclaimableStep(
+      this.stepClaimStore,
+      runId,
+      stepName,
+      stepState,
+      leaseMs
+    )
+  }
+
   protected async claimStepForExecution(
     runId: string,
     stepName: string,
@@ -1324,7 +1352,13 @@ export abstract class PikkuWorkflowService
   ): Promise<StepState | null> {
     return nullWhenStepHeld(() =>
       this.withStepLock(runId, stepName, () =>
-        claimStepByReadThenWrite(this, runId, stepName, rpcName, leaseMs)
+        claimStepByReadThenWrite(
+          this.stepClaimStore,
+          runId,
+          stepName,
+          rpcName,
+          leaseMs
+        )
       )
     )
   }
@@ -1614,60 +1648,28 @@ export abstract class PikkuWorkflowService
       )
     )
 
-    if (stepState.status === 'succeeded') {
-      return stepState.result
-    }
+    return runClosureStep(
+      this.closureStepHost,
+      runId,
+      stepName,
+      stepState,
+      fn,
+      stepOptions?.retries ?? this.getConfig().retries,
+      stepOptions?.retryDelay ?? this.getConfig().retryDelay
+    )
+  }
 
-    const retries = stepOptions?.retries ?? this.getConfig().retries
-    const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
-
-    // A replay of a failed step spends a retry, or throws what the step threw.
-    let startFrom = stepState
-    if (stepState.status === 'failed') {
-      if (stepState.attemptCount > retries) {
-        throw recordedStepError(stepName, stepState)
-      }
-      await this.throwIfRunStopped(runId)
-      startFrom = await this.createRetryAttempt(
-        stepState.stepId,
-        'pending',
-        stepState.attemptCount
-      )
-    }
-
-    if (await this.isInline(runId)) {
-      return runInlineRetryLoop(
-        this,
-        startFrom,
-        retries,
-        retryDelay,
-        () => fn(),
-        undefined,
-        () => this.throwIfRunStopped(runId),
-        { onRefused: (step) => refuseStep(this, runId, stepName, step) }
-      )
-    } else {
-      const { stepId, attemptCount } = startFrom
-      await this.setStepRunning(stepId, attemptCount)
-      let result: any
-      try {
-        result = await fn()
-      } catch (error: any) {
-        await this.setStepError(stepId, error, attemptCount)
-
-        if (attemptCount <= retries) {
-          await this.createRetryAttempt(stepId, 'pending', attemptCount)
-
-          await this.scheduleOrchestratorRetry(runId, retryDelay)
-
-          throw new WorkflowAsyncException(runId, stepName)
-        }
-
-        throw error
-      }
-      // Outside the try, so failing to record it does not run the work again.
-      await this.setStepResult(stepId, result, attemptCount)
-      return result
+  private get closureStepHost(): ClosureStepHost {
+    return {
+      isInline: (runId) => this.isInline(runId),
+      throwIfRunStopped: (runId) => this.throwIfRunStopped(runId),
+      updateRunState: (...args) => this.updateRunState(...args),
+      setStepRunning: (...args) => this.setStepRunning(...args),
+      setStepResult: (...args) => this.setStepResult(...args),
+      setStepError: (...args) => this.setStepError(...args),
+      createRetryAttempt: (...args) => this.createRetryAttempt(...args),
+      scheduleOrchestratorRetry: (...args) =>
+        this.scheduleOrchestratorRetry(...args),
     }
   }
 
