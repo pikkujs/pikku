@@ -672,18 +672,26 @@ describe('an inline step stopped between attempts', () => {
     LIMIT,
     async () => {
       let runId: string | undefined
-      h.register('first', {
-        queued: false,
-        forward: async (_data, wire) => {
-          runId = wire.workflowStep.runId
-          setTimeout(() => void ws.cancelRun(runId!, h.rpc as never), 10)
-          throw new Error('flaky')
-        },
-        compensate: async () => {},
+      let cancelled!: Promise<unknown>
+      const cancelStarted = new Promise<void>((started) => {
+        h.register('first', {
+          queued: false,
+          forward: async (_data, wire) => {
+            runId = wire.workflowStep.runId
+            setTimeout(() => {
+              cancelled = ws.cancelRun(runId!, h.rpc as never)
+              started()
+            }, 10)
+            throw new Error('flaky')
+          },
+          compensate: async () => {},
+        })
       })
       oneStep({ retries: 2, retryDelay: 40 })
 
       await runInline('flow')
+      await cancelStarted
+      await cancelled
 
       assert.equal((await h.run(runId!)).status, 'compensated')
       assert.deepEqual(h.log, ['do:first', 'undo:first'])

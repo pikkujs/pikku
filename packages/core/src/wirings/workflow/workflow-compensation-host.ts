@@ -63,6 +63,8 @@ export const createCompensationApi = (
       if (held) return drive()
       return (await pickingUpLostRun(host, runId, drive)).value
     },
+    isStepOpen: (...args) => service.isStepOpen(...args),
+    holdOpenStep: (...args) => service.holdOpenStep(...args),
     getRun: (...args) => service.getRun(...args),
     getRunSteps: (...args) => service.getRunSteps(...args),
     getRunState: (...args) => service.getRunState(...args),

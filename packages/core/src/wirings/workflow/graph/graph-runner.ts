@@ -5,22 +5,27 @@ import {
   WorkflowCancelledException,
   WorkflowSuspendedException,
   ChildWorkflowStartedException,
+  WorkflowStepLeaseExpiredError,
 } from '../workflow-errors.js'
 import {
   queuedChildOutcome,
   startLinkedChildRun,
   announceCreatedRun,
+  handBackSettledChildren,
 } from '../workflow-child-step.js'
 import {
   childStepRetryStore,
   runInlineRetryLoop,
+  startUnlessStopped,
 } from '../workflow-step-retry.js'
+import { resumeInlineStep } from '../workflow-step-claim.js'
 import { forwardStepHooks } from '../workflow-step-refusal.js'
 import { stepSignalWire, type StepAttempt } from '../workflow-step-signal.js'
 import { buildWorkflowStepWire } from '../workflow-wire.js'
 import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
+  isCompensationStepName,
   isRunClosedToSteps,
   isRunStopped,
 } from '../workflow-constants.js'
@@ -1227,30 +1232,55 @@ export async function runFromMeta(
   )
 }
 
+/** One pass over an inline graph run, made under the run's lease. */
+type InlineGraphPass = {
+  workflowService: PikkuWorkflowService
+  rpcService: any
+  runId: string
+  graphName: string
+  nodes: Record<string, any>
+  /** The nodes this pass started, which it outlives. */
+  started: PassSteps
+  /** Aborts if the run lease this pass holds is lost. */
+  leaseLost: AbortSignal | undefined
+}
+
 async function executeGraphNodeInline(
-  workflowService: PikkuWorkflowService,
-  rpcService: any,
-  runId: string,
-  graphName: string,
+  pass: InlineGraphPass,
   nodeId: string,
   instanceKey: string,
   input: any,
-  nodes: Record<string, any>,
   fromStepName?: string
 ): Promise<void> {
+  const { workflowService, runId, nodes } = pass
   const node = nodes[nodeId]
   if (!node) return
 
-  const rpcName = node.rpcName
+  await workflowService.holdOpenStep(runId, instanceKey, async () => {
+    throwIfLeaseLost(pass.leaseLost)
+    const stepState = await workflowService.insertStepState(
+      runId,
+      instanceKey,
+      node.rpcName,
+      input,
+      { retries: node.retries ?? 0, retryDelay: node.retryDelay },
+      fromStepName
+    )
+    await runInlineGraphNode(pass, nodeId, instanceKey, input, stepState)
+  })
+}
 
-  const stepState = await workflowService.insertStepState(
-    runId,
-    instanceKey,
-    rpcName,
-    input,
-    { retries: node.retries ?? 0, retryDelay: node.retryDelay },
-    fromStepName
-  )
+/** Run a node's step from the attempt in `stepState`, retries and all. */
+async function runInlineGraphNode(
+  pass: InlineGraphPass,
+  nodeId: string,
+  instanceKey: string,
+  input: any,
+  stepState: StepState
+): Promise<void> {
+  const { workflowService, rpcService, runId, graphName, leaseLost } = pass
+  const node = pass.nodes[nodeId]
+  const rpcName = node.rpcName
 
   let attempt: StepState = stepState
   const runNode = async (current: StepState, stepAttempt?: StepAttempt) => {
@@ -1326,6 +1356,7 @@ async function executeGraphNodeInline(
             (await workflowService.getRun(runId))?.status ?? ''
           )
         ) {
+          throwIfLeaseLost(leaseLost)
           await workflowService.setStepError(
             attempt.stepId,
             error,
@@ -1339,7 +1370,7 @@ async function executeGraphNodeInline(
         }
       },
       () => workflowService.throwIfRunStopped(runId),
-      forwardStepHooks(workflowService, runId, instanceKey)
+      forwardStepHooks(workflowService, runId, instanceKey, leaseLost)
     )
   } catch (error) {
     if (
@@ -1354,16 +1385,120 @@ async function executeGraphNodeInline(
   }
 }
 
-async function continueGraphInline(
-  workflowService: PikkuWorkflowService,
-  rpcService: any,
-  runId: string,
-  graphName: string,
-  nodes: Record<string, any>,
-  triggerInput: any,
+/**
+ * Run again the nodes an earlier pass left unfinished when it lost the run. A
+ * node waiting on a child that has not ended is left to that child.
+ */
+async function resumeLostInlineNodes(pass: InlineGraphPass): Promise<void> {
+  const { workflowService, runId, graphName, nodes, leaseLost } = pass
+  await handBackSettledChildren(workflowService, runId)
+  const recorded = await workflowService.getRunSteps(runId)
+  const inputs = new Map(recorded.map((step) => [step.stepName, step.data]))
+  const abandoned = () => new WorkflowAsyncException(runId, graphName)
+  await Promise.all(
+    [...inputs].map(([instanceKey, input]) =>
+      pass.started.start(abandoned, async () => {
+        if (isCompensationStepName(instanceKey)) return
+        const nodeId = remapStepNamesToNodeIds(
+          [instanceKey],
+          nodes,
+          graphName
+        )[0]!
+        if (!nodes[nodeId]?.rpcName) return
+        if (workflowService.isStepOpen(runId, instanceKey)) return
+        await workflowService.holdOpenStep(runId, instanceKey, async () => {
+          const state = await workflowService.getStepState(runId, instanceKey)
+          if (!isLeftUnfinished(state)) return
+          throwIfLeaseLost(leaseLost)
+          let current: StepState
+          try {
+            current = await startUnlessStopped(
+              () =>
+                resumeInlineStep(workflowService, runId, instanceKey, state),
+              () => workflowService.throwIfRunStopped(runId),
+              leaseLost
+            )
+          } catch (error) {
+            // Out of attempts: the planner reads the failed node.
+            if (error instanceof WorkflowStepLeaseExpiredError) return
+            throw error
+          }
+          await runInlineGraphNode(pass, nodeId, instanceKey, input, current)
+        })
+      })
+    )
+  )
+}
+
+const isLeftUnfinished = (state: StepState): boolean => {
+  if (state.status === 'pending') return true
+  if (state.status === 'failed') {
+    return state.attemptCount <= (state.retries ?? 0)
+  }
+  return (
+    state.status === 'running' &&
+    state.childRunId == null &&
+    state.leaseExpiresAt == null
+  )
+}
+
+async function fireInlineEntryNodes(
+  pass: InlineGraphPass,
   entryNodeIds: string[],
-  started: PassSteps
+  triggerInput: any
 ): Promise<void> {
+  const { workflowService, runId, graphName, nodes } = pass
+  const fired = new Set(
+    (await workflowService.getStepInstances(runId)).map((i) => i.stepName)
+  )
+  const abandoned = () => new WorkflowAsyncException(runId, graphName)
+  await Promise.all(
+    entryNodeIds.map(async (nodeId) => {
+      const node = nodes[nodeId]
+      if (!node?.rpcName) return
+
+      const firings = planEntryFirings(
+        graphName,
+        nodeId,
+        node,
+        { trigger: triggerInput },
+        triggerInput
+      )
+
+      await Promise.all(
+        firings
+          .filter((firing) => !fired.has(firing.instanceKey))
+          .map((firing) =>
+            pass.started.start(abandoned, () =>
+              executeGraphNodeInline(
+                pass,
+                nodeId,
+                firing.instanceKey,
+                firing.input
+              )
+            )
+          )
+      )
+    })
+  )
+}
+
+async function continueGraphInline(
+  pass: InlineGraphPass,
+  triggerInput: any,
+  entryNodeIds: string[]
+): Promise<void> {
+  const {
+    workflowService,
+    rpcService,
+    runId,
+    graphName,
+    nodes,
+    started,
+    leaseLost,
+  } = pass
+  const settleIfStopped = () =>
+    workflowService.settleStoppedRun(runId, rpcService, true, leaseLost)
   const abandoned = () => new WorkflowAsyncException(runId, graphName)
   while (true) {
     const {
@@ -1380,15 +1515,19 @@ async function continueGraphInline(
     )
 
     if (unrecovered.length > 0) {
-      await failGraphRun(workflowService, runId, unrecovered[0]!, rpcService)
+      await failGraphRun(
+        workflowService,
+        runId,
+        unrecovered[0]!,
+        rpcService,
+        true,
+        leaseLost
+      )
       return
     }
 
     const run = await workflowService.getRun(runId)
-    if (
-      run?.status === 'suspended' ||
-      (await workflowService.settleStoppedRun(runId, rpcService))
-    ) {
+    if (run?.status === 'suspended' || (await settleIfStopped())) {
       return
     }
 
@@ -1411,13 +1550,14 @@ async function continueGraphInline(
       recovered
     )
 
+    throwIfLeaseLost(leaseLost)
     if (plan.toFire.length === 0) {
       if (
         !plan.hasInFlight &&
         !plan.blockedWaiting &&
         !(await workflowService.updateRunStatus(runId, 'completed'))
       ) {
-        await workflowService.settleStoppedRun(runId, rpcService)
+        await settleIfStopped()
       }
       return
     }
@@ -1444,16 +1584,13 @@ async function continueGraphInline(
           const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
           executed++
+          throwIfLeaseLost(leaseLost)
           await prepareFire(workflowService, runId, fire, node)
           await executeGraphNodeInline(
-            workflowService,
-            rpcService,
-            runId,
-            graphName,
+            pass,
             fire.logical,
             fire.instanceKey,
             resolvedInput,
-            nodes,
             fire.fromStepName
           )
         })
@@ -1569,52 +1706,31 @@ export async function runWorkflowGraph(
   const triggerNodeResults = { trigger: triggerInput }
 
   if (inline && rpcService) {
-    const executeInline = async () => {
-      const started = new PassSteps()
-      const abandoned = () => new WorkflowAsyncException(runId, graphName)
+    const runPass = async (
+      leaseLost: AbortSignal | undefined,
+      pickedUp: boolean
+    ) => {
+      const pass: InlineGraphPass = {
+        workflowService,
+        rpcService,
+        runId,
+        graphName,
+        nodes,
+        started: new PassSteps(),
+        leaseLost,
+      }
+      const settleIfStopped = () =>
+        workflowService.settleStoppedRun(runId, rpcService, true, leaseLost)
       try {
-        await Promise.all(
-          readyEntryNodes.map(async (nodeId) => {
-            const node = nodes[nodeId]
-            if (!node?.rpcName) return
-
-            const firings = planEntryFirings(
-              graphName,
-              nodeId,
-              node,
-              triggerNodeResults,
-              triggerInput
-            )
-
-            await Promise.all(
-              firings.map((firing) =>
-                started.start(abandoned, () =>
-                  executeGraphNodeInline(
-                    workflowService,
-                    rpcService,
-                    runId,
-                    graphName,
-                    nodeId,
-                    firing.instanceKey,
-                    firing.input,
-                    nodes
-                  )
-                )
-              )
-            )
-          })
-        )
-
-        await continueGraphInline(
-          workflowService,
-          rpcService,
-          runId,
-          graphName,
-          nodes,
-          triggerInput,
-          entryNodes,
-          started
-        )
+        if (pickedUp) {
+          await resumeLostInlineNodes(pass)
+        }
+        // Nothing starts on a run that was stopped or is waiting.
+        const status = (await workflowService.getRun(runId))?.status
+        if (status === 'running') {
+          await fireInlineEntryNodes(pass, readyEntryNodes, triggerInput)
+        }
+        await continueGraphInline(pass, triggerInput, entryNodes)
       } catch (error) {
         if (
           error instanceof WorkflowAsyncException ||
@@ -1622,23 +1738,28 @@ export async function runWorkflowGraph(
         ) {
           return
         }
-        if (isOwnershipError(error)) throw error
+        throwIfNotOwned(error, leaseLost)
         await failGraphRunWith(
           workflowService,
           runId,
           error as Error,
-          rpcService
+          rpcService,
+          true,
+          leaseLost
         )
         // An unwind that stopped to wait on a sibling node is finished once
         // that node has ended: nothing else wakes an inline run.
-        await started.close()
-        await workflowService.settleStoppedRun(runId, rpcService)
+        await pass.started.close()
+        await settleIfStopped()
       } finally {
-        await started.close()
-        workflowService.unregisterInlineRun(runId)
+        await pass.started.close()
       }
     }
-    await executeInline()
+    try {
+      await workflowService.runInlineGraph(runId, rpcService, runPass)
+    } finally {
+      workflowService.unregisterInlineRun(runId)
+    }
   } else {
     for (const nodeId of readyEntryNodes) {
       const node = nodes[nodeId]

@@ -44,7 +44,6 @@ which redelivers its job.
 
 Letting the lost pass create the attempt, which the attempt fence would have
 allowed, was rejected: it covers a lost lease and not a crash at the same point.
-An inline graph node is not covered, since nothing replays one.
 
 ## When another pass may take a step back
 
@@ -63,6 +62,15 @@ lease takes it again and carries on, up to three times. If someone else has it,
 or the pickups run out, it asks the queue for a wake and throws the loss. Only the
 loss of the run's own lease does this: a parent that picked itself up over its
 child's loss would start a second child.
+
+An inline graph run holds its run lease for the whole of `runWorkflowGraph`, so
+all of this applies to it. A DSL pickup replays the body. A graph has none to
+replay, so its pickup first runs again each node left `pending`, `running` with no
+step lease and no child, or `failed` with retries left, and fires any entry node
+never started. A node parked on a child gets the child's outcome once it has one,
+and is otherwise left: running it again would start a second child. Only the
+process that lost the lease does this. A queued pass over the same run plans the
+next nodes and replays none.
 
 A queued worker that lost its step lease finishes its job and sends a wake that
 names the attempt. The store may read the lease as live for up to a lease after

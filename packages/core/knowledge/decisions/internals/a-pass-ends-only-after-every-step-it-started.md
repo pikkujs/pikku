@@ -18,8 +18,8 @@ waits for every step it started (`PassSteps`, and the same for an inline graph).
   and a sibling's next retry. A body that returned waits before `completed`.
 - A step asked for after the pass has ended is rejected and never starts.
 - The unwind that waited on a sibling is driven once the pass has let go
-  (`RunUnwinds.runPass`). An inline graph pass takes no run lease, so it drives
-  the unwind itself after its nodes end.
+  (`RunUnwinds.runPass`). An inline graph pass drives it while it still holds the
+  lease, after its nodes end.
 - A body cannot abandon a step by racing it: the pass waits for the loser too.
 
 Waiting makes a pass's own waits matter. An inline sleep and an inline

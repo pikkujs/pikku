@@ -143,6 +143,7 @@ import {
 import { throwIfLeaseLost } from './workflow-lost-lease.js'
 import {
   endFailedInlineRun,
+  pickingUpInlineRun,
   runInlineToItsEnd,
 } from './workflow-inline-pickup.js'
 import { RunUnwinds, type RunUnwindHost } from './workflow-unwind-lease.js'
@@ -1005,18 +1006,62 @@ export abstract class PikkuWorkflowService
   private runInlineToItsEnd(runId: string, rpcService: PikkuRPC) {
     return runInlineToItsEnd(
       {
-        getRun: (id) => this.getRun(id),
-        wake: (id) => this.wakeLater(id),
-        logger: () => this.logger,
+        ...this.inlineRunHost(runId, rpcService),
         runJob: () => this.runWorkflowJob(runId, rpcService),
-        unwind: () =>
-          this.withRunLease(runId, async (leaseLost) => {
-            const host = this.unwindHost(rpcService)
-            await this.unwinds.drive(host, runId, true, leaseLost)
-          }),
       },
       runId
     )
+  }
+
+  private inlineRunHost(runId: string, rpcService: PikkuRPC) {
+    return {
+      getRun: (id: string) => this.getRun(id),
+      wake: (id: string) => this.wakeLater(id),
+      logger: () => this.logger,
+      unwind: () =>
+        this.withRunLease(runId, async (leaseLost) => {
+          const host = this.unwindHost(rpcService)
+          await this.unwinds.drive(host, runId, true, leaseLost)
+        }),
+    }
+  }
+
+  /**
+   * Work an inline graph run, each pass under the run's lease. `leaseLost` is
+   * that lease's signal, and `pickedUp` says an earlier pass lost it.
+   */
+  public async runInlineGraph(
+    runId: string,
+    rpcService: PikkuRPC,
+    pass: (
+      leaseLost: AbortSignal | undefined,
+      pickedUp: boolean
+    ) => Promise<void>
+  ): Promise<void> {
+    const underLease = (pickedUp: boolean) => () =>
+      this.runUnderLease(runId, rpcService, (leaseLost) =>
+        pass(leaseLost, pickedUp)
+      )
+    await pickingUpInlineRun(
+      this.inlineRunHost(runId, rpcService),
+      runId,
+      underLease(false),
+      underLease(true)
+    )
+  }
+
+  /** Count a step as open in this process until `work` settles. */
+  public holdOpenStep<T>(
+    runId: string,
+    stepName: string,
+    work: () => Promise<T>
+  ): Promise<T> {
+    return this.openSteps.hold(runId, stepName, work)
+  }
+
+  /** Whether a pass or driver in this process is working the step. */
+  public isStepOpen(runId: string, stepName: string): boolean {
+    return this.openSteps.has(runId, stepName)
   }
 
   public async runToCompletion<I>(

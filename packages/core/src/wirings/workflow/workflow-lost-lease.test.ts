@@ -376,8 +376,7 @@ describe('a pass that lost its run lease writes nothing', () => {
     )
     h.defineGraph('graph', 'a', { a: { next: 'b' }, b: {} })
 
-    // The unwind is whoever has the run's, as when it was taken to begin with.
-    await startInline('graph')
+    await assert.rejects(startInline('graph'), LeaseLostError)
 
     await assertUntouched(
       ['a:1:succeeded', 'b:1:failed', 'a:compensate:1:running'],

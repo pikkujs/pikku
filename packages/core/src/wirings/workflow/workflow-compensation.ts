@@ -237,6 +237,13 @@ export interface CompensationApi {
     signal?: AbortSignal
   ): Promise<unknown>
   failOrUnwind(run: WorkflowRun, error: Error): Promise<unknown>
+  /** Whether a pass or driver in this process is working the step. */
+  isStepOpen(runId: string, stepName: string): boolean
+  holdOpenStep<T>(
+    runId: string,
+    stepName: string,
+    work: () => Promise<T>
+  ): Promise<T>
   /** `driveUnwind` under the run's lease, taken here unless the caller holds it. */
   drive(runId: string): Promise<'waiting' | 'finished'>
   setStepResult(
@@ -325,6 +332,7 @@ const compensateFunctionStep = async (
     return 'stuck'
   }
   if (state.status === 'scheduled') return 'waiting'
+  if (api.isStepOpen(runId, stepName)) return 'waiting'
   const lease = runningStepLease(state)
   if (lease === 'held') return 'waiting'
 
@@ -341,40 +349,42 @@ const compensateFunctionStep = async (
     return 'waiting'
   }
 
-  // Outside the try: `stuck` for a row the plan still sees retries on would
-  // bring the drive straight back to it.
-  const current =
-    state.status === 'failed'
-      ? await api.createRetryAttempt(
-          state.stepId,
-          'pending',
-          state.attemptCount
-        )
-      : state
+  return api.holdOpenStep(runId, stepName, async () => {
+    // Outside the try: `stuck` for a row the plan still sees retries on would
+    // bring the drive straight back to it.
+    const current =
+      state.status === 'failed'
+        ? await api.createRetryAttempt(
+            state.stepId,
+            'pending',
+            state.attemptCount
+          )
+        : state
 
-  try {
-    await api.runInline(
-      runId,
-      stepName,
-      current,
-      options.retries!,
-      undefined,
-      (current, attempt) =>
-        api.invoke(
-          runId,
-          stepName,
-          current,
-          rpcName,
-          forward.data,
-          compensatingFor,
-          attempt?.signal
-        )
-    )
-    return 'done'
-  } catch (error) {
-    throwIfNotOwned(error, api.leaseLost)
-    return 'stuck'
-  }
+    try {
+      await api.runInline(
+        runId,
+        stepName,
+        current,
+        options.retries!,
+        undefined,
+        (current, attempt) =>
+          api.invoke(
+            runId,
+            stepName,
+            current,
+            rpcName,
+            forward.data,
+            compensatingFor,
+            attempt?.signal
+          )
+      )
+      return 'done'
+    } catch (error) {
+      throwIfNotOwned(error, api.leaseLost)
+      return 'stuck'
+    }
+  })
 }
 
 const compensateChildStep = async (

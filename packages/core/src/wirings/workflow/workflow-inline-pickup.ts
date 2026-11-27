@@ -20,6 +20,23 @@ type InlineRunHost = Omit<LostRunHost, 'getRun'> & {
 }
 
 /**
+ * `pickingUpLostRun` for a run no queue wakes: `first`, then `again` for as long
+ * as the lease is lost. An unwind takes the lease here, so that a run someone
+ * else has is seen to be refused.
+ */
+export const pickingUpInlineRun = (
+  host: Omit<InlineRunHost, 'runJob'>,
+  runId: string,
+  first: () => Promise<void>,
+  again: () => Promise<void> = first
+): Promise<{ pickedUp: boolean }> =>
+  pickingUpLostRun(host, runId, first, async () =>
+    (await host.getRun(runId))?.status === 'compensating'
+      ? host.unwind()
+      : again()
+  )
+
+/**
  * Work an inline run in the caller's process. Nothing else is bound to wake it,
  * so a pass that loses the run's lease picks it up again here.
  */
@@ -27,16 +44,8 @@ export const runInlineToItsEnd = async (
   host: InlineRunHost,
   runId: string
 ): Promise<void> => {
-  const { pickedUp } = await pickingUpLostRun(
-    host,
-    runId,
-    () => host.runJob(),
-    // An unwind takes the lease here, so that a run someone else has is seen to
-    // be refused.
-    async () =>
-      (await host.getRun(runId))?.status === 'compensating'
-        ? host.unwind()
-        : host.runJob()
+  const { pickedUp } = await pickingUpInlineRun(host, runId, () =>
+    host.runJob()
   )
   if (!pickedUp) return
   // A pass that only finishes an unwind throws nothing, unlike the one that
