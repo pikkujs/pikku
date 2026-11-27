@@ -54,6 +54,7 @@ import {
   WORKFLOW_POLL_MIN_MS,
   WORKFLOW_TERMINAL_STATES,
   WORKFLOW_CANCEL_CHECK_MS,
+  RUN_STATUS_SOURCES,
   isRunCancelled,
   isRunClosedToSteps,
   NO_COMPENSATE_STATE_PREFIX,
@@ -383,16 +384,40 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     Array<StepState & { stepName: string; rpcName?: string; data?: any }>
   >
 
+  /**
+   * Move a run to `status` from a status that may precede it, reporting whether
+   * it did. A refused write changes nothing.
+   */
   public async updateRunStatus(
     id: string,
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
-    await this.mirrored(
-      () => this.updateRunStatusImpl(id, status, output, error),
-      (mirror) => mirror.updateRunStatus(id, status, output, error)
+  ): Promise<boolean> {
+    return this.transitionRunStatus(
+      id,
+      RUN_STATUS_SOURCES[status],
+      status,
+      output,
+      error
     )
+  }
+
+  /** `updateRunStatus`, applied only while the run is in one of `from`. */
+  public async transitionRunStatus(
+    id: string,
+    from: readonly WorkflowStatus[],
+    status: WorkflowStatus,
+    output?: any,
+    error?: SerializedError
+  ): Promise<boolean> {
+    const applied = await this.mirrored(
+      () => this.transitionRunStatusImpl(id, from, status, output, error),
+      async (mirror, written) => {
+        if (written) await mirror.updateRunStatus(id, status, output, error)
+      }
+    )
+    if (!applied) return false
     if (isRunCancelled({ status, error })) {
       this.runContexts.get(id)?.stepCancels?.forEach((cancel) => cancel())
     }
@@ -400,14 +425,20 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       this.runExtension?.detachRunContext(id)
       this.releaseContext(id)
     }
+    return true
   }
 
-  protected abstract updateRunStatusImpl(
+  /**
+   * Set the run's status, only while its current one is in `from`, and report
+   * whether it did. The check and the write must be one atomic operation.
+   */
+  protected abstract transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void>
+  ): Promise<boolean>
 
   public async insertStepState(
     runId: string,
@@ -930,6 +961,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const engine: WorkflowRunEngine = {
       inlineStep: this.inlineStep.bind(this),
       updateRunStatus: this.updateRunStatus.bind(this),
+      transitionRunStatus: this.transitionRunStatus.bind(this),
       onChildWorkflowFailed: this.onChildWorkflowFailed.bind(this),
       verifyStepName: this.verifyStepName.bind(this),
       getRunTraceparent: this.getRunTraceparent.bind(this),
@@ -1959,7 +1991,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       getRun: (...args) => this.getRun(...args),
       getRunSteps: (...args) => this.getRunSteps(...args),
       getRunState: (...args) => this.getRunState(...args),
-      updateRunStatus: (...args) => this.updateRunStatus(...args),
+      transitionRunStatus: (...args) => this.transitionRunStatus(...args),
       loadStep: (...args) => this.loadOrCreateStep(...args),
       insertStepState: (...args) => this.insertStepState(...args),
       dispatchStep: (...args) => this.dispatchStep(...args),
@@ -2042,8 +2074,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     error: SerializedError
   ): Promise<void> {
-    const status = (await this.getRun(runId))?.status
-    if (status === 'cancelled' || isUnwound(status)) return
     await this.updateRunStatus(runId, 'failed', undefined, error)
   }
 

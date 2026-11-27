@@ -45,12 +45,13 @@ export interface WorkflowService {
     id: string,
     at?: number | Date
   ): Promise<ReconstructedRunState | null>
+  /** Resolves `false`, changing nothing, when the run cannot move to `status`. */
   updateRunStatus(
     id: string,
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void>
+  ): Promise<boolean>
   withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T>
   close(): Promise<void>
 

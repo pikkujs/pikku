@@ -86,6 +86,29 @@ return 1
 `
 
 /**
+ * Moves a run only while its status is one that may precede the new one.
+ * KEYS[1] is the run hash; ARGV is the number of such statuses, the statuses,
+ * then field/value pairs to set. Returns 1 when the run moved.
+ */
+const CONDITIONAL_RUN_WRITE = `
+local current = redis.call('HGET', KEYS[1], 'status')
+local sources = tonumber(ARGV[1])
+local allowed = false
+for i = 2, sources + 1 do
+  if ARGV[i] == current then
+    allowed = true
+  end
+end
+if not allowed then
+  return 0
+end
+for i = sources + 2, #ARGV, 2 do
+  redis.call('HSET', KEYS[1], ARGV[i], ARGV[i + 1])
+end
+return 1
+`
+
+/**
  * Redis-based implementation of WorkflowStateService
  *
  * Stores workflow run state and step state in Redis. Runs and steps are locked
@@ -357,12 +380,13 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
+  ): Promise<boolean> {
     const now = Date.now()
     const key = this.runKey(id)
 
@@ -379,7 +403,15 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       fields.error = JSON.stringify(error)
     }
 
-    await this.redis.hmset(key, fields)
+    const moved = await this.redis.eval(
+      CONDITIONAL_RUN_WRITE,
+      1,
+      key,
+      from.length.toString(),
+      ...from,
+      ...Object.entries(fields).flat()
+    )
+    return Number(moved) === 1
   }
 
   protected async insertStepStateImpl(

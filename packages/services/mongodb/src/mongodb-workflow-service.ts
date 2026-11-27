@@ -176,14 +176,15 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.runService.getRun(id)
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
-    await this.runs.updateOne(
-      { _id: id },
+  ): Promise<boolean> {
+    const moved = await this.runs.updateOne(
+      { _id: id, status: { $in: [...from] } },
       {
         $set: {
           status,
@@ -193,6 +194,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
         },
       }
     )
+    return moved.matchedCount > 0
   }
 
   protected async insertStepStateImpl(

@@ -130,7 +130,7 @@ describe('mirroring workflow state', () => {
   test('a write that fails is not mirrored', async () => {
     const { mirror, calls } = recordingMirror()
     const ws = service(mirror)
-    ws.updateRunStatusImpl = async () => {
+    ws.transitionRunStatusImpl = async () => {
       throw new Error('database down')
     }
     const runId = await ws.createRun('flow', {}, false, 'hash', {

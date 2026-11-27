@@ -74,7 +74,7 @@ types.
   `maxSpansPerRun` is ignored entirely (no event, view or health sample, so
   nothing is reported that a rebuild could not show, and a duplicate cannot
   double-count). Eviction is by recency, not creation. Only a run that
-  *started* (an event was sent) has its trace id remembered when it leaves
+  _started_ (an event was sent) has its trace id remembered when it leaves
   retention, in a separate bounded set (`maxClosedTraces`): a late span is then
   recognised and ignored, never a second run rooted on itself; only past that
   bound is a very old trace treated as new. A trace never announced is not

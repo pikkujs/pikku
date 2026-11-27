@@ -85,6 +85,42 @@ export const defineWorkflowServiceTests = (
       assert.deepEqual(run.output, { result: 'done' })
     })
 
+    test('a cancelled run is not moved by a late status write', async () => {
+      const runId = await service.createRun(
+        'cancelled-workflow',
+        {},
+        false,
+        'hash-cancelled',
+        wire
+      )
+      const cause = { message: 'stop', stack: '', code: 'WORKFLOW_CANCELLED' }
+      assert.equal(
+        await service.updateRunStatus(runId, 'cancelled', undefined, cause),
+        true
+      )
+
+      for (const late of ['completed', 'failed', 'suspended'] as const) {
+        assert.equal(
+          await service.updateRunStatus(
+            runId,
+            late,
+            { late },
+            {
+              message: 'late',
+              stack: '',
+            }
+          ),
+          false,
+          late
+        )
+      }
+
+      const run = await service.getRun(runId)
+      assert.equal(run?.status, 'cancelled')
+      assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+      assert.ok(!run?.output)
+    })
+
     test('insertStepState and getStepState', async () => {
       const runId = await service.createRun(
         'step-workflow',

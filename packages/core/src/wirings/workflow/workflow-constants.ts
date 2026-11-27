@@ -1,4 +1,4 @@
-import type { StepStatus } from './workflow.types.js'
+import type { StepStatus, WorkflowStatus } from './workflow.types.js'
 
 /**
  * How many times a failed step is retried when neither the step nor the app's `workflow.retries` config says.
@@ -23,6 +23,24 @@ export const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'compensated',
   'compensation_failed',
 ])
+
+/**
+ * The statuses a run may be in for `updateRunStatus` to move it to each one.
+ * An unwind's own writes name their sources instead: see
+ * `unwindEntryStatuses`.
+ */
+export const RUN_STATUS_SOURCES: Readonly<
+  Record<WorkflowStatus, readonly WorkflowStatus[]>
+> = {
+  running: ['running', 'suspended'],
+  suspended: ['running', 'suspended'],
+  completed: ['running', 'suspended'],
+  failed: ['running', 'suspended', 'failed'],
+  cancelled: ['running', 'suspended'],
+  compensating: ['running', 'suspended'],
+  compensated: ['compensating'],
+  compensation_failed: ['compensating'],
+}
 
 /** Step statuses that mean the step has not settled yet. */
 export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([
@@ -69,6 +87,21 @@ export const isRunStopped = (status: string): boolean =>
 
 /** The recorded cause of a run that was cancelled, kept while it unwinds. */
 export const WORKFLOW_CANCELLED_CODE = 'WORKFLOW_CANCELLED'
+
+/**
+ * The statuses a run may start unwinding from. Only a cancel's own unwind leaves
+ * `cancelled`, so a failure cannot take it over. `completed` is a child its
+ * parent is undoing.
+ */
+export const unwindEntryStatuses = (cause: {
+  code?: string
+}): WorkflowStatus[] => [
+  'running',
+  'suspended',
+  'failed',
+  'completed',
+  ...(cause.code === WORKFLOW_CANCELLED_CODE ? (['cancelled'] as const) : []),
+]
 
 const CANCEL_UNWIND_STATES: ReadonlySet<string> = new Set([
   'compensating',

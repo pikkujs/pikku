@@ -29,7 +29,7 @@ export interface DslPassDeps {
     status: WorkflowStatus,
     output?: unknown,
     error?: SerializedError
-  ) => Promise<void>
+  ) => Promise<boolean>
   /** The run's status if something has ended it, finishing any unwind that waited on this pass. */
   settleIfStopped: () => Promise<WorkflowStatus | undefined>
   onChildCompleted: (result: unknown) => Promise<void>
@@ -94,7 +94,9 @@ export const runDslWorkflowPass = async (
     if (await deps.settleIfStopped()) {
       throw new WorkflowCancelledException(runId)
     }
-    await deps.updateRunStatus('completed', result)
+    if (!(await deps.updateRunStatus('completed', result))) {
+      throw new WorkflowCancelledException(runId)
+    }
     await deps.onChildCompleted(result)
   } catch (error: any) {
     failure = error
@@ -122,11 +124,12 @@ export const runDslWorkflowPass = async (
     if (error instanceof WorkflowSuspendedException) {
       outcome = 'interrupted'
       if (!(await deps.settleIfStopped())) {
-        await deps.updateRunStatus('suspended', undefined, {
+        const suspended = await deps.updateRunStatus('suspended', undefined, {
           message: error.message || 'Workflow suspended',
           stack: '',
           code: 'WORKFLOW_SUSPENDED',
         })
+        if (!suspended) await deps.settleIfStopped()
       }
       throw error
     }

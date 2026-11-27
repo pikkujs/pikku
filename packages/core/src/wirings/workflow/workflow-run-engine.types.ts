@@ -36,7 +36,14 @@ export interface WorkflowRunEngine {
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void>
+  ): Promise<boolean>
+  transitionRunStatus(
+    runId: string,
+    from: readonly WorkflowStatus[],
+    status: WorkflowStatus,
+    output?: any,
+    error?: SerializedError
+  ): Promise<boolean>
   onChildWorkflowFailed(run: WorkflowRun, error: unknown): Promise<void>
   verifyStepName(stepName: unknown): void
   getRunTraceparent(runId: string): Promise<string | undefined>

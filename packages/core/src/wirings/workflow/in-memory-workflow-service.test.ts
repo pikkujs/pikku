@@ -74,9 +74,9 @@ describe('InMemoryWorkflowService', () => {
   describe('updateRunStatus', () => {
     test('should update run status', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
-      await service.updateRunStatus(runId, 'succeeded', { result: 'done' })
+      await service.updateRunStatus(runId, 'completed', { result: 'done' })
       const run = await service.getRun(runId)
-      assert.strictEqual(run!.status, 'succeeded')
+      assert.strictEqual(run!.status, 'completed')
       assert.deepStrictEqual(run!.output, { result: 'done' })
     })
 

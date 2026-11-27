@@ -194,10 +194,17 @@ export const runQueuedStep = async (
       error instanceof RPCNotFoundError &&
       !(stopped && isRunClosedToSteps(stopped.status))
     ) {
-      await service.updateRunStatus(runId, 'suspended', undefined, {
-        message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
-        code: 'RPC_NOT_FOUND',
-      })
+      const suspended = await service.updateRunStatus(
+        runId,
+        'suspended',
+        undefined,
+        {
+          message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
+          code: 'RPC_NOT_FOUND',
+        }
+      )
+      // Refused: the run was stopped meanwhile, and waits on this step.
+      if (!suspended) await service.resumeWorkflow(runId)
       return
     }
 

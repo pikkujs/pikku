@@ -168,13 +168,14 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return this.runService.getRun(id)
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
-    await this.db
+  ): Promise<boolean> {
+    const moved = await this.db
       .updateTable('workflowRuns')
       .set({
         status,
@@ -183,7 +184,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         updatedAt: new Date(),
       })
       .where('workflowRunId', '=', id)
-      .execute()
+      .where('status', 'in', from)
+      .executeTakeFirst()
+    return Number(moved?.numUpdatedRows ?? 0n) > 0
   }
 
   protected async insertStepStateImpl(

@@ -389,3 +389,37 @@ describe('a step parked on a child run', () => {
     assert.equal((await ws.getRunSteps(runId))[0]!.childRunId, undefined)
   })
 })
+
+describe('a run status is written only from a status that may precede it', () => {
+  test('a cancelled run is not moved by a late status write', async () => {
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    } as any)
+    const cause = { message: 'stop', stack: '', code: 'WORKFLOW_CANCELLED' }
+    assert.equal(
+      await ws.updateRunStatus(runId, 'cancelled', undefined, cause),
+      true
+    )
+
+    for (const late of ['completed', 'failed', 'suspended'] as const) {
+      assert.equal(
+        await ws.updateRunStatus(
+          runId,
+          late,
+          { late },
+          {
+            message: 'late',
+            stack: '',
+          }
+        ),
+        false,
+        late
+      )
+    }
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'cancelled')
+    assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+    assert.ok(!run?.output)
+  })
+})

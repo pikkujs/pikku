@@ -113,12 +113,12 @@ export class PikkuWorkflowDoClient implements WorkflowService {
     status: WorkflowStatus,
     _output?: any,
     error?: SerializedError
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (status === 'cancelled') {
       await this.getStub(id).cancel(error?.message)
-      return
+      return true
     }
-    notSupported('updateRunStatus')
+    return notSupported('updateRunStatus')
   }
 
   async close(): Promise<void> {}

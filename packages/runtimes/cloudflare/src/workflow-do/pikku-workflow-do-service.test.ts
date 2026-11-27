@@ -532,3 +532,36 @@ describe('PikkuWorkflowDoService — step signals and deadlines', () => {
     assert.equal(service.openInlineStepAttempt(RUN_ID, true), undefined)
   })
 })
+
+describe('PikkuWorkflowDoService — conditional run transitions', () => {
+  beforeEach(async () => {
+    await service.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+  })
+
+  const cause = { message: 'stop', stack: '', code: 'WORKFLOW_CANCELLED' }
+
+  test('a cancelled run is not moved by a late status write', async () => {
+    assert.equal(
+      await service.updateRunStatus(RUN_ID, 'cancelled', undefined, cause),
+      true
+    )
+    for (const late of ['completed', 'failed', 'suspended'] as const) {
+      assert.equal(await service.updateRunStatus(RUN_ID, late), false, late)
+    }
+    const run = await service.getRun(RUN_ID)
+    assert.equal(run?.status, 'cancelled')
+    assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+  })
+
+  test('of two writes racing from one status, only one applies', async () => {
+    const applied = await Promise.all([
+      service.updateRunStatus(RUN_ID, 'cancelled', undefined, cause),
+      service.updateRunStatus(RUN_ID, 'completed'),
+    ])
+    assert.deepEqual(applied, [true, false])
+    assert.equal((await service.getRun(RUN_ID))?.status, 'cancelled')
+  })
+})

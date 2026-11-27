@@ -1,3 +1,4 @@
+import { RUN_STATUS_SOURCES } from './workflow-constants.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { runTraceWire } from './workflow-run-trace.js'
 import {
@@ -589,12 +590,19 @@ export class PikkuScenarioService implements WorkflowRunExtension {
           hookError
         )
       } else {
-        await this.engine.updateRunStatus(runId, 'failed', undefined, {
-          message: hookError.message,
-          stack: hookError.stack,
-          code: hookError.code,
-        })
-        await this.engine.onChildWorkflowFailed(run, hookError)
+        // The run has already completed by now, which the hook overrules.
+        const failed = await this.engine.transitionRunStatus(
+          runId,
+          [...RUN_STATUS_SOURCES.failed, 'completed'],
+          'failed',
+          undefined,
+          {
+            message: hookError.message,
+            stack: hookError.stack,
+            code: hookError.code,
+          }
+        )
+        if (failed) await this.engine.onChildWorkflowFailed(run, hookError)
         throw hookError
       }
     }

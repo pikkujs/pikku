@@ -142,20 +142,24 @@ export class PikkuWorkflowDoService<
     return r ? toWorkflowRun(r) : null
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
+  ): Promise<boolean> {
     this.assertOwn(id)
-    const r = await this.storage.get<DoRunRecord>(KEY_RUN)
-    if (!r) return
-    r.status = status
-    if (output !== undefined) r.output = output
-    if (error !== undefined) r.error = error
-    r.updatedAt = Date.now()
-    await this.storage.put(KEY_RUN, r)
+    return this.exclusively(async () => {
+      const r = await this.storage.get<DoRunRecord>(KEY_RUN)
+      if (!r || !from.includes(r.status)) return false
+      r.status = status
+      if (output !== undefined) r.output = output
+      if (error !== undefined) r.error = error
+      r.updatedAt = Date.now()
+      await this.storage.put(KEY_RUN, r)
+      return true
+    })
   }
 
   protected override assertStepTimeoutSupported(
@@ -629,6 +633,18 @@ export class PikkuWorkflowDoService<
   }
 
   // ─── Internals ────────────────────────────────────────────────────
+
+  private writes: Promise<unknown> = Promise.resolve()
+
+  /**
+   * Run a read-check-write with no other one between its read and its write. A
+   * Durable Object is single-threaded, but its calls interleave at every await.
+   */
+  private exclusively<T>(write: () => Promise<T>): Promise<T> {
+    const next = this.writes.then(write, write)
+    this.writes = next
+    return next
+  }
 
   protected assertOwn(runId: string): void {
     if (runId !== this.ownRunId) {

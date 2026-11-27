@@ -810,12 +810,17 @@ async function failGraphRunWith(
     await workflowService.failOrUnwind(run, error, rpcService, leaseHeld)
     return
   }
-  await workflowService.updateRunStatus(runId, 'failed', undefined, {
-    message: error.message,
-    stack: error.stack ?? '',
-    code: 'GRAPH_NODE_FAILED',
-  })
-  if (run) await workflowService.notifyChildWorkflowFailed(run, error)
+  const failed = await workflowService.updateRunStatus(
+    runId,
+    'failed',
+    undefined,
+    {
+      message: error.message,
+      stack: error.stack ?? '',
+      code: 'GRAPH_NODE_FAILED',
+    }
+  )
+  if (failed && run) await workflowService.notifyChildWorkflowFailed(run, error)
 }
 
 const RECOVERING_FROM_STATE_PREFIX = 'recoveringFrom:'
@@ -1359,8 +1364,12 @@ async function continueGraphInline(
     )
 
     if (plan.toFire.length === 0) {
-      if (!plan.hasInFlight && !plan.blockedWaiting) {
-        await workflowService.updateRunStatus(runId, 'completed')
+      if (
+        !plan.hasInFlight &&
+        !plan.blockedWaiting &&
+        !(await workflowService.updateRunStatus(runId, 'completed'))
+      ) {
+        await workflowService.settleStoppedRun(runId, rpcService)
       }
       return
     }

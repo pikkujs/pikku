@@ -3,6 +3,8 @@ import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
 import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
+  RUN_STATUS_SOURCES,
+  unwindEntryStatuses,
   WORKFLOW_CANCELLED_CODE,
   WORKFLOW_TERMINAL_STATES,
   isRunStopped,
@@ -36,22 +38,14 @@ export interface UnwindHost {
   ): Promise<CompensationStepOutcome>
   finish(
     run: WorkflowRun,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output: unknown,
     error: SerializedError | undefined
   ): Promise<void>
 }
 
-const ENTERABLE: ReadonlySet<string> = new Set([
-  'running',
-  'suspended',
-  'failed',
-  'cancelled',
-  'completed',
-])
-
-export const canEnterCompensation = (status: string): boolean =>
-  ENTERABLE.has(status)
+const UNWINDING: readonly WorkflowStatus[] = ['compensating']
 
 export const compensatingForStep = (
   forward: Pick<UnwindRecord, 'status' | 'result' | 'error' | 'stepName'>
@@ -129,6 +123,7 @@ export const driveUnwind = async (
     if (plan.stuck.length > 0) {
       await host.finish(
         run,
+        UNWINDING,
         'compensation_failed',
         { stuckSteps: plan.stuck },
         run.error
@@ -137,6 +132,7 @@ export const driveUnwind = async (
       const restedAt = plan.childRestedAt ?? plan.restedAt
       await host.finish(
         run,
+        UNWINDING,
         'compensated',
         restedAt ? { restedAt } : undefined,
         run.error
@@ -145,7 +141,7 @@ export const driveUnwind = async (
       // A cancelled run with nothing to undo is still cancelled, not failed.
       const status =
         run.error?.code === WORKFLOW_CANCELLED_CODE ? 'cancelled' : 'failed'
-      await host.finish(run, status, undefined, run.error)
+      await host.finish(run, UNWINDING, status, undefined, run.error)
     }
     return 'finished'
   }
@@ -158,12 +154,13 @@ export interface CompensationApi {
   getRun(runId: string): Promise<WorkflowRun | null>
   getRunSteps(runId: string): Promise<UnwindRecord[]>
   getRunState(runId: string): Promise<Record<string, unknown>>
-  updateRunStatus(
+  transitionRunStatus(
     runId: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: unknown,
     error?: SerializedError
-  ): Promise<void>
+  ): Promise<boolean>
   loadStep(
     runId: string,
     stepName: string,
@@ -222,8 +219,11 @@ export const createUnwindHost = (api: CompensationApi): UnwindHost => ({
     api.isChildWorkflow(forward)
       ? compensateChildStep(api, runId, forward)
       : compensateFunctionStep(api, runId, forward, compensatingFor),
-  finish: async (run, status, output, error) => {
-    await api.updateRunStatus(run.id, status, output, error)
+  finish: async (run, from, status, output, error) => {
+    // Refused: another writer settled the run, and tells the parent itself.
+    if (!(await api.transitionRunStatus(run.id, from, status, output, error))) {
+      return
+    }
     const settled = (await api.getRun(run.id)) ?? run
     await api.notifyParent(
       settled,
@@ -448,6 +448,7 @@ export const beginUnwind = async (
   if (child?.status === 'compensation_failed') {
     await host.finish(
       run,
+      unwindEntryStatuses(cause),
       'compensation_failed',
       { stuckSteps: child.stuckSteps },
       cause
@@ -455,14 +456,25 @@ export const beginUnwind = async (
     return 'finished'
   }
   if (child?.status === 'compensated' && child.restedAt) {
-    await host.finish(run, 'compensated', { restedAt: child.restedAt }, cause)
+    await host.finish(
+      run,
+      unwindEntryStatuses(cause),
+      'compensated',
+      { restedAt: child.restedAt },
+      cause
+    )
     return 'finished'
   }
   if (!(await wouldCompensate(host, run.id))) return 'not-needed'
 
-  const fresh = await api.getRun(run.id)
-  if (!fresh || !canEnterCompensation(fresh.status)) return 'finished'
-  await api.updateRunStatus(run.id, 'compensating', undefined, cause)
+  const entered = await api.transitionRunStatus(
+    run.id,
+    unwindEntryStatuses(cause),
+    'compensating',
+    undefined,
+    cause
+  )
+  if (!entered) return 'finished'
   return (await api.drive(run.id)) === 'waiting' ? 'unwinding' : 'finished'
 }
 
@@ -504,7 +516,16 @@ export const failRunOrUnwind = async (
   }
   const outcome = await beginUnwind(api, createUnwindHost(api), run, cause)
   if (outcome !== 'not-needed') return outcome
-  await api.updateRunStatus(run.id, 'failed', undefined, cause)
+  const failed = await api.transitionRunStatus(
+    run.id,
+    run.status === 'completed'
+      ? [...RUN_STATUS_SOURCES.failed, 'completed']
+      : RUN_STATUS_SOURCES.failed,
+    'failed',
+    undefined,
+    cause
+  )
+  if (!failed) return 'finished'
   await onFailed()
   return 'failed'
 }
@@ -534,7 +555,14 @@ export const cancelAndUnwind = async (
     stack: '',
     code: WORKFLOW_CANCELLED_CODE,
   }
-  await api.updateRunStatus(runId, 'cancelled', undefined, cause)
+  const cancelled = await api.transitionRunStatus(
+    runId,
+    RUN_STATUS_SOURCES.cancelled,
+    'cancelled',
+    undefined,
+    cause
+  )
+  if (!cancelled) return (await api.getRun(runId))?.status
   await beginUnwind(api, host, run, cause)
   return (await api.getRun(runId))?.status
 }

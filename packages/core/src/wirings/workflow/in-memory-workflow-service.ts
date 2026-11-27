@@ -130,19 +130,20 @@ export class InMemoryWorkflowService
     return this.stepHistory.get(runId) || []
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
+  ): Promise<boolean> {
     const run = this.runs.get(id)
-    if (run) {
-      run.status = status
-      run.updatedAt = new Date()
-      if (output !== undefined) run.output = output
-      if (error !== undefined) run.error = error
-    }
+    if (!run || !from.includes(run.status)) return false
+    run.status = status
+    run.updatedAt = new Date()
+    if (output !== undefined) run.output = output
+    if (error !== undefined) run.error = error
+    return true
   }
 
   protected async insertStepStateImpl(
