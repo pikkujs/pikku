@@ -108,13 +108,16 @@ export const runDslWorkflowPass = async (
 
     if (error instanceof WorkflowCancelledException) {
       outcome = 'failed'
-      const stopped = await deps.settleIfStopped()
-      if (!stopped) {
-        await deps.updateRunStatus('cancelled', undefined, {
+      let stopped = await deps.settleIfStopped()
+      if (
+        !stopped &&
+        !(await deps.updateRunStatus('cancelled', undefined, {
           message: error.message || 'Workflow cancelled',
           stack: '',
           code: 'WORKFLOW_CANCELLED',
-        })
+        }))
+      ) {
+        stopped = await deps.settleIfStopped()
       }
       // An unwind tells the parent itself, when it finishes.
       if (!stopped || stopped === 'cancelled') await deps.onChildFailed(error)
