@@ -14,7 +14,11 @@ import {
 import { pikkuState } from '../../pikku-state.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { runningStepLease } from './workflow-step-lease.js'
-import { throwIfLeaseLost, throwIfNotOwned } from './workflow-lost-lease.js'
+import {
+  isOwnershipError,
+  throwIfLeaseLost,
+  throwIfNotOwned,
+} from './workflow-lost-lease.js'
 import type { StepAttempt } from './workflow-step-signal.js'
 import { isWorkflowName } from './workflow-meta-resolver.js'
 import { planUnwind, type UnwindRecord } from './workflow-unwind-plan.js'
@@ -192,8 +196,10 @@ export interface CompensationApi {
     fromStepName: string
   ): Promise<boolean>
   setStepScheduled(stepId: string): Promise<void>
+  /** A row left `running` was lost mid-way, and is retried as a new attempt. */
   runInline(
     runId: string,
+    stepName: string,
     stepState: StepState,
     retries: number,
     retryDelay: WorkflowStepOptions['retryDelay'],
@@ -311,6 +317,7 @@ const compensateFunctionStep = async (
   try {
     await api.runInline(
       runId,
+      stepName,
       state,
       options.retries!,
       undefined,
@@ -593,12 +600,20 @@ export const cancelAndUnwind = async (
     cause
   )
   if (!cancelled) return (await api.getRun(runId))?.status
+  // A child whose unwind lost its lease is waited on like any other, so it
+  // must not keep this run's unwind from starting.
+  let childLost: unknown
   // Read after the write above, which `startLinkedChildRun` relies on.
   for (const step of await host.getRunSteps(runId)) {
-    if (step.childRunId) {
+    if (!step.childRunId) continue
+    try {
       await cancelAndUnwind(api, host, step.childRunId, reason)
+    } catch (error) {
+      if (!isOwnershipError(error)) throw error
+      childLost ??= error
     }
   }
   await beginUnwind(api, host, run, cause)
+  if (childLost) throw childLost
   return (await api.getRun(runId))?.status
 }

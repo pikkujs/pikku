@@ -139,6 +139,7 @@ import {
   type CompensationApi,
 } from './workflow-compensation.js'
 import { isOwnershipError, throwIfLeaseLost } from './workflow-lost-lease.js'
+import { runInlineToItsEnd } from './workflow-inline-pickup.js'
 import { RunUnwinds, type RunUnwindHost } from './workflow-unwind-lease.js'
 import {
   createCompensationApi,
@@ -955,7 +956,7 @@ export abstract class PikkuWorkflowService
     if (shouldInline) {
       this.registerInlineRun(runId)
       try {
-        await this.runWorkflowJob(runId, rpcService)
+        await this.runInlineToItsEnd(runId, rpcService)
       } catch (error: any) {
         if (
           error.name !== 'WorkflowAsyncException' &&
@@ -999,6 +1000,23 @@ export abstract class PikkuWorkflowService
     }
 
     return { runId }
+  }
+
+  private runInlineToItsEnd(runId: string, rpcService: PikkuRPC) {
+    return runInlineToItsEnd(
+      {
+        getRun: (id) => this.getRun(id),
+        wake: (id) => this.wakeLater(id),
+        logger: () => this.logger,
+        runJob: () => this.runWorkflowJob(runId, rpcService),
+        unwind: () =>
+          this.withRunLease(runId, async (leaseLost) => {
+            const host = this.unwindHost(rpcService)
+            await this.unwinds.drive(host, runId, true, leaseLost)
+          }),
+      },
+      runId
+    )
   }
 
   public async runToCompletion<I>(
@@ -1664,6 +1682,9 @@ export abstract class PikkuWorkflowService
       setStepResult: (...args) => this.setStepResult(...args),
       setStepError: (...args) => this.setStepError(...args),
       createRetryAttempt: (...args) => this.createRetryAttempt(...args),
+      logStepRerun: (...args) => this.logStepRerun(...args),
+      logStepAttemptsExhausted: (...args) =>
+        this.logStepAttemptsExhausted(...args),
       scheduleOrchestratorRetry: (...args) =>
         this.scheduleOrchestratorRetry(...args),
     }

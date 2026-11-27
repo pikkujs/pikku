@@ -8,6 +8,8 @@ import {
   recordHasCompensation,
   type CompensationApi,
 } from './workflow-compensation.js'
+import { pickingUpLostRun } from './workflow-lost-lease.js'
+import { takeBackLostInlineStep } from './workflow-step-claim.js'
 import { runInlineRetryLoop } from './workflow-step-retry.js'
 import type { RunUnwindHost, RunUnwinds } from './workflow-unwind-lease.js'
 import type { StepRpcArgs } from './workflow-wire.js'
@@ -53,13 +55,14 @@ export const createCompensationApi = (
   const { service } = deps
   return {
     leaseLost,
-    drive: (runId) =>
-      deps.unwinds.drive(
-        createRunUnwindHost(deps, rpcService),
-        runId,
-        runId === leasedRunId,
-        leaseLost
-      ),
+    drive: async (runId) => {
+      const host = createRunUnwindHost(deps, rpcService)
+      const held = runId === leasedRunId
+      const drive = () => deps.unwinds.drive(host, runId, held, leaseLost)
+      // A lease the caller holds is for its own pass to pick up.
+      if (held) return drive()
+      return (await pickingUpLostRun(host, runId, drive)).value
+    },
     getRun: (...args) => service.getRun(...args),
     getRunSteps: (...args) => service.getRunSteps(...args),
     getRunState: (...args) => service.getRunState(...args),
@@ -70,10 +73,10 @@ export const createCompensationApi = (
     setStepScheduled: (id) => service.setStepScheduled(id),
     setStepResult: (...args) => service.setStepResult(...args),
     setStepError: (...args) => service.setStepError(...args),
-    runInline: (runId, step, retries, retryDelay, work) =>
+    runInline: async (runId, stepName, step, retries, retryDelay, work) =>
       runInlineRetryLoop(
         service,
-        step,
+        await takeBackLostInlineStep(service, runId, stepName, step),
         retries,
         retryDelay,
         work,

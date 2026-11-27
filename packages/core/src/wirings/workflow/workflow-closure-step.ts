@@ -1,5 +1,6 @@
 import { WorkflowAsyncException } from './workflow-errors.js'
 import { refuseStep } from './workflow-step-refusal.js'
+import { takeBackLostInlineStep } from './workflow-step-claim.js'
 import { throwIfNotOwned } from './workflow-lost-lease.js'
 import {
   runInlineRetryLoop,
@@ -10,6 +11,12 @@ import type { StepState, WorkflowStepOptions } from './workflow.types.js'
 
 /** What running a closure step needs from the workflow service. */
 export type ClosureStepHost = StepRetryStore & {
+  logStepRerun(runId: string, stepName: string, attempt: number): Promise<void>
+  logStepAttemptsExhausted(
+    runId: string,
+    stepName: string,
+    attempts: number
+  ): Promise<void>
   isInline(runId: string): Promise<boolean>
   throwIfRunStopped(runId: string): Promise<void>
   updateRunState(runId: string, name: string, value: unknown): Promise<void>
@@ -61,6 +68,14 @@ export const runClosureStep = async (
       'pending',
       stepState.attemptCount
     )
+  }
+
+  // `running` here is a pass that was lost mid-step: only one works a run.
+  if (startFrom.status === 'running') {
+    startFrom = await takeBackLostInlineStep(host, runId, stepName, {
+      ...startFrom,
+      retries,
+    })
   }
 
   const throwIfStopped = () => host.throwIfRunStopped(runId)

@@ -53,7 +53,7 @@ export const runLeaseKey = (runId: string) => `workflow-run:${runId}`
 /** Every holder is told it still has its lease, until the test takes it away. */
 export class ScriptedLeases extends InMemoryLeaseService {
   readonly granted: Lease[] = []
-  readonly lost = new Set<number>()
+  readonly lost = new Set<string>()
   /** Keys another process has, which nothing here can acquire. */
   readonly takenElsewhere = new Set<string>()
   /** Set to have every acquire fail, as when the lease store is unreachable. */
@@ -73,7 +73,7 @@ export class ScriptedLeases extends InMemoryLeaseService {
   /** The run's current holder fails to renew from now on. */
   lose(runId: string) {
     const held = this.granted.filter(({ key }) => key === runLeaseKey(runId))
-    this.lost.add(held.at(-1)!.token)
+    this.lost.add(held.at(-1)!.holder)
   }
 
   /** `lose`, with another process taking the run. */
@@ -91,7 +91,7 @@ export class ScriptedLeases extends InMemoryLeaseService {
   }
 
   override async refresh(lease: Lease): Promise<Lease | null> {
-    return this.lost.has(lease.token) ? null : lease
+    return this.lost.has(lease.holder) ? null : lease
   }
 }
 

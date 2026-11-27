@@ -138,7 +138,7 @@ describe('two passes of one run active at once', () => {
       async () => {
         const { service, signals, end } = await bothInAStep()
 
-        service.leases.lost.add(service.leases.granted[lost]!.token)
+        service.leases.lost.add(service.leases.granted[lost]!.holder)
 
         const aborted = await until(() => signals[lost].aborted, 2_000)
         const other = signals[kept].aborted
