@@ -16,7 +16,7 @@
     "@pikku/cli": "workspace:*"
   },
   "scripts": {
-    "test": "node run.mjs && node pku368.mjs && node markers.mjs"
+    "test": "node run.mjs && node pku368.mjs && node markers.mjs && node bootstrap.mjs"
   },
   "workspaces": [
     "packages/*"

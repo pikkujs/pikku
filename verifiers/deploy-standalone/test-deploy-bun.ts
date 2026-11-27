@@ -115,6 +115,19 @@ export const lifecycle = pikkuServerLifecycle({
 })
 `
 )
+// The app names its own listen address, so a binary run without HOST has to
+// bind it rather than every interface.
+const APP_CONFIG_FILE = join(FUNCTIONS_DIR, 'src', 'config.ts')
+const originalAppConfig = readFileSync(APP_CONFIG_FILE, 'utf-8')
+const patchedAppConfig = originalAppConfig.replace(
+  "awsRegion: 'us-east-1',",
+  "awsRegion: 'us-east-1',\n    hostname: '127.0.0.1',"
+)
+if (patchedAppConfig === originalAppConfig)
+  throw new Error(`Could not set a hostname in ${APP_CONFIG_FILE}`)
+const restoreAppConfig = () => writeFileSync(APP_CONFIG_FILE, originalAppConfig)
+process.on('exit', restoreAppConfig)
+writeFileSync(APP_CONFIG_FILE, patchedAppConfig)
 pinnedConfig.backends.app.deploy = {
   ...pinnedConfig.backends.app.deploy,
   grouping: { strategy: 'function' },
@@ -526,6 +539,61 @@ if (!BUN_AVAILABLE) {
           ]
           if (JSON.stringify(readHookLog()) !== JSON.stringify(expected))
             throw new Error(`got ${JSON.stringify(readHookLog())}`)
+        }
+      )
+
+      await check(
+        "runtime: without HOST the binary binds the app's configured hostname only",
+        async () => {
+          const ownPort = await getFreePort()
+          const env = { ...process.env, PORT: String(ownPort) }
+          delete env.HOST
+          const proc = spawn(binaryPath, [], {
+            env,
+            stdio: 'pipe',
+            cwd: join(DEPLOY_DIR, unitName),
+          })
+          let output = ''
+          proc.stdout?.on('data', (d) => (output += d.toString()))
+          proc.stderr?.on('data', (d) => (output += d.toString()))
+          const exited = new Promise((r) => proc.on('exit', r))
+          const accepts = (host: string) =>
+            new Promise<boolean>((resolve) => {
+              const socket = connect(ownPort, host)
+              socket.setTimeout(2000, () => {
+                socket.destroy()
+                resolve(false)
+              })
+              socket.once('connect', () => {
+                socket.destroy()
+                resolve(true)
+              })
+              socket.once('error', () => resolve(false))
+            })
+          try {
+            for (let i = 0; i < 100 && !output.includes('pikku: ready on'); i++)
+              await new Promise((r) => setTimeout(r, 100))
+            if (!output.includes(`ready on http://127.0.0.1:${ownPort}`))
+              throw new Error(`wrong listen address:\n${output}`)
+            if (!(await accepts('127.0.0.1')))
+              throw new Error('the configured address refuses connections')
+            // Another address of this machine, which only a wildcard bind
+            // answers on.
+            if (await accepts('127.0.0.2'))
+              throw new Error('the binary also answers on 127.0.0.2')
+          } finally {
+            proc.kill('SIGTERM')
+            await exited
+          }
+        }
+      )
+
+      await check(
+        "runtime: HOST wins over the app's configured hostname",
+        async () => {
+          const result = await runToExit({}, { stopWithSigterm: true })
+          if (!result.output.includes('ready on http://0.0.0.0:'))
+            throw new Error(`wrong listen address:\n${result.output}`)
         }
       )
 

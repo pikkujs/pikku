@@ -1,8 +1,18 @@
 import { pikkuVoidFunc } from '#pikku/function'
+import {
+  rootPackagePasses,
+  runPikkuPackagePasses,
+} from '../../utils/package-passes.js'
 
 export const bootstrap = pikkuVoidFunc({
   remote: true,
-  func: async ({ logger, getInspectorState }, _data, { rpc }) => {
+  func: async ({ logger, config, getInspectorState }, _data, { rpc }) => {
+    await runPikkuPackagePasses(
+      rootPackagePasses(config),
+      (pkg) => logger.info(`• pikku bootstrap in ${pkg.entry}`),
+      'bootstrap'
+    )
+
     await getInspectorState(false, true, true)
 
     await rpc.invoke('pikkuErrorTypes')
