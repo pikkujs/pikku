@@ -3,17 +3,12 @@ import assert from 'node:assert/strict'
 
 import { QueuedWorkflowHarness } from '../../testing/service-tests/queued-workflow-harness.js'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
-import { PikkuWorkflowService } from './pikku-workflow-service.js'
-import { InMemoryLeaseService } from '../../services/in-memory-lease-service.js'
-import {
-  LeaseLostError,
-  type Lease,
-  type LeaseService,
-} from '../../services/lease-service.js'
+import { LeaseLostError } from '../../services/lease-service.js'
 import {
   fastLeaseRenewals,
   gate,
   until,
+  LeasedWorkflowService,
 } from './workflow-lease-helpers.test.js'
 
 const LIMIT = { timeout: 20_000 }
@@ -23,52 +18,6 @@ before(() => {
   restoreTimers = fastLeaseRenewals()
 })
 after(() => restoreTimers())
-
-/** Every holder is told it still has the lease, until it is named as lost. */
-class ScriptedLeases extends InMemoryLeaseService {
-  readonly granted: Lease[] = []
-  readonly lost = new Set<number>()
-  private readonly clock: { skew: number }
-
-  constructor() {
-    const clock = { skew: 0 }
-    super(() => Date.now() + clock.skew)
-    this.clock = clock
-  }
-
-  lapse() {
-    this.clock.skew += 60_000
-  }
-
-  override async acquire(key: string, holder: string, ttlMs: number) {
-    const lease = await super.acquire(key, holder, ttlMs)
-    if (lease) this.granted.push(lease)
-    return lease
-  }
-
-  override async refresh(lease: Lease): Promise<Lease | null> {
-    return this.lost.has(lease.token) ? null : lease
-  }
-}
-
-class LeasedService extends InMemoryWorkflowService {
-  protected override readonly leaseService: LeaseService
-  constructor(readonly leases = new ScriptedLeases()) {
-    super()
-    this.leaseService = leases
-  }
-
-  override withRunLease<T>(
-    id: string,
-    fn: (lost?: AbortSignal) => Promise<T>
-  ): Promise<T> {
-    return PikkuWorkflowService.prototype.withRunLease.call(
-      this,
-      id,
-      fn
-    ) as Promise<T>
-  }
-}
 
 const newRun = async (ws: InMemoryWorkflowService) => {
   const runId = await ws.createRun('flow', {}, true, 'flow-hash', {
@@ -133,7 +82,7 @@ describe('two passes of one run active at once', () => {
    * The older pass opens its attempt only once the newer one holds a lease too.
    */
   const bothInAStep = async () => {
-    const service = new LeasedService()
+    const service = new LeasedWorkflowService()
     const h = new QueuedWorkflowHarness(service)
     const entered = [gate(), gate()]
     const go = [gate(), gate()]

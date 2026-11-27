@@ -1,5 +1,6 @@
 import { WorkflowAsyncException } from './workflow-errors.js'
 import { refuseStep } from './workflow-step-refusal.js'
+import { throwIfNotOwned } from './workflow-lost-lease.js'
 import {
   runInlineRetryLoop,
   startStepAttempt,
@@ -41,7 +42,8 @@ export const runClosureStep = async (
   stepState: StepState,
   fn: Function,
   retries: number,
-  retryDelay: WorkflowStepOptions['retryDelay']
+  retryDelay: WorkflowStepOptions['retryDelay'],
+  leaseLost?: AbortSignal
 ): Promise<any> => {
   if (stepState.status === 'succeeded') {
     return stepState.result
@@ -73,16 +75,20 @@ export const runClosureStep = async (
       () => fn(),
       undefined,
       throwIfStopped,
-      { onRefused }
+      { onRefused, leaseLost }
     )
   }
 
-  await startStepAttempt(host, startFrom, throwIfStopped, onRefused)
+  await startStepAttempt(host, startFrom, throwIfStopped, {
+    onRefused,
+    leaseLost,
+  })
   const { stepId, attemptCount } = startFrom
   let result: any
   try {
     result = await fn()
   } catch (error: any) {
+    throwIfNotOwned(error, leaseLost)
     await host.setStepError(stepId, error, attemptCount)
 
     if (attemptCount <= retries) {

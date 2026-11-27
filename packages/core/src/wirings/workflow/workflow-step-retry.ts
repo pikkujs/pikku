@@ -4,6 +4,7 @@ import {
   WorkflowStepSupersededError,
 } from './workflow-errors.js'
 import type { StepAttempt } from './workflow-step-signal.js'
+import { throwIfLeaseLost, throwIfNotOwned } from './workflow-lost-lease.js'
 import type {
   StepState,
   StepStatus,
@@ -58,6 +59,8 @@ export type InlineStepHooks = {
   openAttempt?: () => StepAttempt | undefined
   /** Gives a step that `beforeAttempt` refused to start its final outcome. */
   onRefused?: (stepState: StepState) => Promise<void>
+  /** Aborts if the run lease the calling pass holds is lost. */
+  leaseLost?: AbortSignal
 }
 
 /**
@@ -71,12 +74,15 @@ export const startStepAttempt = async (
   store: Pick<StepRetryStore, 'setStepRunning'>,
   stepState: StepState,
   beforeAttempt?: () => Promise<void>,
-  onRefused?: InlineStepHooks['onRefused']
+  { onRefused, leaseLost }: InlineStepHooks = {}
 ): Promise<void> => {
   await store.setStepRunning(stepState.stepId, stepState.attemptCount)
+  throwIfLeaseLost(leaseLost)
   try {
     await beforeAttempt?.()
+    throwIfLeaseLost(leaseLost)
   } catch (error) {
+    throwIfLeaseLost(leaseLost)
     if (error instanceof WorkflowCancelledException) {
       await onRefused?.(stepState)
     }
@@ -105,20 +111,17 @@ export const runInlineRetryLoop = async (
 ): Promise<any> => {
   let currentStepState = stepState
   while (true) {
+    throwIfLeaseLost(hooks?.leaseLost)
     const attempt = hooks?.openAttempt?.()
     try {
       // Outside the try: a refused start is not a failed attempt.
-      await startStepAttempt(
-        store,
-        currentStepState,
-        beforeAttempt,
-        hooks?.onRefused
-      )
+      await startStepAttempt(store, currentStepState, beforeAttempt, hooks)
       const { stepId, attemptCount } = currentStepState
       let result: any
       try {
         result = await doWork(currentStepState, attempt)
       } catch (error: any) {
+        throwIfNotOwned(error, hooks?.leaseLost)
         if (onError) await onError(error)
 
         await store.setStepError(stepId, error, attemptCount)
@@ -127,6 +130,7 @@ export const runInlineRetryLoop = async (
           throw error
         }
         attempt?.close()
+        throwIfLeaseLost(hooks?.leaseLost)
         // A stopped run gets no pending attempt, which nothing would finish.
         await beforeAttempt?.()
         currentStepState = await store.createRetryAttempt(

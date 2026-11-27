@@ -60,6 +60,7 @@ export const forwardStepHooks = (
   stepName: string,
   leaseLost?: AbortSignal
 ): InlineStepHooks => ({
+  leaseLost,
   openAttempt: () => service.openInlineStepAttempt(runId, true, leaseLost),
   onRefused: (stepState) => refuseStep(service, runId, stepName, stepState),
 })

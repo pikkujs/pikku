@@ -84,6 +84,7 @@ export const createCompensationApi = (
         undefined,
         undefined,
         {
+          leaseLost,
           openAttempt: () =>
             service.openInlineStepAttempt(runId, false, leaseLost),
         }

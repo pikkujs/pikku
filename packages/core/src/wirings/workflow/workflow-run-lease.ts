@@ -4,6 +4,7 @@ import {
   LeaseTakenError,
   type LeaseService,
 } from '../../services/lease-service.js'
+import { throwIfLeaseLost } from './workflow-lost-lease.js'
 
 /** The run is, or was meanwhile, orchestrated by someone else. */
 export const isRunLeaseError = (error: unknown): boolean =>
@@ -24,7 +25,15 @@ export const holdWorkflowLease = <T>(
       `${service.constructor.name} was constructed without a leaseService, so it cannot exclude a second process from a run or step. Pass the app's leaseService to its constructor.`
     )
   }
-  return holdLease(leases, key, (_lease, lost) => fn(lost))
+  return holdLease(leases, key, async (_lease, lost) => {
+    try {
+      return await fn(lost)
+    } catch (error) {
+      // Whatever the body threw after losing the lease, the loss is the news.
+      throwIfLeaseLost(lost)
+      throw error
+    }
+  })
 }
 
 /** A step whose lease is held elsewhere belongs to another dispatch. */

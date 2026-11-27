@@ -24,6 +24,11 @@ import {
   isRunStopped,
 } from '../workflow-constants.js'
 import { childRunFailure } from '../workflow-compensation.js'
+import {
+  isOwnershipError,
+  throwIfLeaseLost,
+  throwIfNotOwned,
+} from '../workflow-lost-lease.js'
 import { runningStepLease } from '../workflow-step-lease.js'
 import type { GraphWireState, PikkuGraphWire } from './workflow-graph.types.js'
 import { pikkuState, getSingletonServices } from '../../../pikku-state.js'
@@ -778,14 +783,16 @@ async function failGraphRun(
   runId: string,
   failedNode: string,
   rpcService?: any,
-  leaseHeld = false
+  leaseHeld = false,
+  leaseLost?: AbortSignal
 ): Promise<void> {
   await failGraphRunWith(
     workflowService,
     runId,
     new Error(`Graph node '${failedNode}' failed after exhausting retries`),
     rpcService,
-    leaseHeld
+    leaseHeld,
+    leaseLost
   )
 }
 
@@ -794,18 +801,31 @@ async function failGraphRunWith(
   runId: string,
   cause: Error,
   rpcService?: any,
-  leaseHeld = false
+  leaseHeld = false,
+  leaseLost?: AbortSignal
 ): Promise<void> {
+  throwIfNotOwned(cause, leaseLost)
   if (
     rpcService &&
-    (await workflowService.settleStoppedRun(runId, rpcService, leaseHeld))
+    (await workflowService.settleStoppedRun(
+      runId,
+      rpcService,
+      leaseHeld,
+      leaseLost
+    ))
   ) {
     return
   }
   const error = Object.assign(cause, { code: 'GRAPH_NODE_FAILED' })
   const run = await workflowService.getRun(runId)
   if (run && rpcService) {
-    await workflowService.failOrUnwind(run, error, rpcService, leaseHeld)
+    await workflowService.failOrUnwind(
+      run,
+      error,
+      rpcService,
+      leaseHeld,
+      leaseLost
+    )
     return
   }
   const failed = await workflowService.updateRunStatus(
@@ -896,13 +916,17 @@ async function queueGraphNode(
   )
 }
 
-/** Called inside the run's lease, which any unwind it starts relies on. */
+/**
+ * Called inside the run's lease, which any unwind it starts relies on.
+ * `leaseLost` is the signal the caller was given with that lease.
+ */
 export async function continueGraph(
   workflowService: PikkuWorkflowService,
   runId: string,
   graphName: string,
   overrideMeta?: WorkflowRuntimeMeta,
-  rpcService?: any
+  rpcService?: any,
+  leaseLost?: AbortSignal
 ): Promise<void> {
   const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
@@ -927,7 +951,8 @@ export async function continueGraph(
       runId,
       unrecovered[0]!,
       rpcService,
-      true
+      true,
+      leaseLost
     )
     return
   }
@@ -980,6 +1005,7 @@ export async function continueGraph(
   // flight and would wait on it forever. Its step already exists: dispatching
   // it again is enough, and the claim makes that the next attempt.
   for (const instance of instances) {
+    throwIfLeaseLost(leaseLost)
     if (runningStepLease(instance) !== 'lapsed') continue
     const logical = remapStepNamesToNodeIds(
       [instance.stepName],
@@ -999,6 +1025,8 @@ export async function continueGraph(
     )
   }
 
+  throwIfLeaseLost(leaseLost)
+
   if (plan.toFire.length === 0) {
     if (!plan.hasInFlight && !plan.blockedWaiting) {
       await workflowService.updateRunStatus(runId, 'completed')
@@ -1012,6 +1040,7 @@ export async function continueGraph(
 
     const resolvedInput = await resolveNodeInput(fire.logical, fire.itemIndex)
 
+    throwIfLeaseLost(leaseLost)
     await prepareFire(workflowService, runId, fire, node)
     await queueGraphNode(
       workflowService,
@@ -1181,9 +1210,17 @@ export async function runFromMeta(
   workflowService: PikkuWorkflowService,
   runId: string,
   meta: WorkflowRuntimeMeta,
-  _rpcService: any
+  _rpcService: any,
+  leaseLost?: AbortSignal
 ): Promise<void> {
-  await continueGraph(workflowService, runId, meta.name, meta, _rpcService)
+  await continueGraph(
+    workflowService,
+    runId,
+    meta.name,
+    meta,
+    _rpcService,
+    leaseLost
+  )
 }
 
 async function executeGraphNodeInline(
@@ -1285,7 +1322,11 @@ async function executeGraphNodeInline(
             (await workflowService.getRun(runId))?.status ?? ''
           )
         ) {
-          await workflowService.setStepError(attempt.stepId, error)
+          await workflowService.setStepError(
+            attempt.stepId,
+            error,
+            attempt.attemptCount
+          )
           await workflowService.updateRunStatus(runId, 'suspended', undefined, {
             message: `RPC '${rpcName}' not found. Deploy the missing function and resume.`,
             code: 'RPC_NOT_FOUND',
@@ -1301,6 +1342,7 @@ async function executeGraphNodeInline(
       error instanceof WorkflowAsyncException ||
       error instanceof WorkflowSuspendedException ||
       error instanceof WorkflowCancelledException ||
+      isOwnershipError(error) ||
       !recoversFailure(node)
     ) {
       throw error
@@ -1567,6 +1609,7 @@ export async function runWorkflowGraph(
         ) {
           return
         }
+        if (isOwnershipError(error)) throw error
         await failGraphRunWith(
           workflowService,
           runId,

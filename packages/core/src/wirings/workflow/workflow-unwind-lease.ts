@@ -1,5 +1,6 @@
 import { LeaseTakenError } from '../../services/lease-service.js'
 import type { Logger } from '../../services/logger.js'
+import { isOwnershipError } from './workflow-lost-lease.js'
 
 type UnwindOutcome = 'waiting' | 'finished'
 
@@ -104,13 +105,18 @@ export class RunUnwinds {
     pass: (leaseLost?: AbortSignal) => Promise<void>
   ): Promise<void> {
     let held = false
+    let disowned = false
     try {
       await host.withRunLease(runId, (leaseLost) => {
         held = true
         return pass(leaseLost)
       })
+    } catch (error) {
+      // A pass that lost the run leaves it to whoever picks it up.
+      disowned = isOwnershipError(error)
+      throw error
     } finally {
-      if (held) await this.driveLeftBehind(host, runId)
+      if (held && !disowned) await this.driveLeftBehind(host, runId)
     }
   }
 

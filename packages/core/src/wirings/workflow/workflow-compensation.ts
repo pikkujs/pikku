@@ -14,6 +14,7 @@ import {
 import { pikkuState } from '../../pikku-state.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { runningStepLease } from './workflow-step-lease.js'
+import { throwIfLeaseLost, throwIfNotOwned } from './workflow-lost-lease.js'
 import type { StepAttempt } from './workflow-step-signal.js'
 import { isWorkflowName } from './workflow-meta-resolver.js'
 import { planUnwind, type UnwindRecord } from './workflow-unwind-plan.js'
@@ -28,6 +29,8 @@ import type {
 export type CompensationStepOutcome = 'done' | 'waiting' | 'stuck'
 
 export interface UnwindHost {
+  /** Aborts if the run lease this unwind is driven under is lost. */
+  leaseLost?: AbortSignal
   getRun(runId: string): Promise<WorkflowRun | null>
   getRunSteps(runId: string): Promise<UnwindRecord[]>
   getRunState(runId: string): Promise<Record<string, unknown>>
@@ -104,11 +107,13 @@ export const driveUnwind = async (
       isChildWorkflow: host.isChildWorkflow,
     })
 
+    throwIfLeaseLost(host.leaseLost)
     if (plan.forwardInFlight) return 'waiting'
 
     if (plan.ready.length > 0) {
       let progressed = false
       for (const forward of plan.ready) {
+        throwIfLeaseLost(host.leaseLost)
         const outcome = await host.runCompensationStep(
           runId,
           forward,
@@ -224,6 +229,7 @@ export interface CompensationApi {
 }
 
 export const createUnwindHost = (api: CompensationApi): UnwindHost => ({
+  leaseLost: api.leaseLost,
   getRun: (id) => api.getRun(id),
   getRunSteps: (id) => api.getRunSteps(id),
   getRunState: (id) => api.getRunState(id),
@@ -320,7 +326,8 @@ const compensateFunctionStep = async (
         )
     )
     return 'done'
-  } catch {
+  } catch (error) {
+    throwIfNotOwned(error, api.leaseLost)
     return 'stuck'
   }
 }
@@ -361,6 +368,7 @@ const compensateChildStep = async (
     await api.failOrUnwind(child, new Error('unwind'))
   }
   const after = await api.getRun(forward.childRunId)
+  throwIfLeaseLost(api.leaseLost)
   switch (after?.status) {
     case 'compensated': {
       const restedAt = (after.output as { restedAt?: string } | undefined)
@@ -469,6 +477,7 @@ export const beginUnwind = async (
 ): Promise<'unwinding' | 'finished' | 'not-needed'> => {
   const child =
     cause.childCompensation ?? (await failedChildCompensation(api, run.id))
+  throwIfLeaseLost(api.leaseLost)
   if (child?.status === 'compensation_failed') {
     await host.finish(
       run,
@@ -490,6 +499,7 @@ export const beginUnwind = async (
     return 'finished'
   }
   if (!(await wouldCompensate(host, run.id))) return 'not-needed'
+  throwIfLeaseLost(api.leaseLost)
 
   const entered = await api.transitionRunStatus(
     run.id,
@@ -540,6 +550,7 @@ export const failRunOrUnwind = async (
   }
   const outcome = await beginUnwind(api, createUnwindHost(api), run, cause)
   if (outcome !== 'not-needed') return outcome
+  throwIfLeaseLost(api.leaseLost)
   const failed = await api.transitionRunStatus(
     run.id,
     run.status === 'completed'

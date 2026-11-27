@@ -11,6 +11,7 @@ import type {
   RunLifecycleContext,
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
+import { isOwnershipError, throwIfLeaseLost } from './workflow-lost-lease.js'
 import {
   WorkflowAsyncException,
   WorkflowCancelledException,
@@ -35,6 +36,8 @@ export interface DslPassDeps {
   onChildCompleted: (result: unknown) => Promise<void>
   onChildFailed: (error: Error) => Promise<void>
   failOrUnwind: (error: Error) => Promise<'unwinding' | 'finished' | 'failed'>
+  /** Aborts if the run lease this pass holds is lost. */
+  leaseLost?: AbortSignal
 }
 
 export const runDslWorkflowPass = async (
@@ -89,6 +92,7 @@ export const runDslWorkflowPass = async (
       }
     )
 
+    throwIfLeaseLost(deps.leaseLost)
     // The run has been in the hands of its steps, and an inline one never went
     // back through the queue, so what it was told is only known by rereading.
     if (await deps.settleIfStopped()) {
@@ -100,6 +104,17 @@ export const runDslWorkflowPass = async (
     await deps.onChildCompleted(result)
   } catch (error: any) {
     failure = error
+
+    const lost: unknown = deps.leaseLost?.aborted
+      ? deps.leaseLost.reason
+      : isOwnershipError(error)
+        ? error
+        : undefined
+    if (lost) {
+      outcome = 'interrupted'
+      failure = lost
+      throw lost
+    }
 
     if (error instanceof WorkflowAsyncException) {
       outcome = 'interrupted'
