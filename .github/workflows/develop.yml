@@ -707,7 +707,8 @@ jobs:
     name: Native desktop (${{ matrix.name }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
-    needs: [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
+    needs:
+      [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
     continue-on-error: ${{ matrix.optional == true }}
     strategy:
@@ -844,7 +845,8 @@ jobs:
     name: Native iOS (simulator)
     runs-on: macos-latest
     timeout-minutes: 60
-    needs: [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
+    needs:
+      [build, native-gate, native-web, inspector-go-build, inspector-rs-build]
     if: ${{ needs.native-gate.outputs.run == 'true' }}
     steps:
       - uses: actions/checkout@v7

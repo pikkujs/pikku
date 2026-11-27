@@ -302,11 +302,11 @@ pikku db migrate    # applies it and regenerates the types
   the reason and nothing is written: declare a new column nullable or with a
   default.
 - **Rename a column with `renamedFrom`.** `caption: { type: 'text', renamedFrom:
-  'label' }` writes `RENAME COLUMN` and keeps the rows. Delete `renamedFrom` once
+'label' }` writes `RENAME COLUMN` and keeps the rows. Delete `renamedFrom` once
   the migration is applied. It is refused on a column in a key, an index or a
   reference.
 - **Rename a table with `renamedFrom`.** `dashboard: { renamedFrom: 'desk',
-  columns: {...} }` writes `ALTER TABLE ... RENAME TO ...` and keeps the rows,
+columns: {...} }` writes `ALTER TABLE ... RENAME TO ...` and keeps the rows,
   renames the indexes, keys and triggers the engine named after the table, and a
   foreign key in another table follows (declare it `references: 'dashboard.id'`).
   No drop, no approval. Delete `renamedFrom` once the migration is applied. It is
@@ -358,7 +358,7 @@ pikku db migrate    # applies it and regenerates the types
   (`..._<8 hex>_<kind>_check`) the declaration no longer wants under that exact
   name is dropped (add first, then drop, so a bound is never unenforced), which
   is what removes the old rule after you rename a table or column by hand; `db
-  check` reports it, a check with a name of your own is left alone. Aurora MySQL 3.x is
+check` reports it, a check with a name of your own is left alone. Aurora MySQL 3.x is
   accepted, MariaDB, Aurora 2.x and 5.7 are refused. **SQLite gets no CHECK at all**:
   validation only, and `db generate`/`db check` print one notice with the
   `CHECK` SQL to add by hand (constraints a hand-written check in the migrations

@@ -9,8 +9,5 @@
   "deploy": {
     "provider": "standalone"
   },
-  "allowShadowedServices": [
-    "queueService",
-    "schedulerService"
-  ]
+  "allowShadowedServices": ["queueService", "schedulerService"]
 }

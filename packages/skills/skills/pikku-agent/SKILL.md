@@ -43,7 +43,8 @@ import { ref } from '#pikku/function'
 
 export const ordersHelper = pikkuAgent({
   name: 'orders-helper',
-  description: "Answers questions about this team's orders from its own records.",
+  description:
+    "Answers questions about this team's orders from its own records.",
   role: 'You answer questions about orders.',
   goal: 'Call a tool first. State only what a tool returned, and say so when none has it.',
   model: 'fast',
@@ -61,11 +62,17 @@ export const ordersHelper = pikkuAgent({
 // or a refresh, keep the threadId somewhere stable and load its messages through the generated thread APIs.
 const agent = usePikkuAgent('ordersHelper')
 const [threadId] = useState(() => crypto.randomUUID())
-const [turns, setTurns] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
+const [turns, setTurns] = useState<
+  { role: 'user' | 'assistant'; text: string }[]
+>([])
 
 const ask = async (message: string) => {
   setTurns((t) => [...t, { role: 'user', text: message }])
-  const { result } = await agent.run({ message, threadId, resourceId: 'orders-help' })
+  const { result } = await agent.run({
+    message,
+    threadId,
+    resourceId: 'orders-help',
+  })
   setTurns((t) => [...t, { role: 'assistant', text: String(result ?? '') }])
 }
 ```
