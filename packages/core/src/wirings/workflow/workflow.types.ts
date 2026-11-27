@@ -108,13 +108,15 @@ export interface WorkflowPlannedStep {
 }
 
 /**
- * Where a run stands. `compensating` and the two after it belong to a saga unwinding after a failure.
+ * Where a run stands. A `cancelling` run has accepted a cancel and has not
+ * ended. `compensating` and the two after it belong to a saga unwinding.
  */
 export type WorkflowStatus =
   | 'running'
   | 'suspended'
   | 'completed'
   | 'failed'
+  | 'cancelling'
   | 'cancelled'
   | 'compensating'
   | 'compensated'
@@ -123,9 +125,19 @@ export type WorkflowStatus =
 /** Whether a recorded version of a workflow's graph may be run. */
 export type WorkflowVersionStatus = 'draft' | 'active' | 'declined'
 
-/** Where one step attempt stands. */
+/**
+ * Where one step attempt stands. A `cancelling` attempt has had its signal
+ * fired and its function has not ended; a `cancelled` one ended for a cancel.
+ */
 export type StepStatus =
-  'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed' | 'suspended'
+  | 'pending'
+  | 'running'
+  | 'scheduled'
+  | 'succeeded'
+  | 'failed'
+  | 'suspended'
+  | 'cancelling'
+  | 'cancelled'
 
 /** One stored workflow run. */
 export interface WorkflowRun {
@@ -210,7 +222,7 @@ export interface WorkflowRunStatus {
  * Read and delete access to stored workflow runs, for consoles and status
  * routes. It applies no ownership check of its own: callers that expose it to
  * users check with `assertWorkflowRunOwner` first.
- * Each step from `getRunSteps` has a `status`: `pending`, `running`, `scheduled`, `succeeded`, `failed`, `suspended`.
+ * Each step from `getRunSteps` has a `status`, a `StepStatus`: `pending`, `running`, `scheduled`, `succeeded`, `failed`, `suspended`, `cancelling`, `cancelled`.
  *
  * @example snippet: workflowApprovalsWaiting
  */
@@ -276,6 +288,7 @@ export interface WorkflowRunMirror {
 
   setStepRunning(stepId: string): Promise<void>
   setStepScheduled(stepId: string): Promise<void>
+  setStepCancelling(stepId: string): Promise<void>
   setStepResult(stepId: string, result: any): Promise<void>
   setStepChildRunId(stepId: string, childRunId: string): Promise<void>
   setStepError(stepId: string, error: SerializedError): Promise<void>

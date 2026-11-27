@@ -664,8 +664,8 @@ export abstract class PikkuWorkflowService
 
   /**
    * Ids of runs that are stalled: `running` or `compensating`, with no step
-   * something is expected to complete (`scheduled`, `suspended`, `running` under
-   * a live lease, or parked on an unsettled child run), and no step activity
+   * something is expected to complete (`scheduled`, `suspended`, `running` or
+   * `cancelling` under a live lease, or parked on an unsettled child run), and no step activity
    * since `before`.
    *
    * A lapsed lease is a dispatch that died, so it holds nothing out of the

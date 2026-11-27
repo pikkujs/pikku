@@ -11,6 +11,7 @@ const MIRROR_METHODS = [
   'insertStepState',
   'setStepRunning',
   'setStepScheduled',
+  'setStepCancelling',
   'setStepResult',
   'setStepChildRunId',
   'setStepError',
@@ -53,6 +54,7 @@ const driveEveryWrite = async (ws: any) => {
   const step = await ws.insertStepState(runId, 'step-1', 'rpc.fn', { x: 1 })
   await ws.setStepScheduled(step.stepId)
   await ws.setStepRunning(step.stepId)
+  await ws.setStepCancelling(step.stepId, 1)
   await ws.setStepChildRunId(step.stepId, 'child-1')
   await ws.setBranchTaken(step.stepId, 'left')
   await ws.setStepError(step.stepId, new Error('boom'))
@@ -167,5 +169,20 @@ describe('a mirror that is broken', () => {
     const ws = service(undefined)
     const { runId } = await driveEveryWrite(ws)
     assert.equal((await ws.getRun(runId))?.status, 'completed')
+  })
+})
+
+describe('mirroring a cancelling step', () => {
+  test('a refused cancelling mark is not mirrored', async () => {
+    const { mirror, calls } = recordingMirror()
+    const ws = service(mirror)
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    })
+    const step = await ws.insertStepState(runId, 'step-1', 'rpc.fn', {})
+
+    assert.equal(await ws.setStepCancelling(step.stepId, 1), false)
+
+    assert.ok(!calls.some((c) => c.method === 'setStepCancelling'))
   })
 })

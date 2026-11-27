@@ -143,6 +143,20 @@ describe('KyselyWorkflowMirror — step lifecycle', () => {
     assert.deepEqual(history[0]!.result, { value: 42 })
   })
 
+  test('setStepCancelling moves the step and its history attempt', async () => {
+    await seedStep()
+    await mirror.setStepRunning(STEP_ID)
+    await mirror.setStepCancelling(STEP_ID)
+
+    const [step] = await runService.getRunSteps(RUN_ID)
+    assert.equal(step!.status, 'cancelling')
+    const history = await runService.getRunHistory(RUN_ID)
+    assert.deepEqual(
+      history.map((h) => h.status),
+      ['cancelling']
+    )
+  })
+
   test('setStepError stores serialized error', async () => {
     await seedStep()
     await mirror.setStepError(STEP_ID, {

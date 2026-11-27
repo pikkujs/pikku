@@ -48,7 +48,7 @@ export abstract class WorkflowStepWrites {
   ): Promise<boolean>
 
   /**
-   * Push the claim on a `running` step forward, so it keeps reading as owned
+   * Push the claim on a `running` or `cancelling` step forward, so it keeps reading as owned
    * for another lease.
    *
    * Does nothing by default, which leaves a store that records no lease exactly
@@ -77,14 +77,36 @@ export abstract class WorkflowStepWrites {
   /**
    * Take a step under a fresh lease, only while it is still on the attempt in
    * `seen` and in one of `from`, reporting whether this caller moved it to
-   * `running`. A `running` step is taken only once its lease has lapsed, on the
-   * clock the store judges leases by, and only with no child run. The check and
-   * the write must be one atomic operation.
+   * `running`. A `running` or `cancelling` step is taken only once its lease has
+   * lapsed, on the clock the store judges leases by, and only with no child run.
+   * The check and the write must be one atomic operation.
    */
   protected abstract claimStepStatus(
     seen: StepState,
     from: readonly StepStatus[],
     leaseMs: number
+  ): Promise<boolean>
+
+  /**
+   * Mark a `running` step `cancelling`: the worker holding `attempt` has fired
+   * its signal and the function has not ended. Resolves `false`, changing
+   * nothing, when the step is not running or is no longer that attempt's.
+   */
+  public async setStepCancelling(
+    stepId: string,
+    attempt: number
+  ): Promise<boolean> {
+    return this.stepWrite(
+      () =>
+        this.setStepCancellingImpl(stepId, STEP_SOURCES.cancelling, attempt),
+      (mirror) => mirror.setStepCancelling(stepId)
+    )
+  }
+
+  protected abstract setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
   ): Promise<boolean>
 
   /** Does nothing to a step a worker has already claimed. */

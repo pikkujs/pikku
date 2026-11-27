@@ -24,6 +24,10 @@ import type {
   DoStepRecord,
 } from './do-storage-types.js'
 
+/** A step whose function has not ended, which a lease may hold. */
+const isStepExecuting = (status: StepStatus): boolean =>
+  (STEP_SOURCES.inFlight as readonly StepStatus[]).includes(status)
+
 const KEY_RUN = 'run'
 const KEY_STATE = 'state'
 const KEY_STEP_ORDER = 'step:order'
@@ -318,15 +322,33 @@ export class PikkuWorkflowDoService<
     }))
   }
 
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    const written = await this.writeStepIf(
+      stepId,
+      from,
+      (s) => {
+        s.status = 'cancelling'
+      },
+      attempt
+    )
+    if (!written) return false
+    await this.appendHistory(stepId, 'cancelling')
+    return true
+  }
+
   protected async claimStepStatus(
     seen: StepState,
     from: readonly StepStatus[],
     _leaseMs: number
   ): Promise<boolean> {
-    // With no step lease to lapse, a `running` step is never taken back.
+    // With no step lease to lapse, an executing step is never taken back.
     return !!(await this.writeStepIf(
       seen.stepId,
-      from.filter((status) => status !== 'running'),
+      from.filter((status) => !isStepExecuting(status)),
       (s) => {
         s.status = 'running'
       },

@@ -96,6 +96,10 @@ const decodeStateKey = (key: string): string =>
     ? Buffer.from(key.slice(ENCODED_STATE_KEY.length), 'hex').toString('utf8')
     : key
 
+/** A step whose function has not ended, which a lease may hold. */
+const isStepExecuting = (status: StepStatus): boolean =>
+  (STEP_SOURCES.inFlight as readonly StepStatus[]).includes(status)
+
 export class MongoDBWorkflowService extends PikkuWorkflowService {
   private initialized = false
   private runService: MongoDBWorkflowRunService
@@ -315,6 +319,25 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       return false
     }
     await this.writeLatestHistory(stepId, 'running', {}, attempt)
+    return true
+  }
+
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    if (
+      !(await this.writeStepIfIn(
+        stepId,
+        from,
+        { status: 'cancelling' },
+        attempt
+      ))
+    ) {
+      return false
+    }
+    await this.writeLatestHistory(stepId, 'cancelling', {}, attempt)
     return true
   }
 
@@ -642,7 +665,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * A `running` step matches only once its lease has lapsed, and only with no
+   * An executing step matches only once its lease has lapsed, and only with no
    * child run: a step parked on a child is the child's to finish.
    */
   private claimFilter(
@@ -654,7 +677,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       _id: stepState.stepId,
       attempt: stepState.attemptCount,
       status: { $in: [...from] },
-      ...(from.includes('running')
+      ...(from.some(isStepExecuting)
         ? { leaseExpiresAt: { $lt: now }, childRunId: null }
         : {}),
     }

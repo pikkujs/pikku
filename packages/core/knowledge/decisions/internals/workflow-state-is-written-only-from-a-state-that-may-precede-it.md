@@ -31,7 +31,12 @@ runs its conditional writes one at a time.
 ## Steps
 
 Every step write is checked against `STEP_SOURCES`, and against the attempt where
-the writer has one. An outcome applies only to a `running` step. So a late write
+the writer has one. An outcome applies only to a `running` or `cancelling` step.
+`setStepCancelling` moves a `running` step to `cancelling` for one attempt, and
+is refused once there is an outcome. A `cancelling` step takes what a `running`
+one does while its function has not ended (outcome, lease renewal, child link,
+branch), and nothing that would start work: it is not set running or scheduled,
+and not retried. So a late write
 from the very attempt that was failed as lost is refused, which a check on the
 attempt number alone would let through. A refused outcome throws
 `WorkflowStepSupersededError`. A refused `setStepScheduled` is silent, because it
@@ -49,7 +54,13 @@ attempt, so a report from an older attempt can still land on a retry.
 ## Claims
 
 `CLAIMABLE_STEP_STATUSES` lists what a dispatch may take a step from; a status
-it does not name is left alone. `claimStepStatus` is each store's atomic take.
+it does not name is left alone, `cancelling` and `cancelled` among them.
+`claimStepStatus` is each store's atomic take. It applies the lapsed-lease and
+no-child checks to a step that is `running` or `cancelling`, whatever sources the
+caller names: a store that keyed them on `running` alone would hand a live
+`cancelling` step to whoever asked for it. A claim that runs a lost step again
+names `STEP_SOURCES.lost`, which leaves `cancelling` out, so a step marked between
+the claim's read and its take is not run again.
 `settleUnclaimableStep` also fails a lost forward step of a stopped run instead of
 running it again, after taking it, so a worker that renewed in the meantime keeps
 it. A cancel can still land between that check and the reclaim. The claim then

@@ -30,6 +30,10 @@ import { requirePikkuSchema } from './schema/index.js'
 import { insertOrIgnore, isMysql } from './kysely-upsert.js'
 import { workflowSchema } from './schema/workflow.schema.js'
 
+/** A step whose function has not ended, which a lease may hold. */
+const isStepExecuting = (status: StepStatus): boolean =>
+  (STEP_SOURCES.inFlight as readonly StepStatus[]).includes(status)
+
 /**
  * What a step read returns, one list for the single read and the whole-run
  * read alike, so the replay snapshot cannot drift from `getStepState`.
@@ -290,6 +294,14 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       from,
       attempt
     )
+  }
+
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    return this.writeStepTransition(stepId, 'cancelling', {}, from, attempt)
   }
 
   public override async refreshStepLease(
@@ -722,9 +734,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * A claim never mixes `running` with other sources, so asking for it also
-   * requires the lease to have lapsed and no child run: a step parked on a child
-   * is the child's to finish, even one saved after the step was read.
+   * A claim never mixes the executing statuses with other sources, so asking for
+   * one also requires the lease to have lapsed and no child run: a step parked on
+   * a child is the child's to finish, even one saved after the step was read.
    */
   protected async claimStepStatus(
     seen: StepState,
@@ -743,7 +755,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       .where(sql`coalesce(current_attempt, 1)`, '=', seen.attemptCount)
       .where('status', 'in', from)
 
-    if (from.includes('running')) {
+    if (from.some(isStepExecuting)) {
       query = query
         .where('leaseExpiresAt', '<', now)
         .where('childRunId', 'is', null)
@@ -950,12 +962,12 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
               .where((eb) =>
                 eb.or([
                   eb('s.status', 'in', ['scheduled', 'suspended']),
-                  // A `running` step counts as in flight only while someone
+                  // An executing step counts as in flight only while someone
                   // still holds it. A lapsed lease is a dispatch that died, and
                   // a null one with no child run is a step worked inside a pass,
                   // which the run's lease answers for, not this query.
                   eb.and([
-                    eb('s.status', '=', 'running'),
+                    eb('s.status', 'in', STEP_SOURCES.inFlight),
                     eb.or([
                       eb('s.leaseExpiresAt', '>', this.nowMs()),
                       eb.and([

@@ -36,6 +36,7 @@ export const RUN_STATUS_SOURCES: Readonly<
   suspended: ['running', 'suspended'],
   completed: ['running', 'suspended'],
   failed: ['running', 'suspended', 'failed'],
+  cancelling: ['running', 'suspended'],
   cancelled: ['running', 'suspended'],
   compensating: ['running', 'suspended'],
   compensated: ['compensating'],
@@ -46,18 +47,24 @@ export const RUN_STATUS_SOURCES: Readonly<
  * The statuses a step may be in for each kind of write to apply. `unsettled` is
  * for the outcome of a step nothing has to be running: a sleep, a step refused
  * before it started, and a compensation row settled without a function.
+ *
+ * `inFlight` is a step whose function has not ended, which a lease may hold: a
+ * store takes a step in one of these only once its lease has lapsed.
  */
 export const STEP_SOURCES = {
   /** `running` too: a claim moves the step there before it is marked. */
   running: ['pending', 'scheduled', 'running'],
   scheduled: ['pending', 'scheduled'],
-  outcome: ['running'],
-  unsettled: ['pending', 'scheduled', 'running'],
+  outcome: ['running', 'cancelling'],
+  unsettled: ['pending', 'scheduled', 'running', 'cancelling'],
+  cancelling: ['running'],
   retry: ['running', 'failed'],
   /** A step no dispatch has taken yet. */
   unclaimed: ['pending', 'scheduled'],
+  /** A lost step a claim may run again. */
+  lost: ['running'],
   /** A child run, a branch or a lease, which only work in flight takes. */
-  inFlight: ['running'],
+  inFlight: ['running', 'cancelling'],
 } as const satisfies Record<string, readonly StepStatus[]>
 
 /**
@@ -73,7 +80,12 @@ export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([
   'pending',
   'scheduled',
   'running',
+  'cancelling',
 ])
+
+/** Whether a step's function has not ended, so a lease may hold it. */
+export const isStepExecuting = (status: string): boolean =>
+  (STEP_SOURCES.inFlight as readonly string[]).includes(status)
 
 export const NO_COMPENSATE_STATE_PREFIX = 'noCompensate:'
 
@@ -106,10 +118,10 @@ export const isRunSettled = (status: string): boolean =>
 
 /**
  * True for a run its own pass must no longer write an outcome for. That is a
- * settled run, or one unwinding, which `cancelRun` moves there on its own.
+ * settled run, or one being cancelled or unwinding, which moves on its own.
  */
 export const isRunStopped = (status: string): boolean =>
-  isRunSettled(status) || status === 'compensating'
+  isRunSettled(status) || status === 'cancelling' || status === 'compensating'
 
 /** The recorded cause of a run that was cancelled, kept while it unwinds. */
 export const WORKFLOW_CANCELLED_CODE = 'WORKFLOW_CANCELLED'
@@ -136,20 +148,23 @@ const CANCEL_UNWIND_STATES: ReadonlySet<string> = new Set([
 ])
 
 /**
- * True for a run that was cancelled, including while it unwinds for that
- * cancel. A run unwinding after a failure was not.
+ * True for a run that was cancelled, including while it is cancelling or
+ * unwinds for that cancel. A run unwinding after a failure was not.
  */
 export const isRunCancelled = (run: {
   status: string
   error?: { code?: string }
 }): boolean =>
   run.status === 'cancelled' ||
+  run.status === 'cancelling' ||
   (CANCEL_UNWIND_STATES.has(run.status) &&
     run.error?.code === WORKFLOW_CANCELLED_CODE)
 
-/** True for a run that starts no more forward steps: cancelled, unwinding or unwound. */
+/** True for a run that starts no more forward steps: cancelled or being cancelled, unwinding or unwound. */
 export const isRunClosedToSteps = (status: string): boolean =>
-  status === 'cancelled' || CANCEL_UNWIND_STATES.has(status)
+  status === 'cancelled' ||
+  status === 'cancelling' ||
+  CANCEL_UNWIND_STATES.has(status)
 
 /** The longest a step in another process takes to learn its run was cancelled. */
 export const WORKFLOW_CANCEL_CHECK_MS = 20_000
@@ -210,7 +225,7 @@ export const DEFAULT_STEP_LEASE_MS = 60_000
 export const STEP_LEASE_REFRESH_MIN_MS = 1_000
 
 /**
- * Whether a `running` step is still owned by the dispatch that claimed it.
+ * Whether an executing step is still owned by the dispatch that claimed it.
  *
  * No lease at all counts as live: a store that records none has no way to tell
  * an abandoned step from a working one, so it keeps the older, safer rule that

@@ -54,13 +54,14 @@ return current
 `
 
 /**
- * Renews or releases the lease of a `running` step. ARGV is the stepId, the
+ * Renews or releases the lease of a `running` or `cancelling` step. ARGV is the stepId, the
  * attempt (empty when unfenced), and the new expiry in epoch milliseconds
  * (empty to release). Returns 1 when the lease moved.
  */
 const FENCED_LEASE_REFRESH = `
 local stepId = redis.call('HGET', KEYS[1], 'stepId')
-if stepId ~= ARGV[1] or redis.call('HGET', KEYS[1], 'status') ~= 'running' then
+local status = redis.call('HGET', KEYS[1], 'status')
+if stepId ~= ARGV[1] or (status ~= 'running' and status ~= 'cancelling') then
   return 0
 end
 local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
@@ -101,8 +102,8 @@ return 1
 
 /**
  * Takes a step under a fresh lease, only while it is on the attempt the claim
- * read and in one of the named statuses; a `running` one only once its lease has
- * lapsed and with no child run. KEYS[1] is the step hash; ARGV is the stepId, the
+ * read and in one of the named statuses; a `running` or `cancelling` one only
+ * once its lease has lapsed and with no child run. KEYS[1] is the step hash; ARGV is the stepId, the
  * attempt, the new lease expiry and the time, both in epoch milliseconds, then
  * the statuses. Returns 1 when the step was taken.
  */
@@ -122,7 +123,7 @@ end
 if not allowed then
   return 0
 end
-if status == 'running' then
+if status == 'running' or status == 'cancelling' then
   local lease = tonumber(redis.call('HGET', KEYS[1], 'leaseExpiresAt') or '')
   if not lease or lease >= tonumber(ARGV[4])
     or redis.call('HEXISTS', KEYS[1], 'childRunId') == 1 then
@@ -238,7 +239,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     stepId: string,
     stepName: string,
     attemptCount: number,
-    status: 'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed',
+    status: StepStatus,
     result?: any,
     error?: SerializedError,
     retries?: number,
@@ -291,7 +292,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     stepId: string,
     stepName: string,
     attemptCount: number,
-    status: 'running' | 'scheduled' | 'succeeded' | 'failed',
+    status: Exclude<StepStatus, 'pending' | 'suspended' | 'cancelled'>,
     result?: any,
     error?: SerializedError,
     retries?: number,
@@ -652,6 +653,14 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     return this.moveStep(stepId, 'running', from, attempt)
   }
 
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    return this.moveStep(stepId, 'cancelling', from, attempt)
+  }
+
   protected async setStepScheduledImpl(
     stepId: string,
     from: readonly StepStatus[]
@@ -694,7 +703,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
   /** Move a step and its current history attempt to a status in flight. */
   private async moveStep(
     stepId: string,
-    status: 'running' | 'scheduled',
+    status: 'running' | 'scheduled' | 'cancelling',
     from: readonly StepStatus[],
     attempt?: number
   ): Promise<boolean> {
@@ -707,7 +716,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
   private async updateStepHistory(
     stepId: string,
     attempt: number,
-    status: 'running' | 'scheduled' | 'succeeded' | 'failed',
+    status: Exclude<StepStatus, 'pending' | 'suspended' | 'cancelled'>,
     result?: any,
     error?: SerializedError
   ): Promise<void> {

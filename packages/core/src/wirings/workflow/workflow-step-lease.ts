@@ -2,6 +2,7 @@ import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import {
   DEFAULT_STEP_LEASE_MS,
   STEP_LEASE_REFRESH_MIN_MS,
+  isStepExecuting,
   isStepLeaseLive,
 } from './workflow-constants.js'
 import {
@@ -72,7 +73,7 @@ export const startStepLeaseRefresh = (
 }
 
 /**
- * Who a `running` step belongs to, for a resumed run that meets it. `held` is a
+ * Who a `running` or `cancelling` step belongs to, for a resumed run that meets it. `held` is a
  * dispatch still working it. `lapsed` is one that died: the step is dispatched
  * again but left `running`, so the claim counts it as another attempt rather
  * than a first run — a step that kills its worker every time then runs out.
@@ -80,7 +81,7 @@ export const startStepLeaseRefresh = (
 export const runningStepLease = (
   stepState: Pick<StepState, 'status' | 'leaseExpiresAt'>
 ): 'held' | 'lapsed' | undefined => {
-  if (stepState.status !== 'running' || stepState.leaseExpiresAt == null) {
+  if (!isStepExecuting(stepState.status) || stepState.leaseExpiresAt == null) {
     return undefined
   }
   return isStepLeaseLive(stepState.leaseExpiresAt) ? 'held' : 'lapsed'

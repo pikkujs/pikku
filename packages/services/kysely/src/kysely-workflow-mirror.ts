@@ -134,6 +134,11 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
     await this.updateStepStatus(stepId, 'scheduled')
   }
 
+  async setStepCancelling(stepId: string): Promise<void> {
+    await this.updateStepStatus(stepId, 'cancelling')
+    await this.appendOrUpdateLatestHistory(stepId, 'cancelling')
+  }
+
   async setStepResult(stepId: string, result: any): Promise<void> {
     const resultJson = JSON.stringify(result)
     await this.db

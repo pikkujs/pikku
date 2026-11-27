@@ -264,7 +264,7 @@ export const claimStepByReadThenWrite = async (
   // Takes nothing unless the lease has lapsed.
   if (
     lost &&
-    !(await store.claimStepStatus(stepState, STEP_SOURCES.inFlight, leaseMs))
+    !(await store.claimStepStatus(stepState, STEP_SOURCES.lost, leaseMs))
   ) {
     return null
   }

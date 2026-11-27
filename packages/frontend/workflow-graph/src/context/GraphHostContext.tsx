@@ -6,6 +6,7 @@ export type WorkflowStepStatus =
   | 'completed'
   | 'failed'
   | 'suspended'
+  | 'cancelling'
   | 'cancelled'
   | 'compensating'
   | 'compensated'

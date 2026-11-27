@@ -2,7 +2,10 @@ import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import type { PikkuWorkflowService } from '../../wirings/workflow/pikku-workflow-service.js'
-import type { StepState } from '../../wirings/workflow/workflow.types.js'
+import type {
+  StepState,
+  StepStatus,
+} from '../../wirings/workflow/workflow.types.js'
 import { RPCNotFoundError } from '../../wirings/rpc/rpc-runner.js'
 import { pikkuState } from '../../pikku-state.js'
 import { ConsoleLogger } from '../../services/logger-console.js'
@@ -471,6 +474,304 @@ export const defineWorkflowFencingTests = (
       assert.equal(graph.branchKeys[STEP], undefined)
     })
 
+    const claimedStep = async (h: WorkflowFencingHarness) => {
+      const runId = await startRun(h)
+      const step = (await claim(h, runId))!
+      return { runId, step }
+    }
+
+    const cancellingStep = async (h: WorkflowFencingHarness) => {
+      const claimed = await claimedStep(h)
+      assert.equal(
+        await h.service.setStepCancelling(claimed.step.stepId, 1),
+        true
+      )
+      return claimed
+    }
+
+    const historyOf = async (h: WorkflowFencingHarness, runId: string) =>
+      (await h.service.getRunHistory(runId))
+        .filter((attempt) => attempt.stepName === STEP)
+        .map((attempt) => attempt.status)
+
+    const take = (
+      h: WorkflowFencingHarness,
+      step: StepState,
+      from: readonly StepStatus[]
+    ) => h.service['claimStepStatus'](step, from, LEASE_MS)
+
+    test('a running step is marked cancelling once, by the attempt that holds it', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const { stale, current } = await supersede(h, runId)
+
+      assert.equal(
+        await h.service.setStepCancelling(stale.stepId, stale.attemptCount),
+        false
+      )
+      assert.equal((await stepOf(h, runId)).status, 'running')
+
+      assert.equal(
+        await h.service.setStepCancelling(current.stepId, current.attemptCount),
+        true
+      )
+      assert.equal(
+        await h.service.setStepCancelling(current.stepId, current.attemptCount),
+        false
+      )
+
+      const step = await stepOf(h, runId)
+      assert.equal(step.status, 'cancelling')
+      assert.equal(step.attemptCount, current.attemptCount)
+      assert.deepEqual(await historyOf(h, runId), ['running', 'cancelling'])
+      assert.deepEqual(
+        (await h.service.getStepInstances(runId)).map((i) => i.status),
+        ['cancelling']
+      )
+    })
+
+    test('a step not started, or already with an outcome, is not marked cancelling', async () => {
+      for (const outcome of ['pending', 'succeeded', 'failed'] as const) {
+        const h = await create()
+        const runId = await startRun(h)
+        if (outcome !== 'pending') {
+          const step = (await claim(h, runId))!
+          if (outcome === 'succeeded') {
+            await h.service.setStepResult(step.stepId, 'done', 1)
+          } else {
+            await h.service.setStepError(step.stepId, new Error('no'), 1)
+          }
+        }
+        const { stepId } = await stepOf(h, runId)
+
+        assert.equal(await h.service.setStepCancelling(stepId, 1), false)
+
+        assert.equal((await stepOf(h, runId)).status, outcome)
+      }
+    })
+
+    test('a cancelling step takes a result', async () => {
+      const h = await create()
+      const { runId, step } = await cancellingStep(h)
+
+      await h.service.setStepResult(step.stepId, 'done', 1)
+
+      const after = await stepOf(h, runId)
+      assert.equal(after.status, 'succeeded')
+      assert.equal(after.result, 'done')
+      assert.deepEqual(await historyOf(h, runId), ['succeeded'])
+    })
+
+    test('a cancelling step takes an error', async () => {
+      const h = await create()
+      const { runId, step } = await cancellingStep(h)
+
+      await h.service.setStepError(step.stepId, new Error('stopped'), 1)
+
+      const after = await stepOf(h, runId)
+      assert.equal(after.status, 'failed')
+      assert.equal(after.error?.message, 'stopped')
+      assert.deepEqual(await historyOf(h, runId), ['failed'])
+    })
+
+    test('a cancelling step is still leased by its attempt, and takes its child and branch', async () => {
+      const h = await create()
+      const { runId, step } = await cancellingStep(h)
+
+      assert.equal(
+        await h.service.refreshStepLease(step.stepId, LEASE_MS, 2),
+        false
+      )
+      assert.equal(
+        await h.service.refreshStepLease(step.stepId, 10 * LEASE_MS, 1),
+        true
+      )
+      assert.equal(
+        await h.service.setStepChildRunId(step.stepId, 'child'),
+        true
+      )
+      await h.service.setBranchTaken(step.stepId, 'left')
+      assert.equal((await stepOf(h, runId)).childRunId, 'child')
+      assert.equal((await stepOf(h, runId)).status, 'cancelling')
+
+      await h.service.setStepResult(step.stepId, 'done', 1)
+      const graph = await h.service.getCompletedGraphState(runId)
+      assert.equal(graph.branchKeys[STEP], 'left')
+    })
+
+    for (const status of ['cancelling', 'cancelled'] as const) {
+      test(`a ${status} step is not set running or scheduled, nor retried`, async () => {
+        const h = await create()
+        const { runId, step } = await claimedStep(h)
+        await h.forceStepStatus(runId, STEP, status)
+
+        await assert.rejects(
+          h.service.setStepRunning(step.stepId, 1),
+          superseded
+        )
+        await h.service.setStepScheduled(step.stepId)
+        await assert.rejects(
+          h.service.createRetryAttempt(step.stepId, 'pending', 1),
+          superseded
+        )
+
+        const after = await stepOf(h, runId)
+        assert.equal(after.status, status)
+        assert.equal(after.attemptCount, 1)
+      })
+    }
+
+    test('a cancelled step takes no outcome, lease or cancelling mark', async () => {
+      const h = await create()
+      const { runId, step } = await claimedStep(h)
+      await h.forceStepStatus(runId, STEP, 'cancelled')
+
+      await assert.rejects(
+        h.service.setStepResult(step.stepId, 'late', 1),
+        superseded
+      )
+      await assert.rejects(
+        h.service.setStepError(step.stepId, new Error('late'), 1),
+        superseded
+      )
+      assert.equal(
+        await h.service.refreshStepLease(step.stepId, LEASE_MS, 1),
+        false
+      )
+      assert.equal(await h.service.setStepCancelling(step.stepId, 1), false)
+
+      assert.equal((await stepOf(h, runId)).status, 'cancelled')
+    })
+
+    for (const from of [['cancelling'], ['running', 'cancelling']] as const) {
+      test(`a live cancelling step is never taken by a claim from ${from.join(' or ')}`, async () => {
+        const h = await create()
+        const { runId } = await cancellingStep(h)
+        const held = await leaseOf(h, runId)
+
+        assert.equal(await take(h, await stepOf(h, runId), from), false)
+        assert.equal(await claim(h, runId), null)
+
+        assert.equal((await stepOf(h, runId)).status, 'cancelling')
+        assert.equal(await leaseOf(h, runId), held)
+      })
+    }
+
+    test('a lapsed cancelling step is taken only by a claim that names it, and never run again', async () => {
+      const h = await create()
+      const { runId } = await cancellingStep(h)
+      await h.lapseLease(runId, STEP)
+
+      assert.equal(await claim(h, runId), null)
+      assert.equal(await take(h, await stepOf(h, runId), ['running']), false)
+      assert.equal((await stepOf(h, runId)).status, 'cancelling')
+      assert.equal((await stepOf(h, runId)).attemptCount, 1)
+
+      assert.equal(
+        await take(h, await stepOf(h, runId), ['running', 'cancelling']),
+        true
+      )
+    })
+
+    test('a lapsed cancelling step parked on a child is not taken', async () => {
+      const h = await create()
+      const { runId, step } = await cancellingStep(h)
+      await h.service.setStepChildRunId(step.stepId, 'child')
+      await h.lapseLease(runId, STEP)
+
+      assert.equal(
+        await take(h, await stepOf(h, runId), ['running', 'cancelling']),
+        false
+      )
+    })
+
+    test('a lost step marked cancelling as a claim takes it over is not run again', async () => {
+      const h = await create()
+      const { runId, step } = await claimedStep(h)
+      await h.lapseLease(runId, STEP)
+      const read = h.service.getStepState.bind(h.service)
+      // The mark lands right after the claim has read the step as running.
+      h.service.getStepState = async (id, name) => {
+        const seen = { ...(await read(id, name)) }
+        h.service.getStepState = read
+        await h.service.setStepCancelling(step.stepId, 1)
+        return seen
+      }
+
+      assert.equal(await quietly(() => claim(h, runId)), null)
+
+      const after = await read(runId, STEP)
+      assert.equal(after.status, 'cancelling')
+      assert.equal(after.attemptCount, 1)
+    })
+
+    test('a run whose live step is cancelling is not stalled', async () => {
+      const h = await create()
+      const { runId } = await cancellingStep(h)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+
+      const stalled = await h.service['findStalledRunIds'](
+        new Date(Date.now() + 1000),
+        1000
+      )
+
+      assert.ok(!stalled.includes(runId))
+    })
+
+    for (const open of ['running', 'suspended'] as const) {
+      test(`a ${open} run moves to cancelling, which no ordinary write leaves`, async () => {
+        const h = await create()
+        const runId = await startRun(h)
+        if (open === 'suspended') {
+          await h.service.updateRunStatus(runId, 'suspended')
+        }
+
+        assert.equal(
+          await h.service.updateRunStatus(runId, 'cancelling', undefined, {
+            message: 'stop',
+            stack: '',
+            code: 'WORKFLOW_CANCELLED',
+          }),
+          true
+        )
+        for (const next of [
+          'running',
+          'suspended',
+          'completed',
+          'failed',
+          'cancelled',
+        ] as const) {
+          assert.equal(
+            await h.service.updateRunStatus(runId, next),
+            false,
+            next
+          )
+        }
+        const run = await h.service.getRun(runId)
+        assert.equal(run?.status, 'cancelling')
+        assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+
+        assert.equal(
+          await h.service.transitionRunStatus(
+            runId,
+            ['cancelling'],
+            'cancelled'
+          ),
+          true
+        )
+      })
+    }
+
+    test('an ended run does not move to cancelling', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      await h.service.updateRunStatus(runId, 'completed')
+
+      assert.equal(await h.service.updateRunStatus(runId, 'cancelling'), false)
+
+      assert.equal((await h.service.getRun(runId))?.status, 'completed')
+    })
+
     /** Records the runs a claim asks to have resumed, instead of resuming. */
     const watchResumes = ({ service }: WorkflowFencingHarness) => {
       const resumed: string[] = []
@@ -514,7 +815,7 @@ export const defineWorkflowFencingTests = (
       })
     }
 
-    for (const closed of ['compensating', 'cancelled'] as const) {
+    for (const closed of ['compensating', 'cancelled', 'cancelling'] as const) {
       test(`a lost step of a ${closed} run is failed, not run again`, async () => {
         const h = await create()
         const runId = await startRun(h)

@@ -725,3 +725,78 @@ describe('PikkuWorkflowDoService — step claims', () => {
     assert.equal((await step()).attemptCount, 1)
   })
 })
+
+describe('PikkuWorkflowDoService — cancelling', () => {
+  const runningStep = async () => {
+    await service.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+    await service.insertStepState(RUN_ID, 's', 'rpc.s', {})
+    const { stepId } = await service.getStepState(RUN_ID, 's')
+    await service.setStepRunning(stepId, 1)
+    return stepId
+  }
+  const status = async () => (await service.getStepState(RUN_ID, 's')).status
+
+  test('a running step is marked cancelling once, by its attempt', async () => {
+    const stepId = await runningStep()
+
+    assert.equal(await service.setStepCancelling(stepId, 2), false)
+    assert.equal(await service.setStepCancelling(stepId, 1), true)
+    assert.equal(await service.setStepCancelling(stepId, 1), false)
+
+    assert.equal(await status(), 'cancelling')
+    assert.equal(
+      (await service.getRunHistory(RUN_ID)).at(-1)?.status,
+      'cancelling'
+    )
+  })
+
+  test('a cancelling step takes a lease refresh, a child and its outcome', async () => {
+    const stepId = await runningStep()
+    await service.setStepCancelling(stepId, 1)
+
+    assert.equal(await service.refreshStepLease(stepId, 1000, 1), true)
+    assert.equal(await service.setStepChildRunId(stepId, 'child'), true)
+    await service.setStepResult(stepId, 'done', 1)
+
+    assert.equal(await status(), 'succeeded')
+  })
+
+  test('a cancelling step takes an error', async () => {
+    const stepId = await runningStep()
+    await service.setStepCancelling(stepId, 1)
+
+    await service.setStepError(stepId, new Error('stopped'), 1)
+
+    assert.equal(await status(), 'failed')
+  })
+
+  test('a cancelling step is never claimed, set running or retried', async () => {
+    const stepId = await runningStep()
+    await service.setStepCancelling(stepId, 1)
+    const seen = await service.getStepState(RUN_ID, 's')
+
+    assert.equal(
+      await service['claimStepStatus'](seen, ['running', 'cancelling'], 1000),
+      false
+    )
+    await assert.rejects(service.setStepRunning(stepId, 1), {
+      name: 'WorkflowStepSupersededError',
+    })
+    await assert.rejects(service.createRetryAttempt(stepId, 'pending', 1), {
+      name: 'WorkflowStepSupersededError',
+    })
+    assert.equal(await status(), 'cancelling')
+  })
+
+  test('a running run moves to cancelling and is read back as such', async () => {
+    await runningStep()
+
+    assert.equal(await service.updateRunStatus(RUN_ID, 'cancelling'), true)
+    assert.equal(await service.updateRunStatus(RUN_ID, 'completed'), false)
+
+    assert.equal((await service.getRun(RUN_ID))?.status, 'cancelling')
+  })
+})

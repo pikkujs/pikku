@@ -40,7 +40,7 @@ export const useStartWorkflow = <Name extends keyof FlattenedWorkflowMap>(
 
 type WorkflowRunStatus = {
   id: string
-  status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'
+  status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelling' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'
   output?: unknown
   error?: { message?: string }
 }

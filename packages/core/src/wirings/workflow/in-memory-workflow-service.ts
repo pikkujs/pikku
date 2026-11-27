@@ -3,6 +3,7 @@ import { isExpectedError } from '../../errors/error-handler.js'
 import {
   WORKFLOW_TERMINAL_STATES,
   isCompensationStepName,
+  isStepExecuting,
   isStepLeaseLive,
   STEP_SOURCES,
 } from './workflow-constants.js'
@@ -231,6 +232,18 @@ export class InMemoryWorkflowService
     return true
   }
 
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
+    step.status = 'cancelling'
+    step.updatedAt = new Date()
+    return true
+  }
+
   protected async claimStepStatus(
     seen: StepState,
     from: readonly StepStatus[],
@@ -239,7 +252,7 @@ export class InMemoryWorkflowService
     const step = this.writableStep(seen.stepId, from, seen.attemptCount)
     if (!step) return false
     if (
-      step.status === 'running' &&
+      isStepExecuting(step.status) &&
       (step.childRunId != null || isStepLeaseLive(step.leaseExpiresAt))
     ) {
       return false
@@ -424,7 +437,7 @@ export class InMemoryWorkflowService
     return false
   }
 
-  private isRunningStepHeld({ childRunId, leaseExpiresAt }: StepState) {
+  private isExecutingStepHeld({ childRunId, leaseExpiresAt }: StepState) {
     if (childRunId === undefined) return isStepLeaseLive(leaseExpiresAt)
     if (leaseExpiresAt != null && isStepLeaseLive(leaseExpiresAt)) return true
     const child = this.runs.get(childRunId)?.status
@@ -463,7 +476,7 @@ export class InMemoryWorkflowService
           (step) =>
             step.status === 'scheduled' ||
             step.status === 'suspended' ||
-            (step.status === 'running' && this.isRunningStepHeld(step))
+            (isStepExecuting(step.status) && this.isExecutingStepHeld(step))
         )
       ) {
         continue
