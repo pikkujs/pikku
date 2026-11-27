@@ -285,3 +285,34 @@ describe('a driver that throws while another caller waits on it', () => {
     assert.equal(calls.unwinds, 1)
   })
 })
+
+describe('whose lease a pass ended on', () => {
+  const unwindsAfter = async (leaseOf: string) => {
+    let unwound = 0
+    const host: RunUnwindHost = {
+      withRunLease: (_runId, fn) => fn(),
+      getRun: async () => ({ status: 'compensating' }),
+      logger: () => undefined,
+      unwind: async () => {
+        unwound++
+        return 'finished'
+      },
+      wake: async () => {},
+    }
+    await assert.rejects(
+      new RunUnwinds().runPass(host, 'parent', async () => {
+        throw new LeaseTakenError(`workflow-run:${leaseOf}`)
+      }),
+      LeaseTakenError
+    )
+    return unwound
+  }
+
+  test("a child run's lease leaves the pass's own unwind to it", async () => {
+    assert.equal(await unwindsAfter('child'), 1)
+  })
+
+  test('its own lease leaves the unwind to whoever has the run', async () => {
+    assert.equal(await unwindsAfter('parent'), 0)
+  })
+})

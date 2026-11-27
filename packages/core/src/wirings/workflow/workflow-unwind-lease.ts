@@ -1,6 +1,6 @@
 import { LeaseTakenError } from '../../services/lease-service.js'
 import type { Logger } from '../../services/logger.js'
-import { isOwnershipError } from './workflow-lost-lease.js'
+import { isAnotherRunsLease, isOwnershipError } from './workflow-lost-lease.js'
 
 type UnwindOutcome = 'waiting' | 'finished'
 
@@ -13,6 +13,10 @@ type UnwindOutcome = 'waiting' | 'finished'
  */
 class UnwindExclusion {
   private readonly active = new Map<string, { again: boolean }>()
+
+  isActive(runId: string): boolean {
+    return this.active.has(runId)
+  }
 
   async run(
     runId: string,
@@ -95,6 +99,28 @@ export class RunUnwinds {
   }
 
   /**
+   * Drive a run nobody is known to be driving, as recovery does. Resolves
+   * `false` if someone is, here or wherever its lease is held.
+   */
+  async redrive(host: RunUnwindHost, runId: string): Promise<boolean> {
+    if (this.exclusion.isActive(runId)) return false
+    let refused = false
+    try {
+      await this.exclusion.run(
+        runId,
+        () => host.withRunLease(runId, (lost) => host.unwind(runId, lost)),
+        async () => {
+          refused = true
+        }
+      )
+    } catch (error) {
+      if (!isOwnershipError(error)) throw error
+      return false
+    }
+    return !refused
+  }
+
+  /**
    * One pass over a run, under its lease. A cancel that arrived too late for the
    * pass to see could not take the lease to unwind, so it is done here once the
    * lease is free.
@@ -113,7 +139,7 @@ export class RunUnwinds {
       })
     } catch (error) {
       // A pass that lost the run leaves it to whoever picks it up.
-      disowned = isOwnershipError(error)
+      disowned = isOwnershipError(error) && !isAnotherRunsLease(error, runId)
       throw error
     } finally {
       if (held && !disowned) await this.driveLeftBehind(host, runId)

@@ -38,7 +38,10 @@ describe('the cancelling statuses', () => {
       isChildWorkflow: () => false,
     })
 
-    assert.equal(plan.forwardInFlight, true)
+    assert.deepEqual(
+      plan.inFlight.map((step) => step.stepName),
+      ['charge']
+    )
     assert.equal(plan.settled, false)
   })
 

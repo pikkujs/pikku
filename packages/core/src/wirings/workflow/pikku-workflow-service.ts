@@ -1,5 +1,6 @@
 import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
+import { rpcService as rpcServices } from '../rpc/rpc-runner.js'
 import {
   buildWorkflowWire,
   invokeStepRpc,
@@ -152,21 +153,21 @@ import {
   createRunUnwindHost,
   type CompensationService,
 } from './workflow-compensation-host.js'
-import { WorkflowStepWrites } from './workflow-step-writes.js'
 import {
   recordedStepError,
   runClosureStep,
   type ClosureStepHost,
 } from './workflow-closure-step.js'
 import type { WorkflowAwaitedStep } from './workflow-queue-workers.js'
+import { loadOrCreateStep } from './workflow-load-step.js'
+import { WorkflowRecoveryFinders } from './workflow-recovery-finders.js'
+import { StepWaitWarnings } from './workflow-unwind-wait.js'
 import { OpenSteps } from './workflow-open-steps.js'
 import { PassSteps, inPass, stepsInPass } from './workflow-pass-steps.js'
 import { runSleepStep, type SleepStepHost } from './workflow-sleep-step.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   WorkflowRecovery,
-  type ScheduledStep,
-  type PendingApproval,
   type StalledSweepOptions,
   type UndispatchedSweepOptions,
   type WorkflowRecoveryPass,
@@ -174,7 +175,7 @@ import {
 
 /** The workflow engine; subclasses supply storage. Leases serialise runs and step claims over a shared store. */
 export abstract class PikkuWorkflowService
-  extends WorkflowStepWrites
+  extends WorkflowRecoveryFinders
   implements WorkflowService
 {
   private runExtension?: WorkflowRunExtension
@@ -184,6 +185,15 @@ export abstract class PikkuWorkflowService
   private readonly unwinds = new RunUnwinds()
 
   private readonly openSteps = new OpenSteps()
+
+  private readonly waitWarnings = new StepWaitWarnings()
+
+  /**
+   * Whether every attempt that can be working a step of this store is in this
+   * process's open-step registry. Only a store whose state no other process can
+   * reach may say so: an unwind then fails a leaseless step that is not there.
+   */
+  protected readonly openStepsAreAllSteps: boolean = false
 
   private contextFor(runId: string): RunContext {
     let context = this.runContexts.get(runId)
@@ -662,59 +672,9 @@ export abstract class PikkuWorkflowService
     await this.enqueueOrchestration(runId, undefined, delay, awaitedStep)
   }
 
-  /**
-   * Ids of runs that are stalled: `running` or `compensating`, with no step
-   * something is expected to complete (`scheduled`, `suspended`, `running` or
-   * `cancelling` under a live lease, or parked on an unsettled child run), and no step activity
-   * since `before`.
-   *
-   * A lapsed lease is a dispatch that died, so it holds nothing out of the
-   * sweep. Nor does a `running` step with no lease and no child run: that is
-   * work inside an orchestration pass, whose owner is the run's lease, which the
-   * sweep checks before it touches the run.
-   *
-   * Returns nothing by default, for a store that cannot express the query.
-   */
-  protected async findStalledRunIds(
-    _before: Date,
-    _limit: number
-  ): Promise<string[]> {
-    return []
-  }
-
-  /**
-   * Runs holding a step `pending` since before `before`. A store overriding it
-   * needs an atomic `claimStepForExecution` (see `sweepUndispatchedSteps`).
-   */
-  protected async findUndispatchedSteps(
-    _before: Date,
-    _limit: number
-  ): Promise<Array<{ runId: string; stepId: string }>> {
-    return []
-  }
-
-  /**
-   * Steps parked on `scheduled` on a `running` or `compensating` run, oldest first, a page at a time.
-   * Returns nothing by default, for a store whose runs die with the process.
-   */
-  protected async findScheduledSteps(
-    _limit: number,
-    _offset: number
-  ): Promise<ScheduledStep[]> {
-    return []
-  }
-
-  /**
-   * The open approval gates of `suspended` runs untouched since `before`, oldest
-   * first, a page at a time. Returns nothing by default, for a store that cannot
-   * express the query.
-   */
-  protected async findPendingApprovals(
-    _before: Date,
-    _limit: number,
-    _offset: number
-  ): Promise<PendingApproval[]> {
-    return []
+  /** What a compensation run by recovery, which has no caller, calls through. */
+  protected recoveryRpcService(): PikkuRPC {
+    return rpcServices.getContextRPCService(getSingletonServices()!, {}, false)
   }
 
   private readonly recovery = new WorkflowRecovery({
@@ -725,6 +685,10 @@ export abstract class PikkuWorkflowService
     listStepStates: (runId) => this.listStepStates(runId),
     withRunLease: (runId, fn) => this.withRunLease(runId, fn),
     findStalledRunIds: (before, limit) => this.findStalledRunIds(before, limit),
+    findRunsAwaitingDriver: (...args) => this.findRunsAwaitingDriver(...args),
+    getRunStatus: async (runId) => (await this.getRun(runId))?.status,
+    redriveUnwind: (runId) =>
+      this.unwinds.redrive(this.unwindHost(this.recoveryRpcService()), runId),
     findUndispatchedSteps: this.findUndispatchedSteps.bind(this),
     findScheduledSteps: this.findScheduledSteps.bind(this),
     resumeWorkflow: (runId) => this.resumeWorkflow(runId),
@@ -1130,37 +1094,13 @@ export abstract class PikkuWorkflowService
     return pass ?? this.contextFor(runId).pass
   }
 
-  private async loadOrCreateStep(
+  private loadOrCreateStep(
     runId: string,
     stepName: string,
     create: () => Promise<StepState>,
     snapshot?: Map<string, StepState>
   ): Promise<StepState> {
-    if (snapshot) {
-      const cached = snapshot.get(stepName)
-      if (cached) {
-        return cached
-      }
-    } else {
-      try {
-        return await this.getStepState(runId, stepName)
-      } catch {
-        // knowledge: decisions/internals/workflow-replay-reads-its-steps-once-and-caches-only-the-immutable-half.md
-      }
-    }
-
-    let step: StepState
-    try {
-      step = await create()
-    } catch (error) {
-      try {
-        step = await this.getStepState(runId, stepName)
-      } catch {
-        throw error
-      }
-    }
-    snapshot?.set(stepName, step)
-    return step
+    return loadOrCreateStep(this, runId, stepName, create, snapshot)
   }
 
   public async getRunIdentity(runId: string): Promise<WorkflowRun | null> {
@@ -1774,13 +1714,15 @@ export abstract class PikkuWorkflowService
       pass.steps
     )
 
-    await runSleepStep(
-      this.sleepStepHost,
-      runId,
-      stepName,
-      stepState,
-      duration,
-      pass.leaseLost
+    await this.openSteps.hold(runId, stepName, () =>
+      runSleepStep(
+        this.sleepStepHost,
+        runId,
+        stepName,
+        stepState,
+        duration,
+        pass.leaseLost
+      )
     )
   }
 
@@ -1921,6 +1863,9 @@ export abstract class PikkuWorkflowService
     return {
       service: this,
       unwinds: this.unwinds,
+      claimStore: this.stepClaimStore,
+      openStepsAreAllSteps: this.openStepsAreAllSteps,
+      waitWarnings: this.waitWarnings,
       logger: () => this.logger,
       wake: (runId) => this.wakeLater(runId),
       loadStep: (...args) => this.loadOrCreateStep(...args),

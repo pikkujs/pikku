@@ -40,6 +40,9 @@ export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
 {
+  /** Its runs live in this process, so nothing else can be working one. */
+  protected override readonly openStepsAreAllSteps: boolean = true
+
   constructor(
     options: WorkflowQueueOptions & { mirror?: WorkflowRunMirror } = {}
   ) {
@@ -437,11 +440,28 @@ export class InMemoryWorkflowService
     return false
   }
 
-  private isExecutingStepHeld({ childRunId, leaseExpiresAt }: StepState) {
-    if (childRunId === undefined) return isStepLeaseLive(leaseExpiresAt)
+  private isExecutingStepHeld(
+    runId: string,
+    stepName: string,
+    { childRunId, leaseExpiresAt }: StepState
+  ) {
+    if (childRunId === undefined) {
+      // With no lease, only a pass in this process can be working it.
+      return leaseExpiresAt == null
+        ? this.isStepOpen(runId, stepName)
+        : isStepLeaseLive(leaseExpiresAt)
+    }
     if (leaseExpiresAt != null && isStepLeaseLive(leaseExpiresAt)) return true
     const child = this.runs.get(childRunId)?.status
     return child === undefined || !WORKFLOW_TERMINAL_STATES.has(child)
+  }
+
+  /** The latest attempt of each of a run's steps. */
+  private latestSteps(runId: string): Array<[string, StepState]> {
+    const prefix = `${runId}:`
+    return [...this.steps]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, step]) => [key.slice(prefix.length), step])
   }
 
   protected override async findPendingApprovals(
@@ -472,11 +492,14 @@ export class InMemoryWorkflowService
       if (run.status !== 'running' && run.status !== 'compensating') continue
       const steps = this.stepHistory.get(runId) ?? []
       if (
-        steps.some(
-          (step) =>
-            step.status === 'scheduled' ||
+        this.latestSteps(runId).some(
+          ([stepName, step]) =>
+            // An unwind settles a forward step that was only dispatched.
+            (step.status === 'scheduled' &&
+              (run.status === 'running' || isCompensationStepName(stepName))) ||
             step.status === 'suspended' ||
-            (isStepExecuting(step.status) && this.isExecutingStepHeld(step))
+            (isStepExecuting(step.status) &&
+              this.isExecutingStepHeld(runId, stepName, step))
         )
       ) {
         continue

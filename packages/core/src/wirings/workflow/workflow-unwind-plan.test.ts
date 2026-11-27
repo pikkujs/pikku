@@ -113,7 +113,7 @@ describe('planUnwind', () => {
   test('steps still in flight hold the plan back until they finish', () => {
     const records = [step('a', 0, 10), step('b', 10, 10, 'running')]
     const p = plan(records)
-    assert.equal(p.forwardInFlight, true)
+    assert.deepEqual(names(p.inFlight), ['b'])
     assert.deepEqual(p.ready, [])
     assert.equal(p.settled, false)
   })

@@ -9,7 +9,6 @@ import {
   DEFAULT_STEP_RETRIES,
   forwardStepName,
   isCompensationStepName,
-  isRunCancelled,
   isRunClosedToSteps,
   RUN_LEASE_RETRY_MS,
   WORKFLOW_END_STATES,
@@ -299,7 +298,7 @@ export const runQueuedStep = async (
     }
 
     // Not rethrown, or the queue would deliver the step again.
-    if (stopped && isRunCancelled(stopped)) {
+    if (stopped && isRunClosedToSteps(stopped.status)) {
       await service.resumeWorkflow(runId)
       return
     }

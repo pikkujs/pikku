@@ -44,6 +44,10 @@ class TestWorkflowService extends InMemoryWorkflowService {
   /** A second process's service over the same store: it holds none of this one's signals. */
   otherInstance(): TestWorkflowService {
     const other = new TestWorkflowService()
+    // Neither sees the steps the other is working.
+    for (const service of [this, other]) {
+      ;(service as any).openStepsAreAllSteps = false
+    }
     for (const key of [
       'runs',
       'steps',

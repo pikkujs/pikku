@@ -9,7 +9,14 @@ import {
   type CompensationApi,
 } from './workflow-compensation.js'
 import { pickingUpLostRun } from './workflow-lost-lease.js'
-import { takeBackLostInlineStep } from './workflow-step-claim.js'
+import {
+  takeBackLostInlineStep,
+  type StepClaimStore,
+} from './workflow-step-claim.js'
+import {
+  settleAwaitedSteps,
+  type StepWaitWarnings,
+} from './workflow-unwind-wait.js'
 import { runInlineRetryLoop } from './workflow-step-retry.js'
 import type { RunUnwindHost, RunUnwinds } from './workflow-unwind-lease.js'
 import type { StepRpcArgs } from './workflow-wire.js'
@@ -19,6 +26,9 @@ import type { WorkflowRun } from './workflow.types.js'
 export type CompensationService = {
   service: PikkuWorkflowService
   unwinds: RunUnwinds
+  claimStore: StepClaimStore
+  openStepsAreAllSteps: boolean
+  waitWarnings: StepWaitWarnings
   logger(): Logger | undefined
   /** Ask for the run to be looked at again shortly, where there is a queue. */
   wake(runId: string): Promise<void>
@@ -55,6 +65,23 @@ export const createCompensationApi = (
   const { service } = deps
   return {
     leaseLost,
+    settleInFlight: (runId, stepNames) =>
+      settleAwaitedSteps(
+        {
+          leaseLost,
+          claimStore: deps.claimStore,
+          openStepsAreAllSteps: deps.openStepsAreAllSteps,
+          isStepOpen: (...args) => service.isStepOpen(...args),
+          getRun: (id) => service.getRun(id),
+          setStepResult: (...args) => service.setStepResult(...args),
+          setStepError: (...args) => service.setStepError(...args),
+          updateRunState: (...args) => service.updateRunState(...args),
+        },
+        deps.waitWarnings,
+        deps.logger(),
+        runId,
+        stepNames
+      ),
     drive: async (runId) => {
       const host = createRunUnwindHost(deps, rpcService)
       const held = runId === leasedRunId

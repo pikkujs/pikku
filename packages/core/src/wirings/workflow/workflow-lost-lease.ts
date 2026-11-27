@@ -30,6 +30,12 @@ export const isOwnershipError = (error: unknown): boolean =>
   ((error instanceof LeaseLostError || error instanceof LeaseTakenError) &&
     isRunLeaseKey(error.key))
 
+/** An error about the lease of a run other than `runId`, such as a child's. */
+export const isAnotherRunsLease = (error: unknown, runId: string): boolean =>
+  (error instanceof LeaseLostError || error instanceof LeaseTakenError) &&
+  isRunLeaseKey(error.key) &&
+  error.key !== runLeaseKey(runId)
+
 /** Throws, before anything is written about `error`, if the pass may not. */
 export const throwIfNotOwned = (
   error: unknown,

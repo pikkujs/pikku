@@ -60,6 +60,9 @@ export class QueuedWorkflowHarness {
         })
       },
     }
+    ;(
+      this.ws as unknown as { recoveryRpcService(): unknown }
+    ).recoveryRpcService = () => this.rpc
     pikkuState(null, 'package', 'singletonServices', {
       logger: { error() {}, info() {}, warn() {}, debug() {} },
       queueService,

@@ -97,6 +97,8 @@ describe('a closure step on a store whose run lease is a pass-through', () => {
         return {}
       })
       await createRun()
+      // Nothing ends the run, so no unwind settles the step first.
+      ws.failOrUnwind = async () => 'finished'
       const record = ws.setStepResult.bind(ws)
       ws.setStepResult = async () => {
         ws.setStepResult = record
@@ -104,8 +106,6 @@ describe('a closure step on a store whose run lease is a pass-through', () => {
       }
       await assert.rejects(pass(), /store unreachable/)
       assert.deepEqual(await rows(), ['A:1:running'])
-      // The failed pass ended the run; what is left is the step's row.
-      ;(await ws.getRun(runId))!.status = 'running'
 
       await pass()
 

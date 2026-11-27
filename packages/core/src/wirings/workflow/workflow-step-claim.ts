@@ -196,21 +196,49 @@ export const settleUnclaimableStep = async (
     return true
   }
   const exhausted = leaseAttemptsExhausted(stepState)
-  // A failed step that has spent every attempt is settled, however it failed;
-  // a redelivered message must not buy it another one.
-  if (stepState.status === 'failed') return exhausted
-  if (stepState.status !== 'running') return false
-
-  const stopped =
+  const isStopped = async () =>
     !isCompensationStepName(stepName) &&
     isRunClosedToSteps((await store.getRun(runId))?.status ?? '')
+  if (stepState.status === 'failed') {
+    // A failed step that has spent every attempt is settled, however it failed;
+    // a redelivered message must not buy it another one.
+    if (exhausted) return true
+    // Nor does a run that was stopped give it one.
+    if (!(await isStopped())) return false
+    await store.resumeWorkflow?.(runId)
+    return true
+  }
+  if (stepState.status !== 'running') return false
+
+  const stopped = await isStopped()
   if (!exhausted && !stopped) return false
+  if (await failLostStep(store, runId, stepName, stepState, leaseMs)) {
+    // A null claim reads as "another dispatch owns it", which resumes nothing.
+    await store.resumeWorkflow?.(runId)
+  }
+  return true
+}
+
+/**
+ * Fail a step whose worker vanished, without running it again. It is taken
+ * first, so a worker whose lease is live by the store's clock keeps it, and
+ * `false` is resolved.
+ */
+export const failLostStep = async (
+  store: StepClaimStore,
+  runId: string,
+  stepName: string,
+  stepState: StepState,
+  leaseMs: number
+): Promise<boolean> => {
+  // Read before the claim, which may change `stepState` in place.
+  const { stepId, attemptCount } = stepState
+  const exhausted = leaseAttemptsExhausted(stepState)
   if (
     !(await store.claimStepStatus(stepState, STEP_SOURCES.inFlight, leaseMs))
   ) {
-    return true
+    return false
   }
-  const { stepId, attemptCount } = stepState
   await store.setStepError(
     stepId,
     new WorkflowStepLeaseExpiredError(runId, stepName, attemptCount, exhausted),
@@ -219,8 +247,6 @@ export const settleUnclaimableStep = async (
   if (exhausted) {
     await store.logStepAttemptsExhausted?.(runId, stepName, attemptCount)
   }
-  // A null claim reads as "another dispatch owns it", which resumes nothing.
-  await store.resumeWorkflow?.(runId)
   return true
 }
 
@@ -268,11 +294,13 @@ export const claimStepByReadThenWrite = async (
   ) {
     return null
   }
+  // Created unclaimed and then claimed, so it is never `running` without a
+  // lease, which is what a step an inline pass works looks like.
   let attempt: StepState
   try {
     attempt = await store.createRetryAttempt(
       stepState.stepId,
-      'running',
+      'pending',
       attemptCount
     )
   } catch (error) {
@@ -280,7 +308,13 @@ export const claimStepByReadThenWrite = async (
     if (error instanceof WorkflowStepSupersededError) return null
     throw error
   }
-  await store.refreshStepLease(attempt.stepId, leaseMs)
+  if (
+    !(await store.claimStepStatus(attempt, STEP_SOURCES.unclaimed, leaseMs))
+  ) {
+    return null
+  }
+  await store.setStepRunning(attempt.stepId, attempt.attemptCount)
+  attempt = { ...attempt, status: 'running' }
   // A `failed` step threw, and this is its ordinary retry.
   if (!lost) return attempt
   await store.logStepRerun?.(runId, stepName, attempt.attemptCount)

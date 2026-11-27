@@ -179,44 +179,60 @@ export const queuedChildOutcome = async (
  */
 const CANCELLED_CHILD_SETTLE_MS = 30_000
 
+type HandBackApi = {
+  getRun(id: string): Promise<WorkflowRun | null>
+  getStepState(runId: string, stepName: string): Promise<StepState>
+  setStepResult(
+    stepId: string,
+    result: unknown,
+    attempt?: number
+  ): Promise<void>
+  setStepError(stepId: string, error: Error, attempt?: number): Promise<void>
+}
+
 /**
- * Give every step still parked on a child that has settled the child's outcome.
- * Replay cannot do this: it would run the step again and start a second child.
+ * Give a step still parked on a child that has settled the child's outcome.
+ * Resolves `false` when there is none to give yet.
+ */
+export const handBackSettledChild = async (
+  api: HandBackApi,
+  runId: string,
+  stepName: string
+): Promise<boolean> => {
+  // One read, so the child and the attempt it is handed to belong together.
+  const step = await api.getStepState(runId, stepName)
+  if (!isParkedOnChild(step) || runningStepLease(step) === 'held') return false
+  const child = await api.getRun(step.childRunId!)
+  if (!child || !WORKFLOW_TERMINAL_STATES.has(child.status)) return false
+  if (
+    child.status === 'cancelled' &&
+    Date.now() - child.updatedAt.getTime() < CANCELLED_CHILD_SETTLE_MS
+  ) {
+    return false
+  }
+  const failure = childRunFailure(child)
+  // Refused when the child's own message, or another sweep, got there first.
+  await unlessSuperseded(() =>
+    failure
+      ? api.setStepError(step.stepId, failure, step.attemptCount)
+      : api.setStepResult(step.stepId, child.output, step.attemptCount)
+  )
+  return true
+}
+
+/**
+ * `handBackSettledChild` over every step of a run. Replay cannot do this: it
+ * would run the step again and start a second child.
  */
 export const handBackSettledChildren = async (
-  api: {
-    getRun(id: string): Promise<WorkflowRun | null>
+  api: HandBackApi & {
     getRunSteps(runId: string): Promise<Array<StepState & { stepName: string }>>
-    getStepState(runId: string, stepName: string): Promise<StepState>
-    setStepResult(
-      stepId: string,
-      result: unknown,
-      attempt?: number
-    ): Promise<void>
-    setStepError(stepId: string, error: Error, attempt?: number): Promise<void>
   },
   runId: string
 ): Promise<void> => {
   for (const listed of await api.getRunSteps(runId)) {
     if (!isParkedOnChild(listed)) continue
-    // One read, so the child and the attempt it is handed to belong together.
-    const step = await api.getStepState(runId, listed.stepName)
-    if (!isParkedOnChild(step) || runningStepLease(step) === 'held') continue
-    const child = await api.getRun(step.childRunId!)
-    if (!child || !WORKFLOW_TERMINAL_STATES.has(child.status)) continue
-    if (
-      child.status === 'cancelled' &&
-      Date.now() - child.updatedAt.getTime() < CANCELLED_CHILD_SETTLE_MS
-    ) {
-      continue
-    }
-    const failure = childRunFailure(child)
-    // Refused when the child's own message, or another sweep, got there first.
-    await unlessSuperseded(() =>
-      failure
-        ? api.setStepError(step.stepId, failure, step.attemptCount)
-        : api.setStepResult(step.stepId, child.output, step.attemptCount)
-    )
+    await handBackSettledChild(api, runId, listed.stepName)
   }
 }
 

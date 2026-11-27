@@ -76,6 +76,12 @@ export const CLAIMABLE_STEP_STATUSES: ReadonlySet<string> = new Set<StepStatus>(
 )
 
 /** Step statuses that mean the step has not settled yet. */
+/**
+ * The statuses of a run that only a driver moves on, so recovery looks for runs
+ * in them and drives each under its lease.
+ */
+export const DRIVEN_RUN_STATUSES: readonly WorkflowStatus[] = ['compensating']
+
 export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([
   'pending',
   'scheduled',
