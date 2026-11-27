@@ -1,5 +1,8 @@
 import { describe, test } from 'node:test'
-import type { PikkuWorkflowWire } from './dsl/workflow-dsl.types.js'
+import type {
+  PikkuWorkflowWire,
+  RpcStepMeta,
+} from './dsl/workflow-dsl.types.js'
 
 /** Never called: the assertions here are the ones the type checker makes. */
 const steps = (workflow: PikkuWorkflowWire) => [
@@ -13,8 +16,16 @@ const steps = (workflow: PikkuWorkflowWire) => [
   () => workflow.expectError('error', 'fn', {}, { timeout: '1s' }),
 ]
 
+const extracted: RpcStepMeta = {
+  type: 'rpc',
+  stepName: 'rpc',
+  rpcName: 'fn',
+  options: { timeout: '30s' },
+}
+
 describe('a step timeout', () => {
   test('is accepted by the RPC form of do alone', () => {
     void steps
+    void extracted
   })
 })

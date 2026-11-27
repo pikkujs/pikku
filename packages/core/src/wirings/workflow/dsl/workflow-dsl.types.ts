@@ -283,7 +283,7 @@ export interface RpcStepMeta {
   /** Input source mappings, or 'passthrough' when entire data is passed */
   inputs?: Record<string, InputSource> | 'passthrough'
   /** Step options */
-  options?: WorkflowStepOptions
+  options?: WorkflowRpcStepOptions
   /** Scenario virtual user name this step runs as ({ virtualUser: virtualUsers.x }) */
   virtualUser?: string
   /** True for workflow.expectEventually polling steps */
