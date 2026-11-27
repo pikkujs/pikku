@@ -12,6 +12,7 @@ import { forwardStepHooks } from './workflow-step-refusal.js'
 import {
   childStepRetryStore,
   runInlineRetryLoop,
+  startUnlessStopped,
 } from './workflow-step-retry.js'
 import { runWithStepDeadline } from './workflow-step-signal.js'
 import type { StepRpcArgs } from './workflow-wire.js'
@@ -101,12 +102,17 @@ const runInlineRpcStep = async (
   }: InlineRpcStep
 ): Promise<any> => {
   const startsChildRun = !options.virtualUser && !!resolveWorkflowMeta(rpcName)
+  const throwIfStopped = () => service.throwIfRunStopped(runId)
   // A stopped run gets no further attempt.
-  if (stepState.status === 'failed') await service.throwIfRunStopped(runId)
+  if (stepState.status === 'failed') await throwIfStopped()
 
   return runInlineRetryLoop(
     startsChildRun ? childStepRetryStore(service) : service,
-    await resumeInlineStep(service, runId, stepName, stepState),
+    await startUnlessStopped(
+      () => resumeInlineStep(service, runId, stepName, stepState),
+      throwIfStopped,
+      leaseLost
+    ),
     retries,
     options.retryDelay,
     (currentStepState, attempt) =>
@@ -160,7 +166,7 @@ const runInlineRpcStep = async (
         throw error
       }
     },
-    () => service.throwIfRunStopped(runId),
+    throwIfStopped,
     forwardStepHooks(service, runId, stepName, leaseLost)
   )
 }

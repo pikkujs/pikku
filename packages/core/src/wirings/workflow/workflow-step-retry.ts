@@ -53,6 +53,24 @@ export const childStepRetryStore = (store: StepRetryStore): StepRetryStore => ({
   createRetryAttempt: (...args) => store.createRetryAttempt(...args),
 })
 
+/**
+ * A start the store refuses on a stopped run is that run being stopped, not the
+ * step passing to another owner, so `throwIfStopped` says how the pass ends.
+ */
+export const startUnlessStopped = async <T>(
+  start: () => Promise<T>,
+  throwIfStopped?: () => Promise<void>,
+  leaseLost?: AbortSignal
+): Promise<T> => {
+  try {
+    return await start()
+  } catch (error) {
+    throwIfLeaseLost(leaseLost)
+    if (error instanceof WorkflowStepSupersededError) await throwIfStopped?.()
+    throw error
+  }
+}
+
 /** What a step run in-process is given besides the loop itself. */
 export type InlineStepHooks = {
   /** The signal of one attempt, opened before the run is checked for a stop. */
@@ -61,6 +79,8 @@ export type InlineStepHooks = {
   onRefused?: (stepState: StepState) => Promise<void>
   /** Aborts if the run lease the calling pass holds is lost. */
   leaseLost?: AbortSignal
+  /** Waits out a `retryDelay`, or less if the next attempt is not to start. */
+  waitToRetry?: (ms: number) => Promise<unknown>
 }
 
 /**
@@ -76,7 +96,11 @@ export const startStepAttempt = async (
   beforeAttempt?: () => Promise<void>,
   { onRefused, leaseLost }: InlineStepHooks = {}
 ): Promise<void> => {
-  await store.setStepRunning(stepState.stepId, stepState.attemptCount)
+  await startUnlessStopped(
+    () => store.setStepRunning(stepState.stepId, stepState.attemptCount),
+    beforeAttempt,
+    leaseLost
+  )
   throwIfLeaseLost(leaseLost)
   try {
     await beforeAttempt?.()
@@ -133,15 +157,15 @@ export const runInlineRetryLoop = async (
         throwIfLeaseLost(hooks?.leaseLost)
         // A stopped run gets no pending attempt, which nothing would finish.
         await beforeAttempt?.()
-        currentStepState = await store.createRetryAttempt(
-          stepId,
-          'pending',
-          attemptCount
+        currentStepState = await startUnlessStopped(
+          () => store.createRetryAttempt(stepId, 'pending', attemptCount),
+          beforeAttempt,
+          hooks?.leaseLost
         )
         if (retryDelay) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, getDurationInMilliseconds(retryDelay))
-          )
+          const ms = getDurationInMilliseconds(retryDelay)
+          await (hooks?.waitToRetry?.(ms) ??
+            new Promise((resolve) => setTimeout(resolve, ms)))
         }
         continue
       }

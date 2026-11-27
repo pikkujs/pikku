@@ -1,3 +1,4 @@
+import { PassSteps } from '../workflow-pass-steps.js'
 import type { PikkuWorkflowService } from '../pikku-workflow-service.js'
 import {
   WorkflowAsyncException,
@@ -1360,8 +1361,10 @@ async function continueGraphInline(
   graphName: string,
   nodes: Record<string, any>,
   triggerInput: any,
-  entryNodeIds: string[]
+  entryNodeIds: string[],
+  started: PassSteps
 ): Promise<void> {
+  const abandoned = () => new WorkflowAsyncException(runId, graphName)
   while (true) {
     const {
       failedNodeIds: rawFailed,
@@ -1421,38 +1424,40 @@ async function continueGraphInline(
 
     let executed = 0
     await Promise.all(
-      plan.toFire.map(async (fire) => {
-        const node = nodes[fire.logical]
-        if (!node?.rpcName) return
+      plan.toFire.map((fire) =>
+        started.start(abandoned, async () => {
+          const node = nodes[fire.logical]
+          if (!node?.rpcName) return
 
-        const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
-          (id) => !IGNORED_REFS.has(id)
-        )
-        const fetchedResults = await reader.read(referencedNodeIds)
-        const nodeResults: Record<string, any> = {
-          trigger: triggerInput,
-          ...fetchedResults,
-        }
-        if (fire.itemIndex !== undefined) {
-          nodeResults['$item'] =
-            reader.fanoutItems[fire.logical]?.[fire.itemIndex]
-        }
-        const resolvedInput = resolveSerializedInput(node.input, nodeResults)
+          const referencedNodeIds = extractReferencedNodeIds(node.input).filter(
+            (id) => !IGNORED_REFS.has(id)
+          )
+          const fetchedResults = await reader.read(referencedNodeIds)
+          const nodeResults: Record<string, any> = {
+            trigger: triggerInput,
+            ...fetchedResults,
+          }
+          if (fire.itemIndex !== undefined) {
+            nodeResults['$item'] =
+              reader.fanoutItems[fire.logical]?.[fire.itemIndex]
+          }
+          const resolvedInput = resolveSerializedInput(node.input, nodeResults)
 
-        executed++
-        await prepareFire(workflowService, runId, fire, node)
-        await executeGraphNodeInline(
-          workflowService,
-          rpcService,
-          runId,
-          graphName,
-          fire.logical,
-          fire.instanceKey,
-          resolvedInput,
-          nodes,
-          fire.fromStepName
-        )
-      })
+          executed++
+          await prepareFire(workflowService, runId, fire, node)
+          await executeGraphNodeInline(
+            workflowService,
+            rpcService,
+            runId,
+            graphName,
+            fire.logical,
+            fire.instanceKey,
+            resolvedInput,
+            nodes,
+            fire.fromStepName
+          )
+        })
+      )
     )
     if (executed === 0) return
   }
@@ -1565,6 +1570,8 @@ export async function runWorkflowGraph(
 
   if (inline && rpcService) {
     const executeInline = async () => {
+      const started = new PassSteps()
+      const abandoned = () => new WorkflowAsyncException(runId, graphName)
       try {
         await Promise.all(
           readyEntryNodes.map(async (nodeId) => {
@@ -1581,15 +1588,17 @@ export async function runWorkflowGraph(
 
             await Promise.all(
               firings.map((firing) =>
-                executeGraphNodeInline(
-                  workflowService,
-                  rpcService,
-                  runId,
-                  graphName,
-                  nodeId,
-                  firing.instanceKey,
-                  firing.input,
-                  nodes
+                started.start(abandoned, () =>
+                  executeGraphNodeInline(
+                    workflowService,
+                    rpcService,
+                    runId,
+                    graphName,
+                    nodeId,
+                    firing.instanceKey,
+                    firing.input,
+                    nodes
+                  )
                 )
               )
             )
@@ -1603,7 +1612,8 @@ export async function runWorkflowGraph(
           graphName,
           nodes,
           triggerInput,
-          entryNodes
+          entryNodes,
+          started
         )
       } catch (error) {
         if (
@@ -1619,7 +1629,12 @@ export async function runWorkflowGraph(
           error as Error,
           rpcService
         )
+        // An unwind that stopped to wait on a sibling node is finished once
+        // that node has ended: nothing else wakes an inline run.
+        await started.close()
+        await workflowService.settleStoppedRun(runId, rpcService)
       } finally {
+        await started.close()
         workflowService.unregisterInlineRun(runId)
       }
     }

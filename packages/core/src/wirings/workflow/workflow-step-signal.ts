@@ -102,6 +102,36 @@ export const openStepAttempt = (source: StepAttemptSource): StepAttempt => {
   }
 }
 
+/**
+ * Wait `ms` inside a pass, ending early once the run is cancelled or the run
+ * lease is lost. Resolves `true` when it was cancelled.
+ */
+export const waitUnlessCancelled = async (
+  source: Omit<StepAttemptSource, 'forward'>,
+  ms: number
+): Promise<boolean> => {
+  const watch = openStepAttempt({ ...source, forward: true })
+  const { signal } = watch
+  try {
+    // A cancel may have landed before the watch began.
+    const run = await source.readRun().catch(() => null)
+    if (run && isRunCancelled(run)) return true
+    await new Promise<void>((resolve) => {
+      if (signal.aborted) return resolve()
+      const done = () => {
+        clearTimeout(timer)
+        signal.removeEventListener('abort', done)
+        resolve()
+      }
+      const timer = setTimeout(done, ms)
+      signal.addEventListener('abort', done)
+    })
+    return signal.reason instanceof WorkflowStepCancelledError
+  } finally {
+    watch.close()
+  }
+}
+
 /** What a step's signal adds to the wire besides `workflowStep.signal`. */
 export const stepSignalWire = (
   signal: AbortSignal | undefined

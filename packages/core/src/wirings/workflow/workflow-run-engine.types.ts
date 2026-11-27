@@ -1,4 +1,5 @@
 import type { PikkuRawWire } from '../../types/core.types.js'
+import type { PassSteps } from './workflow-pass-steps.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   CoreWorkflow,
@@ -109,4 +110,6 @@ export type ReplayPass = {
   steps?: Map<string, StepState>
   /** Aborts if the run lease this pass works under is lost. */
   leaseLost?: AbortSignal
+  /** What the body has started, on a pass that runs one. */
+  started?: PassSteps
 }

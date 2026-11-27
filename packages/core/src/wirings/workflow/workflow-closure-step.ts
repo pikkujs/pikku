@@ -9,6 +9,7 @@ import type { OpenSteps } from './workflow-open-steps.js'
 import {
   runInlineRetryLoop,
   startStepAttempt,
+  startUnlessStopped,
   type StepRetryStore,
 } from './workflow-step-retry.js'
 import type { StepState, WorkflowStepOptions } from './workflow.types.js'
@@ -24,6 +25,11 @@ export type ClosureStepHost = StepRetryStore & {
   ): Promise<void>
   isInline(runId: string): Promise<boolean>
   throwIfRunStopped(runId: string): Promise<void>
+  waitUnlessCancelled(
+    runId: string,
+    ms: number,
+    leaseLost?: AbortSignal
+  ): Promise<boolean>
   updateRunState(runId: string, name: string, value: unknown): Promise<void>
   scheduleOrchestratorRetry(
     runId: string,
@@ -96,25 +102,32 @@ const attemptClosureStep = async (
   retryDelay: WorkflowStepOptions['retryDelay'],
   leaseLost: AbortSignal | undefined
 ): Promise<ClosureOutcome> => {
+  const throwIfStopped = () => host.throwIfRunStopped(runId)
+
   // A replay of a failed step spends a retry, or throws what the step threw.
   let startFrom = stepState
   if (stepState.status === 'failed') {
     if (stepState.attemptCount > retries) {
       throw recordedStepError(stepName, stepState)
     }
-    await host.throwIfRunStopped(runId)
-    startFrom = await resumeInlineStep(host, runId, stepName, stepState)
+    await throwIfStopped()
+    startFrom = await startUnlessStopped(
+      () => resumeInlineStep(host, runId, stepName, stepState),
+      throwIfStopped,
+      leaseLost
+    )
   }
 
   // `running` here is a pass that was lost mid-step.
   if (startFrom.status === 'running') {
-    startFrom = await takeBackLostInlineStep(host, runId, stepName, {
-      ...startFrom,
-      retries,
-    })
+    const lost = { ...startFrom, retries }
+    startFrom = await startUnlessStopped(
+      () => takeBackLostInlineStep(host, runId, stepName, lost),
+      throwIfStopped,
+      leaseLost
+    )
   }
 
-  const throwIfStopped = () => host.throwIfRunStopped(runId)
   const onRefused = (step: StepState) => refuseStep(host, runId, stepName, step)
 
   if (await host.isInline(runId)) {
@@ -127,7 +140,11 @@ const attemptClosureStep = async (
         () => fn(),
         undefined,
         throwIfStopped,
-        { onRefused, leaseLost }
+        {
+          onRefused,
+          leaseLost,
+          waitToRetry: (ms) => host.waitUnlessCancelled(runId, ms, leaseLost),
+        }
       ),
     }
   }

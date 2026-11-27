@@ -55,6 +55,11 @@ export const forwardStepHooks = (
       forward: boolean,
       leaseLost?: AbortSignal
     ): StepAttempt | undefined
+    waitUnlessCancelled(
+      runId: string,
+      ms: number,
+      leaseLost?: AbortSignal
+    ): Promise<boolean>
   },
   runId: string,
   stepName: string,
@@ -62,5 +67,6 @@ export const forwardStepHooks = (
 ): InlineStepHooks => ({
   leaseLost,
   openAttempt: () => service.openInlineStepAttempt(runId, true, leaseLost),
+  waitToRetry: (ms) => service.waitUnlessCancelled(runId, ms, leaseLost),
   onRefused: (stepState) => refuseStep(service, runId, stepName, stepState),
 })

@@ -34,7 +34,6 @@ import type {
 import { continueGraph, runWorkflowGraph } from './graph/graph-runner.js'
 import type { WorkflowService } from '../../services/workflow-service.js'
 import type { ScenarioVirtualUsers } from '../../services/virtual-users-service.js'
-import { isExpectedError } from '../../errors/error-handler.js'
 import { PikkuMissingMetaError } from '../../errors/errors.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import { approvalDeciderFrom } from './workflow-approval-policy.js'
@@ -102,11 +101,7 @@ import {
   warnStepAttemptsExhausted,
   warnStepRerun,
 } from './workflow-step-claim.js'
-import {
-  holdWorkflowLease,
-  isRunLeaseError,
-  nullWhenStepHeld,
-} from './workflow-run-lease.js'
+import { holdWorkflowLease, nullWhenStepHeld } from './workflow-run-lease.js'
 import type { LeaseService } from '../../services/lease-service.js'
 import { runOutput, summarizeRunStatus } from './workflow-run-status.js'
 import { writeRunMirror } from './workflow-run-mirror.js'
@@ -124,6 +119,7 @@ import {
   assertNoClosureTimeout,
   trackStepCancel,
   type StepAttempt,
+  waitUnlessCancelled,
 } from './workflow-step-signal.js'
 import {
   runQueuedStep,
@@ -136,18 +132,19 @@ import {
   isParkedOnChild,
 } from './workflow-child-step.js'
 import { runDslWorkflowPass } from './workflow-dsl-pass.js'
-import { runLogger, withRunTrace } from './workflow-run-trace.js'
+import { withRunTrace } from './workflow-run-trace.js'
 import {
-  childRunFailure,
   settleStoppedRun,
   failRunOrUnwind,
-  isUnwound,
   cancelAndUnwind,
   createUnwindHost,
   type CompensationApi,
 } from './workflow-compensation.js'
-import { isOwnershipError, throwIfLeaseLost } from './workflow-lost-lease.js'
-import { runInlineToItsEnd } from './workflow-inline-pickup.js'
+import { throwIfLeaseLost } from './workflow-lost-lease.js'
+import {
+  endFailedInlineRun,
+  runInlineToItsEnd,
+} from './workflow-inline-pickup.js'
 import { RunUnwinds, type RunUnwindHost } from './workflow-unwind-lease.js'
 import {
   createCompensationApi,
@@ -162,6 +159,8 @@ import {
 } from './workflow-closure-step.js'
 import type { WorkflowAwaitedStep } from './workflow-queue-workers.js'
 import { OpenSteps } from './workflow-open-steps.js'
+import { PassSteps, inPass, stepsInPass } from './workflow-pass-steps.js'
+import { runSleepStep, type SleepStepHost } from './workflow-sleep-step.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   WorkflowRecovery,
@@ -981,39 +980,17 @@ export abstract class PikkuWorkflowService
       try {
         await this.runInlineToItsEnd(runId, rpcService)
       } catch (error: any) {
-        if (
-          error.name !== 'WorkflowAsyncException' &&
-          error.name !== 'WorkflowCancelledException' &&
-          error.name !== 'WorkflowSuspendedException' &&
-          error.name !== 'WorkflowDispatchException' &&
-          !isRunLeaseError(error) &&
-          !isOwnershipError(error)
-        ) {
-          await this.markFailedUnlessUnwound(runId, {
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
-          })
-          runLogger(getSingletonServices()!.logger, wire).error(
-            `Workflow ${name} (run ${runId}) failed:`,
-            isExpectedError(error) ? error.message : error
-          )
-          const settled = await this.getRun(runId)
-          if (settled?.wire?.type === 'workflow' && isUnwound(settled.status)) {
-            throw childRunFailure(settled) ?? error
-          }
-          throw error
-        }
-        // A lease error says nothing about how the run went — a lost lease is
-        // only seen once the body has already written its outcome — so the
-        // run keeps whatever status it reached.
-        if (
-          error.name === 'WorkflowDispatchException' ||
-          isRunLeaseError(error) ||
-          isOwnershipError(error)
-        ) {
-          throw error
-        }
+        await endFailedInlineRun(
+          {
+            getRun: (id) => this.getRun(id),
+            markFailedUnlessUnwound: (...args) =>
+              this.markFailedUnlessUnwound(...args),
+          },
+          runId,
+          name,
+          wire,
+          error
+        )
       } finally {
         this.unregisterInlineRun(runId)
         this.runExtension?.detachRunContext(runId)
@@ -1090,7 +1067,7 @@ export abstract class PikkuWorkflowService
 
   private async beginReplay(runId: string): Promise<ReplayPass> {
     const context = this.enterExecution(runId)
-    const pass: ReplayPass = { ordinals: new Map() }
+    const pass: ReplayPass = { ordinals: new Map(), started: new PassSteps() }
     context.pass = pass
     context.replay = {}
     const steps = await this.listStepStates(runId)
@@ -1274,6 +1251,7 @@ export abstract class PikkuWorkflowService
       return runDslWorkflowPass(
         {
           leaseLost,
+          steps: pass.started!,
           workflowWire: (addonNs) =>
             this.wireFor(run.workflow, runId, rpcService, addonNs, pass),
           extension: this.runExtension,
@@ -1468,17 +1446,27 @@ export abstract class PikkuWorkflowService
   ): StepAttempt | undefined {
     if (!this.stepSignals) return undefined
     return openStepAttempt({
-      runId,
+      ...this.stepAttemptSource(runId, cancelCheckMs, leaseLost),
       forward,
+    })
+  }
+
+  private stepAttemptSource(
+    runId: string,
+    cancelCheckMs: number,
+    leaseLost: AbortSignal | undefined
+  ) {
+    return {
+      runId,
       cancelCheckMs,
       leaseLost,
       readRun: () => this.getRun(runId),
       logger: () => this.logger,
-      onCancel: (cancel) =>
+      onCancel: (cancel: () => void) =>
         trackStepCancel(this.contextFor(runId), cancel, () =>
           this.releaseIdleContext(runId)
         ),
-    })
+    }
   }
 
   /**
@@ -1495,6 +1483,21 @@ export abstract class PikkuWorkflowService
       forward,
       this.cancelCheckIntervalMs,
       leaseLost
+    )
+  }
+
+  /**
+   * A wait a pass sits out itself, a sleep or a `retryDelay`. It ends early once
+   * the run is cancelled, resolving `true`, or the pass's run lease is lost.
+   */
+  public waitUnlessCancelled(
+    runId: string,
+    ms: number,
+    leaseLost?: AbortSignal
+  ): Promise<boolean> {
+    return waitUnlessCancelled(
+      this.stepAttemptSource(runId, this.cancelCheckIntervalMs, leaseLost),
+      ms
     )
   }
 
@@ -1687,6 +1690,7 @@ export abstract class PikkuWorkflowService
       openSteps: this.openSteps,
       isInline: (runId) => this.isInline(runId),
       throwIfRunStopped: (runId) => this.throwIfRunStopped(runId),
+      waitUnlessCancelled: (...args) => this.waitUnlessCancelled(...args),
       updateRunState: (...args) => this.updateRunState(...args),
       setStepRunning: (...args) => this.setStepRunning(...args),
       setStepResult: (...args) => this.setStepResult(...args),
@@ -1725,30 +1729,23 @@ export abstract class PikkuWorkflowService
       pass.steps
     )
 
-    if (stepState.status === 'succeeded') {
-      return
-    }
-
-    if (stepState.status === 'scheduled') {
-      throw new WorkflowAsyncException(runId, stepName)
-    }
-
-    let scheduled: boolean
-    try {
-      scheduled = await this.scheduleSleep(runId, stepState.stepId, duration)
-    } catch (cause) {
-      throw new WorkflowDispatchException(runId, stepName, { cause })
-    }
-    if (scheduled) {
-      await this.setStepScheduled(stepState.stepId)
-      throw new WorkflowAsyncException(runId, stepName)
-    }
-
-    await new Promise((resolve) =>
-      setTimeout(resolve, getDurationInMilliseconds(duration))
+    await runSleepStep(
+      this.sleepStepHost,
+      runId,
+      stepName,
+      stepState,
+      duration,
+      pass.leaseLost
     )
-    throwIfLeaseLost(pass.leaseLost)
-    await this.completeSleep(stepState.stepId)
+  }
+
+  private get sleepStepHost(): SleepStepHost {
+    return {
+      scheduleSleep: (...args) => this.scheduleSleep(...args),
+      setStepScheduled: (stepId) => this.setStepScheduled(stepId),
+      waitUnlessCancelled: (...args) => this.waitUnlessCancelled(...args),
+      completeSleep: (stepId) => this.completeSleep(stepId),
+    }
   }
 
   private async suspendStep(
@@ -1832,7 +1829,7 @@ export abstract class PikkuWorkflowService
     addonNamespace?: string | null,
     boundPass?: ReplayPass
   ): PikkuWorkflowWire {
-    const workflowWire = buildWorkflowWire(name, runId, addonNamespace, {
+    const steps = stepsInPass(boundPass?.started, runId, {
       getRun: () => this.getRun(runId),
       verifyStepName: (stepName) => this.verifyStepName(stepName),
       rpcStep: (stepName, rpcName, data, options) =>
@@ -1861,13 +1858,16 @@ export abstract class PikkuWorkflowService
       approvalStep: (reason, options) =>
         this.approvalStep(runId, reason, options, boundPass),
     })
+    const workflowWire = buildWorkflowWire(name, runId, addonNamespace, steps)
     this.runExtension?.decorateWorkflowWire(workflowWire, {
       name,
       runId,
       rpcService,
       addonNamespace,
       inlineStep: (id, stepName, fn, options, data, rpcName) =>
-        this.inlineStep(id, stepName, fn, options, data, rpcName, boundPass),
+        inPass(boundPass?.started, id, stepName, () =>
+          this.inlineStep(id, stepName, fn, options, data, rpcName, boundPass)
+        ),
     })
     return workflowWire
   }

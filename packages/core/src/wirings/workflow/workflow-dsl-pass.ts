@@ -12,6 +12,7 @@ import type {
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
 import { isOwnershipError, throwIfLeaseLost } from './workflow-lost-lease.js'
+import type { PassSteps } from './workflow-pass-steps.js'
 import {
   WorkflowAsyncException,
   WorkflowCancelledException,
@@ -33,6 +34,8 @@ export interface DslPassDeps {
   ) => Promise<boolean>
   /** The run's status if something has ended it, finishing any unwind that waited on this pass. */
   settleIfStopped: () => Promise<WorkflowStatus | undefined>
+  /** What the body started, which the pass outlives. */
+  steps: Pick<PassSteps, 'waitForAll' | 'close'>
   onChildCompleted: (result: unknown) => Promise<void>
   onChildFailed: (error: Error) => Promise<void>
   failOrUnwind: (error: Error) => Promise<'unwinding' | 'finished' | 'failed'>
@@ -92,6 +95,7 @@ export const runDslWorkflowPass = async (
       }
     )
 
+    await deps.steps.waitForAll()
     throwIfLeaseLost(deps.leaseLost)
     // The run has been in the hands of its steps, and an inline one never went
     // back through the queue, so what it was told is only known by rereading.
@@ -157,6 +161,9 @@ export const runDslWorkflowPass = async (
     if ((await deps.failOrUnwind(error)) === 'unwinding') return
     throw error
   } finally {
+    // After the outcome is written, so a run that failed or was cancelled
+    // already refuses whatever its remaining steps ask for next.
+    await deps.steps.close()
     await deps.extension?.onAfterRunFunc(lifecycle, outcome, failure)
   }
 }
