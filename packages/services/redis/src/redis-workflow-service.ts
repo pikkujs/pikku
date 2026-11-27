@@ -875,7 +875,12 @@ export class RedisWorkflowService extends PikkuWorkflowService {
           seen.retries,
           seen.retryDelay?.toString()
         )
-        return this.getStepState(runId, stepName)
+        return {
+          ...seen,
+          attemptCount: attempt,
+          leaseExpiresAt: new Date(now + leaseMs),
+          updatedAt: new Date(now),
+        }
       },
       async (mirror, newStep) => {
         if (newStep) {

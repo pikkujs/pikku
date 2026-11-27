@@ -208,6 +208,48 @@ describe('a step parked on a child run', () => {
   })
 })
 
+describe('a lost step taken back in redis', () => {
+  test('each claim returns the attempt it acquired', async () => {
+    const runId = await newRun()
+    await ws.insertStepState(
+      runId,
+      'charge',
+      'flow',
+      {},
+      {
+        retries: 3,
+      }
+    )
+    const key = `${KEY_PREFIX}:step:${runId}:charge`
+    const lapse = () =>
+      redis.hset(key, 'status', 'running', 'leaseExpiresAt', '1')
+    const claim = () =>
+      (ws as any).claimStepForExecution(runId, 'charge', 'flow', 60_000)
+    await lapse()
+
+    // The first claim's lease lapses while it is still writing its history.
+    let later: any
+    const save = (ws as any).saveStepHistory.bind(ws)
+    ;(ws as any).saveStepHistory = async (...args: unknown[]) => {
+      ;(ws as any).saveStepHistory = save
+      await save(...args)
+      await lapse()
+      later = await claim()
+    }
+
+    const first = await claim()
+
+    assert.equal(later.attemptCount, 3)
+    assert.equal(
+      first.attemptCount,
+      2,
+      'the claim reported an attempt another worker took'
+    )
+    assert.equal(first.status, 'running')
+    assert.ok(first.leaseExpiresAt.getTime() > Date.now())
+  })
+})
+
 describe('a step’s timeout in redis', () => {
   test('is kept through insert, claim and retry', async () => {
     const runId = await newRun()
