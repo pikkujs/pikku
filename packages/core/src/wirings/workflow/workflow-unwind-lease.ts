@@ -53,11 +53,14 @@ class UnwindExclusion {
 
 /** What driving a run's unwind needs from the workflow service. */
 export type RunUnwindHost = {
-  withRunLease<T>(runId: string, fn: () => Promise<T>): Promise<T>
+  withRunLease<T>(
+    runId: string,
+    fn: (leaseLost?: AbortSignal) => Promise<T>
+  ): Promise<T>
   getRun(runId: string): Promise<{ status: string } | null>
   logger(): Logger | undefined
   /** `driveUnwind` itself. Only to be called under the run's lease. */
-  unwind(runId: string): Promise<UnwindOutcome>
+  unwind(runId: string, leaseLost?: AbortSignal): Promise<UnwindOutcome>
   /** Ask for the run to be looked at again, where there is a queue to ask. */
   wake(runId: string): Promise<void>
 }
@@ -77,14 +80,15 @@ export class RunUnwinds {
   drive(
     host: RunUnwindHost,
     runId: string,
-    leaseHeld: boolean
+    leaseHeld: boolean,
+    leaseLost?: AbortSignal
   ): Promise<UnwindOutcome> {
     if (leaseHeld) {
-      return this.exclusion.run(runId, () => host.unwind(runId))
+      return this.exclusion.run(runId, () => host.unwind(runId, leaseLost))
     }
     return this.exclusion.run(
       runId,
-      () => host.withRunLease(runId, () => host.unwind(runId)),
+      () => host.withRunLease(runId, (lost) => host.unwind(runId, lost)),
       () => host.wake(runId)
     )
   }
@@ -97,13 +101,13 @@ export class RunUnwinds {
   async runPass(
     host: RunUnwindHost,
     runId: string,
-    pass: () => Promise<void>
+    pass: (leaseLost?: AbortSignal) => Promise<void>
   ): Promise<void> {
     let held = false
     try {
-      await host.withRunLease(runId, () => {
+      await host.withRunLease(runId, (leaseLost) => {
         held = true
-        return pass()
+        return pass(leaseLost)
       })
     } finally {
       if (held) await this.driveLeftBehind(host, runId)

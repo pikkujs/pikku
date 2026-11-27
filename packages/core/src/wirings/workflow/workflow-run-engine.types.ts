@@ -75,6 +75,8 @@ export interface WorkflowRunExtension {
       runId: string
       rpcService: any
       addonNamespace?: string | null
+      /** `WorkflowRunEngine.inlineStep`, for the pass this wire belongs to. */
+      inlineStep?: WorkflowRunEngine['inlineStep']
     }
   ): void
   onBeforeRunFunc(context: RunLifecycleContext): Promise<void>
@@ -91,14 +93,20 @@ export interface WorkflowRunExtension {
 export type RunContext = {
   activeExecutions: number
   inline?: boolean
-  ordinals: Map<string, number>
-  lastStep?: string
+  /** What a wire made outside any replay walks: the latest replay's, if any. */
+  pass: ReplayPass
   /** Aborts the signal of each forward step this process is running. */
   stepCancels?: Set<() => void>
-  /** One per pass holding the run's lease, oldest first; aborts if it is lost. */
-  runLeases?: Set<AbortSignal>
   replay?: {
-    steps?: Map<string, StepState>
     run?: WorkflowRun
   }
+}
+
+/** One walk of a workflow body. Two passes of a run never share one. */
+export type ReplayPass = {
+  ordinals: Map<string, number>
+  lastStep?: string
+  steps?: Map<string, StepState>
+  /** Aborts if the run lease this pass works under is lost. */
+  leaseLost?: AbortSignal
 }

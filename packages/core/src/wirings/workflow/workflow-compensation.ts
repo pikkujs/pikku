@@ -153,6 +153,8 @@ export const compensationRpcName = (rpcName: string): string =>
   `${rpcName}:compensate`
 
 export interface CompensationApi {
+  /** Aborts if the run lease the caller holds is lost. */
+  leaseLost?: AbortSignal
   getRun(runId: string): Promise<WorkflowRun | null>
   getRunSteps(runId: string): Promise<UnwindRecord[]>
   getRunState(runId: string): Promise<Record<string, unknown>>

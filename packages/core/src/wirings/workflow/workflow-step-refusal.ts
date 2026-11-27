@@ -52,12 +52,14 @@ export const forwardStepHooks = (
   service: RefusalStore & {
     openInlineStepAttempt(
       runId: string,
-      forward: boolean
+      forward: boolean,
+      leaseLost?: AbortSignal
     ): StepAttempt | undefined
   },
   runId: string,
-  stepName: string
+  stepName: string,
+  leaseLost?: AbortSignal
 ): InlineStepHooks => ({
-  openAttempt: () => service.openInlineStepAttempt(runId, true),
+  openAttempt: () => service.openInlineStepAttempt(runId, true, leaseLost),
   onRefused: (stepState) => refuseStep(service, runId, stepName, stepState),
 })

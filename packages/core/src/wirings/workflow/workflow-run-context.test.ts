@@ -54,7 +54,7 @@ describe('per-run state is released when the run stops executing here', () => {
     await ws.inlineStep(runId, 'a', async () => 1)
     ws.endReplay(runId)
 
-    assert.equal(ws.lastStepName(runId), undefined)
+    assert.equal(ws.runContexts.get(runId)?.pass.lastStep, undefined)
   })
 
   test('unregistering an inline run releases it', async () => {
