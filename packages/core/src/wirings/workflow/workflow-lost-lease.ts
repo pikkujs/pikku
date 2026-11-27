@@ -10,6 +10,9 @@ const RUN_LEASE_PREFIX = 'workflow-run:'
 
 export const runLeaseKey = (runId: string) => `${RUN_LEASE_PREFIX}${runId}`
 
+export const isRunLeaseKey = (key: string): boolean =>
+  key.startsWith(RUN_LEASE_PREFIX)
+
 /** Throws, once the pass holding the lease `lost` belongs to has lost it. */
 export const throwIfLeaseLost = (lost: AbortSignal | undefined): void => {
   if (lost?.aborted) throw lost.reason
@@ -25,7 +28,7 @@ export const throwIfLeaseLost = (lost: AbortSignal | undefined): void => {
 export const isOwnershipError = (error: unknown): boolean =>
   error instanceof WorkflowStepSupersededError ||
   ((error instanceof LeaseLostError || error instanceof LeaseTakenError) &&
-    error.key.startsWith(RUN_LEASE_PREFIX))
+    isRunLeaseKey(error.key))
 
 /** Throws, before anything is written about `error`, if the pass may not. */
 export const throwIfNotOwned = (

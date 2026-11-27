@@ -4,7 +4,7 @@ import {
   LeaseTakenError,
   type LeaseService,
 } from '../../services/lease-service.js'
-import { throwIfLeaseLost } from './workflow-lost-lease.js'
+import { isRunLeaseKey, throwIfLeaseLost } from './workflow-lost-lease.js'
 
 /** The run is, or was meanwhile, orchestrated by someone else. */
 export const isRunLeaseError = (error: unknown): boolean =>
@@ -29,8 +29,9 @@ export const holdWorkflowLease = <T>(
     try {
       return await fn(lost)
     } catch (error) {
-      // Whatever the body threw after losing the lease, the loss is the news.
-      throwIfLeaseLost(lost)
+      // Whatever a pass threw after losing its run, the loss is the news. A
+      // step's lock covers a gate, whose own exception is how the run suspends.
+      if (isRunLeaseKey(key)) throwIfLeaseLost(lost)
       throw error
     }
   })
