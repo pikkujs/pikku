@@ -85,6 +85,83 @@ describe('a cancel that lands just after a lost step is claimed', () => {
   })
 })
 
+describe('a cancel that lands as a step is being set running', () => {
+  /** The cancel is committed just before the write that starts `stepName`. */
+  class CancelledAsItStarts extends InMemoryWorkflowService {
+    stepName = ''
+    protected override async setStepRunningImpl(
+      ...args: Parameters<InMemoryWorkflowService['setStepRunningImpl']>
+    ) {
+      for (const run of await this.listRuns()) {
+        const steps = await this.getRunSteps(run.id)
+        if (
+          steps.some(
+            (s) => s.stepId === args[0] && s.stepName === this.stepName
+          )
+        ) {
+          await this.updateRunStatus(run.id, 'cancelled', undefined, {
+            message: 'stop',
+            stack: '',
+            code: 'WORKFLOW_CANCELLED',
+          })
+        }
+      }
+      return super.setStepRunningImpl(...args)
+    }
+  }
+
+  let cancelling: CancelledAsItStarts
+
+  beforeEach(() => {
+    cancelling = new CancelledAsItStarts()
+    cancelling.stepName = 'work'
+    ws = cancelling
+    h = new QueuedWorkflowHarness(ws)
+  })
+
+  const runFlow = async (inline: boolean) => {
+    let runId!: string
+    await ws
+      .startWorkflow('flow', {}, { type: 'test' }, h.rpc as never, {
+        inline,
+        onRunCreated: (id) => {
+          runId = id
+        },
+      })
+      .catch(() => {})
+    if (!inline) await h.pump()
+    return ws.getStepState(runId, 'work')
+  }
+
+  test('an inline RPC step does not run', async () => {
+    h.register('work', { ...h.ok(), queued: false })
+    h.defineDsl('flow', async (workflow) => {
+      await workflow.do('work', 'work', {})
+    })
+
+    const step = await runFlow(true)
+
+    assert.deepEqual(h.log, [])
+    assert.equal(step.status, 'failed')
+    assert.match(step.error?.message ?? '', /the run had been stopped/)
+  })
+
+  for (const inline of [true, false]) {
+    test(`a closure step of ${inline ? 'an inline' : 'a queued'} run does not run`, async () => {
+      let ran = 0
+      h.defineDsl('flow', async (workflow) => {
+        await workflow.do('work', async () => ++ran)
+      })
+
+      const step = await runFlow(inline)
+
+      assert.equal(ran, 0)
+      assert.equal(step.status, 'failed')
+      assert.match(step.error?.message ?? '', /the run had been stopped/)
+    })
+  }
+})
+
 describe('an inline closure step that has failed', () => {
   test('is not run again by a replay once its retries are spent', async () => {
     let calls = 0

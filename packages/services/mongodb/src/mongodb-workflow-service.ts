@@ -16,7 +16,10 @@ import type {
   WorkflowRpcStepOptions,
 } from '@pikku/core/workflow'
 import type { Db, Collection } from 'mongodb'
-import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
+import {
+  WORKFLOW_STATE_OPTIONS,
+  MongoDBWorkflowRunService,
+} from './mongodb-workflow-run-service.js'
 
 interface WorkflowRunDoc {
   _id: string
@@ -104,12 +107,22 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   constructor(db: Db, options: WorkflowServiceOptions) {
     super(options)
     this.runService = new MongoDBWorkflowRunService(db)
-    this.runs = db.collection<WorkflowRunDoc>('workflow_runs')
-    this.steps = db.collection<WorkflowStepDoc>('workflow_step')
-    this.stepHistory = db.collection<WorkflowStepHistoryDoc>(
-      'workflow_step_history'
+    this.runs = db.collection<WorkflowRunDoc>(
+      'workflow_runs',
+      WORKFLOW_STATE_OPTIONS
     )
-    this.versions = db.collection<WorkflowVersionDoc>('workflow_versions')
+    this.steps = db.collection<WorkflowStepDoc>(
+      'workflow_step',
+      WORKFLOW_STATE_OPTIONS
+    )
+    this.stepHistory = db.collection<WorkflowStepHistoryDoc>(
+      'workflow_step_history',
+      WORKFLOW_STATE_OPTIONS
+    )
+    this.versions = db.collection<WorkflowVersionDoc>(
+      'workflow_versions',
+      WORKFLOW_STATE_OPTIONS
+    )
   }
 
   public async init(): Promise<void> {

@@ -5,6 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 
 import type { StepState } from '@pikku/core/workflow'
 import { MongoDBWorkflowService } from './mongodb-workflow-service.js'
+import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
 import { InMemoryLeaseService } from '@pikku/core/services'
 
 let mongod: MongoMemoryServer
@@ -42,6 +43,30 @@ const seedStep = async () => {
 
 /** The history rows of a run, oldest first. */
 const historyOf = async (runId: string) => ws.getRunHistory(runId)
+
+describe('which MongoDB reads and writes workflow state', () => {
+  test('primary reads and majority writes, whatever the database defaults to', () => {
+    const relaxed = client.db(`wf-relaxed-${++dbCount}`, {
+      readPreference: 'secondaryPreferred',
+      writeConcern: { w: 1 },
+    })
+    const services = [
+      new MongoDBWorkflowService(relaxed, {}),
+      new MongoDBWorkflowRunService(relaxed),
+    ]
+
+    for (const service of services) {
+      const collections = ['runs', 'steps', 'stepHistory', 'versions'].map(
+        (name) => (service as any)[name]
+      )
+      for (const collection of collections) {
+        const label = `${service.constructor.name} ${collection.collectionName}`
+        assert.equal(collection.readPreference?.mode, 'primary', label)
+        assert.equal(collection.writeConcern?.w, 'majority', label)
+      }
+    }
+  })
+})
 
 describe('a step transition reaches the history', () => {
   test('running stamps the attempt it is running', async () => {

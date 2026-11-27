@@ -61,6 +61,30 @@ export type InlineStepHooks = {
 }
 
 /**
+ * Set a step running, and only then read whether its run is still open. A cancel
+ * commits the run before it reads the steps, so whichever of the two writes
+ * first, one side sees the other.
+ *
+ * knowledge: decisions/internals/each-workflow-store-reads-the-latest-write.md
+ */
+export const startStepAttempt = async (
+  store: Pick<StepRetryStore, 'setStepRunning'>,
+  stepState: StepState,
+  beforeAttempt?: () => Promise<void>,
+  onRefused?: InlineStepHooks['onRefused']
+): Promise<void> => {
+  await store.setStepRunning(stepState.stepId, stepState.attemptCount)
+  try {
+    await beforeAttempt?.()
+  } catch (error) {
+    if (error instanceof WorkflowCancelledException) {
+      await onRefused?.(stepState)
+    }
+    throw error
+  }
+}
+
+/**
  * Spend a step's retry budget here and now, rather than by handing the run back
  * to the orchestrator between attempts. For an inline run there is nothing to
  * hand it back to. Nothing ends the run between attempts either, so a forward
@@ -83,17 +107,14 @@ export const runInlineRetryLoop = async (
   while (true) {
     const attempt = hooks?.openAttempt?.()
     try {
-      try {
-        await beforeAttempt?.()
-      } catch (error) {
-        if (error instanceof WorkflowCancelledException) {
-          await hooks?.onRefused?.(currentStepState)
-        }
-        throw error
-      }
-      const { stepId, attemptCount } = currentStepState
       // Outside the try: a refused start is not a failed attempt.
-      await store.setStepRunning(stepId, attemptCount)
+      await startStepAttempt(
+        store,
+        currentStepState,
+        beforeAttempt,
+        hooks?.onRefused
+      )
+      const { stepId, attemptCount } = currentStepState
       let result: any
       try {
         result = await doWork(currentStepState, attempt)

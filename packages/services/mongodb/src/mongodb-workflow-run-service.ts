@@ -64,6 +64,17 @@ interface WorkflowVersionDoc {
   createdAt: Date
 }
 
+/**
+ * For every collection holding workflow state, whatever the connection defaults
+ * to: a write must survive a failover, and a read must see the latest one.
+ *
+ * knowledge: decisions/internals/each-workflow-store-reads-the-latest-write.md (@pikku/core)
+ */
+export const WORKFLOW_STATE_OPTIONS = {
+  readPreference: 'primary',
+  writeConcern: { w: 'majority' },
+} as const
+
 export class MongoDBWorkflowRunService implements WorkflowRunService {
   private runs: Collection<WorkflowRunDoc>
   private steps: Collection<WorkflowStepDoc>
@@ -71,12 +82,22 @@ export class MongoDBWorkflowRunService implements WorkflowRunService {
   private versions: Collection<WorkflowVersionDoc>
 
   constructor(db: Db) {
-    this.runs = db.collection<WorkflowRunDoc>('workflow_runs')
-    this.steps = db.collection<WorkflowStepDoc>('workflow_step')
-    this.stepHistory = db.collection<WorkflowStepHistoryDoc>(
-      'workflow_step_history'
+    this.runs = db.collection<WorkflowRunDoc>(
+      'workflow_runs',
+      WORKFLOW_STATE_OPTIONS
     )
-    this.versions = db.collection<WorkflowVersionDoc>('workflow_versions')
+    this.steps = db.collection<WorkflowStepDoc>(
+      'workflow_step',
+      WORKFLOW_STATE_OPTIONS
+    )
+    this.stepHistory = db.collection<WorkflowStepHistoryDoc>(
+      'workflow_step_history',
+      WORKFLOW_STATE_OPTIONS
+    )
+    this.versions = db.collection<WorkflowVersionDoc>(
+      'workflow_versions',
+      WORKFLOW_STATE_OPTIONS
+    )
   }
 
   async listRuns(options?: {

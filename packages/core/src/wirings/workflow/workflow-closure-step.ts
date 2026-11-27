@@ -2,6 +2,7 @@ import { WorkflowAsyncException } from './workflow-errors.js'
 import { refuseStep } from './workflow-step-refusal.js'
 import {
   runInlineRetryLoop,
+  startStepAttempt,
   type StepRetryStore,
 } from './workflow-step-retry.js'
 import type { StepState, WorkflowStepOptions } from './workflow.types.js'
@@ -60,6 +61,9 @@ export const runClosureStep = async (
     )
   }
 
+  const throwIfStopped = () => host.throwIfRunStopped(runId)
+  const onRefused = (step: StepState) => refuseStep(host, runId, stepName, step)
+
   if (await host.isInline(runId)) {
     return runInlineRetryLoop(
       host,
@@ -68,13 +72,13 @@ export const runClosureStep = async (
       retryDelay,
       () => fn(),
       undefined,
-      () => host.throwIfRunStopped(runId),
-      { onRefused: (step) => refuseStep(host, runId, stepName, step) }
+      throwIfStopped,
+      { onRefused }
     )
   }
 
+  await startStepAttempt(host, startFrom, throwIfStopped, onRefused)
   const { stepId, attemptCount } = startFrom
-  await host.setStepRunning(stepId, attemptCount)
   let result: any
   try {
     result = await fn()
