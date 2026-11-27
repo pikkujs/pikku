@@ -779,13 +779,15 @@ async function failGraphRun(
   workflowService: PikkuWorkflowService,
   runId: string,
   failedNode: string,
-  rpcService?: any
+  rpcService?: any,
+  leaseHeld = false
 ): Promise<void> {
   await failGraphRunWith(
     workflowService,
     runId,
     new Error(`Graph node '${failedNode}' failed after exhausting retries`),
-    rpcService
+    rpcService,
+    leaseHeld
   )
 }
 
@@ -793,18 +795,19 @@ async function failGraphRunWith(
   workflowService: PikkuWorkflowService,
   runId: string,
   cause: Error,
-  rpcService?: any
+  rpcService?: any,
+  leaseHeld = false
 ): Promise<void> {
   if (
     rpcService &&
-    (await workflowService.settleStoppedRun(runId, rpcService))
+    (await workflowService.settleStoppedRun(runId, rpcService, leaseHeld))
   ) {
     return
   }
   const error = Object.assign(cause, { code: 'GRAPH_NODE_FAILED' })
   const run = await workflowService.getRun(runId)
   if (run && rpcService) {
-    await workflowService.failOrUnwind(run, error, rpcService)
+    await workflowService.failOrUnwind(run, error, rpcService, leaseHeld)
     return
   }
   await workflowService.updateRunStatus(runId, 'failed', undefined, {
@@ -890,6 +893,7 @@ async function queueGraphNode(
   )
 }
 
+/** Called inside the run's lease, which any unwind it starts relies on. */
 export async function continueGraph(
   workflowService: PikkuWorkflowService,
   runId: string,
@@ -915,7 +919,13 @@ export async function continueGraph(
   const { recovered, unrecovered } = splitFailures(rawFailed, nodes, graphName)
 
   if (unrecovered.length > 0) {
-    await failGraphRun(workflowService, runId, unrecovered[0]!, rpcService)
+    await failGraphRun(
+      workflowService,
+      runId,
+      unrecovered[0]!,
+      rpcService,
+      true
+    )
     return
   }
 

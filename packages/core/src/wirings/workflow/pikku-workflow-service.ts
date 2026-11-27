@@ -140,6 +140,7 @@ import {
   isChildWorkflowRecord,
   type CompensationApi,
 } from './workflow-compensation.js'
+import { UnwindExclusion } from './workflow-unwind-lease.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   WorkflowRecovery,
@@ -155,6 +156,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   private runExtension?: WorkflowRunExtension
 
   private runContexts = new Map<string, RunContext>()
+
+  private readonly unwinds = new UnwindExclusion()
 
   private contextFor(runId: string): RunContext {
     let context = this.runContexts.get(runId)
@@ -1234,8 +1237,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     if (isRunSettled(run.status)) return
 
     if (run.status === 'compensating') {
-      const host = createUnwindHost(this.compensationApi(rpcService))
-      await this.withRunLease(runId, () => driveUnwind(host, runId))
+      await this.driveRunUnwind(runId, rpcService, false)
       return
     }
 
@@ -1248,7 +1250,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       workflowMeta?.graphHash &&
       run.graphHash !== workflowMeta.graphHash
     ) {
-      await this.withRunLease(runId, () =>
+      await this.runUnderLease(runId, rpcService, () =>
         runVersionMismatchFallback(this, run, workflowMeta, rpcService)
       )
       return
@@ -1258,7 +1260,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       // Two passes over one graph each plan from the state they read, so both
       // can fire the same next node; the run lease keeps them one at a time,
       // exactly as it does for a DSL run's replay.
-      await this.withRunLease(runId, async () => {
+      await this.runUnderLease(runId, rpcService, async () => {
         await continueGraph(this, runId, run.workflow, undefined, rpcService)
         const updatedRun = await this.getRun(runId)
         if (updatedRun?.status === 'completed') {
@@ -1285,7 +1287,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       throw new WorkflowNotFoundError(run.workflow)
     }
 
-    await this.withRunLease(runId, () =>
+    await this.runUnderLease(runId, rpcService, () =>
       runDslWorkflowPass(
         {
           workflowWire: (addonNs) =>
@@ -1293,11 +1295,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
           extension: this.runExtension,
           updateRunStatus: (status, output, error) =>
             this.updateRunStatus(runId, status, output, error),
-          settleIfStopped: () => this.settleStoppedRun(runId, rpcService),
+          settleIfStopped: () => this.settleStoppedRun(runId, rpcService, true),
           onChildCompleted: (result) =>
             this.onChildWorkflowCompleted(run, result),
           onChildFailed: (error) => this.onChildWorkflowFailed(run, error),
-          failOrUnwind: (error) => this.failOrUnwind(run, error, rpcService),
+          failOrUnwind: (error) =>
+            this.failOrUnwind(run, error, rpcService, true),
         },
         run,
         workflowMeta,
@@ -1879,8 +1882,80 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return workflowWire
   }
 
-  private compensationApi(rpcService: PikkuRPC): CompensationApi {
+  /**
+   * One pass over a run, under its lease. A cancel that arrived too late for
+   * the pass to see could not take the lease to unwind, so it is done here once
+   * the lease is free.
+   */
+  private async runUnderLease(
+    runId: string,
+    rpcService: PikkuRPC,
+    pass: () => Promise<void>
+  ): Promise<void> {
+    let held = false
+    try {
+      await this.withRunLease(runId, () => {
+        held = true
+        return pass()
+      })
+    } finally {
+      if (held) await this.driveUnwindLeftBehind(runId, rpcService)
+    }
+  }
+
+  private async driveUnwindLeftBehind(
+    runId: string,
+    rpcService: PikkuRPC
+  ): Promise<void> {
+    try {
+      if ((await this.getRun(runId))?.status !== 'compensating') return
+      await this.driveRunUnwind(runId, rpcService, false)
+    } catch (error) {
+      // Thrown from a `finally`, so it must not replace how the pass ended.
+      this.logger?.error(
+        `Workflow run ${runId}: could not continue its unwind after a pass`,
+        error
+      )
+    }
+  }
+
+  /**
+   * Every compensation is driven from here. `leaseHeld` is for the pass that
+   * already holds the run's lease, which cannot be taken twice.
+   */
+  private driveRunUnwind(
+    runId: string,
+    rpcService: PikkuRPC,
+    leaseHeld: boolean
+  ): Promise<'waiting' | 'finished'> {
+    const drive = () =>
+      driveUnwind(
+        createUnwindHost(this.compensationApi(rpcService, runId)),
+        runId
+      )
+    if (leaseHeld) {
+      return this.unwinds.run(runId, drive)
+    }
+    return this.unwinds.run(
+      runId,
+      () => this.withRunLease(runId, drive),
+      () => this.wakeForUnwind(runId)
+    )
+  }
+
+  /** Another process holds the lease: ask for the run to be looked at again. */
+  private async wakeForUnwind(runId: string): Promise<void> {
+    if (!getSingletonServices()?.queueService) return
+    await this.enqueueOrchestration(runId, undefined, RUN_LEASE_RETRY_MS)
+  }
+
+  private compensationApi(
+    rpcService: PikkuRPC,
+    leasedRunId?: string
+  ): CompensationApi {
     return {
+      drive: (runId) =>
+        this.driveRunUnwind(runId, rpcService, runId === leasedRunId),
       getRun: (...args) => this.getRun(...args),
       getRunSteps: (...args) => this.getRunSteps(...args),
       getRunState: (...args) => this.getRunState(...args),
@@ -1921,12 +1996,14 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  /** `leaseHeld` says the caller is already inside `withRunLease` for this run. */
   public async failOrUnwind(
     run: WorkflowRun,
     error: Error & { code?: string },
-    rpcService: PikkuRPC
+    rpcService: PikkuRPC,
+    leaseHeld = false
   ): Promise<'unwinding' | 'finished' | 'failed'> {
-    const api = this.compensationApi(rpcService)
+    const api = this.compensationApi(rpcService, leaseHeld ? run.id : undefined)
     return failRunOrUnwind(api, run, error, () =>
       this.onChildWorkflowFailed(run, error)
     )
@@ -1939,11 +2016,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
   }
 
+  /** `leaseHeld` says the caller is already inside `withRunLease` for this run. */
   public settleStoppedRun(
     runId: string,
-    rpcService: PikkuRPC
+    rpcService: PikkuRPC,
+    leaseHeld = false
   ): Promise<WorkflowStatus | undefined> {
-    return settleStoppedRun(this.compensationApi(rpcService), runId)
+    return settleStoppedRun(
+      this.compensationApi(rpcService, leaseHeld ? runId : undefined),
+      runId
+    )
   }
 
   /** Stops an unfinished run, children first, and unwinds what it completed. */

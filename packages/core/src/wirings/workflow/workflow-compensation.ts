@@ -203,6 +203,8 @@ export interface CompensationApi {
     signal?: AbortSignal
   ): Promise<unknown>
   failOrUnwind(run: WorkflowRun, error: Error): Promise<unknown>
+  /** `driveUnwind` under the run's lease, taken here unless the caller holds it. */
+  drive(runId: string): Promise<'waiting' | 'finished'>
   setStepResult(stepId: string, result: unknown): Promise<void>
   setStepError(stepId: string, error: Error): Promise<void>
   notifyParent(run: WorkflowRun, error: Error): Promise<void>
@@ -461,9 +463,7 @@ export const beginUnwind = async (
   const fresh = await api.getRun(run.id)
   if (!fresh || !canEnterCompensation(fresh.status)) return 'finished'
   await api.updateRunStatus(run.id, 'compensating', undefined, cause)
-  return (await driveUnwind(host, run.id)) === 'waiting'
-    ? 'unwinding'
-    : 'finished'
+  return (await api.drive(run.id)) === 'waiting' ? 'unwinding' : 'finished'
 }
 
 export const isUnwound = (status: string | undefined): boolean =>
@@ -483,7 +483,7 @@ export const settleStoppedRun = async (
   const status = (await api.getRun(runId))?.status
   if (!status || !isRunStopped(status)) return undefined
   if (status === 'compensating') {
-    await driveUnwind(createUnwindHost(api), runId)
+    await api.drive(runId)
   }
   return status
 }
