@@ -1,3 +1,4 @@
+import type { SerializedError } from '../../errors/serialized-error.js'
 import { getSingletonServices } from '../../pikku-state.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import { ChildWorkflowStartedException } from './workflow-errors.js'
@@ -25,6 +26,43 @@ export interface ChildStepApi {
   setStepChildRunId(stepId: string, childRunId: string): Promise<boolean>
   getRun(id: string): Promise<WorkflowRun | null>
   cancelRun(runId: string, rpcService: PikkuRPC): Promise<unknown>
+}
+
+/**
+ * Tell the caller about a run that has not started, and report whether it still
+ * should. A caller that throws has not taken the run on, so it is failed before
+ * a sweep can find it idle and start it.
+ */
+export const announceCreatedRun = async (
+  api: Pick<ChildStepApi, 'getRun'> & {
+    updateRunStatus(
+      runId: string,
+      status: 'failed',
+      output: undefined,
+      error: SerializedError
+    ): Promise<boolean>
+  },
+  runId: string,
+  onRunCreated: (runId: string) => void | Promise<void>
+): Promise<boolean> => {
+  try {
+    await onRunCreated(runId)
+  } catch (error: any) {
+    try {
+      await api.updateRunStatus(runId, 'failed', undefined, {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+      })
+    } catch (writeError) {
+      getSingletonServices()?.logger.error(
+        `Workflow run ${runId} could not be failed before it started`,
+        writeError
+      )
+    }
+    throw error
+  }
+  return !isRunStopped((await api.getRun(runId))?.status ?? '')
 }
 
 /**

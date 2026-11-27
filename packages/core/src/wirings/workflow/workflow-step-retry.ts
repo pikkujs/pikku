@@ -39,9 +39,9 @@ export const unlessSuperseded = async (
 }
 
 /**
- * The store for a step whose in-process child run names it as its parent step.
- * The child records its outcome on the step as it ends, so the loop's own record
- * of the same outcome finds the step settled.
+ * The store for a step that runs a child workflow in-process. The child, or a
+ * sweep that finds it ended, may record the outcome on the step before the loop
+ * does, so the loop's own record of the same outcome finds the step settled.
  */
 export const childStepRetryStore = (store: StepRetryStore): StepRetryStore => ({
   setStepRunning: (...args) => store.setStepRunning(...args),

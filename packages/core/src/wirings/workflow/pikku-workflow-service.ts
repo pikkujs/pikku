@@ -114,7 +114,11 @@ import { runOutput, summarizeRunStatus } from './workflow-run-status.js'
 import { writeRunMirror } from './workflow-run-mirror.js'
 import { runningStepLease, stepLeaseMsForQueue } from './workflow-step-lease.js'
 import { leaseRenewalIntervalMs } from '../../services/lease-service.js'
-import { runInlineRetryLoop, unlessSuperseded } from './workflow-step-retry.js'
+import {
+  childStepRetryStore,
+  runInlineRetryLoop,
+  unlessSuperseded,
+} from './workflow-step-retry.js'
 import {
   openStepAttempt,
   rpcStepTimeout,
@@ -126,6 +130,7 @@ import {
 import { forwardStepHooks } from './workflow-step-refusal.js'
 import { runQueuedStep, type QueuedStepHost } from './workflow-queued-step.js'
 import {
+  announceCreatedRun,
   runInlineChildStep,
   handBackSettledChildren,
   isParkedOnChild,
@@ -870,7 +875,10 @@ export abstract class PikkuWorkflowService
       inline?: boolean
       startNode?: string
       virtualUsers?: ScenarioVirtualUsers
-      /** Awaited before the run starts. A run it stops never starts. */
+      /**
+       * Awaited before the run starts. A run it stops never starts, and one it
+       * throws for is failed without starting.
+       */
       onRunCreated?: (runId: string) => void | Promise<void>
     }
   ): Promise<{ runId: string }> {
@@ -943,11 +951,11 @@ export abstract class PikkuWorkflowService
       }
     )
 
-    if (options?.onRunCreated) {
-      await options.onRunCreated(runId)
-      if (isRunStopped((await this.getRun(runId))?.status ?? '')) {
-        return { runId }
-      }
+    if (
+      options?.onRunCreated &&
+      !(await announceCreatedRun(this, runId, options.onRunCreated))
+    ) {
+      return { runId }
     }
 
     await this.runExtension?.attachRunContext(runId, workflowMeta, options)
@@ -1568,8 +1576,11 @@ export abstract class PikkuWorkflowService
     const retries = resolvedStepOptions.retries ?? this.getConfig().retries
     const retryDelay = resolvedStepOptions.retryDelay
 
+    const startsChildRun =
+      !resolvedStepOptions.virtualUser && !!resolveWorkflowMeta(rpcName)
+
     return runInlineRetryLoop(
-      this,
+      startsChildRun ? childStepRetryStore(this) : this,
       await takeBackLostInlineStep(this, runId, stepName, stepState),
       retries,
       retryDelay,
@@ -1578,7 +1589,7 @@ export abstract class PikkuWorkflowService
           if (resolvedStepOptions.virtualUser) {
             return resolvedStepOptions.virtualUser.invoke(rpcName, data)
           }
-          if (resolveWorkflowMeta(rpcName)) {
+          if (startsChildRun) {
             return runInlineChildStep(
               {
                 startWorkflow: (...args) => this.startWorkflow(...args),

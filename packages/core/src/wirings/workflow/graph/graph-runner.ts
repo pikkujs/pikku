@@ -8,6 +8,7 @@ import {
 import {
   queuedChildOutcome,
   startLinkedChildRun,
+  announceCreatedRun,
 } from '../workflow-child-step.js'
 import {
   childStepRetryStore,
@@ -1504,11 +1505,11 @@ export async function runWorkflowGraph(
     }
   )
 
-  if (onRunCreated) {
-    await onRunCreated(runId)
-    if (isRunStopped((await workflowService.getRun(runId))?.status ?? '')) {
-      return { runId }
-    }
+  if (
+    onRunCreated &&
+    !(await announceCreatedRun(workflowService, runId, onRunCreated))
+  ) {
+    return { runId }
   }
 
   if (inline) {
