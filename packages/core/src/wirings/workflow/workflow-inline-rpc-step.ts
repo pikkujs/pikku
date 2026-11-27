@@ -3,7 +3,10 @@ import type { PikkuRPC } from '../rpc/rpc-types.js'
 import type { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { runInlineChildStep } from './workflow-child-step.js'
 import { isRunClosedToSteps } from './workflow-constants.js'
+import { WorkflowAsyncException } from './workflow-errors.js'
 import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
+import type { OpenSteps } from './workflow-open-steps.js'
+import { stepDispatchTarget } from './workflow-queue-routing.js'
 import { resumeInlineStep } from './workflow-step-claim.js'
 import { forwardStepHooks } from './workflow-step-refusal.js'
 import {
@@ -38,8 +41,52 @@ type InlineRpcStep = {
   leaseLost: AbortSignal | undefined
 }
 
+/**
+ * Whether a `failed` step has retries this pass is to spend. A queued step's are
+ * the queue's. One run inline with retries left lost its pass before the next
+ * attempt was created.
+ */
+export const retriesFailedRpcStep = async (
+  host: { isInline(runId: string): Promise<boolean> },
+  runId: string,
+  stepName: string,
+  {
+    stepState,
+    retries,
+    rpcName,
+    virtualUser,
+  }: {
+    stepState: StepState
+    retries: number
+    rpcName: string
+    virtualUser: WorkflowRpcStepOptions['virtualUser']
+  }
+): Promise<boolean> =>
+  stepState.attemptCount <= retries &&
+  (!!virtualUser ||
+    (await stepDispatchTarget(rpcName, stepName, () =>
+      host.isInline(runId)
+    )) === 'inline')
+
+/** `runInlineRpcStep`, with the step counted as open in this process. */
+export const holdInlineRpcStep = async (
+  { openSteps, ...host }: InlineRpcStepHost & { openSteps: OpenSteps },
+  step: InlineRpcStep
+): Promise<any> => {
+  const { runId, stepName, stepState, leaseLost } = step
+  // Without a run lease, a pass may be between two attempts of this step.
+  if (
+    stepState.status === 'failed' &&
+    !leaseLost &&
+    openSteps.has(runId, stepName)
+  ) {
+    throw new WorkflowAsyncException(runId, stepName)
+  }
+  return openSteps.hold(runId, stepName, () => runInlineRpcStep(host, step))
+}
+
 /** Run an RPC step of a workflow body in this process, retries and all. */
-export const runInlineRpcStep = async (
+const runInlineRpcStep = async (
   { service, invoke, awaitChildEnd }: InlineRpcStepHost,
   {
     runId,

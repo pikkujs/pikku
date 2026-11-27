@@ -113,7 +113,11 @@ import { writeRunMirror } from './workflow-run-mirror.js'
 import { runningStepLease, stepLeaseMsForQueue } from './workflow-step-lease.js'
 import { leaseRenewalIntervalMs } from '../../services/lease-service.js'
 import { unlessSuperseded } from './workflow-step-retry.js'
-import { runInlineRpcStep } from './workflow-inline-rpc-step.js'
+import {
+  holdInlineRpcStep,
+  retriesFailedRpcStep,
+} from './workflow-inline-rpc-step.js'
+import { orchestrateRun } from './workflow-orchestrate.js'
 import {
   openStepAttempt,
   rpcStepTimeout,
@@ -1500,57 +1504,19 @@ export abstract class PikkuWorkflowService
     rpcService: PikkuRPC,
     awaitedStep?: WorkflowAwaitedStep
   ): Promise<void> {
-    try {
-      await this.runWorkflowJob(runId, rpcService)
-    } catch (error: any) {
-      if (
-        error.name === 'WorkflowAsyncException' ||
-        error.name === 'WorkflowCancelledException' ||
-        error.name === 'WorkflowSuspendedException'
-      ) {
-        if (awaitedStep) {
-          await wakeWhileStepLeased(this.queuedStepHost, runId, awaitedStep)
-        }
-        return
-      }
-
-      // Another orchestrator holds the run. Its pass may already have read the
-      // state this message was sent to report, so the message cannot simply be
-      // dropped — and handing it back to the queue spends the retry budget the
-      // queue keeps for real failures, which a long pass exhausts. Wake the run
-      // again once the holder has had time to finish.
-      if (isRunLeaseError(error) || isOwnershipError(error)) {
-        getSingletonServices()!.logger.info(
-          `Workflow run ${runId} is being orchestrated elsewhere; waking it again in ${RUN_LEASE_RETRY_MS}ms`
-        )
-        await this.enqueueOrchestration(
-          runId,
-          undefined,
-          RUN_LEASE_RETRY_MS,
-          awaitedStep
-        )
-        return
-      }
-
-      if (error.name === 'WorkflowDispatchException') {
-        getSingletonServices()!.logger.warn(
-          `Workflow run ${runId} could not dispatch a step (queue unavailable); leaving run for orchestrator retry`,
-          error
-        )
-        throw error
-      }
-
-      await this.markFailedUnlessUnwound(runId, {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-      })
-
-      throw error
-    }
-    if (awaitedStep) {
-      await wakeWhileStepLeased(this.queuedStepHost, runId, awaitedStep)
-    }
+    await orchestrateRun(
+      {
+        runJob: () => this.runWorkflowJob(runId, rpcService),
+        requeue: (delay) =>
+          this.enqueueOrchestration(runId, undefined, delay, awaitedStep),
+        markFailedUnlessUnwound: (error) =>
+          this.markFailedUnlessUnwound(runId, error),
+        wakeWhileStepLeased: (step) =>
+          wakeWhileStepLeased(this.queuedStepHost, runId, step),
+      },
+      runId,
+      awaitedStep
+    )
   }
 
   private invokeStepRpc(...args: StepRpcArgs): Promise<any> {
@@ -1613,15 +1579,14 @@ export abstract class PikkuWorkflowService
     }
 
     const retries = resolvedStepOptions.retries ?? this.getConfig().retries
-    // A queued step's retries are the queue's to spend. One run here with
-    // retries left lost its pass before the next attempt was created.
     if (
       stepState.status === 'failed' &&
-      (stepState.attemptCount > retries ||
-        (!resolvedStepOptions.virtualUser &&
-          (await stepDispatchTarget(rpcName, stepName, () =>
-            this.isInline(runId)
-          )) === 'queue'))
+      !(await retriesFailedRpcStep(this.closureStepHost, runId, stepName, {
+        stepState,
+        retries,
+        rpcName,
+        virtualUser: resolvedStepOptions.virtualUser,
+      }))
     ) {
       throw recordedStepError(stepName, stepState)
     }
@@ -1655,35 +1620,24 @@ export abstract class PikkuWorkflowService
       throw new WorkflowAsyncException(runId, stepName)
     }
 
-    // Without a run lease, a pass may be between two attempts of this step.
-    if (
-      stepState.status === 'failed' &&
-      !pass.leaseLost &&
-      this.openSteps.has(runId, stepName)
-    ) {
-      throw new WorkflowAsyncException(runId, stepName)
-    }
-
-    return this.openSteps.hold(runId, stepName, () =>
-      runInlineRpcStep(
-        {
-          service: this,
-          invoke: (...args) => this.invokeStepRpc(...args),
-          awaitChildEnd: (id) =>
-            this.awaitRunEnd(id, WORKFLOW_CHILD_POLL_MAX_MS),
-        },
-        {
-          runId,
-          stepName,
-          stepState,
-          rpcName,
-          data,
-          rpcService,
-          options: resolvedStepOptions,
-          retries,
-          leaseLost: pass.leaseLost,
-        }
-      )
+    return holdInlineRpcStep(
+      {
+        service: this,
+        openSteps: this.openSteps,
+        invoke: (...args) => this.invokeStepRpc(...args),
+        awaitChildEnd: (id) => this.awaitRunEnd(id, WORKFLOW_CHILD_POLL_MAX_MS),
+      },
+      {
+        runId,
+        stepName,
+        stepState,
+        rpcName,
+        data,
+        rpcService,
+        options: resolvedStepOptions,
+        retries,
+        leaseLost: pass.leaseLost,
+      }
     )
   }
 
