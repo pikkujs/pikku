@@ -15,7 +15,11 @@ the latest committed write.
 
 - **MongoDB.** Every workflow collection is opened with `readPreference: primary`
   and `writeConcern: majority`, over whatever the database or connection string
-  says (`WORKFLOW_STATE_OPTIONS`).
+  says (`WORKFLOW_STATE_OPTIONS`). This does not cover a failover. Reads keep
+  the read concern the database or connection string gives, by default `local`,
+  so a deposed primary that has not yet stepped down can still serve them, without
+  the writes the new primary has accepted. A cancel committed there can go unseen
+  by a step starting against the old one.
 - **Kysely.** The service cannot choose where a query goes. It must be given a
   connection to the primary: not a read replica, and not a pooler or driver that
   sends reads to one.

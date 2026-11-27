@@ -16,5 +16,10 @@ Workflow races between a cancel, a running pass and a redelivered job are closed
 - A child workflow is linked to its parent step before it starts, so cancelling the parent cannot miss it.
 - A failed closure step spends a retry when replayed, instead of running again for free.
 - MongoDB workflow collections use primary reads and majority writes.
+- A recovery sweep recording an inline child's outcome before the parent's pass no longer fails the parent and compensates a child that succeeded.
+- A pass whose `cancelled` write is refused tells the parent only if the run did end `cancelled`.
+- An unwind driver that throws no longer drops a caller that arrived while it ran.
+- A run whose `onRunCreated` throws, such as a child that cannot be linked, is failed before it starts.
+- Redis gives a retry claimed as `running` a fresh lease in the same write, so a redelivery cannot run it a second time.
 
 A custom workflow store has a changed contract: see `docs/MIGRATION.md`.
