@@ -11,15 +11,17 @@ import { PikkuWorkflowService } from './pikku-workflow-service.js'
 const RUN_LEASE_RENEWAL_MS = leaseRenewalIntervalMs(30_000)
 
 /**
- * Renew run leases every few milliseconds, so a test can lose one without
- * sitting out the real interval. Returns how to put the timers back.
+ * Renew leases every few milliseconds, so a test can lose one without sitting
+ * out the real interval. Returns how to put the timers back.
  */
-export const fastLeaseRenewals = (): (() => void) => {
+export const fastLeaseRenewals = (
+  intervals: readonly number[] = [RUN_LEASE_RENEWAL_MS]
+): (() => void) => {
   const real = globalThis.setTimeout
   globalThis.setTimeout = ((handler: any, ms?: number, ...args: any[]) =>
     real(
       handler,
-      ms === RUN_LEASE_RENEWAL_MS ? 5 : ms,
+      intervals.includes(ms!) ? 5 : ms,
       ...args
     )) as typeof setTimeout
   return () => {

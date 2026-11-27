@@ -1060,6 +1060,8 @@ type GraphStepAttempt = {
   stepName: string
   stepState: StepState
   signal: AbortSignal | undefined
+  /** `true` once the worker has lost the step, and may record nothing of it. */
+  disowned?: () => boolean
 }
 
 async function invokeGraphNodeRpc(
@@ -1194,6 +1196,7 @@ export async function executeGraphStep(
     }
     if (
       error instanceof RPCNotFoundError &&
+      !attempt?.disowned?.() &&
       !isRunClosedToSteps((await workflowService.getRun(runId))?.status ?? '')
     ) {
       await workflowService.updateRunStatus(runId, 'suspended', undefined, {

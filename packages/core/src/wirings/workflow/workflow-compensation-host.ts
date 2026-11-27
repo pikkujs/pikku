@@ -1,4 +1,3 @@
-import { getSingletonServices } from '../../pikku-state.js'
 import type { Logger } from '../../services/logger.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import type { PikkuWorkflowService } from './pikku-workflow-service.js'
@@ -19,8 +18,8 @@ export type CompensationService = {
   service: PikkuWorkflowService
   unwinds: RunUnwinds
   logger(): Logger | undefined
-  /** Ask for the run to be looked at again after a wait, through the queue. */
-  enqueueWake(runId: string): Promise<void>
+  /** Ask for the run to be looked at again shortly, where there is a queue. */
+  wake(runId: string): Promise<void>
   loadStep: CompensationApi['loadStep']
   dispatchStep: CompensationApi['dispatchStep']
   invoke(...args: StepRpcArgs): Promise<any>
@@ -41,10 +40,7 @@ export const createRunUnwindHost = (
       ),
       runId
     ),
-  wake: async (runId) => {
-    if (!getSingletonServices()?.queueService) return
-    await deps.enqueueWake(runId)
-  },
+  wake: (runId) => deps.wake(runId),
 })
 
 /** `leaseLost` belongs to the lease the caller holds on `leasedRunId`. */

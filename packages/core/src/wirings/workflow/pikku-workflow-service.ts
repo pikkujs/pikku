@@ -632,6 +632,12 @@ export abstract class PikkuWorkflowService
     )
   }
 
+  /** Ask for the run to be looked at again shortly, where there is a queue. */
+  private async wakeLater(runId: string): Promise<void> {
+    if (!getSingletonServices()?.queueService) return
+    await this.enqueueOrchestration(runId, undefined, RUN_LEASE_RETRY_MS)
+  }
+
   /**
    * Ids of runs that are stalled: `running` or `compensating`, with no step
    * something is expected to complete (`scheduled`, `suspended`, `running` under
@@ -1408,6 +1414,7 @@ export abstract class PikkuWorkflowService
           Math.min(this.cancelCheckIntervalMs, leaseRenewalIntervalMs(leaseMs))
         ),
       invoke: (...args) => this.invokeStepRpc(...args),
+      wake: (runId) => this.wakeLater(runId),
     }
   }
 
@@ -1839,8 +1846,7 @@ export abstract class PikkuWorkflowService
       service: this,
       unwinds: this.unwinds,
       logger: () => this.logger,
-      enqueueWake: (runId) =>
-        this.enqueueOrchestration(runId, undefined, RUN_LEASE_RETRY_MS),
+      wake: (runId) => this.wakeLater(runId),
       loadStep: (...args) => this.loadOrCreateStep(...args),
       dispatchStep: (...args) => this.dispatchStep(...args),
       invoke: (...args) => this.invokeStepRpc(...args),

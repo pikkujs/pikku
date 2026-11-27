@@ -45,6 +45,8 @@ export type QueuedStepHost = {
     leaseMs: number
   ): StepAttempt | undefined
   invoke(...args: StepRpcArgs): Promise<any>
+  /** Ask for the run to be looked at again after a wait, where there is a queue. */
+  wake(runId: string): Promise<void>
 }
 
 const graphNodeIdFor = (
@@ -82,11 +84,15 @@ export const runQueuedStep = async (
   let childStep = false
   const record = (write: () => Promise<void>) =>
     childStep ? unlessSuperseded(write) : write()
+  let leaseLost = false
   const stopLeaseRefresh = startStepLeaseRefresh(
     stepState.stepId,
     leaseMs,
     () => service.refreshStepLease(stepState.stepId, leaseMs, attempt),
-    (reason) => stepAttempt?.abort(reason)
+    (reason) => {
+      leaseLost = true
+      stepAttempt?.abort(reason)
+    }
   )
 
   try {
@@ -136,7 +142,12 @@ export const runQueuedStep = async (
         workflowMeta!.nodes![graphNodeId].rpcName,
         data,
         run.workflow,
-        { stepName, stepState, signal: stepAttempt?.signal }
+        {
+          stepName,
+          stepState,
+          signal: stepAttempt?.signal,
+          disowned: () => leaseLost,
+        }
       )
     } else {
       if (childStep) {
@@ -201,6 +212,14 @@ export const runQueuedStep = async (
         ?.debug(
           `Workflow step '${stepName}': child workflow ${error.childRunId} started, waiting for completion`
         )
+      return
+    }
+
+    // Nothing is recorded about a step that is no longer this worker's. It
+    // stays `running`, and the woken run dispatches it again once its lease
+    // lapses. A wake that cannot be sent leaves the job to the queue.
+    if (leaseLost) {
+      await host.wake(runId)
       return
     }
 
