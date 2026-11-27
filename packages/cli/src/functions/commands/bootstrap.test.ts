@@ -8,6 +8,7 @@ test('bootstrap writes the error types before anything imports them', async () =
     {
       logger: { hasCriticalErrors: () => false },
       getInspectorState: async () => {},
+      config: { addonPackages: [] },
     } as any,
     undefined as any,
     { rpc: { invoke: async (name: string) => invoked.push(name) } } as any
