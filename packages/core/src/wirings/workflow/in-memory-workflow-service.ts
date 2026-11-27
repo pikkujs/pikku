@@ -1,6 +1,7 @@
 import { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { isExpectedError } from '../../errors/error-handler.js'
 import {
+  DRIVEN_RUN_STATUSES,
   WORKFLOW_TERMINAL_STATES,
   DEFAULT_STEP_LEASE_MS,
   isCompensationStepName,
@@ -484,6 +485,21 @@ export class InMemoryWorkflowService
       }
     }
     return pending.slice(offset, offset + limit)
+  }
+
+  protected override async findRunsAwaitingDriver(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<string[]> {
+    return [...this.runs.values()]
+      .filter(
+        (run) =>
+          DRIVEN_RUN_STATUSES.includes(run.status) && run.updatedAt < before
+      )
+      .sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
+      .slice(offset, offset + limit)
+      .map((run) => run.id)
   }
 
   protected async findStalledRunIds(

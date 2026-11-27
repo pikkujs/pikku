@@ -55,6 +55,7 @@
   "./workflow": [
     "DEFAULT_STEP_LEASE_MS",
     "DEFAULT_STEP_RETRIES",
+    "DRIVEN_RUN_STATUSES",
     "PikkuWorkflowService",
     "STEP_SOURCES",
     "WorkflowApprovalForbiddenError",
@@ -72,9 +73,9 @@
     "WorkflowStepTimeoutError",
     "WorkflowSuspendedException",
     "addWorkflow",
-    "checkWorkflowRunAccess",
     "assertWorkflowRunOwner",
     "buildRunTimeline",
+    "checkWorkflowRunAccess",
     "createGraph",
     "deriveInvocationId",
     "isRef",

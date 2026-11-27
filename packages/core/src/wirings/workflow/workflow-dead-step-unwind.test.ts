@@ -525,7 +525,8 @@ describe('a dead step does not hold an unwind', () => {
       const release = gate()
       const held = ws.holdOpenStep(runId, 'Work', () => release.passed)
 
-      assert.deepEqual((await sweep()).resumed, [])
+      await sweep()
+      assert.deepEqual(await rows(runId), ['Work:1:running'])
       await ws.failOrUnwind(
         (await ws.getRun(runId))!,
         new Error('boom'),
