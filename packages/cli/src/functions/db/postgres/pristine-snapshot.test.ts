@@ -12,7 +12,11 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { PGlite } from '@electric-sql/pglite'
 import { createPristineOpener, userCacheDir } from './pristine-snapshot.js'
-import { writeSourceMigrations, type ResolvedDb } from '../local-db.js'
+import {
+  desiredRuntimeSchema,
+  writeSourceMigrations,
+  type ResolvedDb,
+} from '../local-db.js'
 
 const scratch = join(import.meta.dirname, '..', '..', '..', '..', '.tmp')
 
@@ -27,6 +31,13 @@ describe('the pristine PGlite snapshot', () => {
     const db = new PGlite(loadDataDir ? { loadDataDir } : {})
     await db.waitReady
     return db
+  }
+
+  const bootBare = () => boot()
+
+  const seedSnapshot = async () => {
+    await (await createPristineOpener()(boot, bootBare)).close()
+    loads.length = 0
   }
 
   const tables = async (db: PGlite) =>
@@ -58,28 +69,29 @@ describe('the pristine PGlite snapshot', () => {
 
   test('later databases start from it, and share nothing written since', async () => {
     const openPristineDatabase = createPristineOpener()
-    const first = await openPristineDatabase(boot)
+    const first = await openPristineDatabase(boot, bootBare)
     await first.exec('CREATE TABLE only_in_first (id int)')
-    const second = await openPristineDatabase(boot)
+    const second = await openPristineDatabase(boot, bootBare)
     await second.exec('CREATE TABLE only_in_second (id int)')
-    const third = await openPristineDatabase(boot)
+    const third = await openPristineDatabase(boot, bootBare)
 
-    assert.deepEqual(loads, [false, true, true])
+    assert.deepEqual(loads, [false, true, true, true])
     assert.deepEqual(await tables(second), ['only_in_second'])
     assert.deepEqual(await tables(third), [])
     assert.equal(statSync(snapshotPath()).mode & 0o777, 0o600)
     await Promise.all([first.close(), second.close(), third.close()])
   })
 
-  test('a snapshot that does not load is replaced by a fresh boot', async () => {
+  test('a snapshot that does not load is replaced by a new one', async () => {
+    await seedSnapshot()
     let attempts = 0
-    const openPristineDatabase = createPristineOpener()
-    const db = await openPristineDatabase(async (loadDataDir) => {
+    const db = await createPristineOpener()(async (loadDataDir) => {
       attempts++
-      if (loadDataDir) throw new Error('damaged')
-      return boot()
-    })
+      if (attempts === 1) throw new Error('damaged')
+      return boot(loadDataDir)
+    }, bootBare)
     assert.equal(attempts, 2)
+    assert.deepEqual(loads, [false, true])
     assert.deepEqual(await tables(db), [])
     await db.close()
   })
@@ -95,11 +107,55 @@ describe('the pristine PGlite snapshot', () => {
   })
 
   test('a new process starts from the copy on disk', async () => {
-    loads.length = 0
-    const db = await createPristineOpener()(boot)
+    await seedSnapshot()
+    const db = await createPristineOpener()(boot, bootBare)
     assert.deepEqual(loads, [true])
     assert.deepEqual(await tables(db), [])
     await db.close()
+  })
+
+  test('what a project extension writes at boot stays out of the snapshot', async () => {
+    process.env.XDG_CACHE_HOME = join(root, 'extension-cache')
+    const extensionDir = join(root, 'node_modules', '@probe', 'boot-writer')
+    mkdirSync(extensionDir, { recursive: true })
+    writeFileSync(
+      join(extensionDir, 'package.json'),
+      JSON.stringify({
+        name: '@probe/boot-writer',
+        type: 'module',
+        main: 'index.js',
+      })
+    )
+    writeFileSync(
+      join(extensionDir, 'index.js'),
+      `export const bootWriter = {
+        name: 'bootWriter',
+        setup: async (pg) => ({
+          init: async () => {
+            await pg.exec('CREATE TABLE IF NOT EXISTS extension_probe (id int)')
+          },
+        }),
+      }`
+    )
+    try {
+      await desiredRuntimeSchema(
+        {
+          dialect: 'postgres',
+          mode: 'url',
+          connectionString: 'postgres://unused@127.0.0.1:1/unused',
+          rootDir: root,
+          pgliteExtensions: ['@probe/boot-writer'],
+        } as unknown as ResolvedDb,
+        process.cwd(),
+        [],
+        { error: (message: string) => assert.fail(message) }
+      )
+      const other = await createPristineOpener()(boot, bootBare)
+      assert.deepEqual(await tables(other), [])
+      await other.close()
+    } finally {
+      process.env.XDG_CACHE_HOME = join(root, 'cache')
+    }
   })
 
   test('a replay is repeated once a migration changes', async () => {

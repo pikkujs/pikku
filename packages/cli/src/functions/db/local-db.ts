@@ -1261,8 +1261,9 @@ async function withScratchPostgresDatabase<T>(
     )
   }
 
-  const scratchDb = await openPristineDatabase((loadDataDir) =>
-    createEmbeddedPostgres(context, undefined, loadDataDir)
+  const scratchDb = await openPristineDatabase(
+    (loadDataDir) => createEmbeddedPostgres(context, undefined, loadDataDir),
+    () => createEmbeddedPostgres({ ...context, pgliteExtensions: [] })
   )
   try {
     return await run(pgliteAsClient(scratchDb))

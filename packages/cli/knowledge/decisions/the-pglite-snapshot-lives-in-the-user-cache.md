@@ -17,6 +17,10 @@ The copy on disk is `pikku/pglite-<version>.tar.gz` under `XDG_CACHE_HOME`, or
 then computes schemas in, so whoever supplies it can affect the result. A path
 inside the project would let a checked-out repository supply it.
 
+Every project shares the snapshot, so it is taken from a boot with no project
+extensions: an extension may run SQL as it boots. A project's extensions are
+loaded into each database that starts from the snapshot.
+
 The PGlite version is part of the file name, so each version has its own
 snapshot. The CLI creates the file with mode `0600` and moves it into place with
 a rename. It does not verify the contents: a snapshot that loads is trusted,

@@ -56,33 +56,42 @@ const writeSnapshot = async (snapshot: Blob): Promise<void> => {
 
 /**
  * Opens empty databases: from the snapshot when there is one that loads,
- * otherwise from a fresh boot that then becomes the snapshot. `boot` is handed
- * the data to start from, if any.
+ * otherwise from a new one. `open` starts a database from the data it is handed.
+ * `bootBare` starts one with no project extensions, which is the only kind a
+ * snapshot is taken from: an extension may write to the database as it boots,
+ * and the snapshot is shared by every project.
  */
 export function createPristineOpener() {
   // Held uncompressed, so that only the copy on disk costs a decompression.
   let inMemory: Blob | undefined
 
   return async (
-    boot: (loadDataDir?: Blob) => Promise<PGlite>
+    open: (loadDataDir: Blob) => Promise<PGlite>,
+    bootBare: () => Promise<PGlite>
   ): Promise<PGlite> => {
     const snapshot = inMemory ?? readSnapshot()
     if (snapshot) {
       try {
-        const db = await boot(snapshot)
+        const db = await open(snapshot)
         inMemory = snapshot
         return db
       } catch {
-        // A damaged or unreadable snapshot is replaced by the fresh boot below.
+        // A damaged or unreadable snapshot is replaced below.
         inMemory = undefined
       }
     }
 
-    const db = await boot()
-    await db.exec('CHECKPOINT')
-    inMemory = await db.dumpDataDir('none')
-    await writeSnapshot(inMemory)
-    return db
+    const bare = await bootBare()
+    let taken: Blob
+    try {
+      await bare.exec('CHECKPOINT')
+      taken = await bare.dumpDataDir('none')
+    } finally {
+      await bare.close()
+    }
+    await writeSnapshot(taken)
+    inMemory = taken
+    return open(taken)
   }
 }
 
