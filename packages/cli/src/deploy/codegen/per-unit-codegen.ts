@@ -94,13 +94,19 @@ export async function runPikkuAllChild(
   projectDir: string,
   args: string[],
   options: {
+    command?: 'all' | 'bootstrap'
     deployCodegen?: boolean
     timeoutMs?: number
     env?: Record<string, string>
   } = {}
 ): Promise<void> {
-  const { deployCodegen = true, timeoutMs = 60_000, env = {} } = options
-  await execFileAsync(process.execPath, [pikkuBin, 'all', ...args], {
+  const {
+    command = 'all',
+    deployCodegen = true,
+    timeoutMs = 60_000,
+    env = {},
+  } = options
+  await execFileAsync(process.execPath, [pikkuBin, command, ...args], {
     cwd: projectDir,
     timeout: timeoutMs,
     maxBuffer: 64 * 1024 * 1024,

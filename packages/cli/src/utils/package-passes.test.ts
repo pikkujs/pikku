@@ -6,6 +6,7 @@ import { afterEach, describe, test } from 'node:test'
 import {
   PACKAGE_PASS_ENV,
   PikkuPackagePassError,
+  rootPackagePasses,
   runPikkuPackagePasses,
 } from './package-passes.js'
 import { ROOT_CONFIG_ENV } from './project-packages.js'
@@ -86,6 +87,22 @@ describe('runPikkuPackagePasses', () => {
     assert.equal(await readFile(log, 'utf8'), 'lib all 1\n')
   })
 
+  test('runs the command it is given, and names it when a pass fails', async () => {
+    const { log, pkg } = await setup('app')
+    await assert.rejects(
+      runPikkuPackagePasses(
+        [await pkg('lib'), await pkg('app')],
+        undefined,
+        'bootstrap'
+      ),
+      /pikku bootstrap failed in packages\/app \(exit code 7\)/
+    )
+    assert.equal(
+      await readFile(log, 'utf8'),
+      'lib bootstrap 1\napp bootstrap 1\n'
+    )
+  })
+
   test("the main package's pass is told the root config; an addon's is not", async () => {
     const { log, pkg } = await setup()
     process.argv[1] = await writeRootConfigProbe(log)
@@ -97,6 +114,43 @@ describe('runPikkuPackagePasses', () => {
       await readFile(log, 'utf8'),
       'lib -\napp /project/pikku.config.json\n'
     )
+  })
+})
+
+describe('rootPackagePasses', () => {
+  const addon = { entry: 'packages/lib', dir: '/project/packages/lib' }
+  const main = { entry: 'packages/app', dir: '/project/packages/app' }
+  const config = {
+    addonPackages: [addon],
+    mainPackage: main,
+    configPath: '/project/pikku.config.json',
+  }
+  const withEnv = (name: string, run: () => void) => {
+    const before = process.env[name]
+    process.env[name] = '1'
+    try {
+      run()
+    } finally {
+      if (before === undefined) delete process.env[name]
+      else process.env[name] = before
+    }
+  }
+
+  test('lists the addons, then the main package with the root config', () => {
+    assert.deepEqual(rootPackagePasses(config), [
+      addon,
+      { ...main, rootConfig: '/project/pikku.config.json' },
+    ])
+  })
+
+  test('has none inside a package pass or a deploy pass', () => {
+    for (const name of [PACKAGE_PASS_ENV, 'PIKKU_DEPLOY_CODEGEN']) {
+      withEnv(name, () => assert.deepEqual(rootPackagePasses(config), []))
+    }
+  })
+
+  test('has none for a project that is its own main', () => {
+    assert.deepEqual(rootPackagePasses({ addonPackages: [] }), [])
   })
 })
 
