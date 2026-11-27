@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   runInlineRetryLoop,
+  startStepAttempt,
   type StepRetryStore,
 } from './workflow-step-retry.js'
 import type { StepState } from './workflow.types.js'
@@ -16,6 +17,29 @@ const store = (overrides: Partial<StepRetryStore> = {}): StepRetryStore => ({
   setStepError: async () => {},
   createRetryAttempt: async (stepId) => step(Number(stepId.split('-')[1]) + 1),
   ...overrides,
+})
+
+describe('startStepAttempt', () => {
+  test('a pass that lost its run while marking the step reads no further', async () => {
+    const lost = new AbortController()
+    let checks = 0
+
+    await assert.rejects(
+      startStepAttempt(
+        store({
+          setStepRunning: async () => lost.abort(new Error('run lease lost')),
+        }),
+        step(1),
+        async () => {
+          checks++
+        },
+        { leaseLost: lost.signal }
+      ),
+      /run lease lost/
+    )
+
+    assert.equal(checks, 0)
+  })
 })
 
 describe('runInlineRetryLoop', () => {

@@ -424,6 +424,98 @@ describe('a pass that lost its run lease writes nothing', () => {
   )
 
   test(
+    'an unrelated error thrown after the loss does not fail the run',
+    LIMIT,
+    async () => {
+      h.register('a', h.ok())
+      h.defineGraph('graph', 'a', { a: {} })
+      ;({ runId } = await ws.startWorkflow(
+        'graph',
+        {},
+        { type: 'test' },
+        h.rpc as never
+      ))
+      h.queue.length = 0
+      // Nothing below the run's lease checks the pass's signal for this one.
+      ws.getStepInstances = async () => {
+        await loseRun()
+        throw new Error('store unreachable')
+      }
+
+      await ws.orchestrateWorkflow(runId, h.rpc as never)
+
+      await assertUntouched(['a:1:pending'])
+      assert.deepEqual(
+        h.queue.map((queued) => queued.data),
+        [{ runId }]
+      )
+    }
+  )
+
+  test(
+    'queued graph with nothing left to fire: the run is not completed',
+    LIMIT,
+    async () => {
+      h.register('a', h.ok())
+      // A fan-out over no items leaves no step, so no check comes before the
+      // one on the write that completes the run.
+      h.defineGraph('graph', 'a', {
+        a: { forEach: { $ref: 'trigger', path: 'ids' } },
+      })
+      ;({ runId } = await ws.startWorkflow(
+        'graph',
+        { ids: [] },
+        { type: 'test' },
+        h.rpc as never
+      ))
+      h.queue.length = 0
+      const read = ws.getStepInstances.bind(ws)
+      ws.getStepInstances = async (id) => {
+        await loseRun()
+        return read(id)
+      }
+
+      await ws.orchestrateWorkflow(runId, h.rpc as never)
+
+      await assertUntouched([])
+    }
+  )
+
+  test(
+    'the last compensation succeeds: the run is not settled',
+    LIMIT,
+    async () => {
+      h.register(
+        'a',
+        inlineStep(
+          async () => ({}),
+          async () => {
+            await loseRun()
+          }
+        )
+      )
+      h.register(
+        'boom',
+        inlineStep(async () => {
+          throw new Error('boom')
+        })
+      )
+      h.defineDsl('flow', async (w: any) => {
+        await w.do('A', 'a', {})
+        await w.do('Boom', 'boom', {}, { retries: 0 })
+        return {}
+      })
+
+      await assert.rejects(startInline(), LeaseLostError)
+
+      await assertUntouched(
+        ['A:1:succeeded', 'Boom:1:failed', 'A:compensate:1:succeeded'],
+        'compensating'
+      )
+    }
+  )
+
+  test(
     'the old pass leaves a run that was also cancelled to the cancel',
     LIMIT,
     async () => {
