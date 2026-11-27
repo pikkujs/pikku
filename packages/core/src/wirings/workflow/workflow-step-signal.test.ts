@@ -823,15 +823,17 @@ describe('a graph step', () => {
       LIMIT,
       async () => {
         let aborted: boolean | undefined
+        let changes: string | undefined
         h.register('first', {
           queued,
           forward: async (_data, wire) => {
             assert.equal(wire.workflowStep.signal.aborted, false)
             await ws.cancelRun(wire.workflowStep.runId, h.rpc as never)
             aborted = wire.workflowStep.signal.aborted
-            await assert.rejects(beginChanges(wire.abortScope), {
-              name: 'AbandonedError',
-            })
+            changes = await beginChanges(wire.abortScope).then(
+              () => 'allowed',
+              (error: Error) => error.name
+            )
             return {}
           },
         })
@@ -840,6 +842,7 @@ describe('a graph step', () => {
         const runId = await startIn(queued, 'graph')
 
         assert.equal(aborted, true)
+        assert.equal(changes, 'AbandonedError')
         assert.equal((await h.run(runId)).status, 'cancelled')
         assertNeverMovedBack(runId)
       }
