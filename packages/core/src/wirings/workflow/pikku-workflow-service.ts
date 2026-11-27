@@ -1521,6 +1521,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return invokeStepRpc(this, ...args)
   }
 
+  /** A host that cannot time a step throws here, for a replayed step too. */
+  protected assertStepTimeoutSupported(
+    _stepName: string,
+    _timeout: string | number | undefined
+  ): void {}
+
   private async rpcStep(
     runId: string,
     logicalStepName: string,
@@ -1530,6 +1536,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     stepOptions?: WorkflowRpcStepOptions
   ): Promise<any> {
     const timeout = rpcStepTimeout(logicalStepName, rpcName, stepOptions)
+    this.assertStepTimeoutSupported(logicalStepName, timeout)
     const fromStepName = this.lastStepName(runId)
     const stepName = this.nextStepKey(runId, logicalStepName)
     const resolvedStepOptions: WorkflowRpcStepOptions = {

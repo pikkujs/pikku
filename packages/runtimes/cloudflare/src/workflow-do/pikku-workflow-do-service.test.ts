@@ -1,6 +1,9 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
+import { addWorkflow } from '@pikku/core/workflow'
+
 import { PikkuWorkflowDoService } from './pikku-workflow-do-service.js'
 import type {
   PikkuWorkflowDoEnv,
@@ -484,6 +487,43 @@ describe('PikkuWorkflowDoService — step signals and deadlines', () => {
   test('refuses a step with a timeout', async () => {
     await assert.rejects(
       service.insertStepState(RUN_ID, 'step', 'rpc.x', {}, { timeout: '1s' }),
+      /timeouts are not supported on Cloudflare/
+    )
+  })
+
+  test('refuses a timeout on a step recorded without one', async () => {
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
+    } as never)
+    pikkuState(null, 'workflows', 'meta').flow = {
+      name: 'flow',
+      pikkuFuncId: 'flow',
+      source: 'dsl',
+      graphHash: 'h',
+    } as never
+    pikkuState(null, 'function', 'meta').flow = {
+      name: 'flow',
+      sessionless: true,
+      permissions: [],
+    } as never
+    addWorkflow('flow', {
+      func: async (_services: any, _input: any, { workflow }: any) =>
+        workflow.do('Charge', 'rpc.x', {}, { timeout: '1s' }),
+    } as never)
+    await service.createRun('flow', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+    await service.insertStepState(RUN_ID, 'Charge', 'rpc.x', {})
+
+    await service.runWorkflowJob(RUN_ID, {} as never).catch(() => {})
+
+    assert.deepEqual(dispatched, [], 'the step ran with no deadline')
+    const run = await service.getRun(RUN_ID)
+    assert.equal(run?.status, 'failed')
+    assert.match(
+      run!.error!.message!,
       /timeouts are not supported on Cloudflare/
     )
   })

@@ -158,6 +158,17 @@ export class PikkuWorkflowDoService<
     await this.storage.put(KEY_RUN, r)
   }
 
+  protected override assertStepTimeoutSupported(
+    stepName: string,
+    timeout: string | number | undefined
+  ): void {
+    if (timeout !== undefined) {
+      throw new Error(
+        `Workflow step '${stepName}': step timeouts are not supported on Cloudflare Durable Object workflows`
+      )
+    }
+  }
+
   protected async insertStepStateImpl(
     runId: string,
     stepName: string,
@@ -167,11 +178,7 @@ export class PikkuWorkflowDoService<
     fromStepName?: string
   ): Promise<StepState> {
     this.assertOwn(runId)
-    if (stepOptions?.timeout !== undefined) {
-      throw new Error(
-        `Workflow step '${stepName}': step timeouts are not supported on Cloudflare Durable Object workflows`
-      )
-    }
+    this.assertStepTimeoutSupported(stepName, stepOptions?.timeout)
     const stepId = crypto.randomUUID()
     const now = Date.now()
     const step: DoStepRecord = {
