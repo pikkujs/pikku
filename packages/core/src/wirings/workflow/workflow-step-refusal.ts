@@ -1,12 +1,20 @@
-import { NO_COMPENSATE_STATE_PREFIX } from './workflow-constants.js'
+import {
+  NO_COMPENSATE_STATE_PREFIX,
+  STEP_SOURCES,
+} from './workflow-constants.js'
 import { WorkflowRunStoppedError } from './workflow-errors.js'
 import type { InlineStepHooks } from './workflow-step-retry.js'
 import type { StepAttempt } from './workflow-step-signal.js'
-import type { StepState } from './workflow.types.js'
+import type { StepState, StepStatus } from './workflow.types.js'
 
 type RefusalStore = {
   updateRunState(runId: string, name: string, value: unknown): Promise<void>
-  setStepError(stepId: string, error: Error, attempt?: number): Promise<void>
+  setStepError(
+    stepId: string,
+    error: Error,
+    attempt?: number,
+    from?: readonly StepStatus[]
+  ): Promise<void>
 }
 
 /**
@@ -34,7 +42,8 @@ export const refuseStep = async (
   await store.setStepError(
     stepState.stepId,
     new WorkflowRunStoppedError(runId, stepName),
-    attempt
+    attempt,
+    STEP_SOURCES.unsettled
   )
 }
 

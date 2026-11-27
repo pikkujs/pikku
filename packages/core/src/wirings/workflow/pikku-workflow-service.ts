@@ -55,6 +55,7 @@ import {
   WORKFLOW_TERMINAL_STATES,
   WORKFLOW_CANCEL_CHECK_MS,
   RUN_STATUS_SOURCES,
+  STEP_SOURCES,
   isRunCancelled,
   isRunClosedToSteps,
   NO_COMPENSATE_STATE_PREFIX,
@@ -111,7 +112,7 @@ import { runOutput, summarizeRunStatus } from './workflow-run-status.js'
 import { writeRunMirror } from './workflow-run-mirror.js'
 import { runningStepLease, stepLeaseMsForQueue } from './workflow-step-lease.js'
 import { leaseRenewalIntervalMs } from '../../services/lease-service.js'
-import { runInlineRetryLoop } from './workflow-step-retry.js'
+import { runInlineRetryLoop, unlessSuperseded } from './workflow-step-retry.js'
 import {
   openStepAttempt,
   rpcStepTimeout,
@@ -141,7 +142,8 @@ import {
   isChildWorkflowRecord,
   type CompensationApi,
 } from './workflow-compensation.js'
-import { UnwindExclusion } from './workflow-unwind-lease.js'
+import { RunUnwinds, type RunUnwindHost } from './workflow-unwind-lease.js'
+import { WorkflowStepWrites } from './workflow-step-writes.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   WorkflowRecovery,
@@ -153,12 +155,26 @@ import {
 } from './workflow-recovery.js'
 
 /** The workflow engine; subclasses supply storage. Leases serialise runs and step claims over a shared store. */
-export abstract class PikkuWorkflowService implements WorkflowService {
+const recordedStepError = (stepName: string, step: StepState): Error => {
+  const error = new Error(
+    step.error?.message ||
+      `Step '${stepName}' failed after exhausting all retries`
+  )
+  if (step.error) {
+    Object.assign(error, step.error)
+  }
+  return error
+}
+
+export abstract class PikkuWorkflowService
+  extends WorkflowStepWrites
+  implements WorkflowService
+{
   private runExtension?: WorkflowRunExtension
 
   private runContexts = new Map<string, RunContext>()
 
-  private readonly unwinds = new UnwindExclusion()
+  private readonly unwinds = new RunUnwinds()
 
   private contextFor(runId: string): RunContext {
     let context = this.runContexts.get(runId)
@@ -239,6 +255,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       leaseService?: LeaseService
     } & WorkflowQueueOptions = {}
   ) {
+    super()
     const wireQueues = options.wireQueues ?? true
     this.mirror = options.mirror
     this.leaseService = options.leaseService
@@ -474,128 +491,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
   abstract getStepState(runId: string, stepName: string): Promise<StepState>
 
-  public async setStepRunning(stepId: string): Promise<void> {
-    await this.mirrored(
-      () => this.setStepRunningImpl(stepId),
-      (mirror) => mirror.setStepRunning(stepId)
-    )
-  }
-
-  protected abstract setStepRunningImpl(stepId: string): Promise<void>
-
-  /**
-   * Push the claim on a `running` step forward, so it keeps reading as owned
-   * for another lease.
-   *
-   * Does nothing by default, which leaves a store that records no lease exactly
-   * as it was: its `running` steps are owned until they move on their own, and
-   * a dispatch that dies takes the step with it. A store that overrides this
-   * gains recovery from a lost worker, through both `claimStepForExecution` and
-   * `recoverStalledRuns`.
-   *
-   * `null` releases the lease without ending the step, for a step that is
-   * legitimately `running` with no worker on it — one parked on a child run,
-   * which the child's completion drives rather than a redispatch.
-   * `attempt` fences it to the claim that holds it.
-   *
-   * The lease runs `leaseMs` from now on the store's own clock, so workers
-   * whose clocks disagree still agree on when it lapses. Resolves `false` when
-   * the step is no longer this attempt's to renew.
-   */
-  public async refreshStepLease(
-    _stepId: string,
-    _leaseMs: number | null,
-    _attempt?: number
-  ): Promise<boolean> {
-    return true
-  }
-
-  public async setStepScheduled(stepId: string): Promise<void> {
-    await this.mirrored(
-      () => this.setStepScheduledImpl(stepId),
-      (mirror) => mirror.setStepScheduled(stepId)
-    )
-  }
-
-  protected abstract setStepScheduledImpl(stepId: string): Promise<void>
-
-  /** `attempt` fences it: a newer claim's step throws `WorkflowStepSupersededError`. */
-  public async setStepResult(
-    stepId: string,
-    result: any,
-    attempt?: number
-  ): Promise<void> {
-    await this.mirrored(
-      () => this.setStepResultImpl(stepId, result, attempt),
-      (mirror) => mirror.setStepResult(stepId, result)
-    )
-  }
-
-  protected abstract setStepResultImpl(
-    stepId: string,
-    result: any,
-    attempt?: number
-  ): Promise<void>
-
-  public async setStepChildRunId(
-    stepId: string,
-    childRunId: string
-  ): Promise<void> {
-    await this.mirrored(
-      () => this.setStepChildRunIdImpl(stepId, childRunId),
-      (mirror) => mirror.setStepChildRunId(stepId, childRunId)
-    )
-  }
-
-  protected abstract setStepChildRunIdImpl(
-    stepId: string,
-    childRunId: string
-  ): Promise<void>
-
-  public async setStepError(
-    stepId: string,
-    error: Error,
-    attempt?: number
-  ): Promise<void> {
-    await this.mirrored(
-      () => this.setStepErrorImpl(stepId, error, attempt),
-      (mirror) => {
-        const serialized: SerializedError = {
-          message: error.message,
-          stack: error.stack,
-          code: (error as { code?: string }).code,
-          expected: isExpectedError(error),
-        }
-        return mirror.setStepError(stepId, serialized)
-      }
-    )
-  }
-
-  protected abstract setStepErrorImpl(
-    stepId: string,
-    error: Error,
-    attempt?: number
-  ): Promise<void>
-
-  public async createRetryAttempt(
-    failedStepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState> {
-    return this.mirrored(
-      () => this.createRetryAttemptImpl(failedStepId, status),
-      (mirror, newStep) =>
-        mirror.createRetryAttempt(failedStepId, {
-          ...newStep,
-          stepName: (newStep as { stepName?: string }).stepName ?? '',
-        })
-    )
-  }
-
-  protected abstract createRetryAttemptImpl(
-    failedStepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState>
-
   /** One orchestration pass under the run's lease; never waits (see `holdWorkflowLease`). */
   async withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T> {
     return holdWorkflowLease(
@@ -648,21 +543,6 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     nodeIds: string[]
   ): Promise<Record<string, any>>
-
-  public async setBranchTaken(
-    stepId: string,
-    branchKey: string
-  ): Promise<void> {
-    await this.mirrored(
-      () => this.setBranchTakenImpl(stepId, branchKey),
-      (mirror) => mirror.setBranchTaken(stepId, branchKey)
-    )
-  }
-
-  protected abstract setBranchTakenImpl(
-    stepId: string,
-    branchKey: string
-  ): Promise<void>
 
   public async updateRunState(
     runId: string,
@@ -889,8 +769,18 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     runId: string,
     stepId: string
   ): Promise<void> {
-    await this.setStepResult(stepId, null)
+    await this.completeSleep(stepId)
     await this.resumeWorkflow(runId)
+  }
+
+  /**
+   * A timer can fire for a sleep that is already over, or one a stopped run
+   * settled another way. The run is resumed all the same.
+   */
+  private async completeSleep(stepId: string): Promise<void> {
+    await unlessSuperseded(() =>
+      this.setStepResult(stepId, null, undefined, STEP_SOURCES.unsettled)
+    )
   }
 
   protected async scheduleOrchestratorRetry(
@@ -984,7 +874,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       inline?: boolean
       startNode?: string
       virtualUsers?: ScenarioVirtualUsers
-      onRunCreated?: (runId: string) => void
+      /** Awaited before the run starts. A run it stops never starts. */
+      onRunCreated?: (runId: string) => void | Promise<void>
     }
   ): Promise<{ runId: string }> {
     wire = {
@@ -1056,7 +947,12 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       }
     )
 
-    options?.onRunCreated?.(runId)
+    if (options?.onRunCreated) {
+      await options.onRunCreated(runId)
+      if (isRunStopped((await this.getRun(runId))?.status ?? '')) {
+        return { runId }
+      }
+    }
 
     await this.runExtension?.attachRunContext(runId, workflowMeta, options)
 
@@ -1269,7 +1165,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     if (isRunSettled(run.status)) return
 
     if (run.status === 'compensating') {
-      await this.driveRunUnwind(runId, rpcService, false)
+      await this.unwinds.drive(this.unwindHost(rpcService), runId, false)
       return
     }
 
@@ -1352,7 +1248,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     this.logger?.debug(
       `Child workflow ${childRun.id} completed, updating parent step ${parentStepId}`
     )
-    await this.setStepResult(parentStepId, result)
+    await unlessSuperseded(() => this.setStepResult(parentStepId, result))
     await this.resumeWorkflow(parentRunId)
   }
 
@@ -1373,7 +1269,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     this.logger?.debug(
       `Child workflow ${childRun.id} failed, updating parent step ${parentStepId}`
     )
-    await this.setStepError(parentStepId, error)
+    await unlessSuperseded(() => this.setStepError(parentStepId, error))
     await this.resumeWorkflow(parentRunId)
   }
 
@@ -1603,14 +1499,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     }
 
     if (stepState.status === 'failed') {
-      const error = new Error(
-        stepState.error?.message ||
-          `Step '${stepName}' failed after exhausting all retries`
-      )
-      if (stepState.error) {
-        Object.assign(error, stepState.error)
-      }
-      throw error
+      throw recordedStepError(stepName, stepState)
     }
 
     if (stepState.status === 'scheduled') {
@@ -1660,6 +1549,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
               {
                 startWorkflow: (...args) => this.startWorkflow(...args),
                 setStepChildRunId: (...args) => this.setStepChildRunId(...args),
+                getRun: (id) => this.getRun(id),
+                cancelRun: (...args) => this.cancelRun(...args),
                 awaitRunEnd: (id) =>
                   this.awaitRunEnd(id, WORKFLOW_CHILD_POLL_MAX_MS),
               },
@@ -1730,10 +1621,24 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     const retries = stepOptions?.retries ?? this.getConfig().retries
     const retryDelay = stepOptions?.retryDelay ?? this.getConfig().retryDelay
 
+    // A replay of a failed step spends a retry, or throws what the step threw.
+    let startFrom = stepState
+    if (stepState.status === 'failed') {
+      if (stepState.attemptCount > retries) {
+        throw recordedStepError(stepName, stepState)
+      }
+      await this.throwIfRunStopped(runId)
+      startFrom = await this.createRetryAttempt(
+        stepState.stepId,
+        'pending',
+        stepState.attemptCount
+      )
+    }
+
     if (await this.isInline(runId)) {
       return runInlineRetryLoop(
         this,
-        stepState,
+        startFrom,
         retries,
         retryDelay,
         () => fn(),
@@ -1742,17 +1647,16 @@ export abstract class PikkuWorkflowService implements WorkflowService {
         { onRefused: (step) => refuseStep(this, runId, stepName, step) }
       )
     } else {
-      let currentStepState = stepState
+      const { stepId, attemptCount } = startFrom
+      await this.setStepRunning(stepId, attemptCount)
+      let result: any
       try {
-        await this.setStepRunning(currentStepState.stepId)
-        const result = await fn()
-        await this.setStepResult(currentStepState.stepId, result)
-        return result
+        result = await fn()
       } catch (error: any) {
-        await this.setStepError(currentStepState.stepId, error)
+        await this.setStepError(stepId, error, attemptCount)
 
-        if (currentStepState.attemptCount <= retries) {
-          await this.createRetryAttempt(currentStepState.stepId, 'pending')
+        if (attemptCount <= retries) {
+          await this.createRetryAttempt(stepId, 'pending', attemptCount)
 
           await this.scheduleOrchestratorRetry(runId, retryDelay)
 
@@ -1761,6 +1665,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
 
         throw error
       }
+      // Outside the try, so failing to record it does not run the work again.
+      await this.setStepResult(stepId, result, attemptCount)
+      return result
     }
   }
 
@@ -1804,7 +1711,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     await new Promise((resolve) =>
       setTimeout(resolve, getDurationInMilliseconds(duration))
     )
-    await this.setStepResult(stepState.stepId, null)
+    await this.completeSleep(stepState.stepId)
   }
 
   private async suspendStep(runId: string, reason: string): Promise<void> {
@@ -1914,71 +1821,29 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     return workflowWire
   }
 
-  /**
-   * One pass over a run, under its lease. A cancel that arrived too late for
-   * the pass to see could not take the lease to unwind, so it is done here once
-   * the lease is free.
-   */
-  private async runUnderLease(
+  private unwindHost(rpcService: PikkuRPC): RunUnwindHost {
+    return {
+      withRunLease: (runId, fn) => this.withRunLease(runId, fn),
+      getRun: (runId) => this.getRun(runId),
+      logger: () => this.logger,
+      unwind: (runId) =>
+        driveUnwind(
+          createUnwindHost(this.compensationApi(rpcService, runId)),
+          runId
+        ),
+      wake: async (runId) => {
+        if (!getSingletonServices()?.queueService) return
+        await this.enqueueOrchestration(runId, undefined, RUN_LEASE_RETRY_MS)
+      },
+    }
+  }
+
+  private runUnderLease(
     runId: string,
     rpcService: PikkuRPC,
     pass: () => Promise<void>
   ): Promise<void> {
-    let held = false
-    try {
-      await this.withRunLease(runId, () => {
-        held = true
-        return pass()
-      })
-    } finally {
-      if (held) await this.driveUnwindLeftBehind(runId, rpcService)
-    }
-  }
-
-  private async driveUnwindLeftBehind(
-    runId: string,
-    rpcService: PikkuRPC
-  ): Promise<void> {
-    try {
-      if ((await this.getRun(runId))?.status !== 'compensating') return
-      await this.driveRunUnwind(runId, rpcService, false)
-    } catch (error) {
-      // Thrown from a `finally`, so it must not replace how the pass ended.
-      this.logger?.error(
-        `Workflow run ${runId}: could not continue its unwind after a pass`,
-        error
-      )
-    }
-  }
-
-  /**
-   * Every compensation is driven from here. `leaseHeld` is for the pass that
-   * already holds the run's lease, which cannot be taken twice.
-   */
-  private driveRunUnwind(
-    runId: string,
-    rpcService: PikkuRPC,
-    leaseHeld: boolean
-  ): Promise<'waiting' | 'finished'> {
-    const drive = () =>
-      driveUnwind(
-        createUnwindHost(this.compensationApi(rpcService, runId)),
-        runId
-      )
-    if (leaseHeld) {
-      return this.unwinds.run(runId, drive)
-    }
-    return this.unwinds.run(
-      runId,
-      () => this.withRunLease(runId, drive),
-      () => this.wakeForUnwind(runId)
-    )
-  }
-
-  /** Another process holds the lease: ask for the run to be looked at again. */
-  private async wakeForUnwind(runId: string): Promise<void> {
-    if (!getSingletonServices()?.queueService) return
-    await this.enqueueOrchestration(runId, undefined, RUN_LEASE_RETRY_MS)
+    return this.unwinds.runPass(this.unwindHost(rpcService), runId, pass)
   }
 
   private compensationApi(
@@ -1987,7 +1852,11 @@ export abstract class PikkuWorkflowService implements WorkflowService {
   ): CompensationApi {
     return {
       drive: (runId) =>
-        this.driveRunUnwind(runId, rpcService, runId === leasedRunId),
+        this.unwinds.drive(
+          this.unwindHost(rpcService),
+          runId,
+          runId === leasedRunId
+        ),
       getRun: (...args) => this.getRun(...args),
       getRunSteps: (...args) => this.getRunSteps(...args),
       getRunState: (...args) => this.getRunState(...args),
@@ -1996,8 +1865,8 @@ export abstract class PikkuWorkflowService implements WorkflowService {
       insertStepState: (...args) => this.insertStepState(...args),
       dispatchStep: (...args) => this.dispatchStep(...args),
       setStepScheduled: (id) => this.setStepScheduled(id),
-      setStepResult: (id, result) => this.setStepResult(id, result),
-      setStepError: (id, error) => this.setStepError(id, error),
+      setStepResult: (...args) => this.setStepResult(...args),
+      setStepError: (...args) => this.setStepError(...args),
       runInline: (runId, step, retries, retryDelay, work) =>
         runInlineRetryLoop(
           this,

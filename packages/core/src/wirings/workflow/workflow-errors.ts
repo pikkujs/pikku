@@ -160,17 +160,19 @@ addError(WorkflowStepLeaseExpiredError, {
 })
 
 /**
- * A write from a dispatch that no longer owns its step: its lease lapsed and
- * another dispatch claimed the step as a newer attempt. The newer attempt owns
- * the outcome, so the stale one is dropped rather than recorded over it.
+ * A write from a dispatch that no longer owns its step: another dispatch claimed
+ * it as a newer attempt, or the step has already moved on. Whoever moved it owns
+ * the outcome, so the late one is dropped rather than recorded over it.
  */
 export class WorkflowStepSupersededError extends PikkuError {
   constructor(
     public readonly stepId: string,
-    public readonly attempt: number
+    public readonly attempt?: number
   ) {
     super(
-      `Workflow step ${stepId}: attempt ${attempt} was superseded by a newer claim`
+      attempt === undefined
+        ? `Workflow step ${stepId}: the write was superseded, because the step has moved on`
+        : `Workflow step ${stepId}: attempt ${attempt} was superseded, because the step has moved on`
     )
   }
 }
@@ -228,6 +230,18 @@ addError(WorkflowRunStoppedError, {
   status: 409,
   message: 'Workflow run was stopped.',
 })
+
+/** A step's dispatch ends this way when a child run will complete the step. */
+export class ChildWorkflowStartedException extends Error {
+  name = 'ChildWorkflowStartedException'
+  constructor(
+    public parentRunId: string,
+    public stepId: string,
+    public childRunId: string
+  ) {
+    super(`Child workflow started: ${childRunId}`)
+  }
+}
 
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: unknown) {

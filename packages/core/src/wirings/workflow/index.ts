@@ -16,6 +16,7 @@ export {
 export {
   DEFAULT_STEP_RETRIES,
   DEFAULT_STEP_LEASE_MS,
+  STEP_SOURCES,
   isStepLeaseLive,
 } from './workflow-constants.js'
 export { leaseAttemptsExhausted } from './workflow-step-claim.js'

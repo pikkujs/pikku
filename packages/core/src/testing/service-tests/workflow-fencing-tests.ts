@@ -336,6 +336,135 @@ export const defineWorkflowFencingTests = (
       assert.equal(step.result, 'third')
     })
 
+    test('a late write by an attempt already failed as lost is refused', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const step = (await claim(h, runId))!
+      await h.service.setStepError(
+        step.stepId,
+        new Error('lease expired'),
+        step.attemptCount
+      )
+
+      await assert.rejects(
+        h.service.setStepResult(step.stepId, 'late', step.attemptCount),
+        superseded
+      )
+      await assert.rejects(
+        h.service.setStepError(
+          step.stepId,
+          new Error('late'),
+          step.attemptCount
+        ),
+        superseded
+      )
+
+      const after = await stepOf(h, runId)
+      assert.equal(after.status, 'failed')
+      assert.equal(after.error?.message, 'lease expired')
+      assert.equal(after.result, undefined)
+    })
+
+    test('marking a step scheduled does not undo the claim a worker made first', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const step = (await claim(h, runId))!
+
+      await h.service.setStepScheduled(step.stepId)
+
+      assert.equal((await stepOf(h, runId)).status, 'running')
+    })
+
+    test('a settled step is not set running or scheduled again', async () => {
+      for (const outcome of ['succeeded', 'failed'] as const) {
+        const h = await create()
+        const runId = await startRun(h)
+        const step = (await claim(h, runId))!
+        if (outcome === 'succeeded') {
+          await h.service.setStepResult(step.stepId, 'done', 1)
+        } else {
+          await h.service.setStepError(step.stepId, new Error('no'), 1)
+        }
+
+        await assert.rejects(
+          h.service.setStepRunning(step.stepId),
+          superseded,
+          outcome
+        )
+        await h.service.setStepScheduled(step.stepId)
+
+        assert.equal((await stepOf(h, runId)).status, outcome)
+      }
+    })
+
+    test('an outcome is refused for a step not running, unless the writer names that status', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const { stepId } = await stepOf(h, runId)
+
+      await assert.rejects(
+        h.service.setStepResult(stepId, 'unstarted'),
+        superseded
+      )
+      await assert.rejects(
+        h.service.setStepError(stepId, new Error('unstarted')),
+        superseded
+      )
+      assert.equal((await stepOf(h, runId)).status, 'pending')
+
+      await h.service.setStepResult(stepId, 'named', undefined, [
+        'pending',
+        'running',
+      ])
+      assert.equal((await stepOf(h, runId)).status, 'succeeded')
+    })
+
+    test('one attempt is retried once, however many ask', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const step = (await claim(h, runId))!
+      await h.service.setStepError(step.stepId, new Error('no'), 1)
+
+      const outcomes = await Promise.allSettled([
+        h.service.createRetryAttempt(step.stepId, 'pending', 1),
+        h.service.createRetryAttempt(step.stepId, 'pending', 1),
+      ])
+
+      assert.deepEqual(outcomes.map((o) => o.status).sort(), [
+        'fulfilled',
+        'rejected',
+      ])
+      assert.equal((await stepOf(h, runId)).attemptCount, 2)
+    })
+
+    test('a succeeded step is not retried, linked, branched or leased', async () => {
+      const h = await create()
+      const runId = await startRun(h)
+      const step = (await claim(h, runId))!
+      await h.service.setStepResult(step.stepId, 'done', 1)
+
+      await assert.rejects(
+        h.service.createRetryAttempt(step.stepId, 'pending', 1),
+        superseded
+      )
+      assert.equal(
+        await h.service.setStepChildRunId(step.stepId, 'late-child'),
+        false
+      )
+      await h.service.setBranchTaken(step.stepId, 'late-branch')
+      assert.equal(
+        await h.service.refreshStepLease(step.stepId, LEASE_MS, 1),
+        false
+      )
+
+      const after = await stepOf(h, runId)
+      assert.equal(after.status, 'succeeded')
+      assert.equal(after.attemptCount, 1)
+      assert.equal(after.childRunId ?? undefined, undefined)
+      const graph = await h.service.getCompletedGraphState(runId)
+      assert.equal(graph.branchKeys[STEP], undefined)
+    })
+
     test('a superseded dispatch whose RPC is missing neither fails the step nor suspends the run', async () => {
       const h = await create()
       const runId = await startRun(h)

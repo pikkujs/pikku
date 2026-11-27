@@ -104,7 +104,8 @@ export interface WorkflowService {
   setStepRunning(stepId: string): Promise<void>
   setStepScheduled(stepId: string): Promise<void>
   setStepResult(stepId: string, result: any): Promise<void>
-  setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+  /** Resolves `false` when the step is no longer in flight. */
+  setStepChildRunId(stepId: string, childRunId: string): Promise<boolean>
   setStepError(stepId: string, error: Error): Promise<void>
   createRetryAttempt(
     stepId: string,

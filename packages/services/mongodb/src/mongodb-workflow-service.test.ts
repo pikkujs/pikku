@@ -112,8 +112,10 @@ describe('a step transition reaches the history', () => {
   test('the step row keeps only its latest outcome', async () => {
     const { runId, step } = await seedStep()
 
+    await ws.setStepRunning(step.stepId)
     await ws.setStepError(step.stepId, new Error('first go'))
     await ws.createRetryAttempt(step.stepId, 'pending')
+    await ws.setStepRunning(step.stepId)
     await ws.setStepResult(step.stepId, 'second go')
 
     const state = await ws.getStepState(runId, 'step-1')
@@ -329,8 +331,8 @@ describe('run state and steps the unwind depends on', () => {
 
   test('getRunSteps carries the child run and the outcome time', async () => {
     const { runId, step } = await seedStep()
-    await ws.setStepChildRunId(step.stepId, 'child-1')
     await ws.setStepRunning(step.stepId)
+    await ws.setStepChildRunId(step.stepId, 'child-1')
     await ws.setStepResult(step.stepId, { ok: true })
 
     const [row] = await ws.getRunSteps(runId)

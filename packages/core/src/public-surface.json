@@ -56,6 +56,7 @@
     "DEFAULT_STEP_LEASE_MS",
     "DEFAULT_STEP_RETRIES",
     "PikkuWorkflowService",
+    "STEP_SOURCES",
     "WorkflowApprovalForbiddenError",
     "WorkflowApprovalResolvedError",
     "WorkflowCancelledException",

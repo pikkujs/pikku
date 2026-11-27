@@ -17,7 +17,8 @@ export type StepClaimStore = {
   refreshStepLease(stepId: string, leaseMs: number | null): Promise<boolean>
   createRetryAttempt(
     failedStepId: string,
-    status: 'pending' | 'running'
+    status: 'pending' | 'running',
+    attempt?: number
   ): Promise<StepState>
   /**
    * Requeue the orchestrator so it sees the failure. Without it a step failed
@@ -131,7 +132,11 @@ export const takeBackLostInlineStep = async (
     )
     throw error
   }
-  const attempt = await store.createRetryAttempt(stepState.stepId, 'pending')
+  const attempt = await store.createRetryAttempt(
+    stepState.stepId,
+    'pending',
+    stepState.attemptCount
+  )
   await store.logStepRerun?.(runId, stepName, attempt.attemptCount)
   return attempt
 }
@@ -191,7 +196,11 @@ export const claimStepByReadThenWrite = async (
     return null
   }
   if (stepState.status === 'failed' || stepState.status === 'running') {
-    const attempt = await store.createRetryAttempt(stepState.stepId, 'running')
+    const attempt = await store.createRetryAttempt(
+      stepState.stepId,
+      'running',
+      stepState.attemptCount
+    )
     await store.refreshStepLease(attempt.stepId, leaseMs)
     // A `failed` step threw, and this is its ordinary retry.
     if (stepState.status === 'running') {

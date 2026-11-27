@@ -28,4 +28,31 @@ Kysely, a filtered update in MongoDB, a script in Redis. The in-memory service h
 no await between the two. A Durable Object interleaves calls at every await, so it
 runs its conditional writes one at a time.
 
-**What this rules out:** a run status write that does not name its sources.
+## Steps
+
+Every step write is checked against `STEP_SOURCES`, and against the attempt where
+the writer has one. An outcome applies only to a `running` step. So a late write
+from the very attempt that was failed as lost is refused, which a check on the
+attempt number alone would let through. A refused outcome throws
+`WorkflowStepSupersededError`. A refused `setStepScheduled` is silent, because it
+means a worker claimed the step before the dispatcher got round to marking it.
+
+Writers that settle a step nobody has to be running name `unsettled`: a sleep, a
+refused step, a compensation row with no function of its own.
+
+A child run in the parent's process records its outcome on the parent step as it
+ends, before the engine that ran it does. `childStepRetryStore` and the queued
+step's `record` accept that refusal. A Durable Object's step worker claims
+nothing, so `recordDispatchedOutcome` marks the step running first. It names no
+attempt, so a report from an older attempt can still land on a retry.
+
+## A child is linked before it can start
+
+`cancelRun` writes the parent `cancelled` and only then reads the parent's steps
+to cancel their children. `startLinkedChildRun` writes the link in
+`onRunCreated` and only then reads the parent. Whichever runs second sees what the
+first wrote, so a cancel either finds the child or the child is cancelled before
+it starts.
+
+**What this rules out:** a run or step write that does not name its sources, and
+starting a child run before its parent step names it.

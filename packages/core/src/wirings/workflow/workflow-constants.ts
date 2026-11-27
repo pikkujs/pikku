@@ -42,6 +42,22 @@ export const RUN_STATUS_SOURCES: Readonly<
   compensation_failed: ['compensating'],
 }
 
+/**
+ * The statuses a step may be in for each kind of write to apply. `unsettled` is
+ * for the outcome of a step nothing has to be running: a sleep, a step refused
+ * before it started, and a compensation row settled without a function.
+ */
+export const STEP_SOURCES = {
+  /** `running` too: a claim moves the step there before it is marked. */
+  running: ['pending', 'scheduled', 'running'],
+  scheduled: ['pending', 'scheduled'],
+  outcome: ['running'],
+  unsettled: ['pending', 'scheduled', 'running'],
+  retry: ['running', 'failed'],
+  /** A child run, a branch or a lease, which only work in flight takes. */
+  inFlight: ['running'],
+} as const satisfies Record<string, readonly StepStatus[]>
+
 /** Step statuses that mean the step has not settled yet. */
 export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([
   'pending',

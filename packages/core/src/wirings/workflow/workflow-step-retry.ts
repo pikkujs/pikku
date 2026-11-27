@@ -1,18 +1,47 @@
 import { getDurationInMilliseconds } from '../../time-utils.js'
-import { WorkflowCancelledException } from './workflow-errors.js'
+import {
+  WorkflowCancelledException,
+  WorkflowStepSupersededError,
+} from './workflow-errors.js'
 import type { StepAttempt } from './workflow-step-signal.js'
 import type { StepState, WorkflowStepOptions } from './workflow.types.js'
 
 /** What running a step's retries in-process needs from the workflow service. */
 export type StepRetryStore = {
-  setStepRunning(stepId: string): Promise<void>
-  setStepResult(stepId: string, result: any): Promise<void>
-  setStepError(stepId: string, error: Error): Promise<void>
+  setStepRunning(stepId: string, attempt?: number): Promise<void>
+  setStepResult(stepId: string, result: any, attempt?: number): Promise<void>
+  setStepError(stepId: string, error: Error, attempt?: number): Promise<void>
   createRetryAttempt(
     failedStepId: string,
-    status: 'pending' | 'running'
+    status: 'pending' | 'running',
+    attempt?: number
   ): Promise<StepState>
 }
+
+/** For a write whose refusal means someone else already settled the step. */
+export const unlessSuperseded = async (
+  write: () => Promise<unknown>
+): Promise<void> => {
+  try {
+    await write()
+  } catch (error) {
+    if (!(error instanceof WorkflowStepSupersededError)) throw error
+  }
+}
+
+/**
+ * The store for a step whose in-process child run names it as its parent step.
+ * The child records its outcome on the step as it ends, so the loop's own record
+ * of the same outcome finds the step settled.
+ */
+export const childStepRetryStore = (store: StepRetryStore): StepRetryStore => ({
+  setStepRunning: (...args) => store.setStepRunning(...args),
+  setStepResult: (...args) =>
+    unlessSuperseded(() => store.setStepResult(...args)),
+  setStepError: (...args) =>
+    unlessSuperseded(() => store.setStepError(...args)),
+  createRetryAttempt: (...args) => store.createRetryAttempt(...args),
+})
 
 /** What a step run in-process is given besides the loop itself. */
 export type InlineStepHooks = {
@@ -53,14 +82,16 @@ export const runInlineRetryLoop = async (
         }
         throw error
       }
+      const { stepId, attemptCount } = currentStepState
+      // Outside the try: a refused start is not a failed attempt.
+      await store.setStepRunning(stepId, attemptCount)
       let result: any
       try {
-        await store.setStepRunning(currentStepState.stepId)
         result = await doWork(currentStepState, attempt)
       } catch (error: any) {
         if (onError) await onError(error)
 
-        await store.setStepError(currentStepState.stepId, error)
+        await store.setStepError(stepId, error, attemptCount)
 
         if (currentStepState.attemptCount > retries) {
           throw error
@@ -69,8 +100,9 @@ export const runInlineRetryLoop = async (
         // A stopped run gets no pending attempt, which nothing would finish.
         await beforeAttempt?.()
         currentStepState = await store.createRetryAttempt(
-          currentStepState.stepId,
-          'pending'
+          stepId,
+          'pending',
+          attemptCount
         )
         if (retryDelay) {
           await new Promise((resolve) =>
@@ -81,7 +113,7 @@ export const runInlineRetryLoop = async (
       }
       // Outside the try: the work is done, so failing to record it must not
       // count as a failed attempt and run the work again.
-      await store.setStepResult(currentStepState.stepId, result)
+      await store.setStepResult(stepId, result, attemptCount)
       return result
     } finally {
       attempt?.close()

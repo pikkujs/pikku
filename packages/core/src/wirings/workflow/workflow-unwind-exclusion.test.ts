@@ -6,6 +6,7 @@ import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { InMemoryLeaseService } from '../../services/in-memory-lease-service.js'
 import type { LeaseService } from '../../services/lease-service.js'
+import type { StepStatus } from './workflow.types.js'
 
 /** In-memory storage behind the run lease a persistent store inherits. */
 class LeasedWorkflowService extends InMemoryWorkflowService {
@@ -21,9 +22,13 @@ class LeasedWorkflowService extends InMemoryWorkflowService {
     ) as Promise<T>
   }
 
-  protected override async setStepScheduledImpl(stepId: string): Promise<void> {
-    await super.setStepScheduledImpl(stepId)
+  protected override async setStepScheduledImpl(
+    stepId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const applied = await super.setStepScheduledImpl(stepId, from)
     await this.onScheduled?.()
+    return applied
   }
 }
 

@@ -1,6 +1,10 @@
 import type { DurableObjectStorage } from '@cloudflare/workers-types'
 import type { SerializedError } from '@pikku/core/errors'
-import { PikkuWorkflowService } from '@pikku/core/workflow'
+import {
+  PikkuWorkflowService,
+  STEP_SOURCES,
+  WorkflowStepSupersededError,
+} from '@pikku/core/workflow'
 import type {
   StepState,
   StepStatus,
@@ -285,74 +289,146 @@ export class PikkuWorkflowDoService<
     })
   }
 
-  protected async setStepRunningImpl(stepId: string): Promise<void> {
-    await this.updateStep(stepId, (s) => {
-      s.status = 'running'
-      s.runningAt = Date.now()
-    })
+  protected async setStepRunningImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<boolean> {
+    const written = await this.writeStepIf(
+      stepId,
+      from,
+      (s) => {
+        s.status = 'running'
+        s.runningAt = Date.now()
+      },
+      attempt
+    )
+    if (!written) return false
     await this.appendHistory(stepId, 'running')
+    return true
   }
 
-  protected async setStepScheduledImpl(stepId: string): Promise<void> {
-    await this.updateStep(stepId, (s) => {
+  protected async setStepScheduledImpl(
+    stepId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return !!(await this.writeStepIf(stepId, from, (s) => {
       s.status = 'scheduled'
       s.scheduledAt = Date.now()
-    })
+    }))
+  }
+
+  /** A Durable Object records no step lease: only the status is checked. */
+  public override async refreshStepLease(
+    stepId: string,
+    _leaseMs: number | null,
+    attempt?: number
+  ): Promise<boolean> {
+    return !!(await this.writeStepIf(
+      stepId,
+      STEP_SOURCES.inFlight,
+      () => {},
+      attempt
+    ))
   }
 
   protected async setStepResultImpl(
     stepId: string,
-    result: any
-  ): Promise<void> {
-    await this.updateStep(stepId, (s) => {
-      s.status = 'succeeded'
-      s.result = result
-      s.error = undefined
-      s.succeededAt = Date.now()
-    })
+    result: any,
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const written = await this.writeStepIf(
+      stepId,
+      from,
+      (s) => {
+        s.status = 'succeeded'
+        s.result = result
+        s.error = undefined
+        s.succeededAt = Date.now()
+      },
+      attempt
+    )
+    if (!written) return false
     await this.appendHistory(stepId, 'succeeded', result)
+    return true
   }
 
   protected async setStepChildRunIdImpl(
     stepId: string,
-    childRunId: string
-  ): Promise<void> {
-    await this.updateStep(stepId, (s) => {
+    childRunId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return !!(await this.writeStepIf(stepId, from, (s) => {
       s.childRunId = childRunId
-    })
+    }))
   }
 
   protected async setStepErrorImpl(
     stepId: string,
-    error: Error
-  ): Promise<void> {
+    error: Error,
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
     const serialized: SerializedError = {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
     }
-    await this.updateStep(stepId, (s) => {
-      s.status = 'failed'
-      s.error = serialized
-      s.result = undefined
-      s.failedAt = Date.now()
-    })
+    const written = await this.writeStepIf(
+      stepId,
+      from,
+      (s) => {
+        s.status = 'failed'
+        s.error = serialized
+        s.result = undefined
+        s.failedAt = Date.now()
+      },
+      attempt
+    )
+    if (!written) return false
     await this.appendHistory(stepId, 'failed', undefined, serialized)
+    return true
   }
 
   protected async createRetryAttemptImpl(
     stepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState> {
-    const updated = await this.updateStep(stepId, (s) => {
-      s.status = status
-      s.result = undefined
-      s.error = undefined
-      s.childRunId = undefined
-      s.attemptCount = (s.attemptCount ?? 1) + 1
-    })
+    status: 'pending' | 'running',
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<StepState | null> {
+    const updated = await this.writeStepIf(
+      stepId,
+      from,
+      (s) => {
+        s.status = status
+        s.result = undefined
+        s.error = undefined
+        s.childRunId = undefined
+        s.attemptCount = (s.attemptCount ?? 1) + 1
+      },
+      attempt
+    )
+    if (!updated) return null
     await this.appendHistory(stepId, status)
     return toStepState(updated)
+  }
+
+  /**
+   * Record what the step worker reports. The worker claims nothing, so the step
+   * is marked running here first. A report for a step already settled is
+   * dropped.
+   */
+  async recordDispatchedOutcome(
+    stepId: string,
+    write: () => Promise<void>
+  ): Promise<void> {
+    try {
+      await this.setStepRunning(stepId)
+      await write()
+    } catch (error) {
+      if (!(error instanceof WorkflowStepSupersededError)) throw error
+    }
   }
 
   async withRunLease<T>(_id: string, fn: () => Promise<T>): Promise<T> {
@@ -446,11 +522,12 @@ export class PikkuWorkflowDoService<
 
   protected async setBranchTakenImpl(
     stepId: string,
-    branchKey: string
-  ): Promise<void> {
-    await this.updateStep(stepId, (s) => {
+    branchKey: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return !!(await this.writeStepIf(stepId, from, (s) => {
       s.branchTaken = branchKey
-    })
+    }))
   }
 
   protected async updateRunStateImpl(
@@ -654,19 +731,29 @@ export class PikkuWorkflowDoService<
     }
   }
 
-  protected async updateStep(
+  /**
+   * Change a step only while it is in one of `from` and, with `attempt`, still
+   * on that attempt. Resolves the step written, or `null` when nothing was.
+   */
+  protected writeStepIf(
     stepId: string,
-    mutate: (s: DoStepRecord) => void
-  ): Promise<DoStepRecord> {
-    const key = stepKey(stepId)
-    const step = await this.storage.get<DoStepRecord>(key)
-    if (!step) {
-      throw new Error(`Step record not found: ${stepId}`)
-    }
-    mutate(step)
-    step.updatedAt = Date.now()
-    await this.storage.put(key, step)
-    return step
+    from: readonly StepStatus[],
+    mutate: (s: DoStepRecord) => void,
+    attempt?: number
+  ): Promise<DoStepRecord | null> {
+    return this.exclusively(async () => {
+      const key = stepKey(stepId)
+      const step = await this.storage.get<DoStepRecord>(key)
+      if (!step) {
+        throw new Error(`Step record not found: ${stepId}`)
+      }
+      if (!from.includes(step.status)) return null
+      if (attempt !== undefined && step.attemptCount !== attempt) return null
+      mutate(step)
+      step.updatedAt = Date.now()
+      await this.storage.put(key, step)
+      return step
+    })
   }
 
   protected async appendHistory(

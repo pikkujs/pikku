@@ -205,7 +205,7 @@ export class PikkuWorkflowDoClient implements WorkflowService {
     return Promise.reject(notSupported('setStepResult'))
   }
 
-  setStepChildRunId(_stepId: string, _childRunId: string): Promise<void> {
+  setStepChildRunId(_stepId: string, _childRunId: string): Promise<boolean> {
     return Promise.reject(notSupported('setStepChildRunId'))
   }
 

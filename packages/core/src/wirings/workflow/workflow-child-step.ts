@@ -1,25 +1,57 @@
 import { getSingletonServices } from '../../pikku-state.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
-import { ChildWorkflowStartedException } from './graph/graph-runner.js'
+import { ChildWorkflowStartedException } from './workflow-errors.js'
 import { childRunFailure } from './workflow-compensation.js'
-import { WORKFLOW_TERMINAL_STATES } from './workflow-constants.js'
+import { WORKFLOW_TERMINAL_STATES, isRunStopped } from './workflow-constants.js'
 import { runningStepLease } from './workflow-step-lease.js'
+import { unlessSuperseded } from './workflow-step-retry.js'
 import type {
   StepState,
   WorkflowRun,
   WorkflowRunWire,
 } from './workflow.types.js'
 
-interface ChildStepApi {
+export interface ChildStepApi {
   startWorkflow(
     name: string,
     input: unknown,
     wire: WorkflowRunWire,
     rpcService: PikkuRPC,
-    options?: { inline?: boolean }
+    options?: {
+      inline?: boolean
+      onRunCreated?: (runId: string) => Promise<void>
+    }
   ): Promise<{ runId: string }>
-  setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+  setStepChildRunId(stepId: string, childRunId: string): Promise<boolean>
+  getRun(id: string): Promise<WorkflowRun | null>
+  cancelRun(runId: string, rpcService: PikkuRPC): Promise<unknown>
 }
+
+/**
+ * Start the child run of a parent step, linked to it before it can do anything.
+ * `cancelRun` marks the parent before it reads the parent's steps, and the
+ * parent is read here after the link is written. So a cancel either finds the
+ * child on the step, or is seen here, and the child is cancelled unstarted.
+ */
+export const startLinkedChildRun = (
+  api: ChildStepApi,
+  parent: { runId: string; stepId: string },
+  workflowName: string,
+  data: unknown,
+  wire: WorkflowRunWire,
+  rpcService: PikkuRPC,
+  inline: boolean
+): Promise<{ runId: string }> =>
+  api.startWorkflow(workflowName, data, wire, rpcService, {
+    inline,
+    onRunCreated: async (childRunId) => {
+      const linked = await api.setStepChildRunId(parent.stepId, childRunId)
+      const run = linked ? await api.getRun(parent.runId) : null
+      if (!run || isRunStopped(run.status)) {
+        await api.cancelRun(childRunId, rpcService)
+      }
+    },
+  })
 
 export const runInlineChildStep = async (
   api: ChildStepApi & {
@@ -32,7 +64,9 @@ export const runInlineChildStep = async (
   rpcService: PikkuRPC,
   parentWire: WorkflowRunWire | undefined
 ): Promise<unknown> => {
-  const { runId: childRunId } = await api.startWorkflow(
+  const { runId: childRunId } = await startLinkedChildRun(
+    api,
+    { runId, stepId },
     workflowName,
     data,
     {
@@ -43,9 +77,8 @@ export const runInlineChildStep = async (
       traceparent: parentWire?.traceparent,
     },
     rpcService,
-    { inline: true }
+    true
   )
-  await api.setStepChildRunId(stepId, childRunId)
   const childRun = await api.awaitRunEnd(childRunId)
   const failure = childRunFailure(childRun)
   if (failure) throw failure
@@ -53,7 +86,7 @@ export const runInlineChildStep = async (
 }
 
 export const startQueuedChildStep = async (
-  api: ChildStepApi & { getRun(id: string): Promise<WorkflowRun | null> },
+  api: ChildStepApi,
   runId: string,
   stepId: string,
   workflowName: string,
@@ -62,7 +95,9 @@ export const startQueuedChildStep = async (
   parentWire: WorkflowRunWire | undefined
 ): Promise<unknown> => {
   const shouldInline = !getSingletonServices()?.queueService
-  const { runId: childRunId } = await api.startWorkflow(
+  const { runId: childRunId } = await startLinkedChildRun(
+    api,
+    { runId, stepId },
     workflowName,
     data,
     {
@@ -74,13 +109,27 @@ export const startQueuedChildStep = async (
       traceparent: parentWire?.traceparent,
     },
     rpcService,
-    { inline: shouldInline }
+    shouldInline
   )
-  await api.setStepChildRunId(stepId, childRunId)
-  if (!shouldInline) {
+  return queuedChildOutcome(api, runId, stepId, childRunId, shouldInline)
+}
+
+/**
+ * What the dispatch of a child step ends with: the child's outcome where it ran
+ * in-process, or else the exception that parks the step on it. A child that was
+ * cancelled unstarted has no outcome left to hand back later.
+ */
+export const queuedChildOutcome = async (
+  api: Pick<ChildStepApi, 'getRun'>,
+  runId: string,
+  stepId: string,
+  childRunId: string,
+  inline: boolean
+): Promise<unknown> => {
+  const childRun = await api.getRun(childRunId)
+  if (!inline && childRun?.status !== 'cancelled') {
     throw new ChildWorkflowStartedException(runId, stepId, childRunId)
   }
-  const childRun = await api.getRun(childRunId)
   const failure = childRun && childRunFailure(childRun)
   if (failure) throw failure
   return childRun?.output
@@ -124,11 +173,12 @@ export const handBackSettledChildren = async (
       continue
     }
     const failure = childRunFailure(child)
-    if (failure) {
-      await api.setStepError(step.stepId, failure, step.attemptCount)
-    } else {
-      await api.setStepResult(step.stepId, child.output, step.attemptCount)
-    }
+    // Refused when the child's own message, or another sweep, got there first.
+    await unlessSuperseded(() =>
+      failure
+        ? api.setStepError(step.stepId, failure, step.attemptCount)
+        : api.setStepResult(step.stepId, child.output, step.attemptCount)
+    )
   }
 }
 

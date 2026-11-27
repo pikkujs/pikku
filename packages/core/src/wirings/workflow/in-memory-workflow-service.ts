@@ -4,10 +4,10 @@ import {
   WORKFLOW_TERMINAL_STATES,
   isCompensationStepName,
   isStepLeaseLive,
+  STEP_SOURCES,
 } from './workflow-constants.js'
 import { APPROVAL_STEP_RPC_NAME } from './workflow-approval.js'
 import type { PendingApproval } from './workflow-recovery.js'
-import { WorkflowStepSupersededError } from './workflow-errors.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   WorkflowPlannedStep,
@@ -194,15 +194,41 @@ export class InMemoryWorkflowService
     return step
   }
 
-  protected async setStepRunningImpl(stepId: string): Promise<void> {
+  /**
+   * The live step `stepId` names, when it is in one of `from` and `attempt`
+   * still owns it. A retry is a new step with its own id, so a superseded
+   * attempt's id no longer names a live step at all. Nothing awaits between
+   * this and the write that follows, which makes the two atomic.
+   */
+  private writableStep(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): StepState | undefined {
+    const step = this.liveStep(stepId)
+    if (!step || !from.includes(step.status)) return undefined
+    if (attempt !== undefined && step.attemptCount !== attempt) return undefined
+    return step
+  }
+
+  private liveStep(stepId: string): StepState | undefined {
     for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        step.status = 'running'
-        step.runningAt = new Date()
-        step.updatedAt = new Date()
-        break
-      }
+      if (step.stepId === stepId) return step
     }
+    return undefined
+  }
+
+  protected async setStepRunningImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
+    step.status = 'running'
+    step.runningAt = new Date()
+    step.updatedAt = new Date()
+    return true
   }
 
   public override async refreshStepLease(
@@ -210,69 +236,48 @@ export class InMemoryWorkflowService
     leaseMs: number | null,
     attempt?: number
   ): Promise<boolean> {
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        if (attempt !== undefined && step.attemptCount !== attempt) {
-          return false
-        }
-        step.leaseExpiresAt =
-          leaseMs === null ? undefined : new Date(Date.now() + leaseMs)
-        return true
-      }
-    }
-    return false
+    const step = this.writableStep(stepId, STEP_SOURCES.inFlight, attempt)
+    if (!step) return false
+    step.leaseExpiresAt =
+      leaseMs === null ? undefined : new Date(Date.now() + leaseMs)
+    return true
   }
 
-  protected async setStepScheduledImpl(stepId: string): Promise<void> {
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        step.status = 'scheduled'
-        step.scheduledAt = new Date()
-        step.updatedAt = new Date()
-        break
-      }
-    }
-  }
-
-  /**
-   * The live step `stepId` names, when `attempt` still owns it. A retry is a
-   * new step with its own id, so a superseded attempt's id no longer names a
-   * live step at all.
-   */
-  private ownedStep(stepId: string, attempt?: number): StepState | undefined {
-    let live: StepState | undefined
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        live = step
-        break
-      }
-    }
-    if (attempt !== undefined && live?.attemptCount !== attempt) {
-      throw new WorkflowStepSupersededError(stepId, attempt)
-    }
-    return live
+  protected async setStepScheduledImpl(
+    stepId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from)
+    if (!step) return false
+    step.status = 'scheduled'
+    step.scheduledAt = new Date()
+    step.updatedAt = new Date()
+    return true
   }
 
   protected async setStepResultImpl(
     stepId: string,
     result: any,
-    attempt?: number
-  ): Promise<void> {
-    const step = this.ownedStep(stepId, attempt)
-    if (!step) return
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
     step.status = 'succeeded'
     step.result = result
     step.succeededAt = new Date()
     step.updatedAt = new Date()
+    return true
   }
 
   protected async setStepErrorImpl(
     stepId: string,
     error: Error,
-    attempt?: number
-  ): Promise<void> {
-    const step = this.ownedStep(stepId, attempt)
-    if (!step) return
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
     step.status = 'failed'
     step.error = {
       name: error.name,
@@ -282,25 +287,27 @@ export class InMemoryWorkflowService
     }
     step.failedAt = new Date()
     step.updatedAt = new Date()
+    return true
   }
 
   protected async setStepChildRunIdImpl(
     stepId: string,
-    childRunId: string
-  ): Promise<void> {
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        step.childRunId = childRunId
-        step.updatedAt = new Date()
-        break
-      }
-    }
+    childRunId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from)
+    if (!step) return false
+    step.childRunId = childRunId
+    step.updatedAt = new Date()
+    return true
   }
 
   protected async createRetryAttemptImpl(
     failedStepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState> {
+    status: 'pending' | 'running',
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<StepState | null> {
     let failedStep: StepState | undefined
     let runId: string | undefined
     let stepName: string | undefined
@@ -315,9 +322,18 @@ export class InMemoryWorkflowService
       }
     }
 
-    if (!failedStep || !runId || !stepName) {
+    if (!this.stepData.has(failedStepId)) {
       throw new Error(`Step not found: ${failedStepId}`)
     }
+
+    if (
+      !runId ||
+      !stepName ||
+      !this.writableStep(failedStepId, from, attempt)
+    ) {
+      return null
+    }
+    failedStep = failedStep!
 
     const failedStepData = this.stepData.get(failedStepId)
     const newStepId = globalThis.crypto.randomUUID()
@@ -633,9 +649,12 @@ export class InMemoryWorkflowService
 
   protected async setBranchTakenImpl(
     stepId: string,
-    branchKey: string
-  ): Promise<void> {
+    branchKey: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    if (!this.writableStep(stepId, from)) return false
     this.branchKeys.set(stepId, branchKey)
+    return true
   }
 
   protected async updateRunStateImpl(

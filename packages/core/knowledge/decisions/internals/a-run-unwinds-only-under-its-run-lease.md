@@ -10,7 +10,7 @@ tags: workflow, reliability
 A cancel and the pass already working a run can both reach its unwind. A
 compensation run in-process sits `running` with no step lease, so a second driver
 reads it as lost and invokes it again. Every compensation is therefore driven
-through `driveRunUnwind`, under the run lease. A lease is not re-entrant, so the
+through `RunUnwinds.drive`, under the run lease. A lease is not re-entrant, so the
 pass that already holds it says so instead of taking it again.
 
 A cancel never waits for the lease. It writes the run's status without it and
@@ -18,7 +18,7 @@ leaves the invocations to whoever can take it. Three things bring an unwind back
 when the lease is taken:
 
 - the holding pass drives it before it ends, if it sees the cancel;
-- `runUnderLease` reads the status again after releasing, which covers a cancel
+- `RunUnwinds.runPass` reads the status again after releasing, which covers a cancel
   that landed after the pass's last look, with or without a queue;
 - where there is a queue, the refused caller also enqueues a wake, for a holder in
   another process.

@@ -1,11 +1,7 @@
 import type { Logger } from '../../services/logger.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import type { PikkuRPC } from '../rpc/rpc-types.js'
-import {
-  ChildWorkflowStartedException,
-  executeGraphStep,
-  stripInstanceOrdinal,
-} from './graph/graph-runner.js'
+import { executeGraphStep, stripInstanceOrdinal } from './graph/graph-runner.js'
 import type { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { startQueuedChildStep } from './workflow-child-step.js'
 import { compensatingForStep } from './workflow-compensation.js'
@@ -16,9 +12,13 @@ import {
   isRunCancelled,
   isRunClosedToSteps,
 } from './workflow-constants.js'
-import { WorkflowStepTimeoutError } from './workflow-errors.js'
+import {
+  ChildWorkflowStartedException,
+  WorkflowStepTimeoutError,
+} from './workflow-errors.js'
 import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
 import { startStepLeaseRefresh } from './workflow-step-lease.js'
+import { unlessSuperseded } from './workflow-step-retry.js'
 import { refuseStep } from './workflow-step-refusal.js'
 import {
   runWithStepDeadline,
@@ -77,6 +77,10 @@ export const runQueuedStep = async (
   const forward = !isCompensationStepName(stepName)
   // Opened before the run is read below, so no cancel falls between the two.
   const stepAttempt = host.openAttempt(runId, forward, leaseMs)
+  // Set for a child run, which settles the step itself if it ends in-process.
+  let childStep = false
+  const record = (write: () => Promise<void>) =>
+    childStep ? unlessSuperseded(write) : write()
   const stopLeaseRefresh = startStepLeaseRefresh(
     stepState.stepId,
     leaseMs,
@@ -103,6 +107,9 @@ export const runQueuedStep = async (
       workflowMeta?.source === 'graph'
         ? graphNodeIdFor(stepName, workflowMeta.nodes)
         : undefined
+    childStep = !!resolveWorkflowMeta(
+      graphNodeId ? workflowMeta!.nodes![graphNodeId].rpcName : rpcName
+    )
     if (graphNodeId) {
       result = await executeGraphStep(
         service,
@@ -116,12 +123,13 @@ export const runQueuedStep = async (
         { stepName, stepState, signal: stepAttempt?.signal }
       )
     } else {
-      if (resolveWorkflowMeta(rpcName)) {
+      if (childStep) {
         result = await startQueuedChildStep(
           {
             startWorkflow: (...args) => service.startWorkflow(...args),
             setStepChildRunId: (...args) => service.setStepChildRunId(...args),
             getRun: (id) => service.getRun(id),
+            cancelRun: (...args) => service.cancelRun(...args),
           },
           runId,
           stepState.stepId,
@@ -160,7 +168,9 @@ export const runQueuedStep = async (
       }
     }
 
-    await service.setStepResult(stepState.stepId, result, attempt)
+    // Nothing renews the lease of a step that has its outcome.
+    await stopLeaseRefresh()
+    await record(() => service.setStepResult(stepState.stepId, result, attempt))
 
     await service.resumeWorkflow(runId)
   } catch (error: any) {
@@ -183,7 +193,7 @@ export const runQueuedStep = async (
       await stopLeaseRefresh()
     }
 
-    await service.setStepError(stepState.stepId, error, attempt)
+    await record(() => service.setStepError(stepState.stepId, error, attempt))
 
     // The run's own status decides, not the signal: a step may fail for a
     // cancel it has not been told about yet. Read once the failure is recorded,

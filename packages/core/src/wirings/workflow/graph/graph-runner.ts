@@ -3,8 +3,16 @@ import {
   WorkflowAsyncException,
   WorkflowCancelledException,
   WorkflowSuspendedException,
+  ChildWorkflowStartedException,
 } from '../workflow-errors.js'
-import { runInlineRetryLoop } from '../workflow-step-retry.js'
+import {
+  queuedChildOutcome,
+  startLinkedChildRun,
+} from '../workflow-child-step.js'
+import {
+  childStepRetryStore,
+  runInlineRetryLoop,
+} from '../workflow-step-retry.js'
 import { forwardStepHooks } from '../workflow-step-refusal.js'
 import { stepSignalWire, type StepAttempt } from '../workflow-step-signal.js'
 import { buildWorkflowStepWire } from '../workflow-wire.js'
@@ -29,17 +37,6 @@ import {
   assertGraphSession,
   assertRunSessionStore,
 } from '../workflow-graph-session.js'
-
-export class ChildWorkflowStartedException extends Error {
-  name = 'ChildWorkflowStartedException'
-  constructor(
-    public parentRunId: string,
-    public stepId: string,
-    public childRunId: string
-  ) {
-    super(`Child workflow started: ${childRunId}`)
-  }
-}
 
 function buildTemplateRegex(nodeId: string): RegExp | null {
   if (!nodeId.includes('${')) return null
@@ -1121,23 +1118,22 @@ export async function executeGraphStep(
         traceparent: await workflowService.getRunTraceparent(runId),
       }
       const shouldInline = !getSingletonServices()?.queueService
-      const { runId: childRunId } = await workflowService.startWorkflow(
+      const { runId: childRunId } = await startLinkedChildRun(
+        workflowService,
+        { runId, stepId },
         rpcName,
         data,
         childWire,
         rpcService,
-        { inline: shouldInline }
+        shouldInline
       )
-      await workflowService.setStepChildRunId(stepId, childRunId)
-
-      if (shouldInline) {
-        const childRun = await workflowService.getRun(childRunId)
-        const failure = childRun && childRunFailure(childRun)
-        if (failure) throw failure
-        result = childRun?.output
-      } else {
-        throw new ChildWorkflowStartedException(runId, stepId, childRunId)
-      }
+      result = await queuedChildOutcome(
+        workflowService,
+        runId,
+        stepId,
+        childRunId,
+        shouldInline
+      )
     } else if (agentMeta) {
       const agentRun = await rpcService.agent.run(rpcName, data)
       result = agentRun.result
@@ -1231,14 +1227,15 @@ async function executeGraphNodeInline(
         pikkuUserId: parentWire?.pikkuUserId,
         traceparent: await workflowService.getRunTraceparent(runId),
       }
-      const { runId: childRunId } = await workflowService.startWorkflow(
+      const { runId: childRunId } = await startLinkedChildRun(
+        workflowService,
+        { runId, stepId: attempt.stepId },
         rpcName,
         input,
         childWire,
         rpcService,
-        { inline: true }
+        true
       )
-      await workflowService.setStepChildRunId(attempt.stepId, childRunId)
       const childRun = await workflowService.getRun(childRunId)
       const failure = childRun && childRunFailure(childRun)
       if (failure) throw failure
@@ -1267,7 +1264,9 @@ async function executeGraphNodeInline(
 
   try {
     await runInlineRetryLoop(
-      workflowService,
+      getWorkflowMeta(rpcName)
+        ? childStepRetryStore(workflowService)
+        : workflowService,
       stepState,
       node.retries ?? 0,
       node.retryDelay,
@@ -1453,7 +1452,7 @@ export async function runWorkflowGraph(
   startNode?: string,
   wire?: WorkflowRunWire,
   overrideMeta?: WorkflowRuntimeMeta,
-  onRunCreated?: (runId: string) => void
+  onRunCreated?: (runId: string) => void | Promise<void>
 ): Promise<{ runId: string }> {
   const meta = overrideMeta ?? getWorkflowMeta(graphName)
   if (!meta?.nodes) {
@@ -1505,7 +1504,12 @@ export async function runWorkflowGraph(
     }
   )
 
-  onRunCreated?.(runId)
+  if (onRunCreated) {
+    await onRunCreated(runId)
+    if (isRunStopped((await workflowService.getRun(runId))?.status ?? '')) {
+      return { runId }
+    }
+  }
 
   if (inline) {
     workflowService.registerInlineRun(runId)

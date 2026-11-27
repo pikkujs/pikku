@@ -3,7 +3,7 @@ import {
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
   WorkflowStepLeaseExpiredError,
-  WorkflowStepSupersededError,
+  STEP_SOURCES,
   leaseAttemptsExhausted,
 } from '@pikku/core/workflow'
 import type {
@@ -280,10 +280,18 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return this.runService.getRunHistory(runId)
   }
 
-  protected async setStepRunningImpl(stepId: string): Promise<void> {
-    await this.writeStepTransition(stepId, 'running', {
-      runningAt: new Date(),
-    })
+  protected async setStepRunningImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<boolean> {
+    return this.writeStepTransition(
+      stepId,
+      'running',
+      { runningAt: new Date() },
+      from,
+      attempt
+    )
   }
 
   public override async refreshStepLease(
@@ -299,6 +307,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
         updatedAt: new Date(),
       })
       .where('workflowStepId', '=', stepId)
+      .where('status', 'in', STEP_SOURCES.inFlight)
     if (attempt !== undefined) {
       query = query.where(sql`coalesce(current_attempt, 1)`, '=', attempt)
     }
@@ -311,12 +320,26 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     return appNowMs()
   }
 
-  protected async setStepScheduledImpl(stepId: string): Promise<void> {
-    await this.db
+  protected async setStepScheduledImpl(
+    stepId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return this.writeStepIfIn(stepId, from, { status: 'scheduled' })
+  }
+
+  /** Update a step only while it is in one of `from`. */
+  private async writeStepIfIn(
+    stepId: string,
+    from: readonly StepStatus[],
+    values: Record<string, unknown>
+  ): Promise<boolean> {
+    const moved = await this.db
       .updateTable('workflowStep')
-      .set({ status: 'scheduled', updatedAt: new Date() })
+      .set({ ...values, updatedAt: new Date() } as any)
       .where('workflowStepId', '=', stepId)
-      .execute()
+      .where('status', 'in', from)
+      .executeTakeFirst()
+    return Number(moved?.numUpdatedRows ?? 0n) > 0
   }
 
   /**
@@ -334,8 +357,9 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     stepId: string,
     status: StepStatus,
     historyValues: Record<string, unknown>,
+    from: readonly StepStatus[],
     attempt?: number
-  ): Promise<void> {
+  ): Promise<boolean> {
     const now = new Date()
     const stepValues: Record<string, unknown> = { status, updatedAt: now }
     if ('result' in historyValues) stepValues.result = historyValues.result
@@ -344,7 +368,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
     if (status === 'succeeded') stepValues.error = null
     if (status === 'failed') stepValues.result = null
 
-    await this.db.transaction().execute(async (trx) => {
+    return this.db.transaction().execute(async (trx) => {
       let step = trx
         .updateTable('workflowStep')
         .set({
@@ -356,16 +380,15 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
           currentAttempt: sql`coalesce(current_attempt, 1)`,
         } as any)
         .where('workflowStepId', '=', stepId)
+        .where('status', 'in', from)
       // Fenced to the attempt that made the write, so a dispatch whose step
       // was claimed again after its lease lapsed cannot record over the newer
-      // attempt. Throwing rolls the transaction back.
+      // attempt.
       if (attempt !== undefined) {
         step = step.where(sql`coalesce(current_attempt, 1)`, '=', attempt)
       }
       const moved = await step.executeTakeFirst()
-      if (attempt !== undefined && Number(moved?.numUpdatedRows ?? 0n) === 0) {
-        throw new WorkflowStepSupersededError(stepId, attempt)
-      }
+      if (Number(moved?.numUpdatedRows ?? 0n) === 0) return false
 
       const written = await trx
         .updateTable('workflowStepHistory')
@@ -404,6 +427,7 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
           } as any)
           .execute()
       }
+      return true
     })
   }
 
@@ -454,30 +478,26 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   protected async setStepChildRunIdImpl(
     stepId: string,
-    childRunId: string
-  ): Promise<void> {
-    await this.db
-      .updateTable('workflowStep')
-      .set({
-        childRunId: childRunId,
-        updatedAt: new Date(),
-      })
-      .where('workflowStepId', '=', stepId)
-      .execute()
+    childRunId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return this.writeStepIfIn(stepId, from, { childRunId })
   }
 
   protected async setStepResultImpl(
     stepId: string,
     result: any,
-    attempt?: number
-  ): Promise<void> {
-    await this.writeStepTransition(
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return this.writeStepTransition(
       stepId,
       'succeeded',
       {
         result: JSON.stringify(result),
         succeededAt: new Date(),
       },
+      from,
       attempt
     )
   }
@@ -485,53 +505,69 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
   protected async setStepErrorImpl(
     stepId: string,
     error: Error,
-    attempt?: number
-  ): Promise<void> {
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
     }
-    await this.writeStepTransition(
+    return this.writeStepTransition(
       stepId,
       'failed',
       {
         error: JSON.stringify(serializedError),
         failedAt: new Date(),
       },
+      from,
       attempt
     )
   }
 
   protected async createRetryAttemptImpl(
     stepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState> {
-    // Read before writing: the new attempt number comes from the history this
-    // step already has, and the row it reads is the one returned below.
+    status: 'pending' | 'running',
+    from: readonly StepStatus[],
+    expected?: number
+  ): Promise<StepState | null> {
     const previous = await this.db
       .selectFrom('workflowStep')
       .select('currentAttempt')
       .where('workflowStepId', '=', stepId)
       .executeTakeFirst()
-    const attempt = (previous?.currentAttempt ?? 0) + 1
+    const current = expected ?? previous?.currentAttempt ?? 1
+    const attempt = current + 1
 
-    await this.db
-      .updateTable('workflowStep')
-      .set({
+    const created = await this.db.transaction().execute(async (trx) => {
+      // The attempt is part of the guard, so of two retries of it one applies.
+      const moved = await trx
+        .updateTable('workflowStep')
+        .set({
+          status,
+          result: null,
+          error: null,
+          childRunId: null,
+          currentAttempt: attempt,
+          updatedAt: new Date(),
+        })
+        .where('workflowStepId', '=', stepId)
+        .where('status', 'in', from)
+        .where(sql`coalesce(current_attempt, 1)`, '=', current)
+        .executeTakeFirst()
+      if (Number(moved?.numUpdatedRows ?? 0n) === 0) return false
+      await this.insertHistoryRecord(
+        stepId,
         status,
-        result: null,
-        error: null,
-        childRunId: null,
-        currentAttempt: attempt,
-        updatedAt: new Date(),
-      })
-      .where('workflowStepId', '=', stepId)
-      .execute()
+        attempt,
+        undefined,
+        undefined,
+        trx
+      )
+      return true
+    })
 
-    await this.insertHistoryRecord(stepId, status, attempt)
-
-    return this.readStepAttempt(stepId)
+    return created ? this.readStepAttempt(stepId) : null
   }
 
   private async readStepAttempt(stepId: string): Promise<StepState> {
@@ -855,13 +891,10 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
 
   protected async setBranchTakenImpl(
     stepId: string,
-    branchKey: string
-  ): Promise<void> {
-    await this.db
-      .updateTable('workflowStep')
-      .set({ branchTaken: branchKey, updatedAt: new Date() })
-      .where('workflowStepId', '=', stepId)
-      .execute()
+    branchKey: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return this.writeStepIfIn(stepId, from, { branchTaken: branchKey })
   }
 
   /**

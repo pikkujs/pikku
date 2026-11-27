@@ -262,6 +262,7 @@ describe('graph-runner bugs', () => {
     )
 
     const step = await ws.insertStepState(runId, 'branch-1', 'doBranch', {})
+    await ws.setStepRunning(step.stepId)
     await ws.setBranchTaken(step.stepId, 'next')
 
     await assert.rejects(

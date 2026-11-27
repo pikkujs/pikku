@@ -4,6 +4,7 @@ import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
   RUN_STATUS_SOURCES,
+  STEP_SOURCES,
   unwindEntryStatuses,
   WORKFLOW_CANCELLED_CODE,
   WORKFLOW_TERMINAL_STATES,
@@ -19,6 +20,7 @@ import { planUnwind, type UnwindRecord } from './workflow-unwind-plan.js'
 import type {
   StepState,
   WorkflowRun,
+  StepStatus,
   WorkflowStatus,
   WorkflowStepOptions,
 } from './workflow.types.js'
@@ -202,8 +204,18 @@ export interface CompensationApi {
   failOrUnwind(run: WorkflowRun, error: Error): Promise<unknown>
   /** `driveUnwind` under the run's lease, taken here unless the caller holds it. */
   drive(runId: string): Promise<'waiting' | 'finished'>
-  setStepResult(stepId: string, result: unknown): Promise<void>
-  setStepError(stepId: string, error: Error): Promise<void>
+  setStepResult(
+    stepId: string,
+    result: unknown,
+    attempt?: number,
+    from?: readonly StepStatus[]
+  ): Promise<void>
+  setStepError(
+    stepId: string,
+    error: Error,
+    attempt?: number,
+    from?: readonly StepStatus[]
+  ): Promise<void>
   notifyParent(run: WorkflowRun, error: Error): Promise<void>
   hasCompensation(record: UnwindRecord): boolean
   isChildWorkflow(record: UnwindRecord): boolean
@@ -329,8 +341,16 @@ const compensateChildStep = async (
   )
   if (state.status === 'succeeded') return 'done'
   if (state.status === 'failed') return 'stuck'
+  // A child's row has no function of its own, so it is settled as it stands.
+  const settle = (result: unknown) =>
+    api.setStepResult(
+      state.stepId,
+      result,
+      state.attemptCount,
+      STEP_SOURCES.unsettled
+    )
   if (!forward.childRunId) {
-    await api.setStepResult(state.stepId, undefined)
+    await settle(undefined)
     return 'done'
   }
 
@@ -343,17 +363,19 @@ const compensateChildStep = async (
     case 'compensated': {
       const restedAt = (after.output as { restedAt?: string } | undefined)
         ?.restedAt
-      await api.setStepResult(state.stepId, restedAt ? { restedAt } : undefined)
+      await settle(restedAt ? { restedAt } : undefined)
       return 'done'
     }
     case 'compensation_failed':
       await api.setStepError(
         state.stepId,
-        new Error('child compensation failed')
+        new Error('child compensation failed'),
+        state.attemptCount,
+        STEP_SOURCES.unsettled
       )
       return 'stuck'
     case 'failed':
-      await api.setStepResult(state.stepId, undefined)
+      await settle(undefined)
       return 'done'
     default:
       return 'waiting'
@@ -545,11 +567,6 @@ export const cancelAndUnwind = async (
   if (WORKFLOW_TERMINAL_STATES.has(run.status) || isUnwound(run.status)) {
     return run.status
   }
-  for (const step of await host.getRunSteps(runId)) {
-    if (step.childRunId) {
-      await cancelAndUnwind(api, host, step.childRunId, reason)
-    }
-  }
   const cause: SerializedError = {
     message: reason || 'Workflow cancelled',
     stack: '',
@@ -563,6 +580,12 @@ export const cancelAndUnwind = async (
     cause
   )
   if (!cancelled) return (await api.getRun(runId))?.status
+  // Read after the write above, which `startLinkedChildRun` relies on.
+  for (const step of await host.getRunSteps(runId)) {
+    if (step.childRunId) {
+      await cancelAndUnwind(api, host, step.childRunId, reason)
+    }
+  }
   await beginUnwind(api, host, run, cause)
   return (await api.getRun(runId))?.status
 }

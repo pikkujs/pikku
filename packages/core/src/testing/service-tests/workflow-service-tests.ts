@@ -214,6 +214,7 @@ export const defineWorkflowServiceTests = (
         { retries: 2 }
       )
 
+      await service.setStepRunning(step.stepId)
       await service.setStepError(step.stepId, new Error('fail'))
       const retried = await service.createRetryAttempt(step.stepId, 'pending')
       assert.equal(retried.status, 'pending')
@@ -350,6 +351,7 @@ export const defineWorkflowServiceTests = (
         wire
       )
       const step = await service.insertStepState(runId, 'node-a', 'rpc', {})
+      await service.setStepRunning(step.stepId)
       await service.setStepResult(step.stepId, { out: 'hello' })
 
       const results = await service.getNodeResults(runId, ['node-a'])
@@ -370,8 +372,9 @@ export const defineWorkflowServiceTests = (
         'rpc',
         {}
       )
-      await service.setStepResult(step.stepId, {})
+      await service.setStepRunning(step.stepId)
       await service.setBranchTaken(step.stepId, 'left')
+      await service.setStepResult(step.stepId, {})
 
       const state = await service.getCompletedGraphState(runId)
       assert.ok(state.completedNodeIds.includes('branch-node'))

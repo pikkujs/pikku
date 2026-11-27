@@ -3,11 +3,13 @@ import assert from 'node:assert/strict'
 import Redis from 'ioredis-mock'
 
 import { InMemoryLeaseService, LeaseTakenError } from '@pikku/core/services'
+import { defineServiceTests } from '@pikku/core/testing'
 import { RedisWorkflowService } from './redis-workflow-service.js'
 
 const KEY_PREFIX = 'workflows'
 
 let ws: RedisWorkflowService
+let fencingCount = 0
 let redis: any
 let leases: InMemoryLeaseService
 
@@ -309,4 +311,40 @@ describe('a run status is written only from a status that may precede it', () =>
     assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
     assert.ok(!run?.output)
   })
+})
+
+/**
+ * ioredis-mock cannot run ZRANGEBYSCORE, and its own ZRANGE throws under
+ * ioredis 6. Both are answered through a script, which it can run. A history
+ * entry's score is the attempt it records.
+ */
+const withSortedSetReads = (client: any) => {
+  const range = (key: string): Promise<string[]> =>
+    client.eval("return redis.call('ZRANGE', KEYS[1], 0, -1)", 1, key)
+  client.zrange = range
+  client.zrangebyscore = async (key: string, min: number, max: number) =>
+    (await range(key)).filter((entry) => {
+      const { attemptCount } = JSON.parse(entry)
+      return attemptCount >= Number(min) && attemptCount <= Number(max)
+    })
+  return client
+}
+
+defineServiceTests({
+  name: 'RedisMock',
+  services: {
+    workflowFencing: async () => ({
+      service: new RedisWorkflowService(withSortedSetReads(new Redis()), {
+        keyPrefix: `fencing-${++fencingCount}`,
+        leaseService: new InMemoryLeaseService(),
+      }),
+      lapseLease: async (runId, stepName) => {
+        await new Redis().hset(
+          `fencing-${fencingCount}:step:${runId}:${stepName}`,
+          'leaseExpiresAt',
+          '1'
+        )
+      },
+    }),
+  },
 })
