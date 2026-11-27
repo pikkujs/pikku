@@ -28,4 +28,7 @@ The in-memory and Durable Object services pass the run lease through, so
 while one is active does not wait, because a compensation may itself call back
 into the unwind. It asks the active driver to go round again.
 
+A driver that loses the lease part way records nothing more, and
+[the unwind is picked up again](a-pass-that-lost-its-lease-writes-nothing.md).
+
 **What this rules out:** calling `driveUnwind` anywhere else.

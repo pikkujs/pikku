@@ -149,6 +149,16 @@ Another step failing does not abort a running step, although the run then starts
 
 **Not covered:** graph steps get the signal but take no `timeout`. Agent steps get no signal, and a step's abort does not reach an agent it runs, whose tool calls have their own `wire.abortScope`. Cloudflare Durable Object workflows give no signal, and setting `timeout` there is an error.
 
+## Lost leases
+
+A pass holds its run's lease, and a queued worker holds its step's. After a loss, whatever is thrown records nothing: no step failure, retry, run status, compensation or word to a parent. The step stays `running`, and the next owner runs it as another attempt, or fails it with `WorkflowStepLeaseExpiredError` when none are left. This covers function, closure, graph and compensation steps. A step that returns is still recorded unless a newer attempt has replaced it.
+
+A queued run is woken through the queue. An inline run, and an unwind that `cancelRun` is driving, take the lease again and carry on, up to three times. If someone else holds it or the pickups run out, they enqueue a wake where there is a queue and throw `LeaseLostError`.
+
+- **With no queue and no recovery,** a run whose lease cannot be taken again stays `running`. `cancelRun` stops it, subject to the last point here.
+- An inline child left this way leaves its parent `running` too.
+- A run cancelled, or unwinding for another failure, while the pass of a `running` step with a `compensate` loses the lease stays `compensating`.
+
 ## Restarts
 
 A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at startup and every 30s: a sleep keeps its deadline, and a step caught in flight runs again as a new attempt. A settled step never reruns. So a step can run more than once: make its side effects idempotent on `workflowStep.invocationId`, which stays the same across attempts within one run. Separate runs for the same operation (duplicate deliveries that each start a run) get different ids, so an effect that must be unique across runs, such as a charge, takes a stable key for the business operation (`order-${orderId}-charge`) instead. A step with `retries: 0` caught in flight fails instead, and so does a lost step of a run that is `cancelled` or unwinding: it is not run again. Compensations are, however the run stands. On the Kysely and in-memory stores, recovery also finishes a parent whose child settled without telling it and resumes an approval that was decided but never resumed. It sends a `compensating` run only its compensation jobs again, so one waiting on a lost forward job stays waiting. Any other host calls `workflowService.startRecovery()` once the queue is consuming. Set `workflow.recovery: false` to turn it off.

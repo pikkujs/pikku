@@ -54,7 +54,8 @@ stays `suspended` until the pass the sweep queues moves it on.
 ## In-flight steps run at least once more
 
 A pass that meets its own step already `running` knows the pass before it died
-there, because the lease excludes any other. It retries the step as a counted
+there or [lost the lease](a-pass-that-lost-its-lease-writes-nothing.md),
+because the lease excludes any other. It retries the step as a counted
 attempt with the same `invocationId`, so a function can dedupe on it, and a step
 that kills its process every time runs out of attempts rather than crash-looping.
 The alternative, failing the step, turns every deploy into failed runs.
