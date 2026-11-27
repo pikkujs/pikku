@@ -90,6 +90,7 @@ import {
   scratchServerUrl,
   withScratchServerDatabase,
 } from './postgres/scratch-server.js'
+import { openPristineDatabase } from './postgres/pristine-snapshot.js'
 import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
 import {
   checkChangeStatements,
@@ -578,7 +579,8 @@ export async function loadPGliteExtensions(
 
 async function createEmbeddedPostgres(
   context: PGliteExtensionContext,
-  dataDir?: string
+  dataDir?: string,
+  loadDataDir?: Blob
 ): Promise<PGlite> {
   embeddedPostgresWasm ??= loadEmbeddedPostgresWasm()
 
@@ -605,6 +607,7 @@ async function createEmbeddedPostgres(
   const exitCodeBeforeBoot = process.exitCode
   const db = new PGlite({
     ...(dataDir ? { dataDir } : {}),
+    ...(loadDataDir ? { loadDataDir } : {}),
     ...wasm,
     extensions: {
       pgcrypto,
@@ -1258,7 +1261,9 @@ async function withScratchPostgresDatabase<T>(
     )
   }
 
-  const scratchDb = await createEmbeddedPostgres(context)
+  const scratchDb = await openPristineDatabase((loadDataDir) =>
+    createEmbeddedPostgres(context, undefined, loadDataDir)
+  )
   try {
     return await run(pgliteAsClient(scratchDb))
   } catch (error) {
@@ -1734,14 +1739,53 @@ async function coveredSchema(
   }
 }
 
+/**
+ * The last replay in this process. One command asks for the covered schema
+ * several times, and the answer only changes when the migrations do.
+ */
+let lastPostgresReplay: { key: string; schema: SchemaMap } | undefined
+
+/** Everything a replay depends on, the migrations by content. */
+function replayKey(
+  migrationsDir: string,
+  context: PGliteExtensionContext
+): string {
+  const files = existsSync(migrationsDir)
+    ? readdirSync(migrationsDir)
+        .filter((name) => name.endsWith('.sql'))
+        .sort()
+        .map((name) => [name, readFileSync(join(migrationsDir, name), 'utf8')])
+    : []
+  return JSON.stringify([
+    migrationsDir,
+    context.rootDir,
+    context.pgliteExtensions,
+    scratchServerUrl(),
+    files,
+  ])
+}
+
 async function coveredPostgresSchema(
   migrationsDir: string,
   context: PGliteExtensionContext
 ): Promise<SchemaMap> {
-  return withScratchPostgresDatabase(context, async (client) => {
-    await migrate(new PostgresMigrationExecutor(client), migrationsDir, REPLAY)
-    return postgresDatabaseToMap(client)
-  })
+  const key = replayKey(migrationsDir, context)
+  if (lastPostgresReplay?.key !== key) {
+    const schema = await withScratchPostgresDatabase(
+      context,
+      async (client) => {
+        await migrate(
+          new PostgresMigrationExecutor(client),
+          migrationsDir,
+          REPLAY
+        )
+        return postgresDatabaseToMap(client)
+      }
+    )
+    lastPostgresReplay = { key, schema }
+  }
+  // A copy, so a caller that edits what it is handed cannot change the next one's.
+  return structuredClone(lastPostgresReplay.schema)
 }
 
 export interface SchemaDriftResult {
