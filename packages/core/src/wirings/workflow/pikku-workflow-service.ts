@@ -121,7 +121,11 @@ import {
   trackStepCancel,
   type StepAttempt,
 } from './workflow-step-signal.js'
-import { runQueuedStep, type QueuedStepHost } from './workflow-queued-step.js'
+import {
+  runQueuedStep,
+  type QueuedStepHost,
+  wakeWhileStepLeased,
+} from './workflow-queued-step.js'
 import {
   announceCreatedRun,
   handBackSettledChildren,
@@ -152,6 +156,7 @@ import {
   runClosureStep,
   type ClosureStepHost,
 } from './workflow-closure-step.js'
+import type { WorkflowAwaitedStep } from './workflow-queue-workers.js'
 import { OpenSteps } from './workflow-open-steps.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
@@ -609,25 +614,32 @@ export abstract class PikkuWorkflowService
   private async enqueueOrchestration(
     runId: string,
     workflowName?: string,
-    delay?: number
+    delay?: number,
+    awaitedStep?: WorkflowAwaitedStep
   ): Promise<void> {
-    await this.addOrchestratorJob(runId, workflowName, {
-      ...this.resolveStepJobOptions(),
-      ...(delay !== undefined ? { delay } : {}),
-    })
+    await this.addOrchestratorJob(
+      runId,
+      workflowName,
+      {
+        ...this.resolveStepJobOptions(),
+        ...(delay !== undefined ? { delay } : {}),
+      },
+      awaitedStep
+    )
   }
 
   private async addOrchestratorJob(
     runId: string,
     workflowName: string | undefined,
-    options: JobOptions
+    options: JobOptions,
+    awaitedStep?: WorkflowAwaitedStep
   ): Promise<void> {
     const queueService = requireQueueService()
     const run = await this.getRunIdentity(runId)
     workflowName ??= run?.workflow
     await queueService.add(
       this.getOrchestratorQueueName(workflowName),
-      { runId },
+      awaitedStep ? { runId, awaitedStep } : { runId },
       {
         ...options,
         group: this.getJobGroup(workflowName),
@@ -636,10 +648,14 @@ export abstract class PikkuWorkflowService
     )
   }
 
-  /** Ask for the run to be looked at again shortly, where there is a queue. */
-  private async wakeLater(runId: string): Promise<void> {
+  /** Ask for the run to be looked at again after a wait, where there is a queue. */
+  private async wakeLater(
+    runId: string,
+    delay = RUN_LEASE_RETRY_MS,
+    awaitedStep?: WorkflowAwaitedStep
+  ): Promise<void> {
     if (!getSingletonServices()?.queueService) return
-    await this.enqueueOrchestration(runId, undefined, RUN_LEASE_RETRY_MS)
+    await this.enqueueOrchestration(runId, undefined, delay, awaitedStep)
   }
 
   /**
@@ -1435,7 +1451,8 @@ export abstract class PikkuWorkflowService
           Math.min(this.cancelCheckIntervalMs, leaseRenewalIntervalMs(leaseMs))
         ),
       invoke: (...args) => this.invokeStepRpc(...args),
-      wake: (runId) => this.wakeLater(runId),
+      wake: (runId, awaitedStep, delayMs) =>
+        this.wakeLater(runId, delayMs, awaitedStep),
     }
   }
 
@@ -1477,9 +1494,11 @@ export abstract class PikkuWorkflowService
     )
   }
 
+  /** `awaitedStep` is set on the wake sent for a step whose worker lost it. */
   public async orchestrateWorkflow(
     runId: string,
-    rpcService: PikkuRPC
+    rpcService: PikkuRPC,
+    awaitedStep?: WorkflowAwaitedStep
   ): Promise<void> {
     try {
       await this.runWorkflowJob(runId, rpcService)
@@ -1489,6 +1508,9 @@ export abstract class PikkuWorkflowService
         error.name === 'WorkflowCancelledException' ||
         error.name === 'WorkflowSuspendedException'
       ) {
+        if (awaitedStep) {
+          await wakeWhileStepLeased(this.queuedStepHost, runId, awaitedStep)
+        }
         return
       }
 
@@ -1501,7 +1523,12 @@ export abstract class PikkuWorkflowService
         getSingletonServices()!.logger.info(
           `Workflow run ${runId} is being orchestrated elsewhere; waking it again in ${RUN_LEASE_RETRY_MS}ms`
         )
-        await this.enqueueOrchestration(runId, undefined, RUN_LEASE_RETRY_MS)
+        await this.enqueueOrchestration(
+          runId,
+          undefined,
+          RUN_LEASE_RETRY_MS,
+          awaitedStep
+        )
         return
       }
 
@@ -1520,6 +1547,9 @@ export abstract class PikkuWorkflowService
       })
 
       throw error
+    }
+    if (awaitedStep) {
+      await wakeWhileStepLeased(this.queuedStepHost, runId, awaitedStep)
     }
   }
 

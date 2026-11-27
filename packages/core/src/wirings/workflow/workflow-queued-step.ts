@@ -11,6 +11,8 @@ import {
   isCompensationStepName,
   isRunCancelled,
   isRunClosedToSteps,
+  RUN_LEASE_RETRY_MS,
+  WORKFLOW_END_STATES,
 } from './workflow-constants.js'
 import {
   ChildWorkflowStartedException,
@@ -18,7 +20,11 @@ import {
   WorkflowStepTimeoutError,
 } from './workflow-errors.js'
 import { resolveWorkflowMeta } from './workflow-meta-resolver.js'
-import { startStepLeaseRefresh } from './workflow-step-lease.js'
+import {
+  runningStepLease,
+  startStepLeaseRefresh,
+} from './workflow-step-lease.js'
+import type { WorkflowAwaitedStep } from './workflow-queue-workers.js'
 import { unlessSuperseded } from './workflow-step-retry.js'
 import { refuseStep } from './workflow-step-refusal.js'
 import {
@@ -45,8 +51,12 @@ export type QueuedStepHost = {
     leaseMs: number
   ): StepAttempt | undefined
   invoke(...args: StepRpcArgs): Promise<any>
-  /** Ask for the run to be looked at again after a wait, where there is a queue. */
-  wake(runId: string): Promise<void>
+  /** Ask for the run to be looked at again after `delayMs`, where there is a queue. */
+  wake(
+    runId: string,
+    awaitedStep: WorkflowAwaitedStep,
+    delayMs: number
+  ): Promise<void>
 }
 
 const graphNodeIdFor = (
@@ -57,6 +67,36 @@ const graphNodeIdFor = (
   if (stepName in nodes) return stepName
   const base = stripInstanceOrdinal(stepName)
   return base !== stepName && base in nodes ? base : undefined
+}
+
+/**
+ * Send the wake for a lost step again while its lease still reads as live. A
+ * run that found it so did nothing about the step, and nothing else will.
+ */
+export const wakeWhileStepLeased = async (
+  {
+    service,
+    wake,
+  }: Pick<QueuedStepHost, 'wake'> & {
+    service: Pick<PikkuWorkflowService, 'getRun' | 'getStepState'>
+  },
+  runId: string,
+  awaitedStep: WorkflowAwaitedStep
+): Promise<void> => {
+  const run = await service.getRun(runId)
+  if (!run || WORKFLOW_END_STATES.has(run.status)) return
+  const step = await service.getStepState(runId, awaitedStep.stepName)
+  if (
+    step.attemptCount !== awaitedStep.attempt ||
+    runningStepLease(step) !== 'held'
+  ) {
+    return
+  }
+  await wake(
+    runId,
+    awaitedStep,
+    step.leaseExpiresAt!.getTime() - Date.now() + RUN_LEASE_RETRY_MS
+  )
 }
 
 /** One delivery of a queued step: claim it, run it and record how it went. */
@@ -217,9 +257,14 @@ export const runQueuedStep = async (
 
     // Nothing is recorded about a step that is no longer this worker's. It
     // stays `running`, and the woken run dispatches it again once its lease
-    // lapses. A wake that cannot be sent leaves the job to the queue.
+    // lapses, which is at most a lease after the last renewal. A wake that
+    // cannot be sent leaves the job to the queue.
     if (leaseLost) {
-      await host.wake(runId)
+      await host.wake(
+        runId,
+        { stepName, attempt },
+        leaseMs + RUN_LEASE_RETRY_MS
+      )
       return
     }
 

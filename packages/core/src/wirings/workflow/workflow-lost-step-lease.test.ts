@@ -3,7 +3,13 @@ import assert from 'node:assert/strict'
 
 import { QueuedWorkflowHarness } from '../../testing/service-tests/queued-workflow-harness.js'
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
-import { leaseRenewalIntervalMs } from '../../services/lease-service.js'
+import { getSingletonServices } from '../../pikku-state.js'
+import { pikkuWorkflowOrchestratorFunc } from './workflow-queue-workers.js'
+import { runLeaseKey } from './workflow-lease-helpers.test.js'
+import {
+  leaseRenewalIntervalMs,
+  LeaseTakenError,
+} from '../../services/lease-service.js'
 import { RPCNotFoundError } from '../rpc/rpc-runner.js'
 import { DEFAULT_STEP_LEASE_MS } from './workflow-constants.js'
 import {
@@ -57,6 +63,30 @@ beforeEach(() => {
   h = new QueuedWorkflowHarness(ws)
 })
 
+/** Run the job next in line as an orchestrator would, and return it. */
+const wake = async () => {
+  const { data } = h.queue.shift()!
+  await pikkuWorkflowOrchestratorFunc({}, data, { rpc: h.rpc as never })
+  return data
+}
+
+/** The delay of every job added from now on. */
+const recordDelays = () => {
+  const queue = getSingletonServices()!.queueService!
+  const add = queue.add.bind(queue)
+  const delays: number[] = []
+  queue.add = (name, data, options) => {
+    delays.push(Number(options?.delay ?? 0))
+    return add(name, data, options)
+  }
+  return delays
+}
+
+const wakeFor = (stepName: string) => ({
+  runId,
+  awaitedStep: { stepName, attempt: 1 },
+})
+
 const rows = async () =>
   (await ws.getRunSteps(runId)).map(
     (step) => `${step.stepName}:${step.attemptCount}:${step.status}`
@@ -70,7 +100,11 @@ const jobFor = async (stepName: string) => {
     const job = h.queue.shift()!
     if (job.data.stepName === stepName) return job.data
     if (job.data.stepName === undefined) {
-      await ws.orchestrateWorkflow(job.data.runId, h.rpc as never)
+      await ws.orchestrateWorkflow(
+        job.data.runId,
+        h.rpc as never,
+        job.data.awaitedStep
+      )
     } else {
       // A queue keeps a worker's failure to itself.
       await deliver(job.data).catch(() => {})
@@ -131,7 +165,7 @@ describe('a queued step worker that lost its step lease', () => {
         assert.equal(await status(), 'running')
         assert.deepEqual(
           h.queue.map((queued) => queued.data),
-          [{ runId }]
+          [wakeFor('First')]
         )
         assert.deepEqual(h.undone, [])
       }
@@ -182,6 +216,92 @@ describe('a queued step worker that lost its step lease', () => {
       )
     }
   )
+
+  const lostFirst = async () => {
+    h.register('zero', h.ok())
+    h.register('first', { forward: failsHavingLost('First') })
+    oneStep(1)
+    await start()
+    const job = await jobFor('First')
+    const delays = recordDelays()
+    await deliver(job)
+    return delays
+  }
+
+  test('the wake waits until the lease can have lapsed', LIMIT, async () => {
+    const delays = await lostFirst()
+
+    assert.equal(delays.length, 1)
+    assert.ok(delays[0]! > DEFAULT_STEP_LEASE_MS, `delay ${delays[0]}`)
+  })
+
+  test(
+    'a wake that finds the lease live schedules another',
+    LIMIT,
+    async () => {
+      const delays = await lostFirst()
+      // A renewal the store took after the worker had given up on it.
+      const step = await ws.getStepState(runId, 'First')
+      step.leaseExpiresAt = new Date(Date.now() + 30_000)
+
+      assert.deepEqual(await wake(), wakeFor('First'))
+      assert.deepEqual(await wake(), wakeFor('First'))
+
+      assert.deepEqual(
+        h.queue.map((queued) => queued.data),
+        [wakeFor('First')]
+      )
+      const [, ...again] = delays
+      assert.equal(again.length, 2)
+      for (const delay of again) {
+        assert.ok(delay > 20_000 && delay <= 31_000, `delay ${delay}`)
+      }
+
+      await ws.lapse(runId, 'First')
+      await h.pump()
+
+      assert.equal(await status(), 'completed')
+      assert.deepEqual(await rows(), [
+        'Zero:1:succeeded',
+        'First:1:running',
+        'First:2:succeeded',
+      ])
+    }
+  )
+
+  test(
+    'a wake that finds the run held elsewhere is sent on as it was',
+    LIMIT,
+    async () => {
+      await lostFirst()
+      const held = ws.withRunLease
+      ws.withRunLease = async () => {
+        throw new LeaseTakenError(runLeaseKey(runId))
+      }
+
+      await wake()
+
+      ws.withRunLease = held
+      assert.deepEqual(
+        h.queue.map((queued) => queued.data),
+        [wakeFor('First')]
+      )
+    }
+  )
+
+  test('no further wake follows a step that moved on', LIMIT, async () => {
+    await lostFirst()
+    const step = await ws.getStepState(runId, 'First')
+    await ws.createRetryAttempt(step.stepId, 'running', 1)
+    await ws.refreshStepLease(
+      (await ws.getStepState(runId, 'First')).stepId,
+      30_000
+    )
+
+    await wake()
+
+    assert.deepEqual(h.queue, [])
+  })
 
   test('a success the step fence accepts is recorded', LIMIT, async () => {
     h.register('zero', h.ok())
@@ -256,7 +376,7 @@ describe('a queued step worker that lost its step lease', () => {
     assert.equal(await status(), 'running')
     assert.deepEqual(
       h.queue.map((queued) => queued.data),
-      [{ runId }]
+      [wakeFor('first')]
     )
   })
 

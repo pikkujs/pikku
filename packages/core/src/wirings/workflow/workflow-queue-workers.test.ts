@@ -81,7 +81,7 @@ describe('workflow-queue-workers', () => {
       { rpc: rpc as never }
     )
 
-    assert.deepEqual(calls, [['run-2', rpc]])
+    assert.deepEqual(calls, [['run-2', rpc, undefined]])
   })
 
   test('orchestrator throws when workflow service is missing', async () => {

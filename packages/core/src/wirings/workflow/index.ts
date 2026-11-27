@@ -61,6 +61,7 @@ export {
 export type {
   WorkflowStepInput as WorkflowStepQueueInput,
   PikkuWorkflowOrchestratorInput,
+  WorkflowAwaitedStep,
   PikkuWorkflowSleeperInput,
 } from './workflow-queue-workers.js'
 

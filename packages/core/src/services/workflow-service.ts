@@ -1,3 +1,4 @@
+import type { WorkflowAwaitedStep } from '../wirings/workflow/workflow-queue-workers.js'
 import type { CoreUserSession } from '../types/core.types.js'
 import type { SerializedError } from '../errors/serialized-error.js'
 import type {
@@ -93,7 +94,11 @@ export interface WorkflowService {
     options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }
   ): Promise<unknown>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
-  orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
+  orchestrateWorkflow(
+    runId: string,
+    rpcService: any,
+    awaitedStep?: WorkflowAwaitedStep
+  ): Promise<void>
   executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>
 
   insertStepState(
