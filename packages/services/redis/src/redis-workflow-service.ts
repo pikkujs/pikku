@@ -1,6 +1,7 @@
 import { RedisWorkflowRunService } from './redis-workflow-run-service.js'
 import type { SerializedError } from '@pikku/core/errors'
 import {
+  DRIVEN_RUN_STATUSES,
   DEFAULT_STEP_LEASE_MS,
   isStepLeaseLive,
   PikkuWorkflowService,
@@ -18,6 +19,7 @@ import type {
 } from '@pikku/core/workflow'
 import { Redis, type RedisOptions } from 'ioredis'
 import { randomUUID } from 'crypto'
+import { drivenRunsKey, findDrivenRunIds } from './redis-driven-runs.js'
 
 /**
  * Writes a step only while it is in a status that may precede the write and,
@@ -137,15 +139,17 @@ return 1
 `
 
 /**
- * Moves a run only while its status is one that may precede the new one.
- * KEYS[1] is the run hash; ARGV is the number of such statuses, the statuses,
- * then field/value pairs to set. Returns 1 when the run moved.
+ * Moves a run only while its status is one that may precede the new one, and
+ * keeps the index of driven runs in step. KEYS are the run hash and that index;
+ * ARGV is the run id, the index score (empty when the new status is not a driven
+ * one), the number of preceding statuses, those statuses, then field/value pairs
+ * to set. Returns 1 when the run moved.
  */
 const CONDITIONAL_RUN_WRITE = `
 local current = redis.call('HGET', KEYS[1], 'status')
-local sources = tonumber(ARGV[1])
+local sources = tonumber(ARGV[3])
 local allowed = false
-for i = 2, sources + 1 do
+for i = 4, sources + 3 do
   if ARGV[i] == current then
     allowed = true
   end
@@ -153,8 +157,13 @@ end
 if not allowed then
   return 0
 end
-for i = sources + 2, #ARGV, 2 do
+for i = sources + 4, #ARGV, 2 do
   redis.call('HSET', KEYS[1], ARGV[i], ARGV[i + 1])
+end
+if ARGV[2] == '' then
+  redis.call('ZREM', KEYS[2], ARGV[1])
+else
+  redis.call('ZADD', KEYS[2], ARGV[2], ARGV[1])
 end
 return 1
 `
@@ -456,13 +465,24 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
     const moved = await this.redis.eval(
       CONDITIONAL_RUN_WRITE,
-      1,
+      2,
       key,
+      drivenRunsKey(this.keyPrefix),
+      id,
+      DRIVEN_RUN_STATUSES.includes(status) ? now.toString() : '',
       from.length.toString(),
       ...from,
       ...Object.entries(fields).flat()
     )
     return Number(moved) === 1
+  }
+
+  protected override findRunsAwaitingDriver(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<string[]> {
+    return findDrivenRunIds(this.redis, this.keyPrefix, before, limit, offset)
   }
 
   protected async insertStepStateImpl(

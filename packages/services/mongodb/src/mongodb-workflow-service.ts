@@ -3,6 +3,7 @@ import {
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
   STEP_SOURCES,
+  DRIVEN_RUN_STATUSES,
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
@@ -134,6 +135,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
 
     await this.runs.createIndex({ workflow: 1 })
     await this.runs.createIndex({ status: 1 })
+    await this.runs.createIndex({ status: 1, updatedAt: 1 })
     await this.runs.createIndex({ createdAt: -1 })
 
     await this.steps.createIndex(
@@ -151,6 +153,26 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     )
 
     this.initialized = true
+  }
+
+  protected override async findRunsAwaitingDriver(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<string[]> {
+    const runs = await this.runs
+      .find(
+        {
+          status: { $in: [...DRIVEN_RUN_STATUSES] },
+          updatedAt: { $lt: before },
+        },
+        { projection: { _id: 1 } }
+      )
+      .sort({ updatedAt: 1, _id: 1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray()
+    return runs.map((run) => String(run._id))
   }
 
   protected async createRunImpl(

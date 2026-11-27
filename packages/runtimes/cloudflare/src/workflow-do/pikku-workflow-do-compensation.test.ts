@@ -63,6 +63,9 @@ defineServiceTests({
       })
       return new QueuedDoService(storage as never, {}, RUN_ID)
     },
-    workflowCompensationQueuedOptions: { childWorkflows: false },
+    workflowCompensationQueuedOptions: {
+      childWorkflows: false,
+      unwindRecovery: false,
+    },
   },
 })

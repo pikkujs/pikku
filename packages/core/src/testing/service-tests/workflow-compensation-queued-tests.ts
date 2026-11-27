@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import type { PikkuWorkflowService } from '../../wirings/workflow/pikku-workflow-service.js'
 import { QueuedWorkflowHarness } from './queued-workflow-harness.js'
+import { defineUnwindRecoveryTests } from './workflow-unwind-recovery-tests.js'
 
 /**
  * Conformance suite for saga compensation and graph `recover` on the queued
@@ -12,6 +13,8 @@ import { QueuedWorkflowHarness } from './queued-workflow-harness.js'
 export interface QueuedCompensationOptions {
   /** False for a runtime where one run owns its storage and cannot start a child run. */
   childWorkflows?: boolean
+  /** False for a store that does not yet let recovery find a waiting unwind. */
+  unwindRecovery?: boolean
 }
 
 export const defineWorkflowCompensationQueuedTests = (
@@ -21,6 +24,10 @@ export const defineWorkflowCompensationQueuedTests = (
 ): void => {
   const childWorkflows = options.childWorkflows !== false
   const setup = async () => new QueuedWorkflowHarness(await create())
+
+  if (options.unwindRecovery !== false) {
+    defineUnwindRecoveryTests(name, setup)
+  }
 
   describe('queued saga compensation — DSL', () => {
     test('a successful run compensates nothing', async () => {

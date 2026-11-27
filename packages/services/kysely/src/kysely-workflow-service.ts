@@ -3,6 +3,7 @@ import {
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
   STEP_SOURCES,
+  DRIVEN_RUN_STATUSES,
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
@@ -943,6 +944,24 @@ export class KyselyWorkflowService extends PikkuWorkflowService {
       runId: row.workflowRunId,
       stepId: row.workflowStepId,
     }))
+  }
+
+  protected override async findRunsAwaitingDriver(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<string[]> {
+    const rows = await this.db
+      .selectFrom('workflowRuns')
+      .select('workflowRunId')
+      .where('status', 'in', DRIVEN_RUN_STATUSES)
+      .where('updatedAt', '<', before)
+      .orderBy('updatedAt', 'asc')
+      .orderBy('workflowRunId', 'asc')
+      .limit(limit)
+      .offset(offset)
+      .execute()
+    return rows.map((row) => row.workflowRunId)
   }
 
   protected async findStalledRunIds(

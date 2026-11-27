@@ -2,6 +2,7 @@ import { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { isExpectedError } from '../../errors/error-handler.js'
 import {
   WORKFLOW_TERMINAL_STATES,
+  DEFAULT_STEP_LEASE_MS,
   isCompensationStepName,
   isStepExecuting,
   isStepLeaseLive,
@@ -390,6 +391,8 @@ export class InMemoryWorkflowService
 
     if (status === 'running') {
       newStep.runningAt = now
+      // Leased in the same write, so it never reads as a step with no worker.
+      newStep.leaseExpiresAt = new Date(now.getTime() + DEFAULT_STEP_LEASE_MS)
     }
 
     const key = `${runId}:${stepName}`

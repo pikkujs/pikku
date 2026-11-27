@@ -10,6 +10,7 @@ const KEY_PREFIX = 'workflows'
 
 let ws: RedisWorkflowService
 let fencingCount = 0
+let queuedCount = 0
 let redis: any
 let leases: InMemoryLeaseService
 
@@ -333,6 +334,12 @@ const withSortedSetReads = (client: any) => {
 defineServiceTests({
   name: 'RedisMock',
   services: {
+    workflowCompensationQueued: async () =>
+      new RedisWorkflowService(withSortedSetReads(new Redis()), {
+        keyPrefix: `queued-${++queuedCount}`,
+        wireQueues: false,
+        leaseService: new InMemoryLeaseService(),
+      }),
     workflowFencing: async () => ({
       service: new RedisWorkflowService(withSortedSetReads(new Redis()), {
         keyPrefix: `fencing-${++fencingCount}`,

@@ -15,9 +15,8 @@
  *    reserves `// Future: timeout`), so the run stays `running` for good. The
  *    inline variant is the same thing one level up: a pass whose `holdLease`
  *    keeps renewing the run lease while a step inside it never settles.
- * 2. A run left `compensating` by a process that died mid-unwind.
- *    `runWorkflowJobInner` knows how to finish an unwind (`driveUnwind`), but
- *    `findStalledRunIds` only selects `running` runs, so no job ever arrives.
+ * 2. A run left `compensating` by a process that died mid-unwind. No job is
+ *    coming for it, so recovery has to drive the unwind itself.
  * 3. A run `suspended` on an approval gate whose decision was recorded but whose
  *    resume never reached the queue. `recordApprovalDecision` writes the
  *    decision, then calls `resumeWorkflow`: two writes to two systems, the
@@ -245,14 +244,11 @@ describe('recovery gap: a run left compensating by a process that died mid-unwin
   test('a run compensating for 2 hours with no unwind in flight is never recovered', async () => {
     const runId = await seedUnwound('compensating')
 
-    const recovered: boolean[] = []
-    for (let i = 0; i < SWEEPS; i++) recovered.push(await sweep(runId))
+    for (let i = 0; i < SWEEPS; i++) await sweep(runId)
 
-    assert.equal((await service.getRun(runId))?.status, 'compensating')
-    assert.ok(
-      recovered.includes(true),
-      `the run has been compensating for 2 hours with nothing in flight and ${SWEEPS} recovery passes never handed it to an orchestrator, which would finish the unwind (runWorkflowJobInner -> driveUnwind); findStalledRunIds selects only 'running' runs`
-    )
+    // Recovery drives the unwind itself; with nothing to undo, the run failed.
+    assert.equal((await service.getRun(runId))?.status, 'failed')
+    assert.deepEqual(orchestrated, [])
   })
 
   test('control: the same quiet run in `running` is resumed', async () => {

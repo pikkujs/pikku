@@ -294,13 +294,11 @@ export const claimStepByReadThenWrite = async (
   ) {
     return null
   }
-  // Created unclaimed and then claimed, so it is never `running` without a
-  // lease, which is what a step an inline pass works looks like.
   let attempt: StepState
   try {
     attempt = await store.createRetryAttempt(
       stepState.stepId,
-      'pending',
+      'running',
       attemptCount
     )
   } catch (error) {
@@ -308,13 +306,7 @@ export const claimStepByReadThenWrite = async (
     if (error instanceof WorkflowStepSupersededError) return null
     throw error
   }
-  if (
-    !(await store.claimStepStatus(attempt, STEP_SOURCES.unclaimed, leaseMs))
-  ) {
-    return null
-  }
-  await store.setStepRunning(attempt.stepId, attempt.attemptCount)
-  attempt = { ...attempt, status: 'running' }
+  await store.refreshStepLease(attempt.stepId, leaseMs)
   // A `failed` step threw, and this is its ordinary retry.
   if (!lost) return attempt
   await store.logStepRerun?.(runId, stepName, attempt.attemptCount)
