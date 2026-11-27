@@ -5,7 +5,11 @@ import { QueuedWorkflowHarness } from '../../testing/service-tests/queued-workfl
 import { InMemoryWorkflowService } from './in-memory-workflow-service.js'
 import { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { InMemoryLeaseService } from '../../services/in-memory-lease-service.js'
-import type { LeaseService } from '../../services/lease-service.js'
+import {
+  LeaseTakenError,
+  type LeaseService,
+} from '../../services/lease-service.js'
+import { RunUnwinds, type RunUnwindHost } from './workflow-unwind-lease.js'
 import type { StepStatus } from './workflow.types.js'
 
 /** In-memory storage behind the run lease a persistent store inherits. */
@@ -199,5 +203,85 @@ describe('an unwind runs only under the run lease', () => {
     assert.deepEqual(h.undone, ['undo:first'])
     assert.equal((await h.run(cancelled!)).status, 'compensated')
     await ws.close()
+  })
+})
+
+describe('a driver that throws while another caller waits on it', () => {
+  type Round = () => Promise<'waiting' | 'finished'>
+
+  const drivenBy = (rounds: Round[]) => {
+    const calls = { unwinds: 0, wakes: 0 }
+    const host: RunUnwindHost = {
+      withRunLease: (_runId, fn) => fn(),
+      getRun: async () => ({ status: 'compensating' }),
+      logger: () => undefined,
+      unwind: () => rounds[calls.unwinds++]!(),
+      wake: async () => {
+        calls.wakes++
+      },
+    }
+    return { host, calls }
+  }
+
+  /** The first round fails only once a second caller has arrived. */
+  const failWithAWaiter = async (next: Round, leaseHeld = false) => {
+    const fail = gate()
+    const { host, calls } = drivenBy([
+      async () => {
+        await fail.opened
+        throw new Error('store unreachable')
+      },
+      next,
+    ])
+    const unwinds = new RunUnwinds()
+    const first = unwinds.drive(host, 'run', leaseHeld)
+    const second = await unwinds.drive(host, 'run', false)
+    fail.open()
+    return { first, second, calls }
+  }
+
+  for (const leaseHeld of [false, true]) {
+    test(`goes round again for it, then throws${leaseHeld ? ' under a held lease' : ''}`, async () => {
+      const { first, second, calls } = await failWithAWaiter(
+        async () => 'finished',
+        leaseHeld
+      )
+
+      await assert.rejects(first, /store unreachable/)
+      assert.equal(second, 'waiting')
+      assert.equal(calls.unwinds, 2)
+    })
+  }
+
+  test('keeps its first error when the next round fails too', async () => {
+    const { first, calls } = await failWithAWaiter(async () => {
+      throw new Error('still unreachable')
+    })
+
+    await assert.rejects(first, /store unreachable/)
+    assert.equal(calls.unwinds, 2)
+  })
+
+  test('still wakes the run when the next round finds the lease taken', async () => {
+    const { first, calls } = await failWithAWaiter(async () => {
+      throw new LeaseTakenError('workflow-run:run')
+    })
+
+    await assert.rejects(first, /store unreachable/)
+    assert.equal(calls.wakes, 1)
+  })
+
+  test('throws at once when nobody waits', async () => {
+    const { host, calls } = drivenBy([
+      async () => {
+        throw new Error('store unreachable')
+      },
+    ])
+
+    await assert.rejects(
+      new RunUnwinds().drive(host, 'run', false),
+      /store unreachable/
+    )
+    assert.equal(calls.unwinds, 1)
   })
 })

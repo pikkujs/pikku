@@ -7,8 +7,8 @@ type UnwindOutcome = 'waiting' | 'finished'
  * One unwind per run in this process, which is all that excludes a second
  * driver on a store whose run lease is a pass-through. A caller that arrives
  * while one is active never waits for it: the active driver goes round again,
- * since what the caller has to report may be newer than what it last read.
- *
+ * since what the caller has to report may be newer than what it last read. It
+ * does so after throwing too, and rethrows its first error once it is done.
  */
 class UnwindExclusion {
   private readonly active = new Map<string, { again: boolean }>()
@@ -26,24 +26,28 @@ class UnwindExclusion {
     const state = { again: false }
     this.active.set(runId, state)
     let refused = false
+    let failure: { error: unknown } | undefined
+    let outcome: UnwindOutcome = 'waiting'
     try {
-      let outcome: UnwindOutcome = 'waiting'
       do {
         state.again = false
         refused = false
         try {
           outcome = await drive()
         } catch (error) {
-          if (!onLeaseTaken || !(error instanceof LeaseTakenError)) throw error
-          refused = true
+          if (onLeaseTaken && error instanceof LeaseTakenError) {
+            refused = true
+          } else {
+            failure ??= { error }
+          }
         }
       } while (state.again && outcome === 'waiting')
-      if (!refused) return outcome
     } finally {
       this.active.delete(runId)
     }
-    await onLeaseTaken!()
-    return 'waiting'
+    if (refused) await onLeaseTaken!()
+    if (failure) throw failure.error
+    return refused ? 'waiting' : outcome
   }
 }
 
