@@ -3,25 +3,24 @@ import type { WireServices } from './types/core.types.js'
 import { BadRequestError } from './errors/errors.js'
 
 /**
- * Calls `stop()` on every wire service that has one, last built first, at the
- * end of a wiring. A failing `stop` is logged and does not stop the others.
+ * Calls `close()` on every wire service that has one, in parallel, at the end of a
+ * wiring. A failing `close` is logged and does not stop the others.
  */
-export const stopWireServices = async (
+export const closeWireServices = async (
   logger: Logger,
   wireServices: WireServices
 ) => {
-  const stopped = new Set<unknown>()
-  const services: ({ stop?: () => unknown } | null | undefined)[] =
-    Object.values(wireServices)
-  for (const service of services.reverse()) {
-    if (!service?.stop || stopped.has(service)) continue
-    stopped.add(service)
-    try {
-      await service.stop()
-    } catch (e: any) {
-      logger.error(e)
-    }
-  }
+  await Promise.all(
+    Object.values(wireServices).map(async (service: any) => {
+      if (service?.close) {
+        try {
+          await service.close()
+        } catch (e: any) {
+          logger.error(e)
+        }
+      }
+    })
+  )
 }
 
 let _uidPrefix: string | undefined

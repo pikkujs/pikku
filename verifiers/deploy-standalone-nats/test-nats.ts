@@ -2,9 +2,9 @@
  * Verifier for the NATS service in a standalone deploy, two stages of one
  * project sharing one broker.
  *
- * Build side: `pikku deploy plan --provider standalone` selects the `nats`
- * service of @pikku/addon-queue-nats (opted in with wireAddon); the same
- * source planned for Cloudflare is refused: the service has no variant for a Worker.
+ * Build side: `pikku deploy plan --provider standalone` bundles an app that
+ * connects NATS in `pikkuServices` and registers its queues in the server
+ * lifecycle's `beforeStart`.
  * Run side: against a real nats-server (2.14+, JetStream) with one stream per
  * stage created up front and one restricted user per stage (broker.ts), two copies of
  * the bundle each get only their own jobs and crons, a restart keeps a stage's
@@ -14,7 +14,7 @@
  * the run-side checks are skipped and the build checks still run.
  */
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, readFileSync, readdirSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { connect, headers } from '@nats-io/transport-node'
 import { jetstream, jetstreamManager } from '@nats-io/jetstream'
@@ -80,9 +80,7 @@ const pikku = (...args: string[]) =>
     timeout: 300_000,
   })
 
-console.log(
-  'Setting up: pikku all + deploy plan (standalone, then cloudflare, which must refuse)...'
-)
+console.log('Setting up: pikku all + deploy plan (standalone)...')
 rmSync(join(HERE, '.deploy'), { recursive: true, force: true })
 rmSync(join(HERE, '.pikku'), { recursive: true, force: true })
 pikku('all')
@@ -94,49 +92,15 @@ pikku(
   '--result-file',
   '.deploy/standalone/plan-result.json'
 )
-let cloudflareRefusal = ''
-try {
-  pikku(
-    'deploy',
-    'plan',
-    '--provider',
-    'cloudflare',
-    '--result-file',
-    '.deploy/cloudflare/plan-result.json'
-  )
-} catch (error) {
-  cloudflareRefusal = String((error as { stderr?: Buffer }).stderr ?? error)
-}
-
-console.log('\nBuild: which target gets the service')
-await check('standalone selects nats and starts it with the server', () => {
-  const generated = readFileSync(
-    join(UNIT_DIR, 'platform-services.gen.ts'),
-    'utf-8'
-  )
-  if (!/import \{ nats as service\d+ \} from ".*queue-nats/.test(generated))
-    throw new Error(`the nats service was not imported:\n${generated}`)
-  if (!generated.includes('registry.add("nats/nats"'))
-    throw new Error(`nats was not registered:\n${generated}`)
-  if (!/serverStartHooks[\s\S]*name: "nats\/nats"/.test(generated))
-    throw new Error('nats does not start with the server')
-})
+console.log('\nBuild: the app creates NATS itself')
 await check(
-  'the same source built for Cloudflare is refused, naming the service, rather than bundling NATS',
+  'the bundle carries NATS and no generated platform services file',
   () => {
-    if (
-      !cloudflareRefusal.includes('nats/nats') ||
-      !cloudflareRefusal.includes('PKU388') ||
-      !cloudflareRefusal.includes('has no variant for the cloudflare deploy')
-    )
-      throw new Error(
-        `the Cloudflare plan did not refuse the nats service:\n${cloudflareRefusal}`
-      )
-    const units = join(HERE, '.deploy', 'cloudflare', 'units')
-    for (const unit of existsSync(units) ? readdirSync(units) : [])
-      for (const built of ['bundle.js', 'platform-services.gen.ts'])
-        if (existsSync(join(units, unit, built)))
-          throw new Error(`${unit} was built although nats was refused`)
+    if (existsSync(join(UNIT_DIR, 'platform-services.gen.ts')))
+      throw new Error('a platform services file was generated')
+    const bundle = readFileSync(join(UNIT_DIR, 'bundle.js'), 'utf-8')
+    if (!bundle.includes('never falls back to the in-memory queue'))
+      throw new Error('the NATS connection code is not in the bundle')
   }
 )
 

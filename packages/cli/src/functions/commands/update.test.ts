@@ -204,7 +204,7 @@ describe('runUpdate', () => {
       dependencies: {
         '@pikku/core': 'workspace:*',
         '@pikku/cli': 'file:../cli',
-        '@pikku/addon-kysely': 'link:../kysely',
+        '@pikku/kysely': 'link:../kysely',
       },
     })
 
@@ -298,7 +298,7 @@ describe('runUpdate', () => {
       overrides: {
         '@pikku/core': '0.12.83',
         '@pikku/inspector': '0.12.50',
-        '@pikku/addon-kysely': { kysely: '^0.29.0' },
+        '@pikku/kysely': { kysely: '^0.29.0' },
         typescript: '^6.0.3',
       },
       resolutions: { '@pikku/cli': '^0.12.100' },
@@ -319,9 +319,7 @@ describe('runUpdate', () => {
       'an override left behind pins the old version over the new range'
     )
     assert.equal(json.overrides['@pikku/inspector'], '0.12.99')
-    assert.deepEqual(json.overrides['@pikku/addon-kysely'], {
-      kysely: '^0.29.0',
-    })
+    assert.deepEqual(json.overrides['@pikku/kysely'], { kysely: '^0.29.0' })
     assert.equal(json.overrides.typescript, '^6.0.3')
     assert.equal(json.resolutions['@pikku/cli'], '^0.12.99')
     assert.equal(result.peers.length, 0)
@@ -402,7 +400,7 @@ describe('runUpdate', () => {
     writeJson(join(root, 'package.json'), {
       name: 'app',
       dependencies: {
-        '@pikku/addon-kysely': '^0.12.1',
+        '@pikku/kysely': '^0.12.1',
         '@pikku/core': '^0.12.40',
       },
     })
@@ -411,7 +409,7 @@ describe('runUpdate', () => {
       ...base,
       rootDir: root,
       fetchPackument: async (name) =>
-        name === '@pikku/addon-kysely'
+        name === '@pikku/kysely'
           ? packument(
               { latest: '0.13.15' },
               { '0.13.15': { peerDependencies: { '@pikku/core': '^0.12.82' } } }

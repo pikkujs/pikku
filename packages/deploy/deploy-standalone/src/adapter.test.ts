@@ -69,6 +69,49 @@ describe('StandaloneProviderAdapter frontend serving', () => {
   })
 })
 
+/** Runs the entry's own address declaration against a given env and config. */
+const listenAddress = (
+  source: string,
+  env: Record<string, string>,
+  config: { hostname?: string }
+): string => {
+  const declaration = source.match(/const hostname = (.+)$/m)
+  assert.ok(declaration, 'the entry declares no listen address')
+  assert.ok(
+    source.indexOf('const config = await') < declaration.index!,
+    'the address is resolved once the config exists'
+  )
+  return new Function('process', 'config', `return ${declaration[1]}`)(
+    { env },
+    config
+  )
+}
+
+describe('StandaloneProviderAdapter listen address', () => {
+  const source = () =>
+    new StandaloneProviderAdapter({}).generateEntrySource(baseContext)
+
+  test('HOST wins over the configured hostname', () => {
+    assert.equal(
+      listenAddress(source(), { HOST: '10.0.0.1' }, { hostname: '127.0.0.1' }),
+      '10.0.0.1'
+    )
+  })
+
+  test('the configured hostname applies when HOST is unset or empty', () => {
+    for (const env of [{}, { HOST: '' }] as Record<string, string>[]) {
+      assert.equal(
+        listenAddress(source(), env, { hostname: '127.0.0.1' }),
+        '127.0.0.1'
+      )
+    }
+  })
+
+  test('every interface is the default when neither names an address', () => {
+    assert.equal(listenAddress(source(), {}, {}), '0.0.0.0')
+  })
+})
+
 describe('StandaloneProviderAdapter port', () => {
   test('a bun entry listens on 3000 when nothing is configured', () => {
     const source = new StandaloneProviderAdapter({}).generateEntrySource(
@@ -245,7 +288,7 @@ describe(`StandaloneProviderAdapter postgres wiring`, () => {
 
     assert.match(
       source,
-      /import \{ PikkuKysely \} from '@pikku\/addon-kysely-postgres'/
+      /import \{ PikkuKysely \} from '@pikku\/kysely-postgres'/
     )
     assert.match(source, /process\.env\.DATABASE_URL/)
   })
@@ -813,24 +856,17 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     )
   })
 
-  test('the telemetry registry is created before the services and wins over what the app returns', () => {
+  test('the runtime registries are created before the services and win over what the app returns', () => {
     const source = generate(baseContext)
     assert.match(source, /otlpSinks: __pikkuTelemetry\.otlpSinks,/)
-    assert.doesNotMatch(source, /createAnalyticsSinks|__pikkuAnalyticsSinks/)
-    assert.match(
-      source,
-      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, \.\.\.eventHubServices \}\)/
+    assert.match(source, /analyticsSinks: __pikkuAnalyticsSinks,/)
+    assert.ok(
+      source.indexOf('createAnalyticsSinks()') <
+        source.indexOf('createSingletonServices(')
     )
-  })
-
-  test('the sinks the providers built win over what the app returns', () => {
-    const source = generate({
-      ...baseContext,
-      platformServices: { importPath: './platform-services.gen.js' },
-    })
     assert.match(
       source,
-      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: singletonServices\.analyticsSinks \?\? platformServices\.analyticsSinks, \.\.\.eventHubServices \}\)/
+      /Object\.assign\(singletonServices, \{ otlpSinks: __pikkuTelemetry\.otlpSinks, analyticsSinks: __pikkuAnalyticsSinks, \.\.\.eventHubServices \}\)/
     )
   })
 
@@ -838,10 +874,10 @@ describe('StandaloneProviderAdapter runtime telemetry', () => {
     const source = generate(baseContext)
     assert.match(
       source,
-      /import \{ assertAnalyticsSinksDeclared \} from '@pikku\/core\/analytics'/
+      /import \{ assertAnalyticsSinksDeclared, createAnalyticsSinks \} from '@pikku\/core\/analytics'/
     )
     const check = source.indexOf(
-      'assertAnalyticsSinksDeclared(singletonServices.analyticsSinks)'
+      'assertAnalyticsSinksDeclared(__pikkuAnalyticsSinks)'
     )
     assert.ok(check > source.indexOf('Object.assign(singletonServices'))
     assert.ok(check < source.indexOf('new PikkuBunServer('))
@@ -896,7 +932,7 @@ describe(`StandaloneProviderAdapter workflow service`, () => {
 
     assert.match(
       source,
-      /import \{ PgKyselyWorkflowService, PgKyselyWorkflowRunService, PgKyselyLeaseService \} from '@pikku\/addon-kysely-postgres'/
+      /import \{ PgKyselyWorkflowService, PgKyselyWorkflowRunService, PgKyselyLeaseService \} from '@pikku\/kysely-postgres'/
     )
     assert.match(source, /= new PgKyselyLeaseService\(kysely\)/)
     assert.match(

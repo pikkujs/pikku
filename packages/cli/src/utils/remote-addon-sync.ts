@@ -292,11 +292,8 @@ export const syncRemoteAddonSdks = async ({
   download,
   logger,
   coreVersion = installedCoreVersion(rootDir),
-  frozen = false,
 }: {
   rootDir: string
-  /** Refuse to write the lock: a change to it is an error (`--frozen`). */
-  frozen?: boolean
   specs: RemoteAddonSdkSpec[]
   resolveSdk: ResolveSdk
   download: DownloadSdk
@@ -312,10 +309,7 @@ export const syncRemoteAddonSdks = async ({
       `${e?.message ?? e}. Delete it and run 'pikku all' to write a fresh one.`
     )
   }
-  const lock: AddonsLock = {
-    ...emptyAddonsLock(),
-    providers: previous.providers,
-  }
+  const lock = emptyAddonsLock()
   const sdks: SyncedSdk[] = []
 
   for (const spec of specs) {
@@ -415,39 +409,16 @@ export const syncRemoteAddonSdks = async ({
   const lockPath = join(rootDir, ADDONS_LOCK_FILE)
   const current = existsSync(lockPath) ? readFileSync(lockPath, 'utf-8') : null
   // No versioned addons and no lock: write nothing, not an empty lock.
-  // A version 1 lock has no `providers`, which reads as an empty section: it
-  // is the same lock until a pin changes.
-  const sameAsVersion1 =
-    current !== null &&
-    isVersion1Lock(current) &&
-    serializeAddonsLock(readAddonsLock(rootDir)) === next
   const lockChanged =
-    current !== next &&
-    !sameAsVersion1 &&
-    !(current === null && specs.length === 0)
-  if (lockChanged && frozen) {
-    throw new RemoteAddonSyncError(
-      ErrorCode.PROVIDER_LOCK_FROZEN,
-      `${ADDONS_LOCK_FILE} is frozen (--frozen) but the remote addon SDKs it pins would change. Run pikku all without --frozen locally and commit the lock.`
-    )
-  }
+    current !== next && !(current === null && specs.length === 0)
   if (lockChanged) {
     await writeFile(lockPath, next)
   }
   return { sdks, lock, lockChanged }
 }
 
-const isVersion1Lock = (text: string): boolean => {
-  try {
-    return JSON.parse(text)?.lockfileVersion === 1
-  } catch {
-    return false
-  }
-}
-
 export type AddonSyncConfig = {
   rootDir: string
-  frozen?: boolean
   sourceDirs: string[]
   ignoreFiles?: string[]
   /** Set when the project is an addon: its `pikku.uses` dependencies are synced too. */
@@ -519,6 +490,5 @@ export const runAddonSync = async ({
     resolveSdk,
     download,
     logger,
-    frozen: config.frozen,
   })
 }

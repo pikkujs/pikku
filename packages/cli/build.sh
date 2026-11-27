@@ -36,7 +36,9 @@ node scripts/embed-examples.mjs
 # when the install did not produce a CLI that loads.
 echo "Bootstrapping with published @pikku/cli..."
 : "${PIKKU_CLI_VERSION:=latest}"
-_bootstrap_dir=$(mktemp -d)
+_bootstrap_dir="$PWD/.tmp/build/bootstrap"
+rm -rf -- "$_bootstrap_dir"
+mkdir -p "$_bootstrap_dir"
 trap 'rm -rf "$_bootstrap_dir"' EXIT
 cat > "$_bootstrap_dir/package.json" <<JSON
 {
@@ -76,7 +78,8 @@ fi
 # the registry at runtime, through the wiring imported by hand.
 # knowledge: the-cli-syncs-its-registry-sdk-like-any-consumer
 _registry_wirings="registry cloud-api"
-_registry_hidden_dir=$(mktemp -d)
+_registry_hidden_dir="$PWD/.tmp/build/registry-hidden"
+mkdir -p "$_registry_hidden_dir"
 _hide_registry_wiring() {
   for w in $_registry_wirings; do
     mv "src/$w.wiring.ts" "$_registry_hidden_dir/$w.wiring.ts"
@@ -123,23 +126,10 @@ done
 "$_bootstrap_dir/node_modules/.bin/pikku" all --outDir .pikku
 rm -rf "$_bootstrap_dir"
 
-# The bootstrap CLI's generated files may name exports @pikku/core does not have.
-# Each rewrite runs only on a file that exists, so a bootstrap CLI that does not
-# generate one is not an error.
+# The published CLI still generates the contributor leaves, which import a module
+# @pikku/core no longer has; the local CLI never writes them, so tsc must not see them.
 test -f package.json || { echo "Refusing to run outside package root"; exit 1; }
 rm -rf -- .pikku/contributor .pikku/backends/cli/contributor
-
-_edit_if_present() { # file, sed args...
-  _file=$1
-  shift
-  if [ -f "$_file" ]; then sed -i "$@" "$_file"; fi
-}
-for _stale in .pikku .pikku/backends/cli; do
-  _edit_if_present "$_stale/analytics/pikku-analytics-types.gen.ts" -e '/^  createAnalyticsSinks,$/d' -e '/^  AnalyticsSinkRegistry,$/d'
-  _edit_if_present "$_stale/pikku-local-services.gen.ts" -e "/^import { createAnalyticsSinks } from '@pikku\/core\/analytics'$/d" -e 's/ ?? createAnalyticsSinks()//'
-done
-
-find .pikku -path .pikku/remote -prune -o -name '*.ts' -print0 | xargs -0 -r sed -i -E "s#'@pikku/kysely(-[a-z-]+)?'#'@pikku/addon-kysely\1'#g"
 
 # Build TypeScript (may fail if published CLI generates stale types)
 echo "Building TypeScript to dist..."
@@ -155,7 +145,8 @@ npx tsc -b || true
 # below, which read the addons' contract metadata. On a clean checkout an addon
 # has no dist yet, so a placeholder bootstrap lets the CLI start long enough to
 # build it.
-_shim_dir=$(mktemp -d)
+_shim_dir="$PWD/.tmp/build/shim"
+mkdir -p "$_shim_dir"
 printf '#!/bin/sh\nexec node "%s" "$@"\n' "$PWD/dist/bin/pikku.js" > "$_shim_dir/pikku"
 chmod +x "$_shim_dir/pikku"
 for _addon in ../addon/pikku-changes-cli ../addon/pikku-cloud-cli; do

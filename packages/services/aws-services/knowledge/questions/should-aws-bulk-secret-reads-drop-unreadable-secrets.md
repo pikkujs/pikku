@@ -17,7 +17,7 @@ Elsewhere in the same file, `getSecret` rewraps every error as `FATAL: Error fin
 
 The Kysely secret store does the opposite for bulk reads. It throws when a stored secret
 fails to decrypt, and its comment says swallowing that "produces an undefined secret and an
-opaque downstream failure" (`packages/addon/kysely/src/kysely-secret-service.ts:194-205`).
+opaque downstream failure" (`packages/services/kysely/src/kysely-secret-service.ts:194-205`).
 The core decision `packages/core/knowledge/decisions/internals/a-secret-that-fails-to-decrypt-fails-the-whole-read.md`
 names the Kysely, MongoDB and Redis stores as applying that rule to bulk reads (line 10).
 

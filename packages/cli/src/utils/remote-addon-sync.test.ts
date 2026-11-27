@@ -208,95 +208,6 @@ describe('readTgz', () => {
 })
 
 describe('remote addon SDK sync', () => {
-  test('the providers section of the lock survives a sync', async () => {
-    const project = makeProject('^1.4.0')
-    try {
-      const providers = {
-        'nats/nats': {
-          package: '@pikku/addon-queue-nats',
-          version: '0.12.7',
-          metaHash: 'sha256-abc',
-          kind: 'singleton',
-          provides: ['queueService'],
-          optionalProvides: [],
-          imports: ['logger'],
-          optionalImports: [],
-          addsTo: null,
-          replaces: [],
-        },
-      }
-      writeFileSync(
-        join(project.rootDir, 'pikku-addons.lock'),
-        JSON.stringify({ lockfileVersion: 2, sdks: {}, providers })
-      )
-      await sync(project, fakeRegistry(PUBLISHED))
-      assert.deepEqual(readLock(project.rootDir).providers, providers)
-    } finally {
-      rmSync(project.rootDir, { recursive: true, force: true })
-    }
-  })
-
-  test('frozen refuses a sync that would change the lock', async () => {
-    const project = makeProject('^1.4.0')
-    try {
-      const registry = fakeRegistry(PUBLISHED)
-      const specs = await collectRemoteAddonSdkSpecs({
-        ...project.config,
-        ignoreFiles: [],
-      })
-      await assert.rejects(
-        syncRemoteAddonSdks({
-          rootDir: project.rootDir,
-          specs,
-          resolveSdk: registry.resolveSdk,
-          download: registry.download,
-          logger: silentLogger().logger,
-          coreVersion: '0.12.5',
-          frozen: true,
-        }),
-        (e: RemoteAddonSyncError) =>
-          e.code === ErrorCode.PROVIDER_LOCK_FROZEN && /frozen/.test(e.message)
-      )
-      assert.equal(
-        existsSync(join(project.rootDir, 'pikku-addons.lock')),
-        false
-      )
-    } finally {
-      rmSync(project.rootDir, { recursive: true, force: true })
-    }
-  })
-
-  test('frozen accepts a version 1 lock that pins what the project asks for, and leaves it as it is', async () => {
-    const project = makeProject('^1.4.0')
-    try {
-      const registry = fakeRegistry(PUBLISHED)
-      await sync(project, registry)
-      const { sdks } = readLock(project.rootDir)
-      const v1 = JSON.stringify({ lockfileVersion: 1, sdks }, null, 2) + '\n'
-      writeFileSync(join(project.rootDir, 'pikku-addons.lock'), v1)
-      const specs = await collectRemoteAddonSdkSpecs({
-        ...project.config,
-        ignoreFiles: [],
-      })
-      const { lockChanged } = await syncRemoteAddonSdks({
-        rootDir: project.rootDir,
-        specs,
-        resolveSdk: registry.resolveSdk,
-        download: registry.download,
-        logger: silentLogger().logger,
-        coreVersion: '0.12.5',
-        frozen: true,
-      })
-      assert.equal(lockChanged, false)
-      assert.equal(
-        readFileSync(join(project.rootDir, 'pikku-addons.lock'), 'utf8'),
-        v1
-      )
-    } finally {
-      rmSync(project.rootDir, { recursive: true, force: true })
-    }
-  })
-
   test('a lock miss resolves the range, extracts the SDK and writes the lock', async () => {
     const project = makeProject('^1.4.0')
     try {
@@ -309,7 +220,7 @@ describe('remote addon SDK sync', () => {
       assert.equal(result.sdks[0]!.source, 'downloaded')
       assert.equal(result.lockChanged, true)
       assert.deepEqual(readLock(project.rootDir), {
-        lockfileVersion: 2,
+        lockfileVersion: 1,
         sdks: {
           [NAME]: {
             range: '^1.4.0',
@@ -317,7 +228,6 @@ describe('remote addon SDK sync', () => {
             integrity: sha512Integrity(PUBLISHED['1.4.2']),
           },
         },
-        providers: {},
       })
       const dir = join(project.rootDir, '.pikku', 'remote', `${NAME}@1.4.2`)
       // npm pack's package/ prefix is stripped.

@@ -3,9 +3,11 @@ import { beforeEach, before, describe, test } from 'node:test'
 
 import '../.pikku/pikku-bootstrap.gen.js'
 import { fetch } from '@pikku/core/http'
-import { createPlatformServices } from '../.pikku/providers/pikku-dev-providers.gen.js'
-import { collectedAnalytics } from './providers.js'
-import { createConfig, createSingletonServices } from './services.js'
+import {
+  collectedAnalytics,
+  createConfig,
+  createSingletonServices,
+} from './services.js'
 
 /**
  * `scaffold.pikkuDir` is load-bearing: it puts the generated wire where the
@@ -26,7 +28,7 @@ const recorded = () => collectedAnalytics.flat()
 
 before(async () => {
   const config = await createConfig()
-  await createSingletonServices(config, await createPlatformServices({}))
+  await createSingletonServices(config)
 })
 
 beforeEach(() => {

@@ -1,8 +1,7 @@
 import { test, describe, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { getInitialInspectorState } from '@pikku/inspector'
 import { generateBackendCodegen } from './per-unit-codegen.js'
@@ -10,6 +9,15 @@ import { selectBackends } from '../../utils/select-backends.js'
 import { parseCLIFilters } from '../../utils/parse-cli-filters.js'
 
 const dirs: string[] = []
+
+const scratch = join(import.meta.dirname, '..', '..', '..', '.tmp')
+
+const makeRoot = async () => {
+  await mkdir(scratch, { recursive: true })
+  const root = await mkdtemp(join(scratch, 'pikku-backends-'))
+  dirs.push(root)
+  return root
+}
 
 // file-import-path.windows.test.ts swaps node:path for its win32 flavour for the
 // rest of a full `bun test` process, and every mkdtemp after it gets a
@@ -39,8 +47,7 @@ writeFileSync(join(out, 'args.json'), JSON.stringify({ args, deployCodegen: proc
 describe('generateBackendCodegen', () => {
   test('no backends writes no .pikku/backends tree and runs nothing', async (t) => {
     if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
-    const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)
-    dirs.push(root)
+    const root = await makeRoot()
     assert.deepEqual(selectBackends(undefined), [])
     const { backendDirs, errors } = await generateBackendCodegen({
       projectDir: root,
@@ -63,8 +70,7 @@ describe('generateBackendCodegen', () => {
 
   test('two backends sharing a function each get their own filtered tree', async (t) => {
     if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
-    const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)
-    dirs.push(root)
+    const root = await makeRoot()
     const config = {
       backends: {
         api: { filter: { tags: ['api', 'shared'] } },
@@ -100,14 +106,18 @@ describe('generateBackendCodegen', () => {
         )
       )
       assert.ok(written.args.includes(`--backend=${name}`))
+      const stateFile = written.args
+        .find((arg: string) => arg.startsWith('--stateInput='))
+        .slice('--stateInput='.length)
+      assert.equal(dirname(stateFile), join(root, '.tmp'))
+      assert.equal(existsSync(stateFile), false)
       assert.equal(written.deployCodegen, '1')
     }
   })
 
   test('--backend narrows the run to the one backend', async (t) => {
     if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
-    const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)
-    dirs.push(root)
+    const root = await makeRoot()
     const declared = { api: {}, jobs: {} }
 
     assert.deepEqual(selectBackends(declared, 'jobs'), ['jobs'])
@@ -124,8 +134,7 @@ describe('generateBackendCodegen', () => {
 
   test('a child that fails is reported against its backend', async (t) => {
     if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
-    const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)
-    dirs.push(root)
+    const root = await makeRoot()
     const bin = join(root, 'bad.mjs')
     await writeFile(bin, 'process.exit(1)\n')
     const { errors } = await generateBackendCodegen({
@@ -141,8 +150,7 @@ describe('generateBackendCodegen', () => {
 describe('content buckets per backend', () => {
   test('two backends with different buckets get different generated types', async (t) => {
     if (pathsAreBroken()) return t.skip('node:path is mocked as win32')
-    const root = await mkdtemp(`${tmpdir()}/pikku-backends-`)
-    dirs.push(root)
+    const root = await makeRoot()
     const { errors } = await generateBackendCodegen({
       projectDir: root,
       backends: ['api', 'jobs', 'bare'],

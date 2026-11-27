@@ -1,7 +1,7 @@
 import { describe, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { sql } from 'kysely'
-import { createCoercionPlugin } from '@pikku/addon-kysely'
+import { createCoercionPlugin } from '@pikku/kysely'
 import type { D1Database } from '@cloudflare/workers-types'
 import { createD1Kysely } from './cloudflare-d1-services.js'
 

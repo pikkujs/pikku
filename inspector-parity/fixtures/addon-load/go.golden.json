@@ -70,50 +70,6 @@
    ]
   }
  },
- "optedInProviders": {
-  "ext": {
-   "packageName": "@acme/addon",
-   "providers": {
-    "c1": {
-     "kind": "singleton",
-     "module": "src/services/c1.ts",
-     "export": "c1",
-     "variants": {
-      "common": {
-       "needs": [],
-       "optional": [],
-       "provides": [
-        "c1"
-       ],
-       "optionalProvides": []
-      }
-     }
-    }
-   },
-   "collections": {}
-  },
-  "rem": {
-   "packageName": "@acme/addon",
-   "providers": {
-    "c1": {
-     "kind": "singleton",
-     "module": "src/services/c1.ts",
-     "export": "c1",
-     "variants": {
-      "common": {
-       "needs": [],
-       "optional": [],
-       "provides": [
-        "c1"
-       ],
-       "optionalProvides": []
-      }
-     }
-    }
-   },
-   "collections": {}
-  }
- },
  "secrets": {
   "definitions": [
    {
@@ -346,10 +302,6 @@
     "contentGrants": {
      "x": "rw"
     },
-    "providers": [
-     "c1",
-     "missing"
-    ],
     "dependencies": [
      {
       "alias": "mail",
@@ -396,41 +348,8 @@
     "authCredentialId": "x",
     "local": {
      "package": "@acme/addon",
-     "ui": true,
-     "providers": [
-      "c1"
-     ]
+     "ui": true
     }
-   }
-  ],
-  [
-   "stale",
-   {
-    "package": "@acme/addon3",
-    "file": "<ROOT>/src/app.ts",
-    "providers": [
-     "old"
-    ]
-   }
-  ],
-  [
-   "nullversion",
-   {
-    "package": "@acme/addon4",
-    "file": "<ROOT>/src/app.ts",
-    "providers": [
-     "old"
-    ]
-   }
-  ],
-  [
-   "objectversion",
-   {
-    "package": "@acme/addon5",
-    "file": "<ROOT>/src/app.ts",
-    "providers": [
-     "old"
-    ]
    }
   ]
  ],
@@ -438,10 +357,7 @@
   "ext",
   "two",
   "three",
-  "rem",
-  "stale",
-  "nullversion",
-  "objectversion"
+  "rem"
  ],
  "rpc.wireAddonFiles": [
   "<ROOT>/src/app.ts"
@@ -480,11 +396,6 @@
   },
   {
    "level": "critical",
-   "code": "PKU374",
-   "message": "wireAddon('ext') opts in to provider 'missing', but @acme/addon declares no such provider. It declares: c1, c2."
-  },
-  {
-   "level": "critical",
    "code": "PKU343",
    "message": "wireAddon('ext') lists 'nope' under expose, but @acme/addon publishes no such function."
   },
@@ -500,33 +411,6 @@
   {
    "level": "warn",
    "message": "wireAddon('three') (declared in src/app.ts) names @acme/missing, which is not installed where it can be resolved \u2014 tried <ROOT>. Add \"@acme/missing\": \"workspace:*\" (or a version) to the dependencies of <ROOT>/package.json and run install."
-  },
-  {
-   "level": "critical",
-   "code": "PKU374",
-   "message": "Addon '@acme/addon3' publishes provider meta version 1; this CLI reads version 2. Run 'pikku all' in the addon with this CLI."
-  },
-  {
-   "level": "warn",
-   "message": "wireAddon('stale') (declared in src/app.ts): @acme/addon3 is installed at <ROOT>/node_modules/@acme/addon3 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon3."
-  },
-  {
-   "level": "critical",
-   "code": "PKU374",
-   "message": "Addon '@acme/addon4' publishes provider meta version null; this CLI reads version 2. Run 'pikku all' in the addon with this CLI."
-  },
-  {
-   "level": "warn",
-   "message": "wireAddon('nullversion') (declared in src/app.ts): @acme/addon4 is installed at <ROOT>/node_modules/@acme/addon4 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon4."
-  },
-  {
-   "level": "critical",
-   "code": "PKU374",
-   "message": "Addon '@acme/addon5' publishes provider meta version [object Object]; this CLI reads version 2. Run 'pikku all' in the addon with this CLI."
-  },
-  {
-   "level": "warn",
-   "message": "wireAddon('objectversion') (declared in src/app.ts): @acme/addon5 is installed at <ROOT>/node_modules/@acme/addon5 but has not been built \u2014 its dist/.pikku/addon/function/pikku-functions-meta.gen.json does not exist. Run the addon's build (pikku all && tsc && pikku dist) in <ROOT>/node_modules/@acme/addon5."
   }
  ]
 }

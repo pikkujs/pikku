@@ -64,6 +64,37 @@ fn template_value() {
 }
 
 #[test]
+fn mark_live_scope_functions() {
+    let mut st = State::new(".");
+    st.scopes.definitions = vec![
+        raw(r#"{"name":"admin","scopes":{"users":{"live":true,"scopes":{"ban":{},"view":{"live":false}}}}}"#),
+        raw(r#"{"name":"root","live":true,"scopes":{"child":{}}}"#),
+        raw(r#"{"name":"plain","scopes":{"read":{}}}"#),
+    ];
+    let cases: [(&str, &[&str], bool); 8] = [
+        ("direct", &["admin:users"], true),
+        ("inherited", &["admin:users:ban"], true),
+        ("wildcard", &["admin:users:*"], true),
+        ("rootLive", &["root:child"], true),
+        ("parent", &["admin"], false),
+        ("optedOut", &["admin:users:view"], false),
+        ("plain", &["plain:read"], false),
+        ("none", &[], false),
+    ];
+    for (id, scopes, _) in cases {
+        let meta = fn_meta(|m| m.scopes = scopes.iter().map(|s| s.to_string()).collect());
+        st.functions.meta.set(id, meta);
+    }
+
+    scopes::mark_live_scope_functions(&mut st);
+
+    for (id, _, want) in cases {
+        let got = st.functions.meta.get(id).unwrap().live_scopes;
+        assert_eq!(got, want.then_some(true), "{id}");
+    }
+}
+
+#[test]
 fn apply_declared_scopes_and_flatten() {
     let mut st = State::new(".");
     st.scopes.definitions = vec![raw(r#"{"name":"orders","scopes":{"read":{}}}"#)];

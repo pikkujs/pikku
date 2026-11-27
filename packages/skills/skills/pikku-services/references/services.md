@@ -4,7 +4,7 @@
 
 - [Before You Start](#before-you-start)
 - [API Reference](#api-reference)
-- [`defineProvider` and the generated `SingletonServices`](#defineprovider-and-the-generated-singletonservices)
+- [Host platform services](#host-platform-services)
 - [Usage Patterns](#usage-patterns)
 - [Complete Example](#complete-example)
 
@@ -110,83 +110,34 @@ export type RequiredSingletonServices = Pick<
   Partial<Omit<SingletonServices, 'database' | 'audit' | 'jwt'>>
 ```
 
-## `defineProvider` and the generated `SingletonServices`
+## Host platform services
 
-`defineProvider` declares a target-owned service: one whose construction depends on
-where the app runs (`pikku dev`, a standalone bundle, a Cloudflare unit). Services
-every target builds the same way stay in `createSingletonServices`.
+There are three layers: platform services, singletons and wire services. The
+first belongs to whoever runs the app. A hosting platform or local tool names one
+module that exports `createPlatformServices`, typed with `pikkuPlatformServices`
+from `@pikku/core/lifecycle`:
 
 ```typescript
-import { defineProvider } from '#pikku/provider'
+import { pikkuPlatformServices } from '@pikku/core/lifecycle'
 
-// The same on every target.
-export const mailer = defineProvider(async ({ logger }, env) => {
-  if (!env.SMTP_URL) throw new Error('mailer: SMTP_URL is missing')
-  return { mailer: makeMailer(env.SMTP_URL, logger) }
-})
-
-// Per target. `common` applies where there is no variant of the target's own.
-export const queue = defineProvider({
-  dev: ({ logger }) => ({ queueService: new InMemoryQueueService(logger) }),
-  deploy: async ({ logger }, env) => ({
-    queueService: await connectQueue(env.QUEUE_URL, logger),
-  }),
-  async onServerStart(services) {
-    // runs where the server lifecycle runs, before the app's beforeStart
-  },
-})
+export const createPlatformServices = pikkuPlatformServices(
+  async (env, services, { requiredServices }) => ({
+    queueService: new HostQueueService(env),
+  })
+)
 ```
 
-- What it **needs** are the keys it destructures from `services`; what it
-  **provides** are the keys it returns. Neither is declared twice: the inspector
-  reads them, so the factory must be inline, destructure by plain name (no rest,
-  no `(services) =>`) and return an object type with known keys.
-- A service runs after the services providing what it needs. Two services
-  providing one key, an unmet need and a cycle are build errors. A target's
-  baseline key (what `pikku dev` injects, or what a deploy entry holds first) may
-  be replaced by exactly one service.
-- Put each `dev` / `deploy` / `deploy:<profile>` variant given by reference in a
-  module of its own, or both reach every bundle (PKU375). Profiles are
-  `standalone`, `cloudflare-worker`, `cloudflare-container` and `server`.
-- `optional: ['queueService']` makes a need optional (typed `T | undefined`). A key a
-  provider returns conditionally is optional in the merged type, and a provider that
-  needs it must list it in `optional` (PKU391).
-- `secrets`, `variables`, `credentialService`, `auth`, `jwt` and `logger` are
-  protected: provide one only with `replaces: ['logger']` (PKU394).
-- `defineWireProvider(({ logger }, wire) => ...)` builds a service per invocation
-  from the singletons and the invocation's `wire`. It needs singleton keys or
-  earlier wire keys; a singleton needing a wire key is PKU392, a wire key a
-  singleton holds is PKU393, and `auditLog`, `analytics`, `session` and `rpc` are
-  core's (PKU399). Core builds `auditLog` first, so read it as `optional`.
-- `defineProviderCollection<'name', Item>('name')` and `defineProvider({ addTo })`
-  contribute one item to a list read as label-sorted `{ label, item }` entries;
-  core's `analyticsSinks` is one.
-- Teardown is the provided value's own `stop()`, called in reverse resolved order,
-  once per object. Per request the audit flush runs first, then the project's wire
-  services stop, then the wire providers.
-- A key the entry opens itself (standalone's `kysely`) cannot be replaced
-  (PKU397): a database addon has no `deploy:standalone` variant.
-- Fail closed: throw from the factory when a binding is missing.
-- A project takes an addon's providers by name with
-  `wireAddon({ name, package, providers: ['queue'] })`. Nothing is injected
-  without that list. An addon provider's `env` holds only the names its addon
-  declares with `defineVariable` / `defineSecret`, a needed `credentialService`
-  or `content` is scoped as for the addon's functions, and `onServerStart` sees
-  only its needs, what it provides and `logger`. Providers are in-process,
-  trusted code, not a sandbox (`process.env` stays global);
-  `pikku-addons.lock` records each one's surface (PKU395 on a change,
-  `--approve-providers`; `--frozen`, implied by `CI=true`, PKU396 for a surface
-  change, a new or a removed entry; a version bump alone passes).
-  `wireRemoteAddon` takes none (PKU381).
-- A function that destructures a key nothing provides fails the build (PKU390).
+- A deploy provider names it with `platformServicesModule(ctx)`; `pikku dev` and
+  `pikku serve` take `--platform-services <module>`. There is no config key: the
+  host chooses, not the project.
+- It is the only layer that reads the raw `env`. Addons have singleton and wire
+  services only, and never receive it.
+- What it returns arrives in `createSingletonServices` as `existingServices`. An
+  app that returns its own service for one of those keys wins, with a warning.
+- A service that varies by where the app runs belongs here. Everything else
+  stays in `createSingletonServices`.
 
-`pikku all` generates `#pikku/provider`. Its `SingletonServices` is the type you
-declared plus every key a service provides, as required properties with no `any`,
-and `SingletonServices` from `#pikku/function` is the same merged type. A function
-therefore sees `services.mailer` without a cast or a null check. `pikku dev` and
-`pikku serve` build the services over the local services before
-`createSingletonServices` runs, and each deploy unit gets its own generated
-runner. Reference: `docs/services.md`.
+Reference: `docs/services.md`.
 
 ## Usage Patterns
 
@@ -301,7 +252,7 @@ what makes the split real.
 | `LocalVariablesService` | `@pikku/core/services` | Local environment variables             |
 | `PinoLogger`            | `@pikku/pino`          | Structured logging via Pino             |
 | `createInvocationAudit` | `@pikku/core/services` | Per-request audit buffer                |
-| `createAuditedKysely`   | `@pikku/addon-kysely`  | Auto-capture DB queries as audit events |
+| `createAuditedKysely`   | `@pikku/kysely`        | Auto-capture DB queries as audit events |
 
 ## Complete Example
 

@@ -1,4 +1,5 @@
 import { describe, test, beforeEach } from 'node:test'
+import { createAnalyticsSinks } from '../analytics/fan-out-analytics.js'
 import * as assert from 'node:assert'
 import {
   assertFunctionTelemetry,
@@ -433,15 +434,14 @@ describe('telemetry.spans leaves everything but spans alone', () => {
           logger: log,
           tracer,
           audit: { audit: async (event: unknown) => audited.push(event) },
-          analyticsSinks: [
-            {
-              label: 'recorder',
-              item: {
-                sink: { write: async (batch) => void analytics.push(...batch) },
-                map: { clicked: true },
-              },
-            },
-          ],
+          analyticsSinks: (() => {
+            const sinks = createAnalyticsSinks()
+            sinks.add(
+              { write: async (batch) => void analytics.push(...batch) },
+              { clicked: true }
+            )
+            return sinks
+          })(),
         },
         { trace, traceId: trace.traceId }
       )

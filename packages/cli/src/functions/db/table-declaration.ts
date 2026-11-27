@@ -7,7 +7,7 @@ import type {
   TableAnnotations,
   TablesDeclaration,
 } from '@pikku/core/db'
-import { compileTables, type PikkuSchema } from '@pikku/addon-kysely'
+import { compileTables, type PikkuSchema } from '@pikku/kysely'
 import { loadFreshUserModule } from '../commands/load-user-project.js'
 import type { ColumnInfo } from './db-introspector.js'
 import { APP_TABLES_SOURCE } from './migration-provenance.js'

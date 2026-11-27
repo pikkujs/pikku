@@ -40,8 +40,6 @@ pub mod group_addon_bans;
 pub mod group_subscribe;
 pub mod group_approval_description;
 pub mod group_analytics;
-pub mod group_provider;
-pub mod group_provider_collection;
 pub mod check_wiring_top_level;
 pub mod group_feature;
 pub mod group_feature_flag;
@@ -152,8 +150,6 @@ pub struct Options {
     pub classification_check: bool,
     pub types: Option<Types>,
     pub is_addon: bool,
-    /// Skips PKU372 for a defineProvider whose provides cannot be read yet.
-    pub defer_provider_provides: bool,
 }
 
 /// What every visitor receives: the TS visitors' (logger, checker, state,
@@ -270,8 +266,6 @@ pub fn register_groups(r: &mut Registry) {
     group_feature_flag::register(r);
     group_virtual_users::register(r);
     group_analytics::register(r);
-    group_provider_collection::register(r);
-    group_provider::register(r);
     check_wiring_top_level::register(r);
     group_pikku_studio::register(r);
     group_middleware::register(r);

@@ -191,7 +191,6 @@ fn add_wire_addon(ctx: &mut Context<'_>, node: P<Node>) {
         Option<Record<String>>,
     ) = (None, None, None, None);
     let mut credential_ov: Option<Record<OJson>> = None;
-    let mut service_names: Option<Vec<String>> = None;
     let (mut mcp, mut expose): (Option<Value>, Option<Value>) = (None, None);
     let mut mcp_endpoint: Option<Value> = None;
     let mut auth: Option<bool> = None;
@@ -250,13 +249,6 @@ fn add_wire_addon(ctx: &mut Context<'_>, node: P<Node>) {
             "contentBucket" if is_string_literal(init) => content_bucket = Some(init.text().to_string()),
             "contentGrants" if is_object_literal(init) => content_grants = Some(parse_string_record(init)),
             "globalContent" => global_content = Some(literal_or_text(init)),
-            "providers" => match parse_string_array(init) {
-                Some(names) => service_names = Some(names),
-                None => ctx.log.critical(
-                    codes::ADDON_PROVIDERS_NOT_STATIC,
-                    format!("wireAddon's providers must be an array of string literals, got: {}", node_text(init)),
-                ),
-            },
             _ => {}
         }
     }
@@ -290,9 +282,6 @@ fn add_wire_addon(ctx: &mut Context<'_>, node: P<Node>) {
     o.set("contentBucket", content_bucket.as_deref().and_then(str_value));
     o.set("contentGrants", content_grants.as_ref().map(record_value));
     o.set("globalContent", global_content.as_deref().and_then(str_value));
-    if let Some(names) = &service_names {
-        o.set("providers", Some(serde_json::json!(names)));
-    }
     declare_addon(ctx, &name, file, o.raw());
 }
 

@@ -21,7 +21,7 @@ import { VercelAgentRunner } from '@pikku/ai-vercel'
 import { createDeepInfra } from '@pikku/ai-deepinfra'
 import { JoseJWTService } from '@pikku/jose'
 import { createOpenAI } from '@ai-sdk/openai'
-import type { KyselyPikkuDB } from '@pikku/addon-kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 import {
   KyselyFeatureFlagStore,
   KyselyScopeService,
@@ -33,11 +33,12 @@ import {
   leaseSchema,
   webhookSchema,
   workflowSchema,
-} from '@pikku/addon-kysely'
+} from '@pikku/kysely'
 import {
   anonymousAnalyticsIdentity,
   composeAnalyticsIdentity,
   cookieAnalyticsIdentity,
+  createAnalyticsSinks,
 } from '@pikku/core/analytics'
 import { RecordingAnalyticsService } from './recording-analytics-service.js'
 import { requiredSingletonServices } from '#pikku/pikku-services.gen.js'
@@ -115,8 +116,8 @@ export const createSingletonServices = pikkuServices(
         SQLiteKyselyAgentRunService,
         SQLiteKyselyWorkflowService,
         SQLiteKyselyWorkflowRunService,
-      } = await import('@pikku/addon-kysely-sqlite')
-      const { SerializePlugin } = await import('@pikku/addon-kysely')
+      } = await import('@pikku/kysely-sqlite')
+      const { SerializePlugin } = await import('@pikku/kysely')
       // `:memory:` by default so the standard suite stays isolated and fast.
       // SQLITE_PATH points the same backend at a file, which is what makes
       // durability observable at all: an in-memory store loses every run when
@@ -157,7 +158,7 @@ export const createSingletonServices = pikkuServices(
         PgKyselyLeaseService,
         PgKyselyWorkflowService,
         PgKyselyWorkflowRunService,
-      } = await import('@pikku/addon-kysely-postgres')
+      } = await import('@pikku/kysely-postgres')
       const pikkuKysely = new PikkuKysely<KyselyPikkuDB>(
         logger,
         (await variables.get('DATABASE_URL'))!
@@ -182,7 +183,7 @@ export const createSingletonServices = pikkuServices(
         MySQLKyselyLeaseService,
         MySQLKyselyWorkflowService,
         MySQLKyselyWorkflowRunService,
-      } = await import('@pikku/addon-kysely-mysql')
+      } = await import('@pikku/kysely-mysql')
       const db = new Kysely<KyselyPikkuDB>({
         dialect: new MysqlDialect({
           pool: createPool((await variables.get('DATABASE_URL'))!) as any,
@@ -222,8 +223,7 @@ export const createSingletonServices = pikkuServices(
       Kysely: AuthKysely,
       SqliteDialect: AuthSqliteDialect,
     } = await import('kysely')
-    const { SerializePlugin: AuthSerialize } =
-      await import('@pikku/addon-kysely')
+    const { SerializePlugin: AuthSerialize } = await import('@pikku/kysely')
     const authDatabase = await openSqliteDatabase(':memory:')
     const kysely = new AuthKysely<KyselyPikkuDB>({
       dialect: new AuthSqliteDialect({ database: authDatabase }),
@@ -257,25 +257,14 @@ export const createSingletonServices = pikkuServices(
     // why it is written here and not in a sink.
     const analyticsRecorder = new RecordingAnalyticsService()
     const analyticsConversions = new RecordingAnalyticsService()
-    const analyticsSinks = [
-      ...(hostSinks ?? []),
-      {
-        label: 'e2e/recorder',
-        item: {
-          sink: analyticsRecorder,
-          map: {
-            report_viewed: true,
-            page_viewed: true,
-            // The native smoke jobs look for this one; a sink takes only what its map names.
-            native_opened: true,
-          },
-        },
-      },
-      {
-        label: 'e2e/conversions',
-        item: { sink: analyticsConversions, map: { report_viewed: true } },
-      },
-    ]
+    const analyticsSinks = hostSinks ?? createAnalyticsSinks()
+    analyticsSinks.add(analyticsRecorder, {
+      report_viewed: true,
+      page_viewed: true,
+      // The native smoke jobs look for this one; a sink takes only what its map names.
+      native_opened: true,
+    })
+    analyticsSinks.add(analyticsConversions, { report_viewed: true })
 
     // Ordered, not merged: the cookie resolver reads what the consent banner
     // wrote, and the minting one is handed that answer. Storing an id on a
@@ -291,7 +280,7 @@ export const createSingletonServices = pikkuServices(
     // CamelCase/Serialize plugins the AI/workflow db uses (the auth db above is
     // deliberately plugin-free), kept separate so it works across DB_BACKEND.
     const { KyselyWebhookService, SerializePlugin: WebhookSerializePlugin } =
-      await import('@pikku/addon-kysely')
+      await import('@pikku/kysely')
     const {
       Kysely: WebhookKysely,
       SqliteDialect: WebhookSqliteDialect,
@@ -312,7 +301,7 @@ export const createSingletonServices = pikkuServices(
     // one is: the suite must be able to read the trail back, and a Noop sink
     // would make every audit assertion pass by recording nothing. The `audit`
     // table is written here rather than by `init()`, which only requires it.
-    const { KyselyAuditService } = await import('@pikku/addon-kysely')
+    const { KyselyAuditService } = await import('@pikku/kysely')
     const auditDb = new WebhookKysely<KyselyPikkuDB>({
       dialect: new WebhookSqliteDialect({
         database: await openSqliteDatabase(':memory:'),

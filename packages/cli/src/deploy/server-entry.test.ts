@@ -22,7 +22,7 @@ describe('generateServerEntrySource', () => {
   test('without services the entry is the app lifecycle alone', () => {
     const source = generateServerEntrySource(ctx({ lifecycle }))
     assert.match(source, /__pikkuLifecycle\?\.beforeStart/)
-    assert.doesNotMatch(source, /createPlatformServices|composeServerLifecycle/)
+    assert.doesNotMatch(source, /createPlatformServices/)
     assert.match(
       source,
       /createSingletonServices\(config\)/,
@@ -30,7 +30,7 @@ describe('generateServerEntrySource', () => {
     )
   })
 
-  test('with services, platform services reach the app and the composed lifecycle runs the service start hooks before the app lifecycle', () => {
+  test('platform services reach the app, and its lifecycle runs around server.start()', () => {
     const source = generateServerEntrySource(
       ctx({ lifecycle, platformServices })
     )
@@ -39,28 +39,73 @@ describe('generateServerEntrySource', () => {
       /const platformServices = await createPlatformServices\(process\.env/
     )
     assert.match(source, /createSingletonServices\(config, platformServices\)/)
+    assert.ok(
+      source.indexOf('await createPlatformServices(') <
+        source.indexOf('await createConfig('),
+      'services exist before the config is read'
+    )
     assert.match(
       source,
-      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/
+      /await createConfig\(platformServices\.variables as any\)/
     )
     const at = (needle: string) => source.indexOf(needle)
     assert.ok(
-      at('__pikkuServerLifecycle?.beforeStart') < at('server.start()') &&
-        at('server.start()') < at('__pikkuServerLifecycle?.afterStart'),
-      'start hooks run around server.start()'
+      at('__pikkuLifecycle?.beforeStart') < at('server.start()') &&
+        at('server.start()') < at('__pikkuLifecycle?.afterStart'),
+      'the start hooks run around server.start()'
     )
     assert.match(
       source,
-      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuServerLifecycle\?\.beforeStop.*afterStop: \(\) => __pikkuServerLifecycle\?\.afterStop/
+      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuLifecycle\?\.beforeStop.*afterStop: \(\) => __pikkuLifecycle\?\.afterStop/
+    )
+  })
+})
+
+/** Runs the entry's own address declaration against a given env and config. */
+const listenAddress = (
+  source: string,
+  env: Record<string, string>,
+  config: { hostname?: string }
+): string => {
+  const declaration = source.match(/const HOST = (.+)$/m)
+  assert.ok(declaration, 'the entry declares no listen address')
+  assert.ok(
+    source.indexOf('const config = await') < declaration.index!,
+    'the address is resolved once the config exists'
+  )
+  return new Function('process', 'config', `return ${declaration[1]}`)(
+    { env },
+    config
+  )
+}
+
+describe('generateServerEntrySource listen address', () => {
+  test('HOST wins over the configured hostname', () => {
+    assert.equal(
+      listenAddress(
+        generateServerEntrySource(ctx()),
+        { HOST: '10.0.0.1' },
+        { hostname: '127.0.0.1' }
+      ),
+      '10.0.0.1'
     )
   })
 
-  test('service hooks run even when the app declares no lifecycle', () => {
-    const source = generateServerEntrySource(ctx({ platformServices }))
-    assert.match(
-      source,
-      /composeServerLifecycle\(undefined, \{ start: __pikkuStartHooks/
+  test('the configured hostname applies when HOST is unset or empty', () => {
+    for (const env of [{}, { HOST: '' }] as Record<string, string>[]) {
+      assert.equal(
+        listenAddress(generateServerEntrySource(ctx()), env, {
+          hostname: '127.0.0.1',
+        }),
+        '127.0.0.1'
+      )
+    }
+  })
+
+  test('every interface is the default when neither names an address', () => {
+    assert.equal(
+      listenAddress(generateServerEntrySource(ctx()), {}, {}),
+      '0.0.0.0'
     )
-    assert.match(source, /__pikkuServerLifecycle\?\.beforeStart/)
   })
 })

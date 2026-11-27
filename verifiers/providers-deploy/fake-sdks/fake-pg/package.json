@@ -1,9 +1,0 @@
-{
-  "name": "@verifier/fake-pg",
-  "private": true,
-  "type": "module",
-  "exports": {
-    ".": "./src/index.ts"
-  },
-  "sideEffects": false
-}

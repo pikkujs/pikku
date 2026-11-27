@@ -22,8 +22,11 @@ export type {
   AnalyticsEventDefinitions,
   AnalyticsEventPropsSchema,
 } from './define-analytics-events.js'
-export { analyticsSinks, fanOutAnalytics } from './fan-out-analytics.js'
-export type { AnalyticsSinkItem } from './fan-out-analytics.js'
+export {
+  AnalyticsSinkRegistry,
+  createAnalyticsSinks,
+  fanOutAnalytics,
+} from './fan-out-analytics.js'
 export {
   assertAnalyticsSinksDeclared,
   getDeclaredAnalyticsEvents,

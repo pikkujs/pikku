@@ -3,14 +3,6 @@ import {
   defineVirtualUsers,
   defineAnalyticsEvents,
 } from '@pikku/core'
-import { defineProvider } from '@pikku/core/provider'
-import {
-  devVariant,
-  devVariantTwo,
-  notAFunction,
-  notExported,
-} from './service-dev.js'
-import { deployVariant } from './service-deploy.js'
 
 const beta = { description: 'Beta', anyOf: ['a:read', 'b:write'] }
 const dead = { anyOf: [] }
@@ -68,40 +60,3 @@ export const dup = defineAnalyticsEvents({ signup: z.object({}) })
 export const empty = defineAnalyticsEvents({})
 export const notLit = defineAnalyticsEvents(config)
 declare const z: any, login: any, config: any
-
-declare const dynamic: any
-
-// Variants given by reference live in their own modules.
-export const queue = defineProvider({ dev: devVariant, deploy: deployVariant })
-// One factory is the same on every target; needs are the destructured names.
-export const aliased = defineProvider(({ kysely: db, logger }) => {
-  logger.info('aliased')
-  return { aliased: db }
-})
-export const clock = defineProvider({
-  common: () => ({ clock: () => 0 }),
-  dev: ({ logger }) => ({ clock: () => logger }),
-  onServerStart(services) {
-    void services
-  },
-})
-// PKU375: both variants are exported from the same module.
-export const twin = defineProvider({ dev: devVariant, deploy: devVariantTwo })
-// PKU369
-const hidden = defineProvider(() => ({ hidden: 1 }))
-void hidden
-export const fromDynamic = defineProvider(dynamic)
-export const neither = defineProvider({})
-export const stray = defineProvider({ prod: () => ({}) })
-export const unresolved = defineProvider({ dev: notExported })
-export const notInline = defineProvider({ dev: notAFunction })
-export const shorthand = defineProvider({ dev: devVariant, deploy })
-defineProvider(() => ({ loose: 1 }))
-// PKU371
-export const whole = defineProvider((services) => ({ whole: services }))
-export const rest = defineProvider(({ logger, ...others }) => ({
-  logger,
-  others,
-}))
-// PKU372
-export const untyped = defineProvider(() => dynamic)

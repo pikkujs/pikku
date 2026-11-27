@@ -1,4 +1,4 @@
-import { builtinModules } from 'node:module'
+import { NODE_BUILTIN_MODULES } from './node-builtins.js'
 import type { RuntimeTier } from './runtime-tier.js'
 
 /**
@@ -34,7 +34,7 @@ export interface RuntimeProfile {
 export const bareBuiltinName = (specifier: string): string =>
   specifier.startsWith('node:') ? specifier.slice(5) : specifier
 
-const BUILTIN_SET = new Set(builtinModules)
+const BUILTIN_SET = new Set(NODE_BUILTIN_MODULES)
 
 /** Whether `specifier` names a Node built-in, with or without `node:`. */
 export function isNodeBuiltin(specifier: string): boolean {

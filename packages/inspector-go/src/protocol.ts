@@ -24,7 +24,6 @@ export type InspectorGoAnalysisOptions = Pick<
   | 'setupOnly'
   | 'types'
   | 'isAddon'
-  | 'deferProviderProvides'
   | 'tags'
   | 'classificationCheck'
   | 'allow'
@@ -127,7 +126,6 @@ export const toAnalysisOptions = (
       ...options.schemaConfig,
     },
     isAddon: options.isAddon,
-    deferProviderProvides: options.deferProviderProvides,
     tags: options.tags,
     classificationCheck: options.classificationCheck,
     allow: options.allow,

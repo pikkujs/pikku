@@ -97,7 +97,7 @@ Note: events buffer and flush on invocation close. For a write inside a DB trans
 To audit every DB mutation without explicit calls, wrap kysely so each query emits an event. Note this captures table/column changes only — it cannot see semantic events that do no DB write (e.g. "email sent"), so combine with explicit writes when you need those.
 
 ```typescript
-import { createAuditedKysely } from '@pikku/addon-kysely'
+import { createAuditedKysely } from '@pikku/kysely'
 export const createWireServices = pikkuWireServices(async (services, wire) => {
   if (!services.audit) return {}
   const auditLog = createInvocationAudit(services.audit, wire)
@@ -116,7 +116,7 @@ usually far more volume than it is worth. `eventType`, `transactionId` and
 ## Sinks
 
 - **`NoopAuditService`** (`@pikku/core/services`) — default; discards events. Fine when audit isn't needed.
-- **`KyselyAuditService`** (`@pikku/addon-kysely`) — durable: persists events to an `audit` table via kysely. Use as the local/dev sink so events are queryable without a platform queue: `new KyselyAuditService(kysely)`.
+- **`KyselyAuditService`** (`@pikku/kysely`) — durable: persists events to an `audit` table via kysely. Use as the local/dev sink so events are queryable without a platform queue: `new KyselyAuditService(kysely)`.
 - **Tamper evidence (optional)** — a sink that chains or signs its events can implement `verify(): Promise<{ intact: boolean; checked: number; firstBadId?: string }>`. When it does, `admin:getAudits` adds `intact` to its response so an operator can see tampering; when it does not, the field is absent (not verifiable is not the same as intact). `NoopAuditService` and `KyselyAuditService` do not implement it.
 - **Platform-injected sink** — a deploy platform may inject its own queue-backed `audit` (hence the `existing?.audit ??` fallback above). Its rows land in the same `audit` table shape.
 

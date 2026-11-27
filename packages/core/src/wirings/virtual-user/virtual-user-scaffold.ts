@@ -98,14 +98,14 @@ export const runnableVirtualUser = (
 
 const MISSING_RUN_STORE =
   'No virtualUserRunStore is wired — a run has nowhere to be recorded. ' +
-  'Wire KyselyVirtualUserRunStore from @pikku/addon-kysely, or your own implementation of VirtualUserRunStore.'
+  'Wire KyselyVirtualUserRunStore from @pikku/kysely, or your own implementation of VirtualUserRunStore.'
 
 const MISSING_RUN_STORE_READ =
   'No virtualUserRunStore is wired — there are no runs to read.'
 
 const MISSING_SCHEDULE_STORE =
   'No virtualUserScheduleStore is wired — a cadence has nowhere to live. ' +
-  'Wire KyselyVirtualUserScheduleStore from @pikku/addon-kysely, or your own implementation of VirtualUserScheduleStore.'
+  'Wire KyselyVirtualUserScheduleStore from @pikku/kysely, or your own implementation of VirtualUserScheduleStore.'
 
 /** The store, or the error naming the one to wire. */
 export const requireVirtualUserRunStore = (

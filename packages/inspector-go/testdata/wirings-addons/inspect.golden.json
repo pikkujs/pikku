@@ -805,11 +805,6 @@
             "contentGrants": {
               "images": "read"
             },
-            "providers": [
-              "inbox",
-              "cache",
-              "mailer"
-            ],
             "declaredUses": [
               "kysely",
               "email"
@@ -1277,7 +1272,6 @@
     },
     "serviceTypes": {
       "singletonServices": null,
-      "singletonOptional": [],
       "services": null,
       "secretAliases": []
     },
@@ -1800,188 +1794,6 @@
         ]
       }
     },
-    "providers": {
-      "cache": {
-        "kind": "singleton",
-        "module": "<fixture>/src/services.ts",
-        "export": "cache",
-        "variants": {
-          "common": {
-            "needs": [
-              "kysely"
-            ],
-            "optional": [],
-            "provides": [
-              "cache"
-            ],
-            "optionalProvides": []
-          }
-        }
-      },
-      "clock": {
-        "kind": "singleton",
-        "module": "<fixture>/src/services.ts",
-        "export": "clock",
-        "variants": {
-          "common": {
-            "needs": [],
-            "optional": [],
-            "provides": [
-              "clock"
-            ],
-            "optionalProvides": []
-          },
-          "dev": {
-            "needs": [
-              "logger"
-            ],
-            "optional": [],
-            "provides": [
-              "clock"
-            ],
-            "optionalProvides": []
-          }
-        },
-        "onServerStart": true
-      },
-      "billing": {
-        "kind": "singleton",
-        "module": "<fixture>/src/services.ts",
-        "export": "billing",
-        "variants": {
-          "dev": {
-            "needs": [
-              "logger"
-            ],
-            "optional": [],
-            "provides": [
-              "billing"
-            ],
-            "optionalProvides": [],
-            "module": "<fixture>/src/services/billing-dev.ts",
-            "export": "billingDev"
-          },
-          "deploy": {
-            "needs": [
-              "kysely"
-            ],
-            "optional": [],
-            "provides": [
-              "billing"
-            ],
-            "optionalProvides": [],
-            "module": "<fixture>/src/services/billing-deploy.ts",
-            "export": "billingDeploy"
-          }
-        }
-      },
-      "aliased": {
-        "kind": "singleton",
-        "module": "<fixture>/src/services.ts",
-        "export": "aliased",
-        "variants": {
-          "common": {
-            "needs": [
-              "kysely",
-              "logger"
-            ],
-            "optional": [],
-            "provides": [
-              "aliased"
-            ],
-            "optionalProvides": []
-          }
-        }
-      },
-      "either": {
-        "kind": "singleton",
-        "module": "<fixture>/src/services.ts",
-        "export": "either",
-        "variants": {
-          "common": {
-            "needs": [],
-            "optional": [],
-            "provides": [
-              "a",
-              "b"
-            ],
-            "optionalProvides": [
-              "a",
-              "b"
-            ]
-          }
-        }
-      },
-      "inbox": {
-        "kind": "singleton",
-        "module": "<fixture>/src/services.ts",
-        "export": "inbox",
-        "variants": {
-          "common": {
-            "needs": [],
-            "optional": [],
-            "provides": [
-              "inbox"
-            ],
-            "optionalProvides": []
-          }
-        }
-      }
-    },
-    "optedInProviders": {
-      "shop": {
-        "packageName": "@fixture/shop-addon",
-        "providers": {
-          "inbox": {
-            "kind": "singleton",
-            "module": "src/services/inbox.ts",
-            "export": "inbox",
-            "variants": {
-              "dev": {
-                "needs": [
-                  "logger"
-                ],
-                "optional": [],
-                "provides": [
-                  "inbox"
-                ],
-                "optionalProvides": []
-              },
-              "deploy": {
-                "needs": [
-                  "kysely",
-                  "logger"
-                ],
-                "optional": [],
-                "provides": [
-                  "inbox",
-                  "inboxMetrics"
-                ],
-                "optionalProvides": []
-              }
-            }
-          },
-          "cache": {
-            "kind": "singleton",
-            "module": "src/services.ts",
-            "export": "cache",
-            "variants": {
-              "common": {
-                "needs": [
-                  "kysely"
-                ],
-                "optional": [],
-                "provides": [
-                  "cache"
-                ],
-                "optionalProvides": []
-              }
-            }
-          }
-        },
-        "collections": {}
-      }
-    },
     "exportedContracts": {
       "http": {},
       "cli": {},
@@ -2063,11 +1875,6 @@
     }
   },
   "diagnostics": [
-    {
-      "level": "critical",
-      "code": "PKU373",
-      "message": "wireAddon's providers must be an array of string literals, got: someList"
-    },
     {
       "level": "critical",
       "code": "PKU344",
@@ -2175,73 +1982,8 @@
     },
     {
       "level": "critical",
-      "code": "PKU375",
-      "message": "Provider 'twin': dev and deploy are both exported from <fixture>/src/services/twin-variants.ts. Each variant lives in its own module, so a build imports only the variant it runs."
-    },
-    {
-      "level": "critical",
-      "code": "PKU380",
-      "message": "Provider 'nothing' common provides no key and adds to no collection, so nothing could ever select it. Return an object of the keys it provides, or give it addTo."
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Provider 'hidden': 'hidden' is not exported by <fixture>/src/services.ts, so a host cannot import it"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Provider 'fromDynamic': defineProvider takes a factory function or an object with a variant, got: dynamic"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Provider 'neither': an object declares no variant"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Provider 'stray': defineProvider takes only dev, deploy, deploy:<profile>, common, optional, replaces, addTo and onServerStart, got: prod"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "Provider 'byReference': dev 'someFactory' is not exported by <fixture>/src/services.ts, so a host cannot import it"
-    },
-    {
-      "level": "critical",
-      "code": "PKU369",
-      "message": "defineProvider must be assigned to an exported const so a host can import it, got: defineProvider(() => ({ loose: 1 }))"
-    },
-    {
-      "level": "critical",
-      "code": "PKU371",
-      "message": "Provider 'whole' common must destructure its services parameter, so the build can read what it depends on, got: services"
-    },
-    {
-      "level": "critical",
-      "code": "PKU371",
-      "message": "Provider 'rest' common cannot collect services with a rest element, got: ...others"
-    },
-    {
-      "level": "critical",
-      "code": "PKU372",
-      "message": "Provider 'untyped' common must return an object type with known keys (or a union of them), so the build can read what it provides, got: any"
-    },
-    {
-      "level": "critical",
-      "code": "PKU376",
-      "message": "Provider 'inbox' is declared twice. A provider name belongs to one export."
-    },
-    {
-      "level": "critical",
       "code": "PKU348",
       "message": "@fixture/shop-addon needs email, but wireAddon('shop') does not map it. Wire email and add uses: { 'email': '<name>' } to this wireAddon."
-    },
-    {
-      "level": "critical",
-      "code": "PKU374",
-      "message": "wireAddon('shop') opts in to provider 'mailer', but @fixture/shop-addon declares no such provider. It declares: inbox, cache."
     },
     {
       "level": "critical",
@@ -2569,7 +2311,7 @@
     }
   ],
   "validationPass": {
-    "start": 92,
-    "end": 107
+    "start": 78,
+    "end": 93
   }
 }

@@ -35,16 +35,11 @@ export type {
   ProviderAdapter,
 } from './provider-adapter.js'
 
-export type {
-  EntryPlatformServices,
-  ServiceSupport,
-} from './service-support.js'
+export type { EntryPlatformServices } from './entry-lifecycle.js'
 export {
   appLifecycleVariable,
-  composedLifecycleLines,
-  composedLifecycleVariable,
   entryLifecycleVariable,
-} from './service-support.js'
+} from './entry-lifecycle.js'
 
 export { nodeBuiltinExternals } from './node-builtins.js'
 

@@ -2,7 +2,7 @@
  * End-to-end verifier for the schema-source registry, on either dialect.
  *
  * Every source `pikku db generate` knows about is present and real: Better Auth
- * configured with plugins that add tables *and* columns, the `@pikku/addon-kysely`
+ * configured with plugins that add tables *and* columns, the `@pikku/kysely`
  * runtime declaration, and an addon that declares a table in `db/tables.ts` and
  * publishes the declaration with `pikku db export`. Nothing is stubbed — the CLI binary runs against a real
  * database, and the assertions read the migrations it wrote and the database it
@@ -72,7 +72,19 @@ const repoRoot = resolve(here, '../..')
 const addonDir = join(here, 'addon')
 const remoteAddonDir = join(here, 'remote-addon')
 
-const PIKKU = join(repoRoot, 'packages/cli/dist/bin/pikku.js')
+/**
+ * The node arguments that start the CLI.
+ *
+ * The CLI computes Postgres schemas in a scratch PGlite database, and on Linux
+ * x64 V8 can abort the process while freeing PGlite's WASM code
+ * (`jit_page_->allocations_.erase(addr) == 1`). That check belongs to PKU-based
+ * ThreadIsolation, which this flag turns off. NODE_OPTIONS rejects it, so it
+ * has to be on the command line.
+ */
+const PIKKU = [
+  '--no-memory-protection-keys',
+  join(repoRoot, 'packages/cli/dist/bin/pikku.js'),
+]
 const TSC = join(repoRoot, 'node_modules/.bin/tsc')
 const TSX = join(repoRoot, 'node_modules/.bin/tsx')
 const ADDON_PKG = '@pikku/verifier-db-addon'
@@ -388,7 +400,7 @@ rmSync(join(here, 'src', 'scaffold'), { recursive: true, force: true })
 await store.reset()
 
 // 1. Both addons publish what they need. Neither creates it.
-run('addon: pikku all', 'node', [PIKKU, 'all'], addonDir)
+run('addon: pikku all', 'node', [...PIKKU, 'all'], addonDir)
 // `pikku all` publishes the artifact by itself. A consumer reads an absent one
 // as a package that cannot say whether it ships tables, so an addon must never
 // depend on the author remembering a second command for the file to exist.
@@ -396,12 +408,12 @@ check(
   existsSync(join(addonDir, '.pikku', 'addon', 'db', 'pikku-db-meta.gen.json')),
   'pikku all published the schema artifact on its own'
 )
-run('addon: pikku db export', 'node', [PIKKU, 'db', 'export'], addonDir)
-run('remote addon: pikku all', 'node', [PIKKU, 'all'], remoteAddonDir)
+run('addon: pikku db export', 'node', [...PIKKU, 'db', 'export'], addonDir)
+run('remote addon: pikku all', 'node', [...PIKKU, 'all'], remoteAddonDir)
 run(
   'remote addon: pikku db export',
   'node',
-  [PIKKU, 'db', 'export'],
+  [...PIKKU, 'db', 'export'],
   remoteAddonDir
 )
 
@@ -499,7 +511,12 @@ check(
 // The same contract packs to the same bytes, so a registry can tell a re-run
 // from a changed SDK by its integrity alone.
 const firstPack = readFileSync(sdkTarball)
-run('remote addon: pikku all (again)', 'node', [PIKKU, 'all'], remoteAddonDir)
+run(
+  'remote addon: pikku all (again)',
+  'node',
+  [...PIKKU, 'all'],
+  remoteAddonDir
+)
 check(
   readFileSync(sdkTarball).equals(firstPack),
   'a second pikku all packs the same SDK bytes'
@@ -513,20 +530,20 @@ try {
   run(
     'remote addon: pikku versions init',
     'node',
-    [PIKKU, 'versions', 'init'],
+    [...PIKKU, 'versions', 'init'],
     remoteAddonDir
   )
   // `init` writes an empty manifest; `update` records the current contracts.
   run(
     'remote addon: pikku versions update',
     'node',
-    [PIKKU, 'versions', 'update'],
+    [...PIKKU, 'versions', 'update'],
     remoteAddonDir
   )
   run(
     'remote addon: pikku versions check',
     'node',
-    [PIKKU, 'versions', 'check'],
+    [...PIKKU, 'versions', 'check'],
     remoteAddonDir
   )
   const versions = JSON.parse(readFileSync(versionsFile, 'utf8'))
@@ -538,7 +555,7 @@ try {
   writeFileSync(versionsFile, JSON.stringify(versions, null, 2))
   const drifted = expectFailure(
     'remote addon: pikku versions check (listNotes changed without a bump)',
-    [PIKKU, 'versions', 'check'],
+    [...PIKKU, 'versions', 'check'],
     remoteAddonDir
   )
   check(
@@ -623,7 +640,7 @@ check(
 
 // 3-4. The consumer discovers the addon because it is wired, then writes one
 //      migration per source.
-const firstBuild = captureAll('app: pikku all', 'node', [PIKKU, 'all'])
+const firstBuild = captureAll('app: pikku all', 'node', [...PIKKU, 'all'])
 // The addon is granted BETTER_AUTH_SECRET (labels.functions.ts), which only
 // auth-secrets.gen.ts declares — a file this clean build writes after its
 // first inspection. That inspection must still count the secret as declared.
@@ -632,7 +649,7 @@ check(
   'a clean build does not report the addon grant of BETTER_AUTH_SECRET as targeting nothing (PKU124)'
 )
 const generated = capture('app: pikku db generate', 'node', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'generate',
 ])
@@ -785,8 +802,12 @@ check(
 // 9-10. Apply it all, then ask the database whether it agrees. On postgres this
 //       is where a foreign key that only compiles is separated from one that the
 //       server will actually accept.
-run('app: pikku db migrate', 'node', [PIKKU, 'db', 'migrate'])
-const checked = capture('app: pikku db check', 'node', [PIKKU, 'db', 'check'])
+run('app: pikku db migrate', 'node', [...PIKKU, 'db', 'migrate'])
+const checked = capture('app: pikku db check', 'node', [
+  ...PIKKU,
+  'db',
+  'check',
+])
 check(
   checked.includes('db check: the database matches its migrations'),
   'db check reports the database matches its migrations'
@@ -837,7 +858,7 @@ const addonCarried = ({ sidecar, zod }) =>
 for (const sub of ['codegen', 'reset']) {
   rmSync(join(here, 'db', 'annotations.gen.json'), { force: true })
   rmSync(join(here, '.pikku', 'db', 'zod.gen.ts'), { force: true })
-  run(`app: pikku db ${sub}`, 'node', [PIKKU, 'db', sub])
+  run(`app: pikku db ${sub}`, 'node', [...PIKKU, 'db', sub])
   check(
     addonCarried(addonOutputs()),
     `db ${sub} writes the addon’s annotations into the sidecar and the Zod schema`
@@ -863,7 +884,7 @@ writeFileSync(
     Buffer.alloc(139),
   ])
 )
-const withAppleDouble = spawnSync('node', [PIKKU, 'db', 'migrate'], {
+const withAppleDouble = spawnSync('node', [...PIKKU, 'db', 'migrate'], {
   cwd: here,
   encoding: 'utf8',
   env,
@@ -883,7 +904,7 @@ check(
 
 // 11. Running it again must be a no-op, or every deploy grows a migration.
 const again = capture('app: pikku db generate (again)', 'node', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'generate',
 ])
@@ -910,7 +931,7 @@ console.log(
 await store.clearHistory()
 
 const wouldFail = expectFailure('app: pikku db migrate (history wiped)', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'migrate',
 ])
@@ -920,7 +941,7 @@ check(
 )
 
 const baselined = capture('app: pikku db baseline', 'node', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'baseline',
 ])
@@ -930,7 +951,7 @@ check(
 )
 
 const settled = capture('app: pikku db migrate (baselined)', 'node', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'migrate',
 ])
@@ -945,7 +966,7 @@ check(
 console.log('\n▶ baseline: refuses a database that is actually behind')
 await store.reset()
 const refused = expectFailure('app: pikku db baseline (empty database)', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'baseline',
 ])
@@ -973,7 +994,7 @@ const linkedArtifact = join(
 const savedArtifact = readFileSync(linkedArtifact, 'utf8')
 rmSync(linkedArtifact)
 const mispackaged = expectFailure('app: pikku db generate (artifact missing)', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'generate',
 ])
@@ -988,7 +1009,7 @@ writeFileSync(linkedArtifact, savedArtifact)
 // declaration that has gone missing.
 writeFileSync(linkedArtifact, '{}\n')
 const empty = expectFailure('app: pikku db generate (empty artifact)', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'generate',
 ])
@@ -1008,7 +1029,7 @@ const publish = (value) =>
 const knownMigrations = new Set(readdirSync(MIGRATIONS_DIR))
 const generateWith = (label, ...args) => {
   console.log(`\n▶ ${label}`)
-  const result = spawnSync('node', [PIKKU, 'db', 'generate', ...args], {
+  const result = spawnSync('node', [...PIKKU, 'db', 'generate', ...args], {
     cwd: here,
     encoding: 'utf8',
     env,
@@ -1150,7 +1171,7 @@ const USER_COLUMNS = `id: { type: 'id', primaryKey: true },
       emailVerified: { type: 'boolean', kind: 'bool' },`
 declareTables(TABLES_SOURCE(USER_COLUMNS))
 capture('app: pikku db generate (declared tables)', 'node', [
-  PIKKU,
+  ...PIKKU,
   'db',
   'generate',
 ])
@@ -1179,7 +1200,11 @@ check(
   new RegExp(`${q('user_id')} ${userIdType} not null`, 'i').test(tablesSql),
   `bookmark.user_id took user.id's type (${userIdType.replace(/\\/g, '')})`
 )
-run('app: pikku db migrate (declared tables)', 'node', [PIKKU, 'db', 'migrate'])
+run('app: pikku db migrate (declared tables)', 'node', [
+  ...PIKKU,
+  'db',
+  'migrate',
+])
 const sidecar = JSON.parse(
   readFileSync(join(here, 'db', 'annotations.gen.json'), 'utf8')
 )
@@ -1197,7 +1222,7 @@ check(
 const tablesAgain = capture(
   'app: pikku db generate (declared, again)',
   'node',
-  [PIKKU, 'db', 'generate']
+  [...PIKKU, 'db', 'generate']
 )
 check(
   readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).length === 4 &&
@@ -1207,7 +1232,7 @@ check(
 
 const refusedBy = (label, subcommand = 'generate') => {
   console.log(`\n▶ ${label}`)
-  const result = spawnSync('node', [PIKKU, 'db', subcommand], {
+  const result = spawnSync('node', [...PIKKU, 'db', subcommand], {
     cwd: here,
     encoding: 'utf8',
     env,
@@ -1240,7 +1265,7 @@ for (const name of [
 }
 if (dialect === 'sqlite') {
   const notice = captureAll('app: pikku db generate (sqlite notice)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'generate',
   ])
@@ -1341,7 +1366,7 @@ const filesBefore = new Set(readdirSync(MIGRATIONS_DIR))
 const changedOut = captureAll(
   'app: pikku db generate (changed constraint)',
   'node',
-  [PIKKU, 'db', 'generate']
+  [...PIKKU, 'db', 'generate']
 )
 // The declared enum round-trips through the engine's own CHECK, so the
 // declaration and the database agree and the mismatch warning stays quiet.
@@ -1365,7 +1390,7 @@ if (dialect === 'sqlite') {
     const out = captureAll(
       `app: pikku db ${sub} (constraint-only drift)`,
       'node',
-      [PIKKU, 'db', sub]
+      [...PIKKU, 'db', sub]
     )
     flow.push(out)
     check(
@@ -1399,17 +1424,17 @@ if (changeFile && dialect !== 'sqlite') {
   const applied = captureAll(
     'app: pikku db migrate (changed constraint)',
     'node',
-    [PIKKU, 'db', 'migrate']
+    [...PIKKU, 'db', 'migrate']
   )
   const regenerated = captureAll(
     'app: pikku db generate (after the replacement applied)',
     'node',
-    [PIKKU, 'db', 'generate']
+    [...PIKKU, 'db', 'generate']
   )
   const checked = captureAll(
     'app: pikku db check (after the replacement)',
     'node',
-    [PIKKU, 'db', 'check']
+    [...PIKKU, 'db', 'check']
   )
   check(
     !readdirSync(MIGRATIONS_DIR).some(
@@ -1462,11 +1487,15 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
     )
   )
   capture('app: pikku db generate (probe and tag)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'generate',
   ])
-  run('app: pikku db migrate (probe and tag)', 'node', [PIKKU, 'db', 'migrate'])
+  run('app: pikku db migrate (probe and tag)', 'node', [
+    ...PIKKU,
+    'db',
+    'migrate',
+  ])
   await store.exec(
     "INSERT INTO probe (id, title, legacy, code) VALUES (1, 'keep me', 5, 'c')"
   )
@@ -1490,7 +1519,7 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
   )
 
   run('app: pikku db generate --allowDestructive', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'generate',
     '--allowDestructive',
@@ -1520,7 +1549,7 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
     'and nothing was dropped'
   )
   run('app: pikku db migrate --allowDestructive (drops)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'migrate',
     '--allowDestructive',
@@ -1539,7 +1568,7 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
   check(
     migrationFiles().length === filesBefore + 1 &&
       !capture('app: pikku db generate (drops settled)', 'node', [
-        PIKKU,
+        ...PIKKU,
         'db',
         'generate',
       ]).includes('wrote'),
@@ -1575,11 +1604,15 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
     probeSource(`score: { type: 'integer', min: 0, max: 9 },`, false)
   )
   run('app: pikku db generate (score column)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'generate',
   ])
-  run('app: pikku db migrate (score column)', 'node', [PIKKU, 'db', 'migrate'])
+  run('app: pikku db migrate (score column)', 'node', [
+    ...PIKKU,
+    'db',
+    'migrate',
+  ])
   await store.exec(
     "INSERT INTO probe (id, title, score) VALUES (2, 'renamed', 7)"
   )
@@ -1592,7 +1625,7 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
   )
   const beforeRename = new Set(migrationFiles())
   const renameOutput = captureAll('app: pikku db generate (rename)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'generate',
   ])
@@ -1617,7 +1650,7 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
       `${dialect}: the old check goes before the rename, the new one comes in the next file`
     )
   }
-  run('app: pikku db migrate (rename)', 'node', [PIKKU, 'db', 'migrate'])
+  run('app: pikku db migrate (rename)', 'node', [...PIKKU, 'db', 'migrate'])
   const moved = await store.rows('SELECT id, points FROM probe WHERE id = 2')
   check(
     moved.length === 1 && Number(moved[0].points) === 7,
@@ -1635,7 +1668,7 @@ ${tag ? "  tag: { columns: { id: { type: 'integer', primaryKey: true } } },\n" :
   const settled = captureAll(
     'app: pikku db generate (rename settled)',
     'node',
-    [PIKKU, 'db', 'generate']
+    [...PIKKU, 'db', 'generate']
   )
   check(
     !settled.includes('wrote') &&
@@ -1703,12 +1736,12 @@ ${
 
   declareTables(withShelf('desk', false))
   run('app: pikku db generate (desk and widget)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'generate',
   ])
   run('app: pikku db migrate (desk and widget)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'migrate',
   ])
@@ -1730,7 +1763,7 @@ ${
   const tableRenameOutput = captureAll(
     'app: pikku db generate (table rename)',
     'node',
-    [PIKKU, 'db', 'generate']
+    [...PIKKU, 'db', 'generate']
   )
   const tableRenameFiles = migrationFiles()
     .sort()
@@ -1744,7 +1777,11 @@ ${
       !/DROP TABLE|pikku:destructive/.test(tableRenameFiles.join('\n')),
     `${dialect}: a table rename is written without approval, as a rename and not a drop`
   )
-  run('app: pikku db migrate (table rename)', 'node', [PIKKU, 'db', 'migrate'])
+  run('app: pikku db migrate (table rename)', 'node', [
+    ...PIKKU,
+    'db',
+    'migrate',
+  ])
 
   const shelved = await store.rows(
     'SELECT id, title, size, owner_id FROM dashboard ORDER BY id'
@@ -1813,7 +1850,7 @@ ${
   const settledTable = captureAll(
     'app: pikku db generate (table rename settled)',
     'node',
-    [PIKKU, 'db', 'generate']
+    [...PIKKU, 'db', 'generate']
   )
   check(
     !settledTable.includes('wrote') &&
@@ -1824,7 +1861,7 @@ ${
   )
   check(
     captureAll('app: pikku db check (table rename)', 'node', [
-      PIKKU,
+      ...PIKKU,
       'db',
       'check',
     ]).includes('db check: the database matches its migrations'),
@@ -1836,13 +1873,13 @@ ${
         probeSource(`points: { type: 'integer', min: 0, max: 9 },`, false)
     )
     run('app: pikku db generate --allowDestructive (shelf tables)', 'node', [
-      PIKKU,
+      ...PIKKU,
       'db',
       'generate',
       '--allowDestructive',
     ])
     run('app: pikku db migrate --allowDestructive (shelf tables)', 'node', [
-      PIKKU,
+      ...PIKKU,
       'db',
       'migrate',
       '--allowDestructive',
@@ -1852,13 +1889,13 @@ ${
   // The probe table was only for this: take it out of the declaration too.
   writeFileSync(TABLES_TS, saved)
   run('app: pikku db generate --allowDestructive (probe table)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'generate',
     '--allowDestructive',
   ])
   run('app: pikku db migrate --allowDestructive (probe table)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'migrate',
     '--allowDestructive',
@@ -1882,7 +1919,7 @@ if (dialect !== 'sqlite') {
     readdirSync(MIGRATIONS_DIR).find((f) => !before.has(f))
   const generateNew = (label) => {
     const before = new Set(readdirSync(MIGRATIONS_DIR))
-    const output = captureAll(label, 'node', [PIKKU, 'db', 'generate'])
+    const output = captureAll(label, 'node', [...PIKKU, 'db', 'generate'])
     const file = newMigration(before)
     return { output, file, sql: file ? sqlOf(file) : '' }
   }
@@ -1919,7 +1956,7 @@ if (dialect !== 'sqlite') {
   const applied = captureAll(
     'app: pikku db migrate (colliding names)',
     'node',
-    [PIKKU, 'db', 'migrate']
+    [...PIKKU, 'db', 'migrate']
   )
   check(
     !/duplicate check constraint name/i.test(applied),
@@ -1998,7 +2035,7 @@ if (dialect !== 'sqlite') {
     'a check named by hand is left alone'
   )
   captureAll('app: pikku db migrate (renamed table)', 'node', [
-    PIKKU,
+    ...PIKKU,
     'db',
     'migrate',
   ])
@@ -2036,7 +2073,7 @@ if (dialect !== 'sqlite') {
   const checkedAfterRename = captureAll(
     'app: pikku db check (after the rename)',
     'node',
-    [PIKKU, 'db', 'check']
+    [...PIKKU, 'db', 'check']
   )
   check(
     !/stale|no longer declared/i.test(checkedAfterRename),
@@ -2070,7 +2107,8 @@ if (dialect !== 'sqlite') {
 `)
   const ledgerNames = async () =>
     (await store.checkNames()).filter((n) => n.startsWith('ledger_'))
-  const apply = (label) => captureAll(label, 'node', [PIKKU, 'db', 'migrate'])
+  const apply = (label) =>
+    captureAll(label, 'node', [...PIKKU, 'db', 'migrate'])
   const rejected = async (sql) => Boolean(await store.tryExec(sql))
 
   declareTables(
@@ -2304,7 +2342,7 @@ if (useMysql) {
       declareTables(TABLES_SOURCE(USER_COLUMNS))
       console.log('\n▶ app: pikku db generate (against MariaDB)')
       const before = readdirSync(MIGRATIONS_DIR).length
-      const result = spawnSync('node', [PIKKU, 'db', 'generate'], {
+      const result = spawnSync('node', [...PIKKU, 'db', 'generate'], {
         cwd: here,
         encoding: 'utf8',
         env: { ...env, PIKKU_VERIFIER_MYSQL_URL: mariadbUrl },

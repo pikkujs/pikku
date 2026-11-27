@@ -103,12 +103,6 @@ export type WireAddonConfig = {
   contentGrants?: Record<string, 'read' | 'write'>
   /** Hands over the whole `ContentService` unscoped. The value is the reason, recorded in the deploy manifest. */
   globalContent?: string
-  /**
-   * The providers this project takes from the addon (those it declares with
-   * `defineProvider`), by exported name. None unless listed: an addon never
-   * injects providers into a project that did not ask for them.
-   */
-  providers?: string[]
 }
 
 /**

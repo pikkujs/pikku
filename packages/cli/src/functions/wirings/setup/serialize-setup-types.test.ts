@@ -110,34 +110,3 @@ describe('serializeSetupTypes', () => {
     assert.doesNotMatch(content, /ServerLifecycle/)
   })
 })
-
-describe('serializeSetupTypes injected services', () => {
-  const emitWith = (injectedKeys: string[]) =>
-    serializeSetupTypes(
-      '../function/pikku-function-types.gen.js',
-      '// Config type not found, will use fallback',
-      undefined,
-      "import type { RequiredSingletonServices, RequiredWireServices } from '../pikku-services.gen.js'",
-      [],
-      { injectedKeys }
-    )
-
-  test('existingServices is typed as exactly what providers inject', () => {
-    const content = emitWith(['kysely', 'queueService'])
-    assert.match(
-      content,
-      /export type InjectedServices = Pick<SingletonServices, 'kysely' \| 'queueService'>/
-    )
-    assert.match(
-      content,
-      /existingServices: InjectedServices & Partial<SingletonServices>\) => Promise<Partial<Omit<SingletonServices, 'auth' \| keyof InjectedServices>>>/
-    )
-  })
-
-  test('without providers nothing is injected', () => {
-    assert.match(
-      emitWith([]),
-      /export type InjectedServices = Record<never, never>/
-    )
-  })
-})

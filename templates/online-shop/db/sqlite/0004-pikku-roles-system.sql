@@ -1,6 +1,6 @@
 -- `pikku_roles` needs `system` and `declared` for role sync to work.
 --
--- @pikku/addon-kysely writes both columns when it syncs the roles declared by
+-- @pikku/kysely writes both columns when it syncs the roles declared by
 -- `defineSystemRole` (system: the role is the framework's rather than an
 -- operator's; declared: it still exists in code, so removing a role marks it
 -- inert instead of revoking it). The runtime migration that created this table

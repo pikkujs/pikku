@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { ColumnConstraints } from '@pikku/core/db'
-import type { ColumnKind } from '@pikku/addon-kysely'
+import type { ColumnKind } from '@pikku/kysely'
 import { ZOD_FORMATS, type ZodFormat } from './zod-codegen.js'
 
 /**

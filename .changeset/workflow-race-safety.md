@@ -1,6 +1,6 @@
 ---
 '@pikku/core': patch
-'@pikku/addon-kysely': patch
+'@pikku/kysely': patch
 '@pikku/mongodb': patch
 '@pikku/redis': patch
 '@pikku/cloudflare': patch

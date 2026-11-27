@@ -10,10 +10,10 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
-    "@pikku/addon-kysely": "workspace:*",
     "@pikku/better-auth": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/fetch": "workspace:*",
+    "@pikku/kysely": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "@pikku/tanstack-start": "workspace:*",
     "@pikku/uws": "workspace:*",

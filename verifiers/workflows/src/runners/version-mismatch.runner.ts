@@ -21,7 +21,7 @@
 
 import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'
 import type { PikkuWorkflowService } from '@pikku/core/workflow'
-import type { KyselyPikkuDB } from '@pikku/addon-kysely'
+import type { KyselyPikkuDB } from '@pikku/kysely'
 import { pikkuState } from '@pikku/core/state'
 import { rpcService } from '@pikku/core/rpc'
 import type { QueueService } from '@pikku/core/queue'
@@ -52,7 +52,7 @@ async function createWorkflowService(backend: Backend): Promise<{
 }> {
   if (backend === 'pg') {
     const { PgKyselyWorkflowService, PgKyselyLeaseService } =
-      await import('@pikku/addon-kysely-postgres')
+      await import('@pikku/kysely-postgres')
     const postgres = (await import('postgres')).default
     const { Kysely } = await import('kysely')
     const { PostgresJSDialect } = await import('kysely-postgres-js')

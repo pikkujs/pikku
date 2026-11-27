@@ -9,7 +9,7 @@
 // `break publishChunks` on the first failure, so every package it had not reached
 // yet is abandoned WITHOUT being named. One missing field is therefore silent for
 // every package behind it: `pikku` took @pikku/cli, @pikku/console and
-// @pikku/addon-kysely-node-sqlite down with it, and once that was fixed the brand-new
+// @pikku/kysely-node-sqlite down with it, and once that was fixed the brand-new
 // @pikku/react-layout-panel did the same to @pikku/cli and @pikku/console again.
 // The registry is the wrong place to discover this.
 //

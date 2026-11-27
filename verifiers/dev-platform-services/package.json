@@ -7,22 +7,14 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
-    "@pikku/addon-kysely-postgres": "workspace:*",
     "@pikku/core": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*"
   },
   "devDependencies": {
     "@pikku/cli": "workspace:*",
-    "@pikku/deploy": "workspace:*",
-    "@standard-schema/spec": "^1.1.0",
     "@types/node": "^26",
     "tsx": "^4.23.15",
-    "@verifier/svc-notify": "workspace:*",
-    "@verifier/svc-select": "workspace:*",
-    "@verifier/svc-bad": "workspace:*",
-    "@pikku/deploy-standalone": "workspace:*",
-    "@pikku/addon-kysely": "workspace:*",
-    "@pikku/deploy-cloudflare": "workspace:*"
+    "@standard-schema/spec": "^1.1.0"
   },
   "scripts": {
     "build": "tsc -b",

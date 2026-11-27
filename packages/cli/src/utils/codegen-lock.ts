@@ -1,7 +1,12 @@
 import { createHash } from 'node:crypto'
-import { readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import {
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
+import { dirname, join } from 'node:path'
 import { setTimeout as sleep } from 'node:timers/promises'
 import type { Logger } from '@pikku/core/services'
 
@@ -33,7 +38,8 @@ export const isRunning = (pid: number): boolean => {
 
 const lockFileFor = (outDir: string): string =>
   join(
-    tmpdir(),
+    dirname(outDir),
+    '.tmp',
     `pikku-all-${createHash('sha256').update(outDir).digest('hex').slice(0, 16)}.lock`
   )
 
@@ -60,6 +66,7 @@ export const withCodegenLock = async <T>(
   work: () => Promise<T>
 ): Promise<T> => {
   const file = lockFileFor(outDir)
+  mkdirSync(dirname(file), { recursive: true })
   const deadline = Date.now() + WAIT_MS
   let waiting = false
   for (;;) {

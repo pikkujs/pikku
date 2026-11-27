@@ -2,10 +2,10 @@
 //! runs in finalize.
 
 use serde_json::Value;
-use tsrs_ast::{self as ast, Node};
+use tsrs_ast::{self as ast, Kind, Node};
 use tsrs_core::P;
 
-use super::util_shared::{JsObject, literal_key_name};
+use super::util_shared::{JsObject, literal_key_name, literal_named_property};
 use super::util_wire_meta::prop_value;
 use super::{Context, Phase, Registry, Visitor, order};
 use crate::diag::codes;
@@ -25,6 +25,17 @@ pub fn or_undefined(v: &PropValue) -> Option<Value> {
         return None;
     }
     prop_value(v)
+}
+
+/// `literalBoolProperty` is the literal `name: true|false` on obj, if present.
+/// The key may be an identifier or a string literal, so `'live': true` is read
+/// the same as `live: true`.
+fn literal_bool_property(obj: P<Node>, name: &str) -> Option<bool> {
+    match literal_named_property(obj, name)?.initializer()?.kind() {
+        Kind::TrueKeyword => Some(true),
+        Kind::FalseKeyword => Some(false),
+        _ => None,
+    }
 }
 
 /// `scopesObject` is the object-literal initializer of an identifier-named
@@ -50,6 +61,20 @@ impl Context<'_> {
         }
     }
 
+    /// `liveFlag` reads a scope's `live`. A `live` that is present but not a
+    /// literal boolean cannot be resolved statically, and silently dropping it
+    /// would leave the functions requiring the scope on a cached snapshot, so it
+    /// is reported.
+    fn live_flag(&mut self, obj: P<Node>, scope_name: &str) -> Option<bool> {
+        if let Some(live) = literal_bool_property(obj, "live") {
+            return Some(live);
+        }
+        if literal_named_property(obj, "live").is_some() {
+            self.log.critical(codes::INVALID_VALUE, format!("Scope '{scope_name}' sets `live` to something other than a literal true or false, so it cannot be resolved statically."));
+        }
+        None
+    }
+
     /// `extractScopeNodes` returns `None` when no node was extracted.
     fn extract_scope_nodes(&mut self, obj: P<Node>, scope_name: &str) -> Option<Record<Raw>> {
         let mut nodes: Record<Raw> = Record::new();
@@ -72,6 +97,9 @@ impl Context<'_> {
             let mut node = JsObject::new();
             node.set("displayName", or_undefined(&tsutil::get_property_value(init, "displayName")));
             node.set("description", or_undefined(&tsutil::get_property_value(init, "description")));
+            if let Some(live) = self.live_flag(init, &format!("{scope_name}:{segment}")) {
+                node.set("live", Some(Value::from(live)));
+            }
             if let Some(nested) = scopes_object(init) {
                 if let Some(n) = self.extract_scope_nodes(nested, scope_name) {
                     node.set("scopes", Some(serde_json::to_value(&n).expect("record serialises")));
@@ -170,6 +198,9 @@ impl Context<'_> {
             o.set_str("name", &name);
             o.set("displayName", or_undefined(&display_name));
             o.set("description", or_undefined(&description));
+            if let Some(live) = self.live_flag(root, &name) {
+                o.set("live", Some(Value::from(live)));
+            }
             if let Some(s) = scopes {
                 o.set("scopes", Some(serde_json::to_value(&s).expect("record serialises")));
             }

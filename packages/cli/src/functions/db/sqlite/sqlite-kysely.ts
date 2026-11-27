@@ -6,7 +6,7 @@ import {
   type SqliteDatabase,
   type SqliteStatement,
 } from 'kysely'
-import { traceDialect, type TraceDriverOptions } from '@pikku/addon-kysely'
+import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import type {
   SyncSqliteDatabase,
   SyncSqliteStatement,
@@ -18,7 +18,7 @@ import type {
  * instance stringifies to `"{}"` or to a partial view of itself, which would
  * silently persist an empty JSON blob where the caller meant something.
  *
- * Kept in lockstep with `isJsonEncodable` in `@pikku/addon-kysely-sqlite`'s
+ * Kept in lockstep with `isJsonEncodable` in `@pikku/kysely-sqlite`'s
  * LibsqlWebDialect: whatever binds here under `pikku dev` has to bind the same
  * way once the app is deployed, or the dev and deployed runtimes disagree
  * about what a query may do.

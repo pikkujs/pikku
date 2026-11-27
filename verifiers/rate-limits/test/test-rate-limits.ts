@@ -27,7 +27,7 @@ import {
   KyselyRateLimitService,
   rateLimitSchema,
   type KyselyPikkuDB,
-} from '@pikku/addon-kysely'
+} from '@pikku/kysely'
 import { RedisRateLimitService } from '@pikku/redis'
 import Database from 'better-sqlite3'
 import { Redis } from 'ioredis'

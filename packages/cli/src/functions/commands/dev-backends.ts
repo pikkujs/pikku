@@ -19,6 +19,7 @@ export type DevPassthrough = {
   test?: boolean
   model?: string
   hmr?: boolean
+  platformServices?: string
 }
 
 export type DevBackendProcess = {
@@ -77,6 +78,9 @@ export const backendProcessArgs = (
   if (passthrough.test) args.push('--test')
   if (passthrough.model) args.push(`--model=${passthrough.model}`)
   if (passthrough.hmr === false) args.push('--no-hmr')
+  if (passthrough.platformServices) {
+    args.push(`--platform-services=${passthrough.platformServices}`)
+  }
   return args
 }
 

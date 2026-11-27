@@ -24,7 +24,7 @@
 | `@pikku/schema-ajv`      | Schema validation via AJV                            |
 | `@pikku/schema-cfworker` | Schema validation for Cloudflare                     |
 | `@pikku/pino`            | Structured logging via Pino                          |
-| `@pikku/addon-kysely`    | Type-safe SQL via Kysely (PostgreSQL, SQLite, MySQL) |
+| `@pikku/kysely`          | Type-safe SQL via Kysely (PostgreSQL, SQLite, MySQL) |
 | `@pikku/redis`           | Redis client                                         |
 | `@pikku/queue-bullmq`    | Job queues via BullMQ                                |
 | `@pikku/queue-pg-boss`   | Job queues via PgBoss                                |

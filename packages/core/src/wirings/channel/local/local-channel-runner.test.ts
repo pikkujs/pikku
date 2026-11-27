@@ -184,7 +184,7 @@ test('runChannel should close wire services once when channel closes', async () 
   pikkuState(null, 'package', 'factories', {
     createWireServices: async () => ({
       tracked: {
-        stop: async () => {
+        close: async () => {
           closeCount += 1
         },
       },

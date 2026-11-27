@@ -100,6 +100,25 @@ impl VendorSchemaConverter for ZodjsConverter {
 
 impl ZodjsConverter {
     fn run(&self, refs: &[VendorRef], timeout: Duration, load_packages: bool) -> Result<RunResult, ConvertError> {
+        let deadline = Instant::now() + timeout;
+        let mut out = RunResult::default();
+        let mut pending = refs.to_vec();
+        while !pending.is_empty() {
+            let left = deadline.saturating_duration_since(Instant::now());
+            let v = self.run_batch(&pending, left, load_packages).map_err(|e| match e {
+                ConvertError::Timeout(_) => ConvertError::Timeout(timeout),
+                e => e,
+            })?;
+            collect(&v, &mut out);
+            let unreached: BTreeSet<&str> =
+                v.get("unreached").and_then(Value::as_array).into_iter().flatten().filter_map(Value::as_str).collect();
+            pending.retain(|r| unreached.contains(r.name.as_str()));
+        }
+        Ok(out)
+    }
+
+    /// One QuickJS runtime over as many of `refs` as it can take.
+    fn run_batch(&self, refs: &[VendorRef], timeout: Duration, load_packages: bool) -> Result<Value, ConvertError> {
         let (dir, tsconfig) = (self.dir.clone(), self.tsconfig.clone());
         let refs = refs.to_vec();
         // QuickJS and the TypeScript emitter recurse on the native stack.
@@ -108,9 +127,11 @@ impl ZodjsConverter {
             .spawn(move || run_in_thread(&dir, &tsconfig, &refs, timeout, load_packages))
             .map_err(|e| ConvertError::Failed(format!("starting QuickJS: {e}")))?;
         let text = handle.join().unwrap_or_else(|_| Err(ConvertError::Failed("QuickJS panicked".into())))?;
-        let v: Value = serde_json::from_str(&text)
-            .map_err(|e| ConvertError::Failed(format!("reading the QuickJS result: {e}")))?;
-        let mut out = RunResult::default();
+        serde_json::from_str(&text).map_err(|e| ConvertError::Failed(format!("reading the QuickJS result: {e}")))
+    }
+}
+
+fn collect(v: &Value, out: &mut RunResult) {
         for pair in v.get("schemas").and_then(Value::as_array).into_iter().flatten() {
             let name = pair.get(0).and_then(Value::as_str).unwrap_or_default().to_string();
             out.schemas.push((name, pair.get(1).cloned().unwrap_or(Value::Null)));
@@ -126,12 +147,13 @@ impl ZodjsConverter {
                 f.get(1).and_then(Value::as_str).unwrap_or_default().to_string(),
             ));
         }
-        Ok(out)
-    }
 }
 
 /// The script that loads every declaring module on demand, so that one which
-/// throws costs only its own schemas, and runs Go's runner over them.
+/// throws costs only its own schemas, and runs Go's runner over them. It stops
+/// after a SyntaxError, which is how a failed link surfaces: QuickJS leaks when
+/// it links such a module a second time, and freeing the runtime then aborts the
+/// process. The schemas of the files it did not reach come back as `unreached`.
 fn entry_source(refs: &[VendorRef]) -> Result<String, ConvertError> {
     let mut index: HashMap<String, usize> = HashMap::new();
     let mut files: Vec<String> = Vec::new();
@@ -153,16 +175,22 @@ fn entry_source(refs: &[VendorRef]) -> Result<String, ConvertError> {
     let file_list: Vec<String> = files.iter().map(|f| quote(f)).collect();
     Ok(format!(
         "import * as z from 'zod'\n\
+         import {{ createStub, run }} from '{RUNNER_MODULE}'\n\
          import {{ zodToTypeText, findZodTransform, declaredUnknownPathsOfZod }} from '{HELPERS_MODULE}'\n\
-         import {{ run }} from '{RUNNER_MODULE}'\n\
+         if (!globalThis.Intl) globalThis.Intl = createStub('Intl')\n\
          const FILES = [{}]\n\
          const loaded = new Map()\n\
          for (const file of FILES) {{\n\
-         \x20 try {{ loaded.set(file, {{ module: await import(file) }}) }} catch (e) {{ loaded.set(file, {{ failed: e }}) }}\n\
+         \x20 try {{ loaded.set(file, {{ module: await import(file) }}) }} catch (e) {{\n\
+         \x20   loaded.set(file, {{ failed: e }})\n\
+         \x20   if (e instanceof SyntaxError) break\n\
+         \x20 }}\n\
          }}\n\
-         globalThis.__pikkuResult = JSON.stringify(run({{ z, zodToTypeText, findZodTransform, declaredUnknownPathsOfZod,\n\
-         \x20 files: FILES.map((file) => ({{ file, load: () => {{ const r = loaded.get(file); if (r.failed) throw r.failed; return r.module }} }})),\n\
-         \x20 lookup: [{}] }}))\n",
+         const LOOKUP = [{}]\n\
+         globalThis.__pikkuResult = JSON.stringify({{ ...run({{ z, zodToTypeText, findZodTransform, declaredUnknownPathsOfZod,\n\
+         \x20 files: FILES.slice(0, loaded.size).map((file) => ({{ file, load: () => {{ const r = loaded.get(file); if (r.failed) throw r.failed; return r.module }} }})),\n\
+         \x20 lookup: LOOKUP.filter(([, , index]) => index < loaded.size) }}),\n\
+         \x20 unreached: LOOKUP.filter(([, , index]) => index >= loaded.size).map(([name]) => name) }})\n",
         file_list.join(", "),
         lookup.join(",\n")
     ))
@@ -282,6 +310,8 @@ struct Shared {
     /// are the names its importer asks for.
     sources: HashMap<String, String>,
     stubs: HashMap<String, StubInfo>,
+    /// The names importers ask each resolved module for. A stub exports these.
+    requested: HashMap<String, BTreeSet<String>>,
     /// Where the entry's `zod` is looked for after the project root: the
     /// directories of the modules that declare the schemas.
     declaring_dirs: Vec<PathBuf>,
@@ -294,7 +324,6 @@ struct Shared {
 
 struct StubInfo {
     spec: String,
-    names: BTreeSet<String>,
 }
 
 impl Shared {
@@ -326,6 +355,7 @@ impl Shared {
             transpiler: Transpiler::new(tsconfig),
             sources: HashMap::new(),
             stubs: HashMap::new(),
+            requested: HashMap::new(),
             declaring_dirs,
             load_packages,
             pure: HashMap::new(),
@@ -342,6 +372,25 @@ impl Shared {
     /// The module name for an import: the resolved file, or a stub for a bare
     /// import that is outside the project.
     fn resolve(&mut self, base: &str, name: &str) -> Result<String, String> {
+        let target = self.resolve_target(base, name)?;
+        let mut names = self.imported_names(base, name);
+        if self.is_only_star_export(base, name) {
+            names.extend(self.requested.get(base).into_iter().flatten().cloned());
+        }
+        self.requested.entry(target.clone()).or_default().extend(names);
+        Ok(target)
+    }
+
+    /// Whether `base` re-exports all of `spec` and nothing else wholesale, so
+    /// that a name asked of `base` and not declared by it comes from `spec`. With
+    /// two, giving both stubs the name would make it ambiguous.
+    fn is_only_star_export(&self, base: &str, spec: &str) -> bool {
+        let Some(src) = self.sources.get(base) else { return false };
+        let mut stars = STAR_EXPORT.captures_iter(src);
+        matches!((stars.next(), stars.next()), (Some(only), None) if &only[1] == spec)
+    }
+
+    fn resolve_target(&mut self, base: &str, name: &str) -> Result<String, String> {
         if name.starts_with("pikku:") {
             return Ok(name.to_string());
         }
@@ -355,10 +404,7 @@ impl Shared {
                 Ok(r) if self.loadable(&r.full_path()) => Ok(path_string(&r.full_path())),
                 _ => {
                     let stub = format!("{STUB_PREFIX}{name}@{base}");
-                    if !self.stubs.contains_key(&stub) {
-                        let names = self.imported_names(base, name);
-                        self.stubs.insert(stub.clone(), StubInfo { spec: name.to_string(), names });
-                    }
+                    self.stubs.entry(stub.clone()).or_insert_with(|| StubInfo { spec: name.to_string() });
                     Ok(stub)
                 }
             };
@@ -474,7 +520,7 @@ impl Shared {
              export default stub\n",
             spec = quote(&info.spec)
         );
-        for n in &info.names {
+        for n in self.requested.get(name).into_iter().flatten() {
             if n != "default" && is_identifier(n) {
                 out.push_str(&format!("export const {n} = stub\n"));
             }
@@ -570,6 +616,8 @@ fn is_identifier(n: &str) -> bool {
 
 static STATIC_IMPORT: std::sync::LazyLock<Regex> =
     std::sync::LazyLock::new(|| Regex::new(r#"(?s)\b(?:import|export)\s*(?:[^'"();]*?\bfrom\s*)?["']([^"']+)["']"#).unwrap());
+static STAR_EXPORT: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r#"\bexport\s*\*\s*from\s*["']([^"']+)["']"#).unwrap());
 static DYNAMIC_IMPORT: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| Regex::new(r"\bimport\s*\(").unwrap());
 static DYNAMIC_IMPORT_LITERAL: std::sync::LazyLock<Regex> =
     std::sync::LazyLock::new(|| Regex::new(r#"\bimport\s*\(\s*["']([^"']+)["']\s*\)"#).unwrap());

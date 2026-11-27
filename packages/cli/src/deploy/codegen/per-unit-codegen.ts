@@ -10,8 +10,7 @@
 
 import { execFile } from 'node:child_process'
 import { writeFile, mkdir, rm } from 'node:fs/promises'
-import { join } from 'node:path'
-import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import { promisify } from 'node:util'
 
@@ -95,13 +94,19 @@ export async function runPikkuAllChild(
   projectDir: string,
   args: string[],
   options: {
+    command?: 'all' | 'bootstrap'
     deployCodegen?: boolean
     timeoutMs?: number
     env?: Record<string, string>
   } = {}
 ): Promise<void> {
-  const { deployCodegen = true, timeoutMs = 60_000, env = {} } = options
-  await execFileAsync(process.execPath, [pikkuBin, 'all', ...args], {
+  const {
+    command = 'all',
+    deployCodegen = true,
+    timeoutMs = 60_000,
+    env = {},
+  } = options
+  await execFileAsync(process.execPath, [pikkuBin, command, ...args], {
     cwd: projectDir,
     timeout: timeoutMs,
     maxBuffer: 64 * 1024 * 1024,
@@ -153,10 +158,12 @@ export async function generateBackendCodegen(
   if (backends.length === 0) return { backendDirs, errors }
 
   const stateFilePath = join(
-    tmpdir(),
+    projectDir,
+    '.tmp',
     `pikku-state-${randomBytes(8).toString('hex')}.json`
   )
   try {
+    await mkdir(dirname(stateFilePath), { recursive: true })
     await writeFile(
       stateFilePath,
       JSON.stringify(serializeInspectorState(inspectorState)),
@@ -438,11 +445,12 @@ export async function generatePerUnitCodegen(
 
   // Create a temp file for the serialized inspector state
   const stateFileName = `pikku-state-${randomBytes(8).toString('hex')}.json`
-  const stateFilePath = join(tmpdir(), stateFileName)
+  const stateFilePath = join(projectDir, '.tmp', stateFileName)
 
   try {
     // Serialize and write the inspector state once
     const serialized = serializeInspectorState(inspectorState)
+    await mkdir(dirname(stateFilePath), { recursive: true })
     await writeFile(stateFilePath, JSON.stringify(serialized), 'utf-8')
 
     // Generate codegen for each unit

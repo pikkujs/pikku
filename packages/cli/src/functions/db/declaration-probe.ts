@@ -1,6 +1,6 @@
 import { sql, type Kysely } from 'kysely'
 import type { TablesDeclaration } from '@pikku/core/db'
-import { applyPikkuSchemas } from '@pikku/addon-kysely'
+import { applyPikkuSchemas } from '@pikku/kysely'
 
 /** A declared `default` or `onUpdate` that has to be run to be believed. */
 interface Probe {

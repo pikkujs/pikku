@@ -10,7 +10,7 @@ import type {
   KyselyFeatureFlagStore,
   KyselyPikkuDB,
   KyselyScopeService,
-} from '@pikku/addon-kysely'
+} from '@pikku/kysely'
 import type { RecordingAnalyticsService } from './recording-analytics-service.js'
 
 export interface UserSession extends CoreUserSession {}

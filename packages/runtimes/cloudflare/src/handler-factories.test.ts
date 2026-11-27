@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { defineQueueIdentityTransportTests } from '@pikku/core/testing'
 import { CloudflareQueueService } from './cloudflare-queue-service.js'
 import { constantTimeEqual } from './dispatch-auth.js'
+import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { pikkuState } from '@pikku/core/state'
 // Type-only, so it is erased before runtime and does not load the module ahead
 // of the `cloudflare:workers` stub registered below.
@@ -266,12 +267,8 @@ describe('setupServices and the declared analytics events', () => {
         ? Object.fromEntries(names.map((name) => [name, { name }]))
         : (null as never)
     )
-    const analyticsSinks = [
-      {
-        label: 'sink',
-        item: { sink: { write: async () => {} }, map: { page_viewed: true } },
-      },
-    ]
+    const analyticsSinks = createAnalyticsSinks()
+    analyticsSinks.add({ write: async () => {} }, { page_viewed: true })
     return {
       createConfig: async () => ({}),
       createSingletonServices: async () => ({ analyticsSinks }) as any,
@@ -293,5 +290,40 @@ describe('setupServices and the declared analytics events', () => {
       setupServices({} as any, servicesWith([])),
       /declares no analytics events/
     )
+  })
+})
+
+describe('setupServices and the platform services', () => {
+  const run = async (platform: Record<string, unknown>) => {
+    const { setupServices } = await import('./handler-factories.js')
+    const seen: any = {}
+    await setupServices({ NAME: 'from-env' } as any, {
+      createPlatformServices: async () => platform as any,
+      createConfig: async (variables: any) => {
+        seen.config = variables
+        return {}
+      },
+      createSingletonServices: async (_config: any, existing: any) => {
+        seen.existing = existing
+        return {} as any
+      },
+    })
+    return seen
+  }
+
+  test('the config and the app get the variables and secrets the platform provides', async () => {
+    const variables = { own: 'variables' }
+    const secrets = { own: 'secrets' }
+    const seen = await run({ variables, secrets })
+    assert.equal(seen.config, variables)
+    assert.equal(seen.existing.variables, variables)
+    assert.equal(seen.existing.secrets, secrets)
+  })
+
+  test('without platform ones, both read the environment', async () => {
+    const seen = await run({})
+    assert.equal(await seen.config.get('NAME'), 'from-env')
+    assert.equal(seen.existing.variables, seen.config)
+    assert.equal(await seen.existing.secrets.hasSecret('NAME'), true)
   })
 })

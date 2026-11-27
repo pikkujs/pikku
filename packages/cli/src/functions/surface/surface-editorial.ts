@@ -74,12 +74,6 @@ export const LEAF_EDITORIAL: Record<string, LeafEditorial> = {
     summary:
       'The events a project can measure, declared by name so the generated ingest knows what to accept. Where they go is an AnalyticsService on singleton services; what a function records into is the analytics service on the invocation.',
   },
-  provider: {
-    step: 'enhance it',
-    skill: null,
-    summary:
-      "The project's providers, declared with `defineProvider`: a factory that destructures what it needs and returns what it provides, the same on every target or per `dev` and `deploy` variant. This leaf's `SingletonServices` is the project's own type plus everything those providers provide. An addon declares its providers with core's untyped helper instead, and a project opts in to them by name with `wireAddon`.",
-  },
   utils: {
     step: 'enhance it',
     skill: null,
@@ -336,14 +330,14 @@ export const SURFACE_GUIDES: SurfaceGuide[] = [
     names: ['defineTables', 'tables', 'db/tables.ts', 'requiredType'],
     title: 'declaring tables in db/tables.ts',
     points: [
-      '`defineTables` is imported from `@pikku/addon-kysely`, not from a `#pikku` door, which is why it is no export here. `pikku meta db` says where the project keeps `db/tables.ts` and which tables it already declares.',
+      '`defineTables` is imported from `@pikku/kysely`, not from a `#pikku` door, which is why it is no export here. `pikku meta db` says where the project keeps `db/tables.ts` and which tables it already declares.',
       "One declaration gives the SQL, the types and the column classification. `statements` are `db.schema` calls (tables and indexes only, camelCase); `ctx.key` and `ctx.text` are the dialect's key and text types.",
       '`pikku db generate` writes the SQL, and only adds: new tables, columns and indexes. `pikku db migrate` applies it and regenerates the types, so a query on the new table type-checks only after `migrate`.',
       "A foreign key onto a table outside the file (Better Auth's `user`) is named in `requires`, and `requiredType(types, 'user', 'id')` gives the column its type.",
       'A column named like personal data or a credential (email, phone, token) warns on `migrate` until it has a `security` annotation (`pii`, `secret`). The `pikku-kysely` skill has the full rules.',
     ],
     example: `// db/tables.ts
-import { defineTables } from '@pikku/addon-kysely'
+import { defineTables } from '@pikku/kysely'
 
 export const tables = defineTables({
   statements: [

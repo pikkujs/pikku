@@ -15,7 +15,7 @@ import { pathToFileURL } from 'node:url'
 import { CamelCasePlugin, Kysely, PostgresDialect, sql } from 'kysely'
 import type { PGlite } from '@electric-sql/pglite'
 import { hasDeclaredSql, runDeclaredSql } from './declaration-probe.js'
-import { traceDialect, type TraceDriverOptions } from '@pikku/addon-kysely'
+import { traceDialect, type TraceDriverOptions } from '@pikku/kysely'
 import {
   migrate,
   baselineMigrations,
@@ -39,7 +39,7 @@ import {
   type PikkuSchema,
   type RequiredTypes,
   type CoercionMap,
-} from '@pikku/addon-kysely'
+} from '@pikku/kysely'
 import { loadAuthOptions, getAuthMigrations } from './better-auth-schema.js'
 import { generateSchemaTypes, type CodegenResult } from './db-codegen.js'
 import { generateZodTypes, type ZodCodegenResult } from './zod-codegen.js'
@@ -1436,7 +1436,7 @@ export interface DesiredRuntimeSchema extends DesiredSchema {
 }
 
 /**
- * The tables `@pikku/addon-kysely`'s runtime services need, as declared.
+ * The tables `@pikku/kysely`'s runtime services need, as declared.
  *
  * Materialized the same way the auth schema is: applied to a throwaway database
  * and introspected, so one declaration answers both "what should exist" and
@@ -2924,7 +2924,7 @@ export async function schemaSources(
     sources.push({
       name: 'pikku-runtime',
       desired: runtime,
-      origin: "@pikku/addon-kysely's runtime services",
+      origin: "@pikku/kysely's runtime services",
       schema: resolved.dialect === 'postgres' ? resolved.schema : undefined,
     })
   }
