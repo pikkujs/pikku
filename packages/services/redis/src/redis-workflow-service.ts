@@ -1,6 +1,10 @@
 import { RedisWorkflowRunService } from './redis-workflow-run-service.js'
 import type { SerializedError } from '@pikku/core/errors'
-import { isStepLeaseLive, PikkuWorkflowService } from '@pikku/core/workflow'
+import {
+  DEFAULT_STEP_LEASE_MS,
+  isStepLeaseLive,
+  PikkuWorkflowService,
+} from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
   WorkflowServiceOptions,
@@ -827,11 +831,19 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     const retryDelay = data.retryDelay
 
     // Fenced to the attempt being retried, so of two retries of it one applies.
-    // Keeps result/error for visibility.
+    // Keeps result/error for visibility. A `running` attempt takes a fresh lease
+    // in the same write: under the previous attempt's lapsed one, another claim
+    // could take it before `refreshStepLease` runs.
     const written = await this.writeStepIf(
       stepId,
       from,
-      { status, attemptCount: newAttemptCount.toString() },
+      {
+        status,
+        attemptCount: newAttemptCount.toString(),
+        ...(status === 'running'
+          ? { leaseExpiresAt: (now + DEFAULT_STEP_LEASE_MS).toString() }
+          : {}),
+      },
       currentAttempt,
       ['childRunId']
     )

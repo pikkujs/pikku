@@ -135,6 +135,43 @@ describe('reclaiming a step whose worker was lost', () => {
     assert.equal(stored.attemptCount, 1)
   })
 
+  test('leaves the retry of a failed step to the claim still taking it', async () => {
+    await redis.hset(
+      stepKey(),
+      'status',
+      'failed',
+      'leaseExpiresAt',
+      String(Date.now() - 1000)
+    )
+    const refresh = ws.refreshStepLease.bind(ws)
+    let redelivered: unknown = 'not delivered'
+    // The redelivery lands before the claim has renewed the lease.
+    ws.refreshStepLease = async (...args) => {
+      ws.refreshStepLease = refresh
+      redelivered = await claim()
+      return refresh(...args)
+    }
+
+    const claimed = await claim()
+
+    assert.equal(redelivered, null, 'the new attempt was claimed twice')
+    assert.equal(claimed.attemptCount, 2)
+    assert.equal((await ws.getStepState(runId, 'step-1')).attemptCount, 2)
+    assert.equal(await attemptsRecorded(), 2)
+  })
+
+  test('takes back a retry whose claim died before renewing its lease', async () => {
+    await redis.hset(stepKey(), 'status', 'failed')
+    ws.refreshStepLease = async () => {
+      throw new Error('worker died')
+    }
+    await assert.rejects(claim(), /worker died/)
+
+    const stored = await ws.getStepState(runId, 'step-1')
+
+    assert.ok(stored.leaseExpiresAt, 'a running step with no lease is stuck')
+  })
+
   test('leaves the ordinary retry of a failed step clearing its child', async () => {
     await ws.setStepChildRunId(stepId, 'child-1')
     await redis.hset(stepKey(), 'status', 'failed')
