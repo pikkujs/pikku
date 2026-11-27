@@ -612,7 +612,6 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       `const baseLogger = new ConsoleLogger()`,
       `const port = parseInt(process.env.PORT || '${this.port}', 10)`,
-      `const hostname = process.env.HOST || '0.0.0.0'`,
       ...(ctx.embedded
         ? [
             `for (const { env, path } of __pikkuEmbeddedFiles) process.env[env] ??= path`,
@@ -623,6 +622,7 @@ export class StandaloneProviderAdapter implements ProviderAdapter {
       ``,
       `async function main() {`,
       `  const config = await ${ctx.configVar}()`,
+      `  const hostname = process.env.HOST || config.hostname || '0.0.0.0'`,
       ...telemetryLines(ctx),
       `  const schedulerService = new InMemorySchedulerService()`,
       `  const queueService = new InMemoryQueueService()`,

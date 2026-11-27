@@ -33,7 +33,6 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
     `import '${ctx.bootstrapPath}'`,
     ``,
     `const PORT = Number(process.env.PORT ?? 8080)`,
-    `const HOST = process.env.HOST ?? '0.0.0.0'`,
     ``,
     `async function main(): Promise<void> {`,
     ...(ctx.platformServices
@@ -47,6 +46,7 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
           `  const singletonServices = await ${ctx.servicesVar}(config)`,
         ]),
     `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
+    `  const HOST = process.env.HOST || config.hostname || '0.0.0.0'`,
     ``,
     `  const server = new PikkuBunServer(`,
     `    { ...config, hostname: HOST, port: PORT, healthCheckPath: '/__pikku/health' },`,
