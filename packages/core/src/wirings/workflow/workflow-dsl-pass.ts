@@ -34,6 +34,7 @@ export interface DslPassDeps {
   ) => Promise<boolean>
   /** The run's status if something has ended it, finishing any unwind that waited on this pass. */
   settleIfStopped: () => Promise<WorkflowStatus | undefined>
+  runStatus: () => Promise<WorkflowStatus | undefined>
   /** What the body started, which the pass outlives. */
   steps: Pick<PassSteps, 'waitForAll' | 'close'>
   onChildCompleted: (result: unknown) => Promise<void>
@@ -158,7 +159,13 @@ export const runDslWorkflowPass = async (
 
     outcome = 'failed'
     if (await deps.settleIfStopped()) throw error
-    if ((await deps.failOrUnwind(error)) === 'unwinding') return
+    if ((await deps.failOrUnwind(error)) === 'unwinding') {
+      // It may only be waiting on this pass's own steps. A run they leave with
+      // nothing to undo has failed like any other.
+      await deps.steps.close()
+      await deps.settleIfStopped()
+      if ((await deps.runStatus()) !== 'failed') return
+    }
     throw error
   } finally {
     // After the outcome is written, so a run that failed or was cancelled

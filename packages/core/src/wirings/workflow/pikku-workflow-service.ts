@@ -1244,6 +1244,7 @@ export abstract class PikkuWorkflowService
             this.updateRunStatus(runId, status, output, error),
           settleIfStopped: () =>
             this.settleStoppedRun(runId, rpcService, true, leaseLost),
+          runStatus: async () => (await this.getRun(runId))?.status,
           onChildCompleted: (result) =>
             this.onChildWorkflowCompleted(run, result),
           onChildFailed: (error) => this.onChildWorkflowFailed(run, error),

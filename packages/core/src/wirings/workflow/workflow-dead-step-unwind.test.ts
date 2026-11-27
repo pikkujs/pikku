@@ -860,3 +860,32 @@ describe('the in-memory finder', () => {
     assert.deepEqual(await found(), [runId])
   })
 })
+
+describe('what the caller of an inline run is told', () => {
+  test(
+    'a run with nothing to undo that failed beside a sibling still rejects',
+    LIMIT,
+    async () => {
+      register('sib', boom, { queued: false, compensate: false })
+      h.defineDsl('flow', async (w: any) => {
+        await Promise.all([
+          w.do('Sib', 'sib', {}, { retries: 0 }),
+          w.do('Slow', () => new Promise((resolve) => setTimeout(resolve, 20))),
+        ])
+      })
+      let runId = ''
+
+      await assert.rejects(
+        ws.startWorkflow('flow', {}, { type: 'test' }, h.rpc as never, {
+          inline: true,
+          onRunCreated: (id) => {
+            runId = id
+          },
+        }),
+        /boom/
+      )
+
+      assert.equal(await status(runId), 'failed')
+    }
+  )
+})
