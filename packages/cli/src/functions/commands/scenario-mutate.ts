@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
-import { relative, resolve } from 'node:path'
+import { createRequire } from 'node:module'
+import { join, relative, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 import { pikkuSessionlessFunc } from '#pikku/function'
 import { dim } from '../../utils/output.js'
@@ -90,21 +92,37 @@ const runTsc = (cwd: string, tsconfig: string, timeoutMs: number) =>
     })
   })
 
-/** Stryker is an optional peer: load it only when this command runs. */
-const loadStryker = async (): Promise<{
+/**
+ * Resolve an optional peer from the project first, then from the CLI. A project
+ * install is nested (bun, pnpm), so Stryker's own plugin lookup cannot find a
+ * sibling checker; naming the resolved paths as `plugins` fixes that.
+ */
+const resolvePeer = (rootDir: string, name: string): string | undefined => {
+  for (const base of [join(rootDir, 'package.json'), import.meta.url]) {
+    try {
+      return createRequire(base).resolve(name)
+    } catch {
+      // try the next place
+    }
+  }
+  return undefined
+}
+
+const loadStryker = async (
+  rootDir: string
+): Promise<{
   Stryker: new (options: Record<string, unknown>) => {
     runMutationTest(): Promise<any[]>
   }
 }> => {
-  const name = '@stryker-mutator/core'
-  try {
-    return await import(name)
-  } catch {
+  const core = resolvePeer(rootDir, '@stryker-mutator/core')
+  if (!core) {
     throw new Error(
       '`pikku scenario mutate` needs StrykerJS to generate mutants. Install it in the project: ' +
         'npm i -D @stryker-mutator/core @stryker-mutator/typescript-checker'
     )
   }
+  return import(pathToFileURL(core).href)
 }
 
 /**
@@ -116,14 +134,16 @@ const generateMutants = async (
   rootDir: string,
   files: string[],
   excludedMutations: string[],
-  tsconfig: string
+  tsconfig: string,
+  useChecker: boolean,
+  warn: (message: string) => void
 ): Promise<Mutant[]> => {
-  const { Stryker } = await loadStryker()
+  const { Stryker } = await loadStryker(rootDir)
   const options: Record<string, unknown> = {
     testRunner: 'command',
     commandRunner: { command: 'true' },
     coverageAnalysis: 'off',
-    inPlace: true,
+    inPlace: false,
     mutate: files,
     mutator: { excludedMutations },
     reporters: [],
@@ -131,11 +151,17 @@ const generateMutants = async (
     ignorePatterns: ['.pikku', '.stryker-tmp'],
     tsconfigFile: tsconfig,
   }
-  try {
-    await import('@stryker-mutator/typescript-checker' as string)
-    options.checkers = ['typescript']
-  } catch {
+  const checker = resolvePeer(rootDir, '@stryker-mutator/typescript-checker')
+  if (checker && !useChecker) {
+    warn(
+      'The project does not type-check as it stands, and the Stryker checker refuses to start on that. ' +
+        'Mutants are not type-checked, so one that does not compile is run anyway.'
+    )
+  }
+  if (checker && useChecker) {
     // Without the checker, non-compiling mutants reach `tsc` and count as inconclusive.
+    options.checkers = ['typescript']
+    options.plugins = [resolvePeer(rootDir, '@stryker-mutator/core')!, checker]
   }
   const previous = process.cwd()
   process.chdir(rootDir)
@@ -215,6 +241,10 @@ export const scenarioMutate = pikkuSessionlessFunc<
       .map((part) => part.trim())
       .filter(Boolean)
 
+    // Fail on a missing Stryker before spending a type-check on the answer.
+    await loadStryker(rootDir)
+    const baseline = await runTsc(rootDir, tsconfig, stageTimeout)
+    if (baseline.timedOut) throw new Error('The baseline tsc timed out.')
     logger.info('Generating mutants with StrykerJS…')
     let mutants = pickMutants(
       await generateMutants(
@@ -224,11 +254,18 @@ export const scenarioMutate = pikkuSessionlessFunc<
           .split(',')
           .map((part) => part.trim())
           .filter(Boolean),
-        tsconfig
+        tsconfig,
+        baseline.code === 0,
+        (message) => logger.warn(message)
       ),
       perFile
     )
     if (maxMutants !== undefined) mutants = mutants.slice(0, maxMutants)
+    if (mutants.length === 0) {
+      throw new Error(
+        `No mutants were generated from --files ${files}. Check the globs match source files under ${rootDir} that contain behaviour (schemas, imports and config lines are skipped).`
+      )
+    }
     logger.info(`Running ${mutants.length} mutants against ${flows}`)
 
     const flowList = flows.split(',').map((part) => part.trim())
@@ -274,9 +311,11 @@ export const scenarioMutate = pikkuSessionlessFunc<
         const codegen = await runCli(['all'], rootDir, stageTimeout)
         if (codegen.timedOut) return inconclusive('timeout')
         if (codegen.code !== 0) return inconclusive('codegen')
-        const tsc = await runTsc(rootDir, tsconfig, stageTimeout)
-        if (tsc.timedOut) return inconclusive('timeout')
-        if (tsc.code !== 0) return inconclusive('tsc')
+        if (baseline.code === 0) {
+          const tsc = await runTsc(rootDir, tsconfig, stageTimeout)
+          if (tsc.timedOut) return inconclusive('timeout')
+          if (tsc.code !== 0) return inconclusive('tsc')
+        }
         const run = await runCli(
           [
             'scenario',
