@@ -151,13 +151,15 @@ Another step failing does not abort a running step, although the run then starts
 
 ## Lost leases
 
-A pass holds its run's lease, and a queued worker holds its step's. After a loss, whatever is thrown records nothing: no step failure, retry, run status, compensation or word to a parent. The step stays `running`, and the next owner runs it as another attempt, or fails it with `WorkflowStepLeaseExpiredError` when none are left. This covers function, closure, graph and compensation steps. A step that returns is still recorded unless a newer attempt has replaced it.
+A pass holds its run's lease, and a queued worker holds its step's. After a loss, whatever is thrown records nothing: no step failure, retry, run status, compensation or word to a parent. The step stays `running`, and the next owner runs it as another attempt, or fails it with `WorkflowStepLeaseExpiredError` when none are left. This covers function, closure, graph and compensation steps. A step that returns is still recorded unless a newer attempt has replaced it. Losing the lock a suspend or approval gate is recorded under does not turn the gate into a failure.
 
-A queued run is woken through the queue. An inline run, and an unwind that `cancelRun` is driving, take the lease again and carry on, up to three times. If someone else holds it or the pickups run out, they enqueue a wake where there is a queue and throw `LeaseLostError`.
+An inline step, closure or compensation left `failed` with retries remaining, by a pass that lost its lease or died before creating the next attempt, spends a retry when replayed. Inline graph nodes do not. On a store with no real run lease (in-memory, Cloudflare Durable Object), a second pass leaves a closure step alone while this process is still working it.
+
+A queued run is woken through the queue. After a lost step lease the wake is delayed by a lease, and repeats for as long as that attempt still reads as leased. A custom orchestrator worker passes the job's `awaitedStep` to `orchestrateWorkflow`. An inline run, and an unwind that `cancelRun` is driving, take the lease again and carry on, up to three times. If someone else holds it or the pickups run out, they enqueue a wake where there is a queue and throw `LeaseLostError`.
 
 - **With no queue and no recovery,** a run whose lease cannot be taken again stays `running`. `cancelRun` stops it, subject to the last point here.
 - An inline child left this way leaves its parent `running` too.
-- A run cancelled, or unwinding for another failure, while the pass of a `running` step with a `compensate` loses the lease stays `compensating`.
+- A run cancelled, or unwinding for another failure, while the pass or queued worker of a `running` step with a `compensate` loses its lease stays `compensating`.
 
 ## Restarts
 
