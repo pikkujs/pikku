@@ -1374,6 +1374,7 @@ The generated local services (`pikku serve`, `pikku dev`, a generated local CLI)
 - **Dispatch routes fail closed** (`@pikku/cloudflare` 0.12.17 `c2d4f86`, `@pikku/node-http-server` 0.12.8 `b28e2da`). `POST /__pikku/queue-job` and `/__pikku/scheduler-job` reject every request until `PIKKU_DISPATCH_SECRET` is set on the worker and sent in `x-pikku-dispatch`.
 - **A deployed Cloudflare Worker is always production** (core 0.12.138 `6f11bb5`). The adapter pins `NODE_ENV=production`, so 5xx responses no longer include the error message or stack.
 - **The better-auth framework adapters moved** into `@pikku/next` and `@pikku/tanstack-start` (`c899301`).
+- **Built entries listen on your configured `hostname`** (`@pikku/cli`, `@pikku/deploy-standalone`, `@pikku/deploy-cloudflare`). The standalone binary and the server and container entries bind `HOST` when it is set, otherwise the `hostname` that `createConfig` returns, otherwise `0.0.0.0`. An app whose config says `localhost` or `127.0.0.1` is unreachable from outside its container: set `HOST=0.0.0.0` on the deployment, or remove `hostname` from the config. **Find:** `rg -n "hostname" -g '*config*.ts' -g 'services.ts'`
 
 Package names: the runtimes are published as `@pikku/express`, `@pikku/express-middleware`, `@pikku/fastify`, `@pikku/fastify-plugin`, `@pikku/next`, `@pikku/lambda`, `@pikku/cloudflare`, `@pikku/azure-functions`, `@pikku/bun-server`, `@pikku/node-http-server`, `@pikku/uws`, `@pikku/uws-handler`, `@pikku/ws`, `@pikku/tanstack-start` and `@pikku/modelcontextprotocol`.
 

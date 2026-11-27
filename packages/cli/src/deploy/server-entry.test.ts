@@ -60,3 +60,52 @@ describe('generateServerEntrySource', () => {
     )
   })
 })
+
+/** Runs the entry's own address declaration against a given env and config. */
+const listenAddress = (
+  source: string,
+  env: Record<string, string>,
+  config: { hostname?: string }
+): string => {
+  const declaration = source.match(/const HOST = (.+)$/m)
+  assert.ok(declaration, 'the entry declares no listen address')
+  assert.ok(
+    source.indexOf('const config = await') < declaration.index!,
+    'the address is resolved once the config exists'
+  )
+  return new Function('process', 'config', `return ${declaration[1]}`)(
+    { env },
+    config
+  )
+}
+
+describe('generateServerEntrySource listen address', () => {
+  test('HOST wins over the configured hostname', () => {
+    assert.equal(
+      listenAddress(
+        generateServerEntrySource(ctx()),
+        { HOST: '10.0.0.1' },
+        { hostname: '127.0.0.1' }
+      ),
+      '10.0.0.1'
+    )
+  })
+
+  test('the configured hostname applies when HOST is unset or empty', () => {
+    for (const env of [{}, { HOST: '' }] as Record<string, string>[]) {
+      assert.equal(
+        listenAddress(generateServerEntrySource(ctx()), env, {
+          hostname: '127.0.0.1',
+        }),
+        '127.0.0.1'
+      )
+    }
+  })
+
+  test('every interface is the default when neither names an address', () => {
+    assert.equal(
+      listenAddress(generateServerEntrySource(ctx()), {}, {}),
+      '0.0.0.0'
+    )
+  })
+})
