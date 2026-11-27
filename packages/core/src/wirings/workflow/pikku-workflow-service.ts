@@ -152,6 +152,7 @@ import {
   runClosureStep,
   type ClosureStepHost,
 } from './workflow-closure-step.js'
+import { OpenSteps } from './workflow-open-steps.js'
 import { runVersionMismatchFallback } from './workflow-version-fallback.js'
 import {
   WorkflowRecovery,
@@ -172,6 +173,8 @@ export abstract class PikkuWorkflowService
   private runContexts = new Map<string, RunContext>()
 
   private readonly unwinds = new RunUnwinds()
+
+  private readonly openSteps = new OpenSteps()
 
   private contextFor(runId: string): RunContext {
     let context = this.runContexts.get(runId)
@@ -1675,6 +1678,7 @@ export abstract class PikkuWorkflowService
 
   private get closureStepHost(): ClosureStepHost {
     return {
+      openSteps: this.openSteps,
       isInline: (runId) => this.isInline(runId),
       throwIfRunStopped: (runId) => this.throwIfRunStopped(runId),
       updateRunState: (...args) => this.updateRunState(...args),
