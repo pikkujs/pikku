@@ -126,6 +126,10 @@ import {
   renderScenarioCoverage,
   scenarioCoverage,
 } from './functions/commands/scenario-coverage.js'
+import {
+  scenarioMutate,
+  renderScenarioMutate,
+} from './functions/commands/scenario-mutate.js'
 import { pikkuVersionsInit } from './functions/commands/versions-init.js'
 import { pikkuThemeApply, pikkuThemeList } from './functions/commands/theme.js'
 import {
@@ -1476,6 +1480,59 @@ wireCLI({
             routes: {
               description:
                 'Comma-separated app routes, to list the ones no scenario opens',
+            },
+          },
+        }),
+        mutate: pikkuCLICommand({
+          func: scenarioMutate,
+          description:
+            'Mutation-test the suite: generate mutants of the source files with StrykerJS, run each through codegen, tsc and the named scenarios, and report the survivors (a mutant no scenario fails on). Needs @stryker-mutator/core in the project',
+          parameters: '<environment>',
+          render: renderScenarioMutate,
+          options: {
+            files: {
+              description:
+                'Comma-separated globs of the source files to mutate, relative to the project root (e.g. packages/functions/src/**/*.function.ts)',
+              short: 'm',
+            },
+            flows: {
+              description:
+                'Comma-separated scenario names that must catch the mutants',
+              short: 'f',
+            },
+            spawn: {
+              description:
+                "Start `pikku dev` on the environment's apiUrl for each mutant run. Without it, the environment must already be serving the mutant, which it will not be",
+              default: true,
+            },
+            apiUrl: {
+              description:
+                "Override the environment's api url for the runs, e.g. to use a free port",
+            },
+            perFile: {
+              description:
+                'Mutants to try per file, taken across mutator types',
+              default: 12,
+            },
+            maxMutants: {
+              description: 'Stop after this many mutants in total',
+            },
+            minScore: {
+              description:
+                'Fail (exit 1) when killed / (killed + survived) is below this percentage',
+            },
+            minMutants: {
+              description:
+                'With --min-score, fail too when fewer mutants than this reached a verdict',
+              default: 1,
+            },
+            exclude: {
+              description: 'Comma-separated Stryker mutators to leave out',
+              default: 'StringLiteral,ArrayDeclaration',
+            },
+            timeout: {
+              description: 'Minutes allowed for each stage of one mutant',
+              default: 10,
             },
           },
         }),
