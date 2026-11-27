@@ -10,5 +10,7 @@ The libsql web dialect talks to the Turso HTTP pipeline with `fetch`, so it runs
 the Node client cannot. These notes record the choices that follow from that.
 
 <!-- pikku:knowledge-index -->
+
 - [decisions](decisions/index.md) — a rule that was chosen, and what it rules out
+
 <!-- /pikku:knowledge-index -->

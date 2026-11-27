@@ -14,6 +14,8 @@ answering them independently is what keeps the result usable.
 These notes record how this package answers them.
 
 <!-- pikku:knowledge-index -->
+
 - [decisions](decisions/index.md) — a rule that was chosen, and what it rules out
 - [questions](questions/index.md) — something asked and not yet answered
+
 <!-- /pikku:knowledge-index -->
