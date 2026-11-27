@@ -23,6 +23,13 @@ when the lease is taken:
 - where there is a queue, the refused caller also enqueues a wake, for a holder in
   another process.
 
+An unwind left waiting on a step has no one to bring it back if that step dies.
+Recovery [drives it](an-unwind-waits-for-every-forward-step.md) with
+`RunUnwinds.redrive`, which does nothing while another driver has the run.
+
+A driver that ends on a lease error naming another run, such as a child's, has not
+lost its own run.
+
 The in-memory and Durable Object services pass the run lease through, so
 `UnwindExclusion` keeps one driver per run inside a process. A caller that arrives
 while one is active does not wait, because a compensation may itself call back

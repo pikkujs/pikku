@@ -32,9 +32,10 @@ it.
 
 ## What a sweep covers besides `running` runs
 
-A `compensating` run is swept like a `running` one, but only its compensation jobs
-are sent again. Sending a lost forward job again would start that step after the
-cancel, so an unwind waiting on one stays waiting.
+A `compensating` run is not handed to its orchestrator. Recovery
+[drives its unwind](an-unwind-waits-for-every-forward-step.md) under the run
+lease, which sends lost compensation jobs again and fails forward steps that are
+dead. No forward step is sent again.
 
 A child tells its parent when it settles, and that message can be lost. Replaying
 the parent cannot replace it, because running the step again starts a second

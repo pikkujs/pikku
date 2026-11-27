@@ -22,8 +22,8 @@ export abstract class WorkflowRecoveryFinders extends WorkflowStepWrites {
   /**
    * Ids of runs that are stalled: `running` or `compensating`, with no step
    * something is expected to complete (`scheduled`, `suspended`, `running` or
-   * `cancelling` under a live lease, or parked on an unsettled child run), and no step activity
-   * since `before`.
+   * `cancelling` under a live lease, or parked on an unsettled child run), and
+   * no step activity since `before`.
    *
    * A lapsed lease is a dispatch that died, so it holds nothing out of the
    * sweep. Nor does a `running` step with no lease and no child run: that is
@@ -51,8 +51,9 @@ export abstract class WorkflowRecoveryFinders extends WorkflowStepWrites {
   }
 
   /**
-   * Steps parked on `scheduled` on a `running` or `compensating` run, oldest first, a page at a time.
-   * Returns nothing by default, for a store whose runs die with the process.
+   * Steps parked on `scheduled` on a `running` or `compensating` run, oldest
+   * first, a page at a time. Returns nothing by default, for a store whose runs
+   * die with the process.
    */
   protected async findScheduledSteps(
     _limit: number,

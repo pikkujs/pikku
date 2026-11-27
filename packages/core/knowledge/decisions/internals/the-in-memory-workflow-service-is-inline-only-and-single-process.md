@@ -20,6 +20,11 @@ tools that want step orchestration, for tests, and for single-process apps that
 do not need persistence — and the run state is unbounded and lost on restart,
 which is the price of that.
 
+Being the only process also lets it say that every attempt that can work one of
+its steps is in its open-step registry (`openStepsAreAllSteps`), so an unwind can
+[fail a step nobody is working](an-unwind-waits-for-every-forward-step.md)
+without a real run lease. A subclass over shared storage must set it `false`.
+
 **What this rules out:** treating the no-op locks as a bug and adding real
 locking here, and running this service anywhere a second process or a queue
 worker could touch the same run. A deployment that needs either wants a

@@ -17,6 +17,9 @@ waits for every step it started (`PassSteps`, and the same for an inline graph).
   after. The closed run then refuses whatever a surviving branch asks for next,
   and a sibling's next retry. A body that returned waits before `completed`.
 - A step asked for after the pass has ended is rejected and never starts.
+- A DSL run that failed beside a step still running reads as unwinding until the
+  pass has outlived it. If there was nothing to undo, it is then `failed`, and the
+  caller gets the error.
 - The unwind that waited on a sibling is driven once the pass has let go
   (`RunUnwinds.runPass`). An inline graph pass drives it while it still holds the
   lease, after its nodes end.

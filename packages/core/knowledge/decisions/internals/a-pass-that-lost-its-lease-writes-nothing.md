@@ -86,13 +86,12 @@ beside a healthy step would start a chain of wakes of its own.
 
 - **With no queue and no recovery,** a run whose lease cannot be taken again stays
   `running`. Nothing in the process is left to look at it, and a sweep resumes a
-  run through the queue. `cancelRun` still stops it, subject to the last point.
+  `running` run through the queue. `cancelRun` still stops it.
 - **An inline child** has no parent step to report to. When it is left running, so
   is the parent waiting on it.
-- **An unwind waits for a step that is `running`** and has a compensation. If the
-  run was cancelled, or started to unwind for another failure, while that step's
-  pass or queued worker was losing its lease, the run stays `compensating`, even
-  once a step lease has lapsed: nothing yet declares the step dead.
+- **An unwind waiting on a step that lost its lease** stays `compensating` until
+  something drives it. Recovery does, and fails the step once it
+  [counts as dead](an-unwind-waits-for-every-forward-step.md).
 
 A pickup can run a function again beside a call that ignored its signal. That is
 the same at-least-once guarantee a restart has, and `invocationId` is what a
