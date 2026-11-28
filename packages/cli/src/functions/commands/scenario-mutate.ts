@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join, relative, resolve } from 'node:path'
@@ -33,6 +33,13 @@ export interface ScenarioMutateReport extends MutationScore {
 
 const MINUTE = 60_000
 
+const live = new Set<ChildProcess>()
+const track = <T extends ChildProcess>(child: T): T => {
+  live.add(child)
+  child.once('exit', () => live.delete(child))
+  return child
+}
+
 /**
  * Run this same CLI again as a child. `scenario run` and `all` call
  * process.exit-style paths and boot a server, so each mutant gets a clean process.
@@ -43,10 +50,15 @@ const runCli = (
   timeoutMs: number
 ): Promise<{ code: number | null; output: string; timedOut: boolean }> =>
   new Promise((resolvePromise) => {
-    const child = spawn(
-      process.execPath,
-      [...process.execArgv, process.argv[1]!, ...args],
-      { cwd, env: { ...process.env, PIKKU_NO_LOGO: '1' } }
+    const child = track(
+      spawn(
+        process.execPath,
+        [...process.execArgv, process.argv[1]!, ...args],
+        {
+          cwd,
+          env: { ...process.env, PIKKU_NO_LOGO: '1' },
+        }
+      )
     )
     let output = ''
     let timedOut = false
@@ -72,13 +84,11 @@ const runCli = (
 const runTsc = (cwd: string, tsconfig: string, timeoutMs: number) =>
   new Promise<{ code: number | null; timedOut: boolean }>((resolvePromise) => {
     // The real compiler: `pikku scenario run --tsc-summary` does not fail on type errors.
-    const child = spawn(
-      'npx',
-      ['--no-install', 'tsc', '--noEmit', '-p', tsconfig],
-      {
+    const child = track(
+      spawn('npx', ['--no-install', 'tsc', '--noEmit', '-p', tsconfig], {
         cwd,
         stdio: 'ignore',
-      }
+      })
     )
     let timedOut = false
     const timer = setTimeout(() => {
@@ -266,13 +276,37 @@ export const scenarioMutate = pikkuSessionlessFunc<
         `No mutants were generated from --files ${files}. Check the globs match source files under ${rootDir} that contain behaviour (schemas, imports and config lines are skipped).`
       )
     }
-    logger.info(`Running ${mutants.length} mutants against ${flows}`)
 
     const flowList = flows.split(',').map((part) => part.trim())
     const passthrough = [
       ...(spawnServer ? ['--spawn'] : []),
       ...(apiUrl ? ['--apiUrl', apiUrl] : []),
     ]
+    const scenarioArgs = [
+      'scenario',
+      'run',
+      environment,
+      '--flows',
+      flowList.join(','),
+      ...passthrough,
+    ]
+
+    logger.info(`Checking ${flows} passes on the unmutated code…`)
+    const clean = await runCli(['all'], rootDir, stageTimeout)
+    if (clean.code !== 0)
+      throw new Error(
+        `Codegen fails on the unmutated project, so no mutant can be judged:\n${clean.output.slice(-2000)}`
+      )
+    const cleanRun = classifyScenarioRun(
+      await runCli(scenarioArgs, rootDir, stageTimeout)
+    )
+    if (cleanRun !== 'survived')
+      throw new Error(
+        cleanRun === 'killed'
+          ? `${flows} fails on the unmutated code: every mutant would count as killed. Fix the scenario first.`
+          : `${flows} did not run on the unmutated code (${cleanRun}): no mutant can be judged.`
+      )
+    logger.info(`Running ${mutants.length} mutants against ${flows}`)
 
     const results: MutantResult[] = []
     const originals = new Map<string, string>()
@@ -281,7 +315,13 @@ export const scenarioMutate = pikkuSessionlessFunc<
         writeFileSync(resolve(rootDir, file), source)
     }
     const onSignal = () => {
+      for (const child of live) child.kill('SIGTERM')
       restore()
+      spawnSync(
+        process.execPath,
+        [...process.execArgv, process.argv[1]!, 'all'],
+        { cwd: rootDir, stdio: 'ignore', timeout: stageTimeout }
+      )
       process.exit(130)
     }
     process.once('SIGINT', onSignal)
@@ -316,18 +356,7 @@ export const scenarioMutate = pikkuSessionlessFunc<
           if (tsc.timedOut) return inconclusive('timeout')
           if (tsc.code !== 0) return inconclusive('tsc')
         }
-        const run = await runCli(
-          [
-            'scenario',
-            'run',
-            environment,
-            '--flows',
-            flowList.join(','),
-            ...passthrough,
-          ],
-          rootDir,
-          stageTimeout
-        )
+        const run = await runCli(scenarioArgs, rootDir, stageTimeout)
         const verdict = classifyScenarioRun(run)
         return verdict === 'killed' || verdict === 'survived'
           ? { ...base, outcome: verdict }

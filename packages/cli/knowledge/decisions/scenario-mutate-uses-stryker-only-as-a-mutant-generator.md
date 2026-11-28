@@ -39,3 +39,7 @@ flag through the codegen child and `spawnDevServer` is the untried route.
 - The typescript checker refuses to start on a project that does not type-check;
   the command checks the baseline first and then runs without the checker and
   without the per-mutant `tsc` stage.
+
+## The clean code is run first
+
+`scenario mutate` runs `pikku all` and the named scenarios against the unmutated project before it touches a file, and refuses to continue unless they pass. A scenario that already fails (or never runs) would otherwise "kill" every mutant and report 100%. On SIGINT/SIGTERM it also kills the in-flight child processes and regenerates from the restored source, so `.pikku` is not left holding the last mutant.
