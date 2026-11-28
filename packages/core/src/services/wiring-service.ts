@@ -402,13 +402,6 @@ export const filterAllMetaByAddon = (
   }
 }
 
-export class NotFoundError extends Error {
-  constructor(message: string) {
-    super(message)
-    this.name = 'NotFoundError'
-  }
-}
-
 const isAppFunction = (func: FunctionMeta): boolean =>
   !func.tags?.includes('pikku') && !func.scenario && !func.scenarioStep
 
