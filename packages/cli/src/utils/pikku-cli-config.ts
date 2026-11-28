@@ -612,9 +612,7 @@ const _getPikkuCLIConfig = async (
   exitProcess: boolean = false,
   outDirOverride?: string
 ): Promise<PikkuCLIConfig> => {
-  if (!configFile) {
-    configFile = await findConfigFile()
-  }
+  configFile = resolve(configFile ?? (await findConfigFile()))
 
   try {
     const mainPass = await resolveMainPass(configFile)
