@@ -2,6 +2,9 @@
  * A root project whose workspace holds an addon and a main package, found by their markers.
  *
  *   1. pikku all at the root runs pikku all in the addon, then in the main package
+ *   1b. pikku all from the main package, given the root config by a relative path
+ *       (`-c ../../pikku.config.json`), reads that same file in every pass it starts:
+ *       it succeeds and writes no .pikku above the project
  *   1a. the main package's config holds only `"main": true`, and its pass reads
  *       the root's settings: its virtual user names the root's `local`
  *       environment and takes its address from the root's `scenarios.emailDomain`
@@ -40,6 +43,20 @@ for (const pkg of ['tools', 'app']) {
   }
 }
 console.log('✓ the addon and the main package were generated')
+
+const above = [1, 2, 3].map((up) => join(here, ...Array(up).fill('..'), '.pikku'))
+const relative = spawnSync('node', [PIKKU, 'all', '-c', '../../pikku.config.json'], {
+  cwd: join(here, 'packages/app'),
+  encoding: 'utf8',
+})
+const strays = above.filter((dir) => existsSync(dir))
+for (const dir of strays) rmSync(dir, { recursive: true, force: true })
+if (relative.status !== 0) {
+  console.error(relative.stdout + relative.stderr)
+  fail('pikku all from the main package with a relative -c failed')
+}
+if (strays.length) fail(`a relative -c wrote outside the project: ${strays.join(', ')}`)
+console.log('✓ a relative -c from the main package reads the root config in every pass')
 
 const virtualUsers = JSON.parse(
   readFileSync(
