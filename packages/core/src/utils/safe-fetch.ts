@@ -7,6 +7,7 @@ import {
   hostMatches,
   validateHostPattern,
 } from './host-match.js'
+import { getDefaultHostResolver } from './default-host-resolver.js'
 import { isIpLiteral, parseIPv4Octets, parseIPv6Groups } from './ip-literal.js'
 
 export { hostMatches, validateHostPattern } from './host-match.js'
@@ -125,21 +126,6 @@ export function isPrivateHost(hostname: string): boolean {
 /** Resolves a hostname to the IP addresses it points at. */
 export type HostResolver = (hostname: string) => Promise<string[]>
 
-let defaultHostResolver: HostResolver | undefined
-
-/**
- * Installs the resolver {@link safeFetch} uses when a call passes no
- * `resolveHost` of its own.
- *
- * Core cannot resolve DNS itself — Workers has no DNS API — so without a
- * resolver the guard is literal-only and a public name pointing at
- * `169.254.169.254` passes. Node runtimes install
- * `nodeHostResolver` from `@pikku/core/node-host-resolver` at startup.
- */
-export function setDefaultHostResolver(resolver: HostResolver | undefined) {
-  defaultHostResolver = resolver
-}
-
 /** Restrictions {@link safeFetch} and {@link assertFetchableUrl} apply to each URL they visit. */
 export interface SafeFetchOptions {
   /**
@@ -169,7 +155,7 @@ export interface SafeFetchOptions {
   maxRedirects?: number
   /**
    * Resolves a hostname so a *public* name pointing at a private address is
-   * refused. Defaults to whatever {@link setDefaultHostResolver} installed;
+   * refused. Defaults to the resolver `installNodeHostResolver` installed;
    * pass `null` to opt a call out of resolution entirely.
    */
   resolveHost?: HostResolver | null
@@ -253,7 +239,7 @@ async function resolvedRefusal(
   const resolver =
     options.resolveHost === null
       ? undefined
-      : (options.resolveHost ?? defaultHostResolver)
+      : (options.resolveHost ?? getDefaultHostResolver())
   if (!resolver || isIpLiteral(url.hostname)) return undefined
 
   const addresses = await resolver(url.hostname)

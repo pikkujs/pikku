@@ -1,6 +1,7 @@
 import { lookup } from 'node:dns/promises'
 
-import { setDefaultHostResolver, type HostResolver } from './safe-fetch.js'
+import { setDefaultHostResolver } from './default-host-resolver.js'
+import type { HostResolver } from './safe-fetch.js'
 
 /**
  * Resolves a hostname through the platform resolver, returning every address it
