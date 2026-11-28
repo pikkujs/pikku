@@ -35,9 +35,9 @@ import {
   type RegistryInvoke,
 } from '../../utils/remote-addon-sync.js'
 import { writeAddonDeclaration } from '../db/addon-declarations.js'
-import { writeAddonCrud } from '../wirings/crud/crud-addon.js'
+import { writeAddonCollection } from '../wirings/collections/collection-addon.js'
 import { ensureDbTypes } from '../db/ensure-db-types.js'
-import { CRUD_FILE } from '../wirings/crud/load-crud-declaration.js'
+import { COLLECTIONS_FILE } from '../wirings/collections/load-collection-declaration.js'
 import {
   PikkuTypecheckFailedError,
   renderTscFull,
@@ -207,8 +207,9 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       )
     }
 
-    const hasCrud = !config.addon && existsSync(join(config.rootDir, CRUD_FILE))
-    await workflow.do('CRUD', 'pikkuCrud', null)
+    const hasCollection =
+      !config.addon && existsSync(join(config.rootDir, COLLECTIONS_FILE))
+    await workflow.do('collection', 'pikkuCollection', null)
 
     const allImports: string[] = []
     let functionTypesFileExists = true
@@ -413,8 +414,8 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
     await workflow.do('Function types split', 'pikkuFunctionTypesSplit', {})
     await workflow.do('Leaf subpath entries', 'pikkuLeafIndexes', null)
 
-    if (hasCrud) {
-      await workflow.do('CRUD checks', 'pikkuCrudChecks', null)
+    if (hasCollection) {
+      await workflow.do('collection checks', 'pikkuCollectionChecks', null)
     }
 
     if (!functionTypesFileExists || missingScaffolds.length > 0) {
@@ -744,7 +745,7 @@ export const allWorkflow = pikkuWorkflowComplexFunc<void, void>({
       // consumer reads an absent file as a package that cannot say whether it
       // ships a schema, which is a broken publish rather than a quiet no.
       await writeAddonDeclaration(config.rootDir, config.outDir)
-      await writeAddonCrud(config.rootDir, config.outDir)
+      await writeAddonCollection(config.rootDir, config.outDir)
     }
 
     const hasFunctionRegistrations = await workflow.do(

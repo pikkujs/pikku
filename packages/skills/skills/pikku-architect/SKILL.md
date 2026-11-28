@@ -211,7 +211,7 @@ calls. That was the right answer, but it was a design decision made mid-build be
 not asked what the wire would accept. Before you write a wire, name what that wire hands the
 function and what it does with the answer; where the two disagree, plan BOTH halves.
 
-**Records the owner or staff edit come from the CRUD backend** (`defineCrud` in `db/crud.ts`, over the tables in
+**Records the owner or staff edit come from the collection backend** (`defineCollections` in `db/collections.ts`, over the tables in
 `db/tables.ts`): plan no hand-written list, get, create, update or delete functions for them. The `/admin` screens call
 the generated ones, and are still yours to plan. A public form's submit function is planned as usual.
 

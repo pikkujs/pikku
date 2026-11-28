@@ -708,7 +708,7 @@
     "validateSchema"
   ],
   "./db": ["defineTables"],
-  "./crud": ["defineCrud"],
+  "./collections": ["defineCollections"],
   "./testing": [
     "RecordingTracer",
     "clearPikkuRuntimeState",

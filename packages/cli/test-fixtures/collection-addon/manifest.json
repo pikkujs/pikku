@@ -1,0 +1,26 @@
+{
+  "name": "@collection-fixture/notes",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#pikku/*.js": "./dist/.pikku/*.js",
+    "#pikku/*": ["./dist/.pikku/*/index.js", "./dist/.pikku/*"]
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./types": { "types": "./dist/types/application-types.d.ts" },
+    "./collections": {
+      "types": "./dist/src/collections.d.ts",
+      "import": "./dist/src/collections.js"
+    },
+    "./.pikku/*": "./dist/.pikku/addon/*",
+    "./.pikku/rpc/pikku-rpc-wirings-map.internal.gen.js": {
+      "types": "./dist/.pikku/addon/rpc/pikku-rpc-wirings-map.internal.gen.d.ts"
+    }
+  },
+  "files": ["dist"]
+}

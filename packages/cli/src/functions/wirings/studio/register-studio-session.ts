@@ -29,14 +29,14 @@ const wiredAddonScopeRoots = () => {
 }
 
 /**
- * `crud` when the project has CRUD collections: only the functions `pikku all`
- * generates from `db/crud.ts` require a scope under that root.
+ * `collections` when the project has collections: only the functions `pikku all`
+ * generates from `db/collections.ts` require a scope under that root.
  */
-const crudScopeRoots = () =>
+const collectionScopeRoots = () =>
   Object.values(pikkuState(null, 'function', 'meta')).some(({ scopes }) =>
-    scopes?.some((scope) => scope.startsWith('crud:'))
+    scopes?.some((scope) => scope.startsWith('collections:'))
   )
-    ? ['crud']
+    ? ['collections']
     : []
 
 const matches = (presented: string, token: string) => {
@@ -61,7 +61,7 @@ export const studioSession = (token: string) =>
             ...new Set([
               ...STUDIO_SESSION.scopes,
               ...wiredAddonScopeRoots(),
-              ...crudScopeRoots(),
+              ...collectionScopeRoots(),
             ]),
           ],
         })

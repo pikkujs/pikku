@@ -18,6 +18,6 @@
     "src/wirings/harness/harness.test.ts",
     "src/wirings/webhook/define-outgoing-webhook.test.ts",
     "src/platform-services.types.test.ts",
-    "src/crud/define-crud.types.test.ts"
+    "src/collections/define-collections.types.test.ts"
   ]
 }

@@ -10,8 +10,8 @@ rules of the `pikku-changes` skill, and these on top:
   (menu labels, buttons, footer) stays in the i18n messages.
 - An owner area in the same app: a `frontend` change with `"newPages": ["/admin", ...]` where the signed-in owner lists,
   adds, edits and removes those records and reads what the forms sent. It depends on the data change. Never a separate app.
-  Those records, and what the forms sent, use the CRUD backend, within the limits in `pikku-changes`: the data change
-  declares them in `db/crud.ts`, and the `/admin` pages are built to call the generated functions. The functions the
+  Those records, and what the forms sent, use the collection backend, within the limits in `pikku-changes`: the data change
+  declares them in `db/collections.ts`, and the `/admin` pages are built to call the generated functions. The functions the
   public forms submit to are hand-written.
 - The rebuilt site does what the original does, no more. A route, form, table or email comes from the capture: an original
   page, form or redirect, an email the original visibly sends or promises, the owner area, or the data of a service being
