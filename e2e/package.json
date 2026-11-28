@@ -71,6 +71,8 @@
     "@pikku/ws": "workspace:*",
     "@playwright/test": "^1.64.1",
     "@standard-schema/spec": "^1.1.0",
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/typescript-checker": "^10.1.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26",
     "@types/ws": "^8.18.2",

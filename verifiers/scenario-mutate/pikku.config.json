@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/pikkujs/pikku/refs/heads/main/packages/cli/cli.schema.json",
+  "rootDir": ".",
+  "tsconfig": "./tsconfig.json",
+  "packageMappings": {
+    ".": "@pikku/verifiers-scenario-mutate"
+  },
+  "schema": {
+    "supportsImportAttributes": true
+  },
+  "scaffold": {
+    "pikkuDir": "src/scaffold",
+    "rpc": true,
+    "scenarios": true
+  },
+  "scenarios": {
+    "emailDomain": "virtualuser.local"
+  },
+  "environments": {
+    "local": {
+      "backends": {
+        "api": {
+          "signInPath": "/api/auth/sign-in/virtual-user"
+        }
+      },
+      "frontends": {}
+    }
+  },
+  "backends": {
+    "api": {
+      "filter": {},
+      "dev": {
+        "port": 4021
+      }
+    }
+  }
+}

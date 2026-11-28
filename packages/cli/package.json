@@ -85,6 +85,8 @@
     "zod": "^4.6.7"
   },
   "peerDependencies": {
+    "@stryker-mutator/core": "^10.1.1",
+    "@stryker-mutator/typescript-checker": "^10.1.1",
     "@pikku/playwright": "^0.12.90",
     "@pikku/ws": "^0.12.12",
     "better-auth": "^1.7.5",
@@ -154,6 +156,12 @@
     "./package.json": "./package.json"
   },
   "peerDependenciesMeta": {
+    "@stryker-mutator/core": {
+      "optional": true
+    },
+    "@stryker-mutator/typescript-checker": {
+      "optional": true
+    },
     "@pikku/playwright": {
       "optional": true
     },

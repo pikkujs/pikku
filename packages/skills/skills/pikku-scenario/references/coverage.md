@@ -68,3 +68,17 @@ node --import tsx --test src/**/*.test.ts
 ```
 
 Services are plain objects — a Pikku function is pure business logic, so a mock is just the shape the function destructures. Build real services via the `pikkuServices` / `pikkuWireServices` factories when a test needs them.
+
+## Do the assertions catch anything: `pikku scenario mutate`
+
+Coverage says a line ran, not that a scenario would notice it changing. `pikku scenario mutate <env> --files <globs> --flows <names>` mutates the named source files one change at a time, runs each mutant through codegen, `tsc` and the named scenarios against a spawned server, and lists the **survivors**: mutants the scenarios still passed on, by file, line and mutator.
+
+```bash
+pikku scenario mutate ci --files 'packages/functions/src/**/*.function.ts' \
+  --flows sessionHealthScenario --min-score 80 --api-url http://localhost:4031
+```
+
+- Needs `@stryker-mutator/core` (and `@stryker-mutator/typescript-checker`) in the project. Stryker only generates the mutants; it never runs the scenarios.
+- A survivor means a scenario never asserts on that behaviour: add the assertion, then run again. `value * 2` → `value / 2` surviving means nothing checks the doubled value.
+- Mutants that fail codegen, `tsc` or boot are **inconclusive** and count neither way. The score is `killed / (killed + survived)`; `--min-score` makes the command exit 1 below it.
+- It rewrites your source once per mutant and restores it afterwards, including on Ctrl-C. Use `--api-url` to run on a port no other server holds.
