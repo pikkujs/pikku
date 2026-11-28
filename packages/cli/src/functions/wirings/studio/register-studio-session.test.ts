@@ -1,5 +1,7 @@
 import assert from 'node:assert'
-import { describe, test } from 'node:test'
+import { afterEach, beforeEach, describe, test } from 'node:test'
+import { wireAddon, wireRemoteAddon } from '@pikku/core/addon'
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
 import {
   registerStudioSession,
   studioSession,
@@ -49,5 +51,71 @@ describe('studio session', () => {
   test('is only registered with a long enough token', () => {
     assert.equal(registerStudioSession(undefined), false)
     assert.equal(registerStudioSession('short'), false)
+  })
+})
+
+const declareScopes = (packageName: string | null, ...scopes: string[][]) => {
+  scopes.forEach((required, index) => {
+    pikkuState(packageName, 'function', 'meta')[`fn${index}`] = {
+      scopes: required,
+    } as never
+  })
+}
+
+describe('studio session with wired addons', () => {
+  beforeEach(() => resetPikkuState())
+  afterEach(() => resetPikkuState())
+
+  const scopes = async () =>
+    ((await run({ [STUDIO_HEADER]: TOKEN })) as { scopes: string[] }).scopes
+
+  test('holds the root of every scope a wired addon function requires', async () => {
+    wireAddon({ name: 'blog', package: '@acme/addon-blog' })
+    wireAddon({ name: 'shop', package: '@acme/addon-shop' })
+    declareScopes('@acme/addon-blog', ['blog:manage'], ['blog:read'])
+    declareScopes('@acme/addon-shop', ['shop:orders:refund', 'admin:users'])
+
+    assert.deepEqual(await scopes(), [
+      'admin',
+      'pikku:otlp:runs',
+      'blog',
+      'shop',
+    ])
+  })
+
+  test('never holds the wildcard', async () => {
+    wireAddon({ name: 'blog', package: '@acme/addon-blog' })
+    declareScopes('@acme/addon-blog', ['*'], ['*:manage'])
+
+    assert.deepEqual(await scopes(), ['admin', 'pikku:otlp:runs'])
+  })
+
+  test("takes nothing from the app's own functions, a package that is not wired, or a remote addon", async () => {
+    wireRemoteAddon({
+      name: 'cloud',
+      package: '@acme/addon-cloud',
+      serverUrl: 'https://cloud.example.com',
+    })
+    declareScopes(null, ['billing:refund'])
+    declareScopes('@acme/addon-unwired', ['unwired:manage'])
+    declareScopes('@acme/addon-cloud', ['cloud:manage'])
+
+    assert.deepEqual(await scopes(), ['admin', 'pikku:otlp:runs'])
+  })
+
+  test('holds collections when the app has collection functions, and only then', async () => {
+    declareScopes(null, ['billing:refund'], ['collectionExport:run'])
+    assert.deepEqual(await scopes(), ['admin', 'pikku:otlp:runs'])
+
+    resetPikkuState()
+    declareScopes(null, [
+      'collections:offering:read',
+      'collections:offering:edit',
+    ])
+    assert.deepEqual(await scopes(), [
+      'admin',
+      'pikku:otlp:runs',
+      'collections',
+    ])
   })
 })

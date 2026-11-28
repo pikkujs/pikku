@@ -25,6 +25,8 @@
     // A subcommand, not a binary: `pikku dev` in the dev-bun verifier, and
     // `yarn dev` in the app `create-pikku` has just scaffolded.
     "dev",
+    // A subcommand, not a binary: a standalone bundle's own `db migrate`.
+    "db",
     // Optional system binaries. `@pikku/playwright` probes for ffmpeg and keeps
     // recordings uncompressed when it is absent, and its tests skip without it;
     // ffprobe ships alongside.
