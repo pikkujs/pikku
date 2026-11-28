@@ -2,6 +2,7 @@ import { describe, test, before } from 'node:test'
 import assert from 'node:assert/strict'
 
 import type { PikkuWorkflowService } from '../../wirings/workflow/pikku-workflow-service.js'
+import type { StepState } from '../../wirings/workflow/workflow.types.js'
 import type { ServiceTestConfig } from '../service-tests.js'
 
 /** Conformance suite for `workflowService`. Runs only when a backend supplies one. */
@@ -82,6 +83,42 @@ export const defineWorkflowServiceTests = (
       assert.ok(run)
       assert.equal(run.status, 'completed')
       assert.deepEqual(run.output, { result: 'done' })
+    })
+
+    test('a cancelled run is not moved by a late status write', async () => {
+      const runId = await service.createRun(
+        'cancelled-workflow',
+        {},
+        false,
+        'hash-cancelled',
+        wire
+      )
+      const cause = { message: 'stop', stack: '', code: 'WORKFLOW_CANCELLED' }
+      assert.equal(
+        await service.updateRunStatus(runId, 'cancelled', undefined, cause),
+        true
+      )
+
+      for (const late of ['completed', 'failed', 'suspended'] as const) {
+        assert.equal(
+          await service.updateRunStatus(
+            runId,
+            late,
+            { late },
+            {
+              message: 'late',
+              stack: '',
+            }
+          ),
+          false,
+          late
+        )
+      }
+
+      const run = await service.getRun(runId)
+      assert.equal(run?.status, 'cancelled')
+      assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+      assert.ok(!run?.output)
     })
 
     test('insertStepState and getStepState', async () => {
@@ -177,12 +214,67 @@ export const defineWorkflowServiceTests = (
         { retries: 2 }
       )
 
+      await service.setStepRunning(step.stepId)
       await service.setStepError(step.stepId, new Error('fail'))
       const retried = await service.createRetryAttempt(step.stepId, 'pending')
       assert.equal(retried.status, 'pending')
       assert.equal(retried.attemptCount, 2)
       assert.equal(retried.error, undefined)
       assert.equal(retried.result, undefined)
+    })
+
+    test('a step’s timeout is kept through insert, claim and retry', async () => {
+      const runId = await service.createRun(
+        'timeout-workflow',
+        {},
+        false,
+        'hash-timeout',
+        wire
+      )
+      const store = service as unknown as {
+        claimStepForExecution(
+          runId: string,
+          stepName: string,
+          rpcName: string,
+          leaseMs: number
+        ): Promise<StepState>
+      }
+      const claim = () =>
+        store.claimStepForExecution(runId, 'deadline-step', 'myRpc', 60_000)
+      const inserted = await service.insertStepState(
+        runId,
+        'deadline-step',
+        'myRpc',
+        {},
+        { retries: 2, timeout: '30000ms' }
+      )
+      assert.equal(inserted.timeout, '30000ms')
+      assert.equal(
+        (await service.getStepState(runId, 'deadline-step')).timeout,
+        '30000ms'
+      )
+
+      const first = await claim()
+      assert.equal(first.timeout, '30000ms')
+
+      await service.setStepError(first.stepId, new Error('timed out'))
+      const reclaimed = await claim()
+      assert.equal(reclaimed.attemptCount, 2)
+      assert.equal(reclaimed.timeout, '30000ms')
+
+      await service.setStepError(reclaimed.stepId, new Error('again'))
+      const retried = await service.createRetryAttempt(
+        reclaimed.stepId,
+        'pending'
+      )
+      assert.equal(retried.timeout, '30000ms')
+
+      const bare = await service.insertStepState(runId, 'bare', 'myRpc', {})
+      assert.equal(bare.timeout, undefined)
+      assert.equal(
+        (await service.getStepState(runId, 'bare')).timeout,
+        undefined
+      )
     })
 
     test('getRunStatus reports per-step duration and attempts', async () => {
@@ -259,6 +351,7 @@ export const defineWorkflowServiceTests = (
         wire
       )
       const step = await service.insertStepState(runId, 'node-a', 'rpc', {})
+      await service.setStepRunning(step.stepId)
       await service.setStepResult(step.stepId, { out: 'hello' })
 
       const results = await service.getNodeResults(runId, ['node-a'])
@@ -279,8 +372,9 @@ export const defineWorkflowServiceTests = (
         'rpc',
         {}
       )
-      await service.setStepResult(step.stepId, {})
+      await service.setStepRunning(step.stepId)
       await service.setBranchTaken(step.stepId, 'left')
+      await service.setStepResult(step.stepId, {})
 
       const state = await service.getCompletedGraphState(runId)
       assert.ok(state.completedNodeIds.includes('branch-node'))

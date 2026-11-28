@@ -86,18 +86,22 @@ export const stepWorkerQueueName = (
  * every step dispatch would pay for that — only a step that names a workflow
  * and has a queue to reach ever asks.
  */
+/** Whether the function a step or its compensation runs goes to the queue. */
+export const isQueuedFunction = (rpcName: string): boolean => {
+  const funcId = pikkuState(null, 'rpc', 'meta')[forwardStepName(rpcName)]
+  return (
+    typeof funcId === 'string' &&
+    pikkuState(null, 'function', 'meta')[funcId]?.workflowQueued === true
+  )
+}
+
 export const stepDispatchTarget = async (
   rpcName: string,
   stepName: string,
   parentIsInline: () => Promise<boolean>
 ): Promise<'queue' | 'inline'> => {
-  const rpcFuncId = pikkuState(null, 'rpc', 'meta')[forwardStepName(rpcName)]
-  const rpcMeta =
-    typeof rpcFuncId === 'string'
-      ? pikkuState(null, 'function', 'meta')[rpcFuncId]
-      : undefined
   const hasQueue = getSingletonServices()?.queueService !== undefined
-  if (rpcMeta?.workflowQueued === true) {
+  if (isQueuedFunction(rpcName)) {
     if (!hasQueue) {
       throw new Error(
         `Workflow step '${stepName}' (function '${rpcName}') is marked 'workflowQueued: true' but no queue service is configured.`

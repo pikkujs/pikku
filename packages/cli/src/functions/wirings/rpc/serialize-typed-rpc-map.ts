@@ -129,7 +129,7 @@ export type TypedRunWorkflow = <Name extends keyof FlattenedWorkflowMap>(
 export type TypedWorkflowStatus = (
   workflowName: string,
   runId: string
-) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'; output?: unknown; error?: { message?: string } }>
+) => Promise<{ id: string; status: 'running' | 'suspended' | 'completed' | 'failed' | 'cancelling' | 'cancelled' | 'compensating' | 'compensated' | 'compensation_failed'; output?: unknown; error?: { message?: string } }>
 
 /** A tool call waiting for the user's approval, as \`run\` and \`approve\` return it. */
 export type AgentPendingApproval = {

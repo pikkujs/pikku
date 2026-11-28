@@ -17,6 +17,7 @@
     "src/wirings/agent/agent-middleware.types.test.ts",
     "src/wirings/harness/harness.test.ts",
     "src/wirings/webhook/define-outgoing-webhook.test.ts",
+    "src/wirings/workflow/workflow-step-timeout.types.test.ts",
     "src/platform-services.types.test.ts",
     "src/collections/define-collections.types.test.ts"
   ]

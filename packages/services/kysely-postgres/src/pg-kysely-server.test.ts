@@ -57,6 +57,14 @@ if (!url) {
       workflowFencing: async () => {
         return {
           service: await fresh(),
+          forceStepStatus: async (runId, stepName, status) => {
+            await db
+              .updateTable('workflowStep')
+              .set({ status })
+              .where('workflowRunId', '=', runId)
+              .where('stepName', '=', stepName)
+              .execute()
+          },
           lapseLease: async (runId, stepName) => {
             await db
               .updateTable('workflowStep')

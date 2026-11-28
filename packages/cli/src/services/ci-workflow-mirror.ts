@@ -65,6 +65,7 @@ export class CLIWorkflowMirror implements WorkflowRunMirror {
   }
 
   async setStepScheduled() {}
+  async setStepCancelling() {}
   async setStepChildRunId() {}
   async createRetryAttempt() {}
   async setBranchTaken() {}

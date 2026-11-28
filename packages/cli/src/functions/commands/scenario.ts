@@ -818,7 +818,12 @@ export const scenarioRun = pikkuSessionlessFunc<
             data,
             { type: 'cli' },
             guardRpc,
-            { virtualUsers, onRunCreated: (id) => (runId = id) }
+            {
+              virtualUsers,
+              onRunCreated: (id) => {
+                runId = id
+              },
+            }
           ))
           const run = await workflowService.getRun(runId)
           if (run?.status === 'completed') {

@@ -3,11 +3,14 @@ import assert from 'node:assert/strict'
 import Redis from 'ioredis-mock'
 
 import { InMemoryLeaseService, LeaseTakenError } from '@pikku/core/services'
+import { defineServiceTests } from '@pikku/core/testing'
 import { RedisWorkflowService } from './redis-workflow-service.js'
 
 const KEY_PREFIX = 'workflows'
 
 let ws: RedisWorkflowService
+let fencingCount = 0
+let queuedCount = 0
 let redis: any
 let leases: InMemoryLeaseService
 
@@ -154,4 +157,208 @@ describe('RedisWorkflowService locks on the lease service it is given', () => {
     assert.equal(claimed, null)
     assert.equal((await ws.getStepState(runId, 'charge')).status, 'pending')
   })
+})
+
+describe('a step parked on a child run', () => {
+  const park = async (retries: number) => {
+    const runId = await newRun()
+    const step = await ws.insertStepState(
+      runId,
+      'child',
+      'flow',
+      {},
+      { retries }
+    )
+    // ioredis-mock cannot run `setStepRunning`'s history read, so the status
+    // is written as that method leaves it.
+    await redis.hset((ws as any).stepKey(runId, 'child'), 'status', 'running')
+    await ws.setStepChildRunId(step.stepId, 'child-1')
+    await redis.hset((ws as any).stepKey(runId, 'child'), 'leaseExpiresAt', '1')
+    return { runId, stepId: step.stepId }
+  }
+
+  test('reading the step reports its child', async () => {
+    const { runId } = await park(2)
+
+    assert.equal((await ws.getStepState(runId, 'child')).childRunId, 'child-1')
+  })
+
+  for (const retries of [2, 0]) {
+    test(`is not taken back when its lease lapses (retries ${retries})`, async () => {
+      const { runId } = await park(retries)
+
+      const claimed = await (ws as any).claimStepForExecution(
+        runId,
+        'child',
+        'flow',
+        60_000
+      )
+
+      assert.equal(claimed, null)
+      const after = await ws.getStepState(runId, 'child')
+      assert.equal(after.status, 'running')
+      assert.equal(after.attemptCount, 1)
+    })
+  }
+
+  test('a retry drops the failed attempt’s child', async () => {
+    const { runId, stepId } = await park(2)
+    await redis.hset((ws as any).stepKey(runId, 'child'), 'status', 'failed')
+
+    await ws.createRetryAttempt(stepId, 'pending')
+
+    assert.equal((await ws.getStepState(runId, 'child')).childRunId, undefined)
+  })
+})
+
+describe('a lost step taken back in redis', () => {
+  test('each claim returns the attempt it acquired', async () => {
+    const runId = await newRun()
+    await ws.insertStepState(
+      runId,
+      'charge',
+      'flow',
+      {},
+      {
+        retries: 3,
+      }
+    )
+    const key = `${KEY_PREFIX}:step:${runId}:charge`
+    const lapse = () =>
+      redis.hset(key, 'status', 'running', 'leaseExpiresAt', '1')
+    const claim = () =>
+      (ws as any).claimStepForExecution(runId, 'charge', 'flow', 60_000)
+    await lapse()
+
+    // The first claim's lease lapses while it is still writing its history.
+    let later: any
+    const save = (ws as any).saveStepHistory.bind(ws)
+    ;(ws as any).saveStepHistory = async (...args: unknown[]) => {
+      ;(ws as any).saveStepHistory = save
+      await save(...args)
+      await lapse()
+      later = await claim()
+    }
+
+    const first = await claim()
+
+    assert.equal(later.attemptCount, 3)
+    assert.equal(
+      first.attemptCount,
+      2,
+      'the claim reported an attempt another worker took'
+    )
+    assert.equal(first.status, 'running')
+    assert.ok(first.leaseExpiresAt.getTime() > Date.now())
+  })
+})
+
+describe('a step’s timeout in redis', () => {
+  test('is kept through insert, claim and retry', async () => {
+    const runId = await newRun()
+    const claim = () =>
+      (ws as any).claimStepForExecution(runId, 'step-1', 'rpc.fn', 60_000)
+    const inserted = await ws.insertStepState(
+      runId,
+      'step-1',
+      'rpc.fn',
+      {},
+      { retries: 2, timeout: '30000ms' }
+    )
+    assert.equal(inserted.timeout, '30000ms')
+
+    // `ioredis-mock` cannot run the history update behind the transition
+    // methods, so the lost and failed states are written to the hash.
+    const key = `${KEY_PREFIX}:step:${runId}:step-1`
+    await redis.hset(key, 'status', 'running', 'leaseExpiresAt', '1')
+    const first = await claim()
+    assert.equal(first.timeout, '30000ms')
+    await redis.hset(key, 'status', 'failed')
+    const reclaimed = await claim()
+    assert.equal(reclaimed.timeout, '30000ms')
+    assert.equal((await ws.getStepState(runId, 'step-1')).timeout, '30000ms')
+  })
+})
+
+describe('a run status is written only from a status that may precede it', () => {
+  test('a cancelled run is not moved by a late status write', async () => {
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    } as any)
+    const cause = { message: 'stop', stack: '', code: 'WORKFLOW_CANCELLED' }
+    assert.equal(
+      await ws.updateRunStatus(runId, 'cancelled', undefined, cause),
+      true
+    )
+
+    for (const late of ['completed', 'failed', 'suspended'] as const) {
+      assert.equal(
+        await ws.updateRunStatus(
+          runId,
+          late,
+          { late },
+          {
+            message: 'late',
+            stack: '',
+          }
+        ),
+        false,
+        late
+      )
+    }
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'cancelled')
+    assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+    assert.ok(!run?.output)
+  })
+})
+
+/**
+ * ioredis-mock cannot run ZRANGEBYSCORE, and its own ZRANGE throws under
+ * ioredis 6. Both are answered through a script, which it can run. A history
+ * entry's score is the attempt it records.
+ */
+const withSortedSetReads = (client: any) => {
+  const range = (key: string): Promise<string[]> =>
+    client.eval("return redis.call('ZRANGE', KEYS[1], 0, -1)", 1, key)
+  client.zrange = range
+  client.zrangebyscore = async (key: string, min: number, max: number) =>
+    (await range(key)).filter((entry) => {
+      const { attemptCount } = JSON.parse(entry)
+      return attemptCount >= Number(min) && attemptCount <= Number(max)
+    })
+  return client
+}
+
+defineServiceTests({
+  name: 'RedisMock',
+  services: {
+    workflowCompensationQueued: async () =>
+      new RedisWorkflowService(withSortedSetReads(new Redis()), {
+        keyPrefix: `queued-${++queuedCount}`,
+        wireQueues: false,
+        leaseService: new InMemoryLeaseService(),
+      }),
+    workflowFencing: async () => ({
+      service: new RedisWorkflowService(withSortedSetReads(new Redis()), {
+        keyPrefix: `fencing-${++fencingCount}`,
+        leaseService: new InMemoryLeaseService(),
+      }),
+      lapseLease: async (runId, stepName) => {
+        await new Redis().hset(
+          `fencing-${fencingCount}:step:${runId}:${stepName}`,
+          'leaseExpiresAt',
+          '1'
+        )
+      },
+      forceStepStatus: async (runId, stepName, status) => {
+        await new Redis().hset(
+          `fencing-${fencingCount}:step:${runId}:${stepName}`,
+          'status',
+          status
+        )
+      },
+    }),
+  },
 })

@@ -150,7 +150,9 @@ export abstract class PikkuWorkflowDO<
   /** Called by the step worker after a step finishes successfully. */
   async recordStepResult(stepId: string, result: unknown): Promise<void> {
     const service = this.getOrInitService()
-    await service.setStepResult(stepId, result)
+    await service.recordDispatchedOutcome(stepId, () =>
+      service.setStepResult(stepId, result)
+    )
     await service.resumeWorkflow(this.ctx.id.toString())
   }
 
@@ -165,7 +167,9 @@ export abstract class PikkuWorkflowDO<
       stack: err.stack,
       code: err.code,
     })
-    await service.setStepError(stepId, error)
+    await service.recordDispatchedOutcome(stepId, () =>
+      service.setStepError(stepId, error)
+    )
     await service.resumeWorkflow(this.ctx.id.toString())
   }
 

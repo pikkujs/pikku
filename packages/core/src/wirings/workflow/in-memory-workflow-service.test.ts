@@ -74,9 +74,9 @@ describe('InMemoryWorkflowService', () => {
   describe('updateRunStatus', () => {
     test('should update run status', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
-      await service.updateRunStatus(runId, 'succeeded', { result: 'done' })
+      await service.updateRunStatus(runId, 'completed', { result: 'done' })
       const run = await service.getRun(runId)
-      assert.strictEqual(run!.status, 'succeeded')
+      assert.strictEqual(run!.status, 'completed')
       assert.deepStrictEqual(run!.output, { result: 'done' })
     })
 
@@ -139,6 +139,7 @@ describe('InMemoryWorkflowService', () => {
     test('should transition step to succeeded with result', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
       const step = await service.insertStepState(runId, 'step1', null, {})
+      await service.setStepRunning(step.stepId)
       await service.setStepResult(step.stepId, { output: 'done' })
       const updated = await service.getStepState(runId, 'step1')
       assert.strictEqual(updated.status, 'succeeded')
@@ -150,6 +151,7 @@ describe('InMemoryWorkflowService', () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
       const step = await service.insertStepState(runId, 'step1', null, {})
       const error = new Error('step failed')
+      await service.setStepRunning(step.stepId)
       await service.setStepError(step.stepId, error)
       const updated = await service.getStepState(runId, 'step1')
       assert.strictEqual(updated.status, 'failed')
@@ -176,6 +178,7 @@ describe('InMemoryWorkflowService', () => {
         {},
         { retries: 2 }
       )
+      await service.setStepRunning(step.stepId)
       await service.setStepError(step.stepId, new Error('fail'))
       const retry = await service.createRetryAttempt(step.stepId, 'pending')
       assert.strictEqual(retry.attemptCount, 2)
@@ -185,6 +188,7 @@ describe('InMemoryWorkflowService', () => {
     test('should set running status on retry if specified', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
       const step = await service.insertStepState(runId, 'step1', null, {})
+      await service.setStepRunning(step.stepId)
       await service.setStepError(step.stepId, new Error('fail'))
       const retry = await service.createRetryAttempt(step.stepId, 'running')
       assert.strictEqual(retry.status, 'running')
@@ -201,6 +205,7 @@ describe('InMemoryWorkflowService', () => {
     test('should add retry to history', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
       const step = await service.insertStepState(runId, 'step1', null, {})
+      await service.setStepRunning(step.stepId)
       await service.setStepError(step.stepId, new Error('fail'))
       await service.createRetryAttempt(step.stepId, 'pending')
       const history = await service.getRunHistory(runId)
@@ -227,6 +232,7 @@ describe('InMemoryWorkflowService', () => {
     test('should track completed and failed nodes', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
       const step1 = await service.insertStepState(runId, 'node1', null, {})
+      await service.setStepRunning(step1.stepId)
       await service.setStepResult(step1.stepId, 'ok')
       const step2 = await service.insertStepState(
         runId,
@@ -235,6 +241,7 @@ describe('InMemoryWorkflowService', () => {
         {},
         { retries: 0 }
       )
+      await service.setStepRunning(step2.stepId)
       await service.setStepError(step2.stepId, new Error('fail'))
 
       const state = await service.getCompletedGraphState(runId)
@@ -251,6 +258,7 @@ describe('InMemoryWorkflowService', () => {
         {},
         { retries: 2 }
       )
+      await service.setStepRunning(step.stepId)
       await service.setStepError(step.stepId, new Error('fail'))
 
       const state = await service.getCompletedGraphState(runId)
@@ -260,6 +268,7 @@ describe('InMemoryWorkflowService', () => {
     test('should get node results', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
       const step1 = await service.insertStepState(runId, 'node1', null, {})
+      await service.setStepRunning(step1.stepId)
       await service.setStepResult(step1.stepId, { value: 42 })
       await service.insertStepState(runId, 'node2', null, {})
 
@@ -281,6 +290,7 @@ describe('InMemoryWorkflowService', () => {
     test('should set branch taken by stepId', async () => {
       const runId = await service.createRun('wf', {}, true, 'h', {} as any)
       const step = await service.insertStepState(runId, 'node1', null, {})
+      await service.setStepRunning(step.stepId)
       await service.setBranchTaken(step.stepId, 'right')
 
       const state = await service.getCompletedGraphState(runId)

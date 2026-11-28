@@ -1186,6 +1186,19 @@ Sessionless agent threads are no longer shared (core 0.12.74 `afef587`). Reading
   { charge: { func: 'chargeCard', recover: 'refund' } }
   ```
 
+- **A workflow store of your own writes by compare-and-set** (core, redis, mongodb, kysely, cloudflare). This affects only a class that extends `PikkuWorkflowService` or implements `WorkflowService`; the shipped stores already do it. `updateRunStatusImpl` is replaced by `transitionRunStatusImpl(id, from, status, output?, error?)`. `setStepRunningImpl`, `setStepScheduledImpl`, `setStepResultImpl`, `setStepErrorImpl`, `setStepChildRunIdImpl` and `setBranchTakenImpl` take the statuses the write may replace (and, for the first, third and fourth, the attempt), and resolve to whether it applied. `createRetryAttemptImpl` takes the sources and the attempt and resolves to `null` when refused. A new abstract `claimStepStatus(seen, from, leaseMs)` is the atomic take of a step. `setStepChildRunId` and `updateRunStatus` resolve to a boolean. A step outcome now applies only to a `running` step, so code that records one without `setStepRunning` first gets `WorkflowStepSupersededError`. Run the `workflowFencing` and workflow service cases of `@pikku/core/testing` against the store.
+
+- **Workflow runs and steps have a `cancelling` status, and steps a `cancelled` one** (core, redis, mongodb, kysely, cloudflare). `WorkflowStatus` gains `cancelling`; `StepStatus` gains `cancelling` and `cancelled`, so an exhaustive `switch` or a `Record` over either type no longer compiles until it names them. Both are stored as plain strings: no schema change. A custom store adds `setStepCancellingImpl(stepId, from, attempt)`, a compare-and-set that moves a step to `cancelling` only while it is in `from` (`running`) and on `attempt`, resolving to whether it applied. A custom `WorkflowRunMirror` adds `setStepCancelling(stepId)`. A step's outcome, `refreshStepLease` and `setStepChildRunIdImpl` apply to a `cancelling` step as to a `running` one: the sources core passes include it, so a `refreshStepLease` or recovery query that names `running` itself must name both. `claimStepStatus` must apply its lapsed-lease and no-child checks whenever the step is `running` or `cancelling`, not only when the sources name `running`. Drain workers on an older version before deploying: they do not know these statuses.
+- **A failure unwind waits for every forward step, and recovery drives it** (core, redis, mongodb, kysely). A run that fails beside a step in flight is `compensating` until that step ends or is declared dead, even with nothing to undo, so code that expected `failed`, `compensated` or `compensation_failed` at once has to wait for it. A dead forward step is failed, not run again. Recovery drives `compensating` runs itself, so a host has to call `startRecovery()` or `recoverWorkflows()`, and compensations that run inline run in the sweeping process. A custom store:
+  - overrides `findRunsAwaitingDriver(before, limit, offset)`: the runs in `DRIVEN_RUN_STATUSES` not written since `before`, oldest first. The default returns none, so a waiting unwind there is never finished.
+  - writes the step lease in the same write as a retry attempt created `running` (`createRetryAttemptImpl`). An attempt that reads as `running` with no lease can be declared dead.
+  - leaves `openStepsAreAllSteps` `false` unless every process that can work its steps is the one holding the service. A subclass of `InMemoryWorkflowService` over shared storage must override it to `false`.
+  - runs the `workflowCompensationQueued` cases of `@pikku/core/testing`, which now include an unwind waiting on a lost step (`unwindRecovery: false` leaves them out for a store with no recovery).
+
+  `RedisWorkflowService` keeps a sorted set, `<keyPrefix>:driven-runs`, written by the same script as the run's status. The first sweep indexes the runs already stored by scanning them once and then sets `<keyPrefix>:driven-runs-indexed`. A worker on an older version does not write the index, so drain old workers before deploying; if one wrote afterwards, delete the marker to rebuild it. The script touches two keys, so on Redis Cluster they would need one hash slot. MongoDB creates a `{ status, updatedAt }` index on the run collection.
+
+- **An inline graph run holds its run lease** (core). Another pass over the same run is refused with `LeaseTakenError` while it runs, as for a DSL run.
+
 - **`inline: false` → `workflowQueued: true`** on function config (core 0.12.40 `ba1ab08`). A queued step now throws when no queue service is configured. Before, it quietly ran inline.
 - **Dynamic, database-stored workflows are removed** (core 0.12.71 `a261006`). This removes `getAIGeneratedWorkflows`, `validateWorkflowWiring` and `computeEntryNodeIds`. `WorkflowService.getNodesWithoutSteps` is removed too (core 0.12.74 `6a307f0`).
 - **A graph run starts only at a declared entry node** (core 0.12.80 `6dada45`). The generated `POST /workflow/:workflowName/graph/:nodeId` route is gone, and `approveStep` takes the caller's session.
@@ -1478,6 +1491,12 @@ Declare `VIRTUAL_USER_VERIFY_KEY` as an optional variable. Delete the `SCENARIO_
 ---
 
 ## Database changes
+
+A SQL database that already has the `workflow_step` table needs the column that holds a step's `timeout`. Run this before the new version boots (on MySQL the type is `longtext`):
+
+```sql
+ALTER TABLE workflow_step ADD COLUMN timeout text;
+```
 
 Apply these renames **before** the first boot on the new version, then run `pikku db generate` and `pikku db migrate` to create what is new. The runtime no longer creates or alters tables.
 

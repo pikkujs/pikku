@@ -60,6 +60,9 @@ export class QueuedWorkflowHarness {
         })
       },
     }
+    ;(
+      this.ws as unknown as { recoveryRpcService(): unknown }
+    ).recoveryRpcService = () => this.rpc
     pikkuState(null, 'package', 'singletonServices', {
       logger: { error() {}, info() {}, warn() {}, debug() {} },
       queueService,
@@ -172,7 +175,11 @@ export class QueuedWorkflowHarness {
             this.rpc as never
           )
         } else {
-          await this.ws.orchestrateWorkflow(job.data.runId, this.rpc as never)
+          await this.ws.orchestrateWorkflow(
+            job.data.runId,
+            this.rpc as never,
+            job.data.awaitedStep
+          )
         }
       } catch {
         job.attempt = (job.attempt ?? 1) + 1

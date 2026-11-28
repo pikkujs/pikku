@@ -1,5 +1,6 @@
 import type { PikkuRPC } from '../rpc/rpc-types.js'
 import { runFromMeta } from './graph/graph-runner.js'
+import { throwIfLeaseLost } from './workflow-lost-lease.js'
 import type { PikkuWorkflowService } from './pikku-workflow-service.js'
 import type { WorkflowRun } from './workflow.types.js'
 
@@ -12,13 +13,16 @@ export const runVersionMismatchFallback = async (
   service: PikkuWorkflowService,
   run: WorkflowRun,
   currentMeta: { source: string },
-  rpcService: PikkuRPC
+  rpcService: PikkuRPC,
+  leaseLost?: AbortSignal
 ): Promise<void> => {
   // What can be resumed depends on the version the run started on, not on what
   // the workflow has since become. The current source only stands in when that
   // version was never stored.
   const version = await service.getWorkflowVersion(run.workflow, run.graphHash!)
   const source = version?.source ?? currentMeta.source
+
+  throwIfLeaseLost(leaseLost)
 
   if (source === 'complex') {
     await service.updateRunStatus(run.id, 'failed', undefined, {
@@ -38,5 +42,5 @@ export const runVersionMismatchFallback = async (
     return
   }
 
-  await runFromMeta(service, run.id, version.graph, rpcService)
+  await runFromMeta(service, run.id, version.graph, rpcService, leaseLost)
 }

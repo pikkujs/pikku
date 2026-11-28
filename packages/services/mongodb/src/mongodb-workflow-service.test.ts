@@ -5,6 +5,7 @@ import { MongoMemoryServer } from 'mongodb-memory-server'
 
 import type { StepState } from '@pikku/core/workflow'
 import { MongoDBWorkflowService } from './mongodb-workflow-service.js'
+import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
 import { InMemoryLeaseService } from '@pikku/core/services'
 
 let mongod: MongoMemoryServer
@@ -42,6 +43,30 @@ const seedStep = async () => {
 
 /** The history rows of a run, oldest first. */
 const historyOf = async (runId: string) => ws.getRunHistory(runId)
+
+describe('which MongoDB reads and writes workflow state', () => {
+  test('primary reads and majority writes, whatever the database defaults to', () => {
+    const relaxed = client.db(`wf-relaxed-${++dbCount}`, {
+      readPreference: 'secondaryPreferred',
+      writeConcern: { w: 1 },
+    })
+    const services = [
+      new MongoDBWorkflowService(relaxed, {}),
+      new MongoDBWorkflowRunService(relaxed),
+    ]
+
+    for (const service of services) {
+      const collections = ['runs', 'steps', 'stepHistory', 'versions'].map(
+        (name) => (service as any)[name]
+      )
+      for (const collection of collections) {
+        const label = `${service.constructor.name} ${collection.collectionName}`
+        assert.equal(collection.readPreference?.mode, 'primary', label)
+        assert.equal(collection.writeConcern?.w, 'majority', label)
+      }
+    }
+  })
+})
 
 describe('a step transition reaches the history', () => {
   test('running stamps the attempt it is running', async () => {
@@ -112,8 +137,10 @@ describe('a step transition reaches the history', () => {
   test('the step row keeps only its latest outcome', async () => {
     const { runId, step } = await seedStep()
 
+    await ws.setStepRunning(step.stepId)
     await ws.setStepError(step.stepId, new Error('first go'))
     await ws.createRetryAttempt(step.stepId, 'pending')
+    await ws.setStepRunning(step.stepId)
     await ws.setStepResult(step.stepId, 'second go')
 
     const state = await ws.getStepState(runId, 'step-1')
@@ -329,13 +356,97 @@ describe('run state and steps the unwind depends on', () => {
 
   test('getRunSteps carries the child run and the outcome time', async () => {
     const { runId, step } = await seedStep()
-    await ws.setStepChildRunId(step.stepId, 'child-1')
     await ws.setStepRunning(step.stepId)
+    await ws.setStepChildRunId(step.stepId, 'child-1')
     await ws.setStepResult(step.stepId, { ok: true })
 
     const [row] = await ws.getRunSteps(runId)
 
     assert.equal(row!.childRunId, 'child-1')
     assert.ok(row!.succeededAt, 'the unwind orders steps by when they finished')
+  })
+})
+
+describe('a step parked on a child run', () => {
+  const park = async (retries: number) => {
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    } as any)
+    const step = await ws.insertStepState(
+      runId,
+      'child',
+      'rpc.fn',
+      {},
+      { retries }
+    )
+    await ws.setStepRunning(step.stepId)
+    await ws.setStepChildRunId(step.stepId, 'child-1')
+    await ws.refreshStepLease(step.stepId, -1_000)
+    return { runId, stepId: step.stepId }
+  }
+
+  const claim = (runId: string) =>
+    (ws as any).claimStepForExecution(runId, 'child', 'rpc.fn', 60_000)
+
+  test('reading the step reports its child', async () => {
+    const { runId } = await park(2)
+
+    assert.equal((await ws.getStepState(runId, 'child')).childRunId, 'child-1')
+  })
+
+  for (const retries of [2, 0]) {
+    test(`is not taken back when its lease lapses (retries ${retries})`, async () => {
+      const { runId } = await park(retries)
+
+      assert.equal(await claim(runId), null)
+
+      const after = await ws.getStepState(runId, 'child')
+      assert.equal(after.status, 'running')
+      assert.equal(after.attemptCount, 1)
+    })
+  }
+
+  test('claiming a failed attempt again drops its child', async () => {
+    const { runId, stepId } = await park(2)
+    await ws.setStepError(stepId, new Error('child failed'))
+
+    const claimed = await claim(runId)
+
+    assert.equal(claimed.attemptCount, 2)
+    assert.equal((await ws.getRunSteps(runId))[0]!.childRunId, undefined)
+  })
+})
+
+describe('a run status is written only from a status that may precede it', () => {
+  test('a cancelled run is not moved by a late status write', async () => {
+    const runId = await ws.createRun('flow', {}, false, 'hash', {
+      type: 'test',
+    } as any)
+    const cause = { message: 'stop', stack: '', code: 'WORKFLOW_CANCELLED' }
+    assert.equal(
+      await ws.updateRunStatus(runId, 'cancelled', undefined, cause),
+      true
+    )
+
+    for (const late of ['completed', 'failed', 'suspended'] as const) {
+      assert.equal(
+        await ws.updateRunStatus(
+          runId,
+          late,
+          { late },
+          {
+            message: 'late',
+            stack: '',
+          }
+        ),
+        false,
+        late
+      )
+    }
+
+    const run = await ws.getRun(runId)
+    assert.equal(run?.status, 'cancelled')
+    assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+    assert.ok(!run?.output)
   })
 })

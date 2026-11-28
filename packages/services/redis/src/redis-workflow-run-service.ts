@@ -6,6 +6,7 @@ import type {
 } from '@pikku/core/workflow'
 import type { Redis } from 'ioredis'
 
+import { drivenRunsKey } from './redis-driven-runs.js'
 export class RedisWorkflowRunService implements WorkflowRunService {
   constructor(
     private redis: Redis,
@@ -195,6 +196,7 @@ export class RedisWorkflowRunService implements WorkflowRunService {
     }
 
     await this.redis.del(...keysToDelete)
+    await this.redis.zrem(drivenRunsKey(this.keyPrefix), id)
     return true
   }
 

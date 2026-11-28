@@ -61,6 +61,7 @@ const REACHED = new Set([
   'completed',
   'failed',
   'suspended',
+  'cancelling',
   'cancelled',
   'compensating',
   'compensated',

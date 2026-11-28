@@ -2,6 +2,7 @@ import { getSingletonServices, pikkuState } from '../../pikku-state.js'
 import {
   DEFAULT_STEP_LEASE_MS,
   STEP_LEASE_REFRESH_MIN_MS,
+  isStepExecuting,
   isStepLeaseLive,
 } from './workflow-constants.js'
 import {
@@ -36,12 +37,13 @@ export const stepLeaseMsForQueue = (queueName: string): number => {
  *
  * A refresh that resolves `false` means another dispatch has claimed the step
  * since: renewing stops there, and says so, because the step's outcome will
- * now be refused rather than recorded.
+ * now be refused rather than recorded. `onLost` is told, with the reason.
  */
 export const startStepLeaseRefresh = (
   stepId: string,
   leaseMs: number,
-  refresh: () => Promise<boolean>
+  refresh: () => Promise<boolean>,
+  onLost?: (reason: unknown) => void
 ): (() => Promise<void>) => {
   const interval = leaseRenewalIntervalMs(leaseMs)
   if (interval < STEP_LEASE_REFRESH_MIN_MS) {
@@ -61,16 +63,17 @@ export const startStepLeaseRefresh = (
       throw error
     })
   )
-  renewal.signal.addEventListener('abort', () =>
+  renewal.signal.addEventListener('abort', () => {
     getSingletonServices()?.logger?.warn(
       `Workflow step ${stepId}: lost its lease, so another dispatch may claim it; this one stops renewing and its outcome will be refused if it does`
     )
-  )
+    onLost?.(renewal.signal.reason)
+  })
   return renewal.stop
 }
 
 /**
- * Who a `running` step belongs to, for a resumed run that meets it. `held` is a
+ * Who a `running` or `cancelling` step belongs to, for a resumed run that meets it. `held` is a
  * dispatch still working it. `lapsed` is one that died: the step is dispatched
  * again but left `running`, so the claim counts it as another attempt rather
  * than a first run — a step that kills its worker every time then runs out.
@@ -78,7 +81,7 @@ export const startStepLeaseRefresh = (
 export const runningStepLease = (
   stepState: Pick<StepState, 'status' | 'leaseExpiresAt'>
 ): 'held' | 'lapsed' | undefined => {
-  if (stepState.status !== 'running' || stepState.leaseExpiresAt == null) {
+  if (!isStepExecuting(stepState.status) || stepState.leaseExpiresAt == null) {
     return undefined
   }
   return isStepLeaseLive(stepState.leaseExpiresAt) ? 'held' : 'lapsed'

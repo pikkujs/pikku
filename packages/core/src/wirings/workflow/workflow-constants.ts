@@ -1,4 +1,4 @@
-import type { StepStatus } from './workflow.types.js'
+import type { StepStatus, WorkflowStatus } from './workflow.types.js'
 
 /**
  * How many times a failed step is retried when neither the step nor the app's `workflow.retries` config says.
@@ -24,12 +24,74 @@ export const WORKFLOW_TERMINAL_STATES: ReadonlySet<string> = new Set([
   'compensation_failed',
 ])
 
+/**
+ * The statuses a run may be in for `updateRunStatus` to move it to each one.
+ * An unwind's own writes name their sources instead: see
+ * `unwindEntryStatuses`.
+ */
+export const RUN_STATUS_SOURCES: Readonly<
+  Record<WorkflowStatus, readonly WorkflowStatus[]>
+> = {
+  running: ['running', 'suspended'],
+  suspended: ['running', 'suspended'],
+  completed: ['running', 'suspended'],
+  failed: ['running', 'suspended', 'failed'],
+  cancelling: ['running', 'suspended'],
+  cancelled: ['running', 'suspended'],
+  compensating: ['running', 'suspended'],
+  compensated: ['compensating'],
+  compensation_failed: ['compensating'],
+}
+
+/**
+ * The statuses a step may be in for each kind of write to apply. `unsettled` is
+ * for the outcome of a step nothing has to be running: a sleep, a step refused
+ * before it started, and a compensation row settled without a function.
+ *
+ * `inFlight` is a step whose function has not ended, which a lease may hold: a
+ * store takes a step in one of these only once its lease has lapsed.
+ */
+export const STEP_SOURCES = {
+  /** `running` too: a claim moves the step there before it is marked. */
+  running: ['pending', 'scheduled', 'running'],
+  scheduled: ['pending', 'scheduled'],
+  outcome: ['running', 'cancelling'],
+  unsettled: ['pending', 'scheduled', 'running', 'cancelling'],
+  cancelling: ['running'],
+  retry: ['running', 'failed'],
+  /** A step no dispatch has taken yet. */
+  unclaimed: ['pending', 'scheduled'],
+  /** A lost step a claim may run again. */
+  lost: ['running'],
+  /** A child run, a branch or a lease, which only work in flight takes. */
+  inFlight: ['running', 'cancelling'],
+} as const satisfies Record<string, readonly StepStatus[]>
+
+/**
+ * The only statuses a dispatch may take a step from. One it does not know is
+ * left alone.
+ */
+export const CLAIMABLE_STEP_STATUSES: ReadonlySet<string> = new Set<StepStatus>(
+  ['pending', 'scheduled', 'running', 'failed']
+)
+
 /** Step statuses that mean the step has not settled yet. */
+/**
+ * The statuses of a run that only a driver moves on, so recovery looks for runs
+ * in them and drives each under its lease.
+ */
+export const DRIVEN_RUN_STATUSES: readonly WorkflowStatus[] = ['compensating']
+
 export const STEP_IN_FLIGHT_STATES: ReadonlySet<StepStatus> = new Set([
   'pending',
   'scheduled',
   'running',
+  'cancelling',
 ])
+
+/** Whether a step's function has not ended, so a lease may hold it. */
+export const isStepExecuting = (status: string): boolean =>
+  (STEP_SOURCES.inFlight as readonly string[]).includes(status)
 
 export const NO_COMPENSATE_STATE_PREFIX = 'noCompensate:'
 
@@ -62,10 +124,56 @@ export const isRunSettled = (status: string): boolean =>
 
 /**
  * True for a run its own pass must no longer write an outcome for. That is a
- * settled run, or one unwinding, which `cancelRun` moves there on its own.
+ * settled run, or one being cancelled or unwinding, which moves on its own.
  */
 export const isRunStopped = (status: string): boolean =>
-  isRunSettled(status) || status === 'compensating'
+  isRunSettled(status) || status === 'cancelling' || status === 'compensating'
+
+/** The recorded cause of a run that was cancelled, kept while it unwinds. */
+export const WORKFLOW_CANCELLED_CODE = 'WORKFLOW_CANCELLED'
+
+/**
+ * The statuses a run may start unwinding from. Only a cancel's own unwind leaves
+ * `cancelled`, so a failure cannot take it over. `completed` is a child its
+ * parent is undoing.
+ */
+export const unwindEntryStatuses = (cause: {
+  code?: string
+}): WorkflowStatus[] => [
+  'running',
+  'suspended',
+  'failed',
+  'completed',
+  ...(cause.code === WORKFLOW_CANCELLED_CODE ? (['cancelled'] as const) : []),
+]
+
+const CANCEL_UNWIND_STATES: ReadonlySet<string> = new Set([
+  'compensating',
+  'compensated',
+  'compensation_failed',
+])
+
+/**
+ * True for a run that was cancelled, including while it is cancelling or
+ * unwinds for that cancel. A run unwinding after a failure was not.
+ */
+export const isRunCancelled = (run: {
+  status: string
+  error?: { code?: string }
+}): boolean =>
+  run.status === 'cancelled' ||
+  run.status === 'cancelling' ||
+  (CANCEL_UNWIND_STATES.has(run.status) &&
+    run.error?.code === WORKFLOW_CANCELLED_CODE)
+
+/** True for a run that starts no more forward steps: cancelled or being cancelled, unwinding or unwound. */
+export const isRunClosedToSteps = (status: string): boolean =>
+  status === 'cancelled' ||
+  status === 'cancelling' ||
+  CANCEL_UNWIND_STATES.has(status)
+
+/** The longest a step in another process takes to learn its run was cancelled. */
+export const WORKFLOW_CANCEL_CHECK_MS = 20_000
 
 export const WORKFLOW_POLL_MIN_MS = 10
 
@@ -123,7 +231,7 @@ export const DEFAULT_STEP_LEASE_MS = 60_000
 export const STEP_LEASE_REFRESH_MIN_MS = 1_000
 
 /**
- * Whether a `running` step is still owned by the dispatch that claimed it.
+ * Whether an executing step is still owned by the dispatch that claimed it.
  *
  * No lease at all counts as live: a store that records none has no way to tell
  * an abandoned step from a working one, so it keeps the older, safer rule that

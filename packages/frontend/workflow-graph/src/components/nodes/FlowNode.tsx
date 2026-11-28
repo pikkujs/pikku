@@ -24,6 +24,7 @@ const runStatusColors: Record<string, string> = {
   scheduled: 'var(--pikku-status-scheduled, oklch(0.8 0.15 60))',
   pending: 'var(--pikku-status-pending, var(--muted-foreground))',
   suspended: 'var(--pikku-status-suspended, oklch(0.88 0.15 100))',
+  cancelling: 'var(--pikku-status-cancelling, oklch(0.8 0.15 60))',
   cancelled: 'var(--pikku-status-cancelled, var(--muted-foreground))',
   skipped: 'var(--pikku-status-skipped, var(--muted-foreground))',
 }

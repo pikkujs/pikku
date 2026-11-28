@@ -12,6 +12,10 @@ defineServiceTests({
           const step = await service.getStepState(runId, stepName)
           step.leaseExpiresAt = new Date(0)
         },
+        forceStepStatus: async (runId, stepName, status) => {
+          const step = await service.getStepState(runId, stepName)
+          step.status = status as typeof step.status
+        },
       }
     },
   },

@@ -166,6 +166,7 @@ describe('KyselyWorkflowService — step transition round-trips', () => {
       const step = await service.insertStepState(runId, 's1', 'rpc.fn', {
         x: 1,
       })
+      if (name !== 'setStepRunning') await service.setStepRunning(step.stepId)
 
       queries.length = 0
       await run(step.stepId)
@@ -187,6 +188,7 @@ describe('KyselyWorkflowService — step transition round-trips', () => {
       const step = await service.insertStepState(runId, 's1', 'rpc.fn', {
         x: 1,
       })
+      if (name !== 'setStepRunning') await service.setStepRunning(step.stepId)
 
       queries.length = 0
       await run(step.stepId)
@@ -272,6 +274,7 @@ describe('KyselyWorkflowService — attempt counting', () => {
     const step = await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
     assert.equal((await service.getStepState(runId, 's1')).attemptCount, 1)
 
+    await service.setStepRunning(step.stepId)
     await service.setStepError(step.stepId, new Error('one'))
     await service.createRetryAttempt(step.stepId, 'running')
     assert.equal((await service.getStepState(runId, 's1')).attemptCount, 2)
@@ -509,6 +512,7 @@ describe('KyselyWorkflowService — a transition that addresses no history row',
   const orphanStep = async () => {
     const runId = await seedRun('wf-orphan')
     const step = await service.insertStepState(runId, 's1', 'rpc.fn', { x: 1 })
+    await service.setStepRunning(step.stepId)
     await sql`UPDATE workflow_step SET current_attempt = NULL WHERE workflow_step_id = ${step.stepId}`.execute(
       db
     )

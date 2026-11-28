@@ -1,3 +1,4 @@
+import type { WorkflowAwaitedStep } from '../wirings/workflow/workflow-queue-workers.js'
 import type { CoreUserSession } from '../types/core.types.js'
 import type { SerializedError } from '../errors/serialized-error.js'
 import type {
@@ -45,13 +46,17 @@ export interface WorkflowService {
     id: string,
     at?: number | Date
   ): Promise<ReconstructedRunState | null>
+  /** Resolves `false`, changing nothing, when the run cannot move to `status`. */
   updateRunStatus(
     id: string,
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void>
-  withRunLease<T>(id: string, fn: () => Promise<T>): Promise<T>
+  ): Promise<boolean>
+  withRunLease<T>(
+    id: string,
+    fn: (lost?: AbortSignal) => Promise<T>
+  ): Promise<T>
   close(): Promise<void>
 
   resumeWorkflow(runId: string): Promise<void>
@@ -89,7 +94,11 @@ export interface WorkflowService {
     options?: { pollIntervalMs?: number; wire?: WorkflowRunWire }
   ): Promise<unknown>
   runWorkflowJob(runId: string, rpcService: any): Promise<void>
-  orchestrateWorkflow(runId: string, rpcService: any): Promise<void>
+  orchestrateWorkflow(
+    runId: string,
+    rpcService: any,
+    awaitedStep?: WorkflowAwaitedStep
+  ): Promise<void>
   executeWorkflowSleepCompleted(runId: string, stepId: string): Promise<void>
 
   insertStepState(
@@ -103,7 +112,8 @@ export interface WorkflowService {
   setStepRunning(stepId: string): Promise<void>
   setStepScheduled(stepId: string): Promise<void>
   setStepResult(stepId: string, result: any): Promise<void>
-  setStepChildRunId(stepId: string, childRunId: string): Promise<void>
+  /** Resolves `false` when the step is no longer in flight. */
+  setStepChildRunId(stepId: string, childRunId: string): Promise<boolean>
   setStepError(stepId: string, error: Error): Promise<void>
   createRetryAttempt(
     stepId: string,

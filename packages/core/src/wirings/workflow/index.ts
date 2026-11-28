@@ -9,10 +9,15 @@ export {
   WorkflowStepFunctionMismatchError,
   WorkflowStepLeaseExpiredError,
   WorkflowStepSupersededError,
+  WorkflowStepCancelledError,
+  WorkflowStepTimeoutError,
+  WorkflowRunStoppedError,
 } from './workflow-errors.js'
 export {
   DEFAULT_STEP_RETRIES,
   DEFAULT_STEP_LEASE_MS,
+  STEP_SOURCES,
+  DRIVEN_RUN_STATUSES,
   isStepLeaseLive,
 } from './workflow-constants.js'
 export { leaseAttemptsExhausted } from './workflow-step-claim.js'
@@ -57,6 +62,7 @@ export {
 export type {
   WorkflowStepInput as WorkflowStepQueueInput,
   PikkuWorkflowOrchestratorInput,
+  WorkflowAwaitedStep,
   PikkuWorkflowSleeperInput,
 } from './workflow-queue-workers.js'
 
@@ -86,6 +92,7 @@ export type {
 
 export type {
   WorkflowStepOptions,
+  WorkflowRpcStepOptions,
   WorkflowWireDoRPC,
   WorkflowApprovalOptions,
   ApprovalOutcome,

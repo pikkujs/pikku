@@ -3,6 +3,10 @@ import type { CompensatingFor } from './dsl/workflow-dsl.types.js'
 import {
   DEFAULT_STEP_RETRIES,
   NO_COMPENSATE_STATE_PREFIX,
+  RUN_STATUS_SOURCES,
+  STEP_SOURCES,
+  unwindEntryStatuses,
+  WORKFLOW_CANCELLED_CODE,
   WORKFLOW_TERMINAL_STATES,
   isRunStopped,
   compensationStepName,
@@ -10,11 +14,19 @@ import {
 import { pikkuState } from '../../pikku-state.js'
 import { resolveNamespace } from '../rpc/rpc-runner.js'
 import { runningStepLease } from './workflow-step-lease.js'
+import { isQueuedFunction } from './workflow-queue-routing.js'
+import {
+  isOwnershipError,
+  throwIfLeaseLost,
+  throwIfNotOwned,
+} from './workflow-lost-lease.js'
+import type { StepAttempt } from './workflow-step-signal.js'
 import { isWorkflowName } from './workflow-meta-resolver.js'
 import { planUnwind, type UnwindRecord } from './workflow-unwind-plan.js'
 import type {
   StepState,
   WorkflowRun,
+  StepStatus,
   WorkflowStatus,
   WorkflowStepOptions,
 } from './workflow.types.js'
@@ -22,6 +34,8 @@ import type {
 export type CompensationStepOutcome = 'done' | 'waiting' | 'stuck'
 
 export interface UnwindHost {
+  /** Aborts if the run lease this unwind is driven under is lost. */
+  leaseLost?: AbortSignal
   getRun(runId: string): Promise<WorkflowRun | null>
   getRunSteps(runId: string): Promise<UnwindRecord[]>
   getRunState(runId: string): Promise<Record<string, unknown>>
@@ -34,22 +48,19 @@ export interface UnwindHost {
   ): Promise<CompensationStepOutcome>
   finish(
     run: WorkflowRun,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output: unknown,
     error: SerializedError | undefined
   ): Promise<void>
+  /**
+   * Settle the awaited forward steps that nothing else will. Resolves `true` if
+   * the unwind is to be planned again.
+   */
+  settleInFlight(runId: string, stepNames: string[]): Promise<boolean>
 }
 
-const ENTERABLE: ReadonlySet<string> = new Set([
-  'running',
-  'suspended',
-  'failed',
-  'cancelled',
-  'completed',
-])
-
-export const canEnterCompensation = (status: string): boolean =>
-  ENTERABLE.has(status)
+const UNWINDING: readonly WorkflowStatus[] = ['compensating']
 
 export const compensatingForStep = (
   forward: Pick<UnwindRecord, 'status' | 'result' | 'error' | 'stepName'>
@@ -70,22 +81,92 @@ export const skippedSteps = (state: Record<string, unknown>): Set<string> =>
       .map((k) => k.slice(NO_COMPENSATE_STATE_PREFIX.length))
   )
 
-export const wouldCompensate = async (
+/**
+ * A compensation run here that is `failed` with retries left lost its driver
+ * before the next attempt was created. The queue spends a queued one's.
+ */
+const failedCompensationResumes = ({
+  rpcName,
+  attemptCount,
+  retries = DEFAULT_STEP_RETRIES,
+}: Pick<UnwindRecord, 'rpcName' | 'attemptCount' | 'retries'>): boolean =>
+  !!rpcName &&
+  attemptCount !== undefined &&
+  attemptCount <= retries &&
+  !isQueuedFunction(rpcName)
+
+/**
+ * A failure waits for every forward step in flight before it undoes anything. A
+ * cancel waits only for those it will have to undo.
+ */
+const awaitsEveryStep = (cause: SerializedError | undefined): boolean =>
+  cause?.code !== WORKFLOW_CANCELLED_CODE
+
+const readUnwindPlan = async (
   host: UnwindHost,
-  runId: string
-): Promise<boolean> => {
+  runId: string,
+  cause: SerializedError | undefined
+) => {
   const [records, state] = await Promise.all([
     host.getRunSteps(runId),
     host.getRunState(runId),
   ])
-  const plan = planUnwind({
+  return planUnwind({
     records,
     skip: skippedSteps(state),
     hasCompensation: host.hasCompensation,
     isChildWorkflow: host.isChildWorkflow,
+    resumesFailed: failedCompensationResumes,
+    awaitsAll: awaitsEveryStep(cause),
   })
-  return plan.candidates.length > 0 || plan.forwardInFlight || !!plan.restedAt
 }
+
+/**
+ * Finish a run with the outcome of a child that left nothing for it to undo: one
+ * whose compensation failed, or that rested at a milestone of its own.
+ */
+const finishWithChild = async (
+  host: UnwindHost,
+  run: WorkflowRun,
+  from: readonly WorkflowStatus[],
+  child: ChildCompensationInfo,
+  cause: SerializedError | undefined
+): Promise<void> => {
+  if (child.status === 'compensation_failed') {
+    await host.finish(
+      run,
+      from,
+      'compensation_failed',
+      { stuckSteps: child.stuckSteps },
+      cause
+    )
+  } else {
+    await host.finish(
+      run,
+      from,
+      'compensated',
+      { restedAt: child.restedAt },
+      cause
+    )
+  }
+}
+
+export const wouldCompensate = async (
+  host: UnwindHost,
+  runId: string,
+  cause: SerializedError | undefined
+): Promise<boolean> => {
+  const plan = await readUnwindPlan(host, runId, cause)
+  return (
+    plan.candidates.length > 0 || plan.inFlight.length > 0 || !!plan.restedAt
+  )
+}
+
+const endsUnwind = (
+  child: ChildCompensationInfo | undefined
+): child is ChildCompensationInfo =>
+  child?.status === 'compensation_failed' ||
+  (child?.status === 'compensated' && !!child.restedAt)
 
 export const driveUnwind = async (
   host: UnwindHost,
@@ -95,22 +176,31 @@ export const driveUnwind = async (
     const run = await host.getRun(runId)
     if (!run || WORKFLOW_TERMINAL_STATES.has(run.status)) return 'finished'
 
-    const [records, state] = await Promise.all([
-      host.getRunSteps(runId),
-      host.getRunState(runId),
-    ])
-    const plan = planUnwind({
-      records,
-      skip: skippedSteps(state),
-      hasCompensation: host.hasCompensation,
-      isChildWorkflow: host.isChildWorkflow,
-    })
+    const plan = await readUnwindPlan(host, runId, run.error)
 
-    if (plan.forwardInFlight) return 'waiting'
+    throwIfLeaseLost(host.leaseLost)
+    if (plan.inFlight.length > 0) {
+      const settled =
+        run.status === 'compensating' &&
+        (await host.settleInFlight(
+          runId,
+          plan.inFlight.map((step) => step.stepName)
+        ))
+      if (settled) continue
+      return 'waiting'
+    }
+
+    // Held back by `beginUnwind` while forward steps were in flight.
+    const child = (run.error as UnwindCause | undefined)?.childCompensation
+    if (run.status === 'compensating' && endsUnwind(child)) {
+      await finishWithChild(host, run, UNWINDING, child, run.error)
+      return 'finished'
+    }
 
     if (plan.ready.length > 0) {
       let progressed = false
       for (const forward of plan.ready) {
+        throwIfLeaseLost(host.leaseLost)
         const outcome = await host.runCompensationStep(
           runId,
           forward,
@@ -127,6 +217,7 @@ export const driveUnwind = async (
     if (plan.stuck.length > 0) {
       await host.finish(
         run,
+        UNWINDING,
         'compensation_failed',
         { stuckSteps: plan.stuck },
         run.error
@@ -135,12 +226,16 @@ export const driveUnwind = async (
       const restedAt = plan.childRestedAt ?? plan.restedAt
       await host.finish(
         run,
+        UNWINDING,
         'compensated',
         restedAt ? { restedAt } : undefined,
         run.error
       )
     } else {
-      await host.finish(run, 'failed', undefined, run.error)
+      // A cancelled run with nothing to undo is still cancelled, not failed.
+      const status =
+        run.error?.code === WORKFLOW_CANCELLED_CODE ? 'cancelled' : 'failed'
+      await host.finish(run, UNWINDING, status, undefined, run.error)
     }
     return 'finished'
   }
@@ -150,15 +245,19 @@ export const compensationRpcName = (rpcName: string): string =>
   `${rpcName}:compensate`
 
 export interface CompensationApi {
+  settleInFlight: UnwindHost['settleInFlight']
+  /** Aborts if the run lease the caller holds is lost. */
+  leaseLost?: AbortSignal
   getRun(runId: string): Promise<WorkflowRun | null>
   getRunSteps(runId: string): Promise<UnwindRecord[]>
   getRunState(runId: string): Promise<Record<string, unknown>>
-  updateRunStatus(
+  transitionRunStatus(
     runId: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: unknown,
     error?: SerializedError
-  ): Promise<void>
+  ): Promise<boolean>
   loadStep(
     runId: string,
     stepName: string,
@@ -181,11 +280,19 @@ export interface CompensationApi {
     fromStepName: string
   ): Promise<boolean>
   setStepScheduled(stepId: string): Promise<void>
+  createRetryAttempt(
+    failedStepId: string,
+    status: 'pending' | 'running',
+    attempt?: number
+  ): Promise<StepState>
+  /** A row left `running` was lost mid-way, and is retried as a new attempt. */
   runInline(
+    runId: string,
+    stepName: string,
     stepState: StepState,
     retries: number,
     retryDelay: WorkflowStepOptions['retryDelay'],
-    work: (current: StepState) => Promise<unknown>
+    work: (current: StepState, attempt?: StepAttempt) => Promise<unknown>
   ): Promise<unknown>
   invoke(
     runId: string,
@@ -193,28 +300,53 @@ export interface CompensationApi {
     stepState: StepState,
     rpcName: string,
     data: unknown,
-    compensatingFor: CompensatingFor
+    compensatingFor: CompensatingFor,
+    signal?: AbortSignal
   ): Promise<unknown>
   failOrUnwind(run: WorkflowRun, error: Error): Promise<unknown>
-  setStepResult(stepId: string, result: unknown): Promise<void>
-  setStepError(stepId: string, error: Error): Promise<void>
+  /** Whether a pass or driver in this process is working the step. */
+  isStepOpen(runId: string, stepName: string): boolean
+  holdOpenStep<T>(
+    runId: string,
+    stepName: string,
+    work: () => Promise<T>
+  ): Promise<T>
+  /** `driveUnwind` under the run's lease, taken here unless the caller holds it. */
+  drive(runId: string): Promise<'waiting' | 'finished'>
+  setStepResult(
+    stepId: string,
+    result: unknown,
+    attempt?: number,
+    from?: readonly StepStatus[]
+  ): Promise<void>
+  setStepError(
+    stepId: string,
+    error: Error,
+    attempt?: number,
+    from?: readonly StepStatus[]
+  ): Promise<void>
   notifyParent(run: WorkflowRun, error: Error): Promise<void>
   hasCompensation(record: UnwindRecord): boolean
   isChildWorkflow(record: UnwindRecord): boolean
 }
 
 export const createUnwindHost = (api: CompensationApi): UnwindHost => ({
+  leaseLost: api.leaseLost,
   getRun: (id) => api.getRun(id),
   getRunSteps: (id) => api.getRunSteps(id),
   getRunState: (id) => api.getRunState(id),
   hasCompensation: (r) => api.hasCompensation(r),
   isChildWorkflow: (r) => api.isChildWorkflow(r),
+  settleInFlight: (...args) => api.settleInFlight(...args),
   runCompensationStep: (runId, forward, compensatingFor) =>
     api.isChildWorkflow(forward)
       ? compensateChildStep(api, runId, forward)
       : compensateFunctionStep(api, runId, forward, compensatingFor),
-  finish: async (run, status, output, error) => {
-    await api.updateRunStatus(run.id, status, output, error)
+  finish: async (run, from, status, output, error) => {
+    // Refused: another writer settled the run, and tells the parent itself.
+    if (!(await api.transitionRunStatus(run.id, from, status, output, error))) {
+      return
+    }
     const settled = (await api.getRun(run.id)) ?? run
     await api.notifyParent(
       settled,
@@ -261,8 +393,14 @@ const compensateFunctionStep = async (
     )
   )
   if (state.status === 'succeeded') return 'done'
-  if (state.status === 'failed') return 'stuck'
+  if (
+    state.status === 'failed' &&
+    !failedCompensationResumes({ ...state, rpcName, retries: options.retries })
+  ) {
+    return 'stuck'
+  }
   if (state.status === 'scheduled') return 'waiting'
+  if (api.isStepOpen(runId, stepName)) return 'waiting'
   const lease = runningStepLease(state)
   if (lease === 'held') return 'waiting'
 
@@ -279,21 +417,42 @@ const compensateFunctionStep = async (
     return 'waiting'
   }
 
-  try {
-    await api.runInline(state, options.retries!, undefined, (current) =>
-      api.invoke(
+  return api.holdOpenStep(runId, stepName, async () => {
+    // Outside the try: `stuck` for a row the plan still sees retries on would
+    // bring the drive straight back to it.
+    const current =
+      state.status === 'failed'
+        ? await api.createRetryAttempt(
+            state.stepId,
+            'pending',
+            state.attemptCount
+          )
+        : state
+
+    try {
+      await api.runInline(
         runId,
         stepName,
         current,
-        rpcName,
-        forward.data,
-        compensatingFor
+        options.retries!,
+        undefined,
+        (current, attempt) =>
+          api.invoke(
+            runId,
+            stepName,
+            current,
+            rpcName,
+            forward.data,
+            compensatingFor,
+            attempt?.signal
+          )
       )
-    )
-    return 'done'
-  } catch {
-    return 'stuck'
-  }
+      return 'done'
+    } catch (error) {
+      throwIfNotOwned(error, api.leaseLost)
+      return 'stuck'
+    }
+  })
 }
 
 const compensateChildStep = async (
@@ -314,8 +473,16 @@ const compensateChildStep = async (
   )
   if (state.status === 'succeeded') return 'done'
   if (state.status === 'failed') return 'stuck'
+  // A child's row has no function of its own, so it is settled as it stands.
+  const settle = (result: unknown) =>
+    api.setStepResult(
+      state.stepId,
+      result,
+      state.attemptCount,
+      STEP_SOURCES.unsettled
+    )
   if (!forward.childRunId) {
-    await api.setStepResult(state.stepId, undefined)
+    await settle(undefined)
     return 'done'
   }
 
@@ -324,21 +491,24 @@ const compensateChildStep = async (
     await api.failOrUnwind(child, new Error('unwind'))
   }
   const after = await api.getRun(forward.childRunId)
+  throwIfLeaseLost(api.leaseLost)
   switch (after?.status) {
     case 'compensated': {
       const restedAt = (after.output as { restedAt?: string } | undefined)
         ?.restedAt
-      await api.setStepResult(state.stepId, restedAt ? { restedAt } : undefined)
+      await settle(restedAt ? { restedAt } : undefined)
       return 'done'
     }
     case 'compensation_failed':
       await api.setStepError(
         state.stepId,
-        new Error('child compensation failed')
+        new Error('child compensation failed'),
+        state.attemptCount,
+        STEP_SOURCES.unsettled
       )
       return 'stuck'
     case 'failed':
-      await api.setStepResult(state.stepId, undefined)
+      await settle(undefined)
       return 'done'
     default:
       return 'waiting'
@@ -430,27 +600,29 @@ export const beginUnwind = async (
 ): Promise<'unwinding' | 'finished' | 'not-needed'> => {
   const child =
     cause.childCompensation ?? (await failedChildCompensation(api, run.id))
-  if (child?.status === 'compensation_failed') {
-    await host.finish(
-      run,
-      'compensation_failed',
-      { stuckSteps: child.stuckSteps },
-      cause
-    )
+  const { inFlight } = await readUnwindPlan(host, run.id, cause)
+  throwIfLeaseLost(api.leaseLost)
+  if (endsUnwind(child) && inFlight.length === 0) {
+    await finishWithChild(host, run, unwindEntryStatuses(cause), child, cause)
     return 'finished'
   }
-  if (child?.status === 'compensated' && child.restedAt) {
-    await host.finish(run, 'compensated', { restedAt: child.restedAt }, cause)
-    return 'finished'
+  const recorded = endsUnwind(child)
+    ? { ...cause, childCompensation: child }
+    : cause
+  if (!endsUnwind(child) && !(await wouldCompensate(host, run.id, cause))) {
+    return 'not-needed'
   }
-  if (!(await wouldCompensate(host, run.id))) return 'not-needed'
+  throwIfLeaseLost(api.leaseLost)
 
-  const fresh = await api.getRun(run.id)
-  if (!fresh || !canEnterCompensation(fresh.status)) return 'finished'
-  await api.updateRunStatus(run.id, 'compensating', undefined, cause)
-  return (await driveUnwind(host, run.id)) === 'waiting'
-    ? 'unwinding'
-    : 'finished'
+  const entered = await api.transitionRunStatus(
+    run.id,
+    unwindEntryStatuses(cause),
+    'compensating',
+    undefined,
+    recorded
+  )
+  if (!entered) return 'finished'
+  return (await api.drive(run.id)) === 'waiting' ? 'unwinding' : 'finished'
 }
 
 export const isUnwound = (status: string | undefined): boolean =>
@@ -470,7 +642,7 @@ export const settleStoppedRun = async (
   const status = (await api.getRun(runId))?.status
   if (!status || !isRunStopped(status)) return undefined
   if (status === 'compensating') {
-    await driveUnwind(createUnwindHost(api), runId)
+    await api.drive(runId)
   }
   return status
 }
@@ -491,7 +663,17 @@ export const failRunOrUnwind = async (
   }
   const outcome = await beginUnwind(api, createUnwindHost(api), run, cause)
   if (outcome !== 'not-needed') return outcome
-  await api.updateRunStatus(run.id, 'failed', undefined, cause)
+  throwIfLeaseLost(api.leaseLost)
+  const failed = await api.transitionRunStatus(
+    run.id,
+    run.status === 'completed'
+      ? [...RUN_STATUS_SOURCES.failed, 'completed']
+      : RUN_STATUS_SOURCES.failed,
+    'failed',
+    undefined,
+    cause
+  )
+  if (!failed) return 'finished'
   await onFailed()
   return 'failed'
 }
@@ -511,17 +693,33 @@ export const cancelAndUnwind = async (
   if (WORKFLOW_TERMINAL_STATES.has(run.status) || isUnwound(run.status)) {
     return run.status
   }
-  for (const step of await host.getRunSteps(runId)) {
-    if (step.childRunId) {
-      await cancelAndUnwind(api, host, step.childRunId, reason)
-    }
-  }
   const cause: SerializedError = {
     message: reason || 'Workflow cancelled',
     stack: '',
-    code: 'WORKFLOW_CANCELLED',
+    code: WORKFLOW_CANCELLED_CODE,
   }
-  await api.updateRunStatus(runId, 'cancelled', undefined, cause)
+  const cancelled = await api.transitionRunStatus(
+    runId,
+    RUN_STATUS_SOURCES.cancelled,
+    'cancelled',
+    undefined,
+    cause
+  )
+  if (!cancelled) return (await api.getRun(runId))?.status
+  // A child whose unwind lost its lease is waited on like any other, so it
+  // must not keep this run's unwind from starting.
+  let childLost: unknown
+  // Read after the write above, which `startLinkedChildRun` relies on.
+  for (const step of await host.getRunSteps(runId)) {
+    if (!step.childRunId) continue
+    try {
+      await cancelAndUnwind(api, host, step.childRunId, reason)
+    } catch (error) {
+      if (!isOwnershipError(error)) throw error
+      childLost ??= error
+    }
+  }
   await beginUnwind(api, host, run, cause)
+  if (childLost) throw childLost
   return (await api.getRun(runId))?.status
 }

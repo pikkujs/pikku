@@ -1,4 +1,5 @@
 import type { PikkuRawWire } from '../../types/core.types.js'
+import type { PassSteps } from './workflow-pass-steps.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   CoreWorkflow,
@@ -36,7 +37,14 @@ export interface WorkflowRunEngine {
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void>
+  ): Promise<boolean>
+  transitionRunStatus(
+    runId: string,
+    from: readonly WorkflowStatus[],
+    status: WorkflowStatus,
+    output?: any,
+    error?: SerializedError
+  ): Promise<boolean>
   onChildWorkflowFailed(run: WorkflowRun, error: unknown): Promise<void>
   verifyStepName(stepName: unknown): void
   getRunTraceparent(runId: string): Promise<string | undefined>
@@ -68,6 +76,8 @@ export interface WorkflowRunExtension {
       runId: string
       rpcService: any
       addonNamespace?: string | null
+      /** `WorkflowRunEngine.inlineStep`, for the pass this wire belongs to. */
+      inlineStep?: WorkflowRunEngine['inlineStep']
     }
   ): void
   onBeforeRunFunc(context: RunLifecycleContext): Promise<void>
@@ -84,10 +94,22 @@ export interface WorkflowRunExtension {
 export type RunContext = {
   activeExecutions: number
   inline?: boolean
-  ordinals: Map<string, number>
-  lastStep?: string
+  /** What a wire made outside any replay walks: the latest replay's, if any. */
+  pass: ReplayPass
+  /** Aborts the signal of each forward step this process is running. */
+  stepCancels?: Set<() => void>
   replay?: {
-    steps?: Map<string, StepState>
     run?: WorkflowRun
   }
+}
+
+/** One walk of a workflow body. Two passes of a run never share one. */
+export type ReplayPass = {
+  ordinals: Map<string, number>
+  lastStep?: string
+  steps?: Map<string, StepState>
+  /** Aborts if the run lease this pass works under is lost. */
+  leaseLost?: AbortSignal
+  /** What the body has started, on a pass that runs one. */
+  started?: PassSteps
 }

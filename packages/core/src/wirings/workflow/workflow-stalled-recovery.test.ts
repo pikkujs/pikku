@@ -315,6 +315,7 @@ describe('recovery ownership', () => {
         retryDelay: '1hour',
       }
     )
+    await ws.setStepRunning(step.stepId)
     await ws.setStepError(step.stepId, new Error('boom'))
     await ws.createRetryAttempt(step.stepId, 'pending')
     const run = await ws.getRun(runId)

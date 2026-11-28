@@ -10,9 +10,17 @@ export interface WorkflowStepInput {
   fromStepName?: string
 }
 
+/** An attempt of a step whose worker lost its lease. */
+export interface WorkflowAwaitedStep {
+  stepName: string
+  attempt: number
+}
+
 /** The job the workflow orchestrator queue carries: a run to advance. */
 export interface PikkuWorkflowOrchestratorInput {
   runId: string
+  /** The run is woken again for as long as this attempt reads as leased. */
+  awaitedStep?: WorkflowAwaitedStep
 }
 
 /** The job that wakes a run when a `sleep` step's duration has passed. */
@@ -43,7 +51,7 @@ export async function pikkuWorkflowWorkerFunc(
 
 export async function pikkuWorkflowOrchestratorFunc(
   _services: Record<string, unknown>,
-  { runId }: PikkuWorkflowOrchestratorInput,
+  { runId, awaitedStep }: PikkuWorkflowOrchestratorInput,
   { rpc }: { rpc: PikkuRPC }
 ): Promise<void> {
   const services = getSingletonServices()
@@ -52,7 +60,7 @@ export async function pikkuWorkflowOrchestratorFunc(
       `Workflow service not initialized: cannot orchestrate workflow for runId ${runId}`
     )
   }
-  await services.workflowService.orchestrateWorkflow(runId, rpc)
+  await services.workflowService.orchestrateWorkflow(runId, rpc, awaitedStep)
 }
 
 export async function pikkuWorkflowSleeperFunc(

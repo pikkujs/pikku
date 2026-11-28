@@ -11,6 +11,8 @@ import type {
   RunLifecycleContext,
   WorkflowRunExtension,
 } from './workflow-run-engine.types.js'
+import { isOwnershipError, throwIfLeaseLost } from './workflow-lost-lease.js'
+import type { PassSteps } from './workflow-pass-steps.js'
 import {
   WorkflowAsyncException,
   WorkflowCancelledException,
@@ -29,12 +31,17 @@ export interface DslPassDeps {
     status: WorkflowStatus,
     output?: unknown,
     error?: SerializedError
-  ) => Promise<void>
+  ) => Promise<boolean>
   /** The run's status if something has ended it, finishing any unwind that waited on this pass. */
   settleIfStopped: () => Promise<WorkflowStatus | undefined>
+  runStatus: () => Promise<WorkflowStatus | undefined>
+  /** What the body started, which the pass outlives. */
+  steps: Pick<PassSteps, 'waitForAll' | 'close'>
   onChildCompleted: (result: unknown) => Promise<void>
   onChildFailed: (error: Error) => Promise<void>
   failOrUnwind: (error: Error) => Promise<'unwinding' | 'finished' | 'failed'>
+  /** Aborts if the run lease this pass holds is lost. */
+  leaseLost?: AbortSignal
 }
 
 export const runDslWorkflowPass = async (
@@ -89,15 +96,30 @@ export const runDslWorkflowPass = async (
       }
     )
 
+    await deps.steps.waitForAll()
+    throwIfLeaseLost(deps.leaseLost)
     // The run has been in the hands of its steps, and an inline one never went
     // back through the queue, so what it was told is only known by rereading.
     if (await deps.settleIfStopped()) {
       throw new WorkflowCancelledException(runId)
     }
-    await deps.updateRunStatus('completed', result)
+    if (!(await deps.updateRunStatus('completed', result))) {
+      throw new WorkflowCancelledException(runId)
+    }
     await deps.onChildCompleted(result)
   } catch (error: any) {
     failure = error
+
+    const lost: unknown = deps.leaseLost?.aborted
+      ? deps.leaseLost.reason
+      : isOwnershipError(error)
+        ? error
+        : undefined
+    if (lost) {
+      outcome = 'interrupted'
+      failure = lost
+      throw lost
+    }
 
     if (error instanceof WorkflowAsyncException) {
       outcome = 'interrupted'
@@ -106,13 +128,16 @@ export const runDslWorkflowPass = async (
 
     if (error instanceof WorkflowCancelledException) {
       outcome = 'failed'
-      const stopped = await deps.settleIfStopped()
-      if (!stopped) {
-        await deps.updateRunStatus('cancelled', undefined, {
+      let stopped = await deps.settleIfStopped()
+      if (
+        !stopped &&
+        !(await deps.updateRunStatus('cancelled', undefined, {
           message: error.message || 'Workflow cancelled',
           stack: '',
           code: 'WORKFLOW_CANCELLED',
-        })
+        }))
+      ) {
+        stopped = await deps.settleIfStopped()
       }
       // An unwind tells the parent itself, when it finishes.
       if (!stopped || stopped === 'cancelled') await deps.onChildFailed(error)
@@ -122,20 +147,30 @@ export const runDslWorkflowPass = async (
     if (error instanceof WorkflowSuspendedException) {
       outcome = 'interrupted'
       if (!(await deps.settleIfStopped())) {
-        await deps.updateRunStatus('suspended', undefined, {
+        const suspended = await deps.updateRunStatus('suspended', undefined, {
           message: error.message || 'Workflow suspended',
           stack: '',
           code: 'WORKFLOW_SUSPENDED',
         })
+        if (!suspended) await deps.settleIfStopped()
       }
       throw error
     }
 
     outcome = 'failed'
     if (await deps.settleIfStopped()) throw error
-    if ((await deps.failOrUnwind(error)) === 'unwinding') return
+    if ((await deps.failOrUnwind(error)) === 'unwinding') {
+      // It may only be waiting on this pass's own steps. A run they leave with
+      // nothing to undo has failed like any other.
+      await deps.steps.close()
+      await deps.settleIfStopped()
+      if ((await deps.runStatus()) !== 'failed') return
+    }
     throw error
   } finally {
+    // After the outcome is written, so a run that failed or was cancelled
+    // already refuses whatever its remaining steps ask for next.
+    await deps.steps.close()
     await deps.extension?.onAfterRunFunc(lifecycle, outcome, failure)
   }
 }

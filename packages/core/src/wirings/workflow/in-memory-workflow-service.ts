@@ -1,7 +1,16 @@
 import { PikkuWorkflowService } from './pikku-workflow-service.js'
 import { isExpectedError } from '../../errors/error-handler.js'
-import { isStepLeaseLive } from './workflow-constants.js'
-import { WorkflowStepSupersededError } from './workflow-errors.js'
+import {
+  DRIVEN_RUN_STATUSES,
+  WORKFLOW_TERMINAL_STATES,
+  DEFAULT_STEP_LEASE_MS,
+  isCompensationStepName,
+  isStepExecuting,
+  isStepLeaseLive,
+  STEP_SOURCES,
+} from './workflow-constants.js'
+import { APPROVAL_STEP_RPC_NAME } from './workflow-approval.js'
+import type { PendingApproval } from './workflow-recovery.js'
 import type { SerializedError } from '../../errors/serialized-error.js'
 import type {
   WorkflowPlannedStep,
@@ -14,7 +23,7 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
-  WorkflowStepOptions,
+  WorkflowRpcStepOptions,
 } from './workflow.types.js'
 
 interface InternalStepData {
@@ -33,6 +42,9 @@ export class InMemoryWorkflowService
   extends PikkuWorkflowService
   implements WorkflowRunService
 {
+  /** Its runs live in this process, so nothing else can be working one. */
+  protected override readonly openStepsAreAllSteps: boolean = true
+
   constructor(
     options: WorkflowQueueOptions & { mirror?: WorkflowRunMirror } = {}
   ) {
@@ -124,19 +136,20 @@ export class InMemoryWorkflowService
     return this.stepHistory.get(runId) || []
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
+  ): Promise<boolean> {
     const run = this.runs.get(id)
-    if (run) {
-      run.status = status
-      run.updatedAt = new Date()
-      if (output !== undefined) run.output = output
-      if (error !== undefined) run.error = error
-    }
+    if (!run || !from.includes(run.status)) return false
+    run.status = status
+    run.updatedAt = new Date()
+    if (output !== undefined) run.output = output
+    if (error !== undefined) run.error = error
+    return true
   }
 
   protected async insertStepStateImpl(
@@ -144,7 +157,7 @@ export class InMemoryWorkflowService
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: WorkflowStepOptions,
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     const stepId = globalThis.crypto.randomUUID()
@@ -157,6 +170,7 @@ export class InMemoryWorkflowService
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay,
+      timeout: stepOptions?.timeout,
       fromStepName,
       createdAt: now,
       updatedAt: now,
@@ -186,15 +200,72 @@ export class InMemoryWorkflowService
     return step
   }
 
-  protected async setStepRunningImpl(stepId: string): Promise<void> {
+  /**
+   * The live step `stepId` names, when it is in one of `from` and `attempt`
+   * still owns it. A retry is a new step with its own id, so a superseded
+   * attempt's id no longer names a live step at all. Nothing awaits between
+   * this and the write that follows, which makes the two atomic.
+   */
+  private writableStep(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): StepState | undefined {
+    const step = this.liveStep(stepId)
+    if (!step || !from.includes(step.status)) return undefined
+    if (attempt !== undefined && step.attemptCount !== attempt) return undefined
+    return step
+  }
+
+  private liveStep(stepId: string): StepState | undefined {
     for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        step.status = 'running'
-        step.runningAt = new Date()
-        step.updatedAt = new Date()
-        break
-      }
+      if (step.stepId === stepId) return step
     }
+    return undefined
+  }
+
+  protected async setStepRunningImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
+    step.status = 'running'
+    step.runningAt = new Date()
+    step.updatedAt = new Date()
+    return true
+  }
+
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
+    step.status = 'cancelling'
+    step.updatedAt = new Date()
+    return true
+  }
+
+  protected async claimStepStatus(
+    seen: StepState,
+    from: readonly StepStatus[],
+    leaseMs: number
+  ): Promise<boolean> {
+    const step = this.writableStep(seen.stepId, from, seen.attemptCount)
+    if (!step) return false
+    if (
+      isStepExecuting(step.status) &&
+      (step.childRunId != null || isStepLeaseLive(step.leaseExpiresAt))
+    ) {
+      return false
+    }
+    step.status = 'running'
+    step.leaseExpiresAt = new Date(Date.now() + leaseMs)
+    step.updatedAt = new Date()
+    return true
   }
 
   public override async refreshStepLease(
@@ -202,69 +273,48 @@ export class InMemoryWorkflowService
     leaseMs: number | null,
     attempt?: number
   ): Promise<boolean> {
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        if (attempt !== undefined && step.attemptCount !== attempt) {
-          return false
-        }
-        step.leaseExpiresAt =
-          leaseMs === null ? undefined : new Date(Date.now() + leaseMs)
-        return true
-      }
-    }
-    return false
+    const step = this.writableStep(stepId, STEP_SOURCES.inFlight, attempt)
+    if (!step) return false
+    step.leaseExpiresAt =
+      leaseMs === null ? undefined : new Date(Date.now() + leaseMs)
+    return true
   }
 
-  protected async setStepScheduledImpl(stepId: string): Promise<void> {
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        step.status = 'scheduled'
-        step.scheduledAt = new Date()
-        step.updatedAt = new Date()
-        break
-      }
-    }
-  }
-
-  /**
-   * The live step `stepId` names, when `attempt` still owns it. A retry is a
-   * new step with its own id, so a superseded attempt's id no longer names a
-   * live step at all.
-   */
-  private ownedStep(stepId: string, attempt?: number): StepState | undefined {
-    let live: StepState | undefined
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        live = step
-        break
-      }
-    }
-    if (attempt !== undefined && live?.attemptCount !== attempt) {
-      throw new WorkflowStepSupersededError(stepId, attempt)
-    }
-    return live
+  protected async setStepScheduledImpl(
+    stepId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from)
+    if (!step) return false
+    step.status = 'scheduled'
+    step.scheduledAt = new Date()
+    step.updatedAt = new Date()
+    return true
   }
 
   protected async setStepResultImpl(
     stepId: string,
     result: any,
-    attempt?: number
-  ): Promise<void> {
-    const step = this.ownedStep(stepId, attempt)
-    if (!step) return
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
     step.status = 'succeeded'
     step.result = result
     step.succeededAt = new Date()
     step.updatedAt = new Date()
+    return true
   }
 
   protected async setStepErrorImpl(
     stepId: string,
     error: Error,
-    attempt?: number
-  ): Promise<void> {
-    const step = this.ownedStep(stepId, attempt)
-    if (!step) return
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from, attempt)
+    if (!step) return false
     step.status = 'failed'
     step.error = {
       name: error.name,
@@ -274,25 +324,27 @@ export class InMemoryWorkflowService
     }
     step.failedAt = new Date()
     step.updatedAt = new Date()
+    return true
   }
 
   protected async setStepChildRunIdImpl(
     stepId: string,
-    childRunId: string
-  ): Promise<void> {
-    for (const step of this.steps.values()) {
-      if (step.stepId === stepId) {
-        step.childRunId = childRunId
-        step.updatedAt = new Date()
-        break
-      }
-    }
+    childRunId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const step = this.writableStep(stepId, from)
+    if (!step) return false
+    step.childRunId = childRunId
+    step.updatedAt = new Date()
+    return true
   }
 
   protected async createRetryAttemptImpl(
     failedStepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState> {
+    status: 'pending' | 'running',
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<StepState | null> {
     let failedStep: StepState | undefined
     let runId: string | undefined
     let stepName: string | undefined
@@ -307,9 +359,18 @@ export class InMemoryWorkflowService
       }
     }
 
-    if (!failedStep || !runId || !stepName) {
+    if (!this.stepData.has(failedStepId)) {
       throw new Error(`Step not found: ${failedStepId}`)
     }
+
+    if (
+      !runId ||
+      !stepName ||
+      !this.writableStep(failedStepId, from, attempt)
+    ) {
+      return null
+    }
+    failedStep = failedStep!
 
     const failedStepData = this.stepData.get(failedStepId)
     const newStepId = globalThis.crypto.randomUUID()
@@ -322,6 +383,7 @@ export class InMemoryWorkflowService
       attemptCount: failedStep.attemptCount + 1,
       retries: failedStep.retries,
       retryDelay: failedStep.retryDelay,
+      timeout: failedStep.timeout,
       fromStepName: failedStep.fromStepName,
       createdAt: now,
       updatedAt: now,
@@ -330,6 +392,8 @@ export class InMemoryWorkflowService
 
     if (status === 'running') {
       newStep.runningAt = now
+      // Leased in the same write, so it never reads as a step with no worker.
+      newStep.leaseExpiresAt = new Date(now.getTime() + DEFAULT_STEP_LEASE_MS)
     }
 
     const key = `${runId}:${stepName}`
@@ -359,9 +423,12 @@ export class InMemoryWorkflowService
   ): Promise<Array<{ runId: string; stepId: string }>> {
     const undispatched: Array<{ runId: string; stepId: string }> = []
     for (const [runId, run] of this.runs) {
-      if (run.status !== 'running') continue
+      if (run.status !== 'running' && run.status !== 'compensating') continue
       for (const step of this.stepHistory.get(runId) ?? []) {
         if (step.status !== 'pending') continue
+        if (run.status === 'compensating' && !this.isCompensation(step)) {
+          continue
+        }
         if (step.updatedAt >= before) continue
         undispatched.push({ runId, stepId: step.stepId })
         if (undispatched.length >= limit) return undispatched
@@ -370,20 +437,88 @@ export class InMemoryWorkflowService
     return undispatched
   }
 
+  private isCompensation({ stepId }: StepState): boolean {
+    for (const [key, step] of this.steps) {
+      if (step.stepId === stepId) return isCompensationStepName(key)
+    }
+    return false
+  }
+
+  private isExecutingStepHeld(
+    runId: string,
+    stepName: string,
+    { childRunId, leaseExpiresAt }: StepState
+  ) {
+    if (childRunId === undefined) {
+      // With no lease, only a pass in this process can be working it.
+      return leaseExpiresAt == null
+        ? this.isStepOpen(runId, stepName)
+        : isStepLeaseLive(leaseExpiresAt)
+    }
+    if (leaseExpiresAt != null && isStepLeaseLive(leaseExpiresAt)) return true
+    const child = this.runs.get(childRunId)?.status
+    return child === undefined || !WORKFLOW_TERMINAL_STATES.has(child)
+  }
+
+  /** The latest attempt of each of a run's steps. */
+  private latestSteps(runId: string): Array<[string, StepState]> {
+    const prefix = `${runId}:`
+    return [...this.steps]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, step]) => [key.slice(prefix.length), step])
+  }
+
+  protected override async findPendingApprovals(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<PendingApproval[]> {
+    const pending: PendingApproval[] = []
+    for (const [runId, run] of this.runs) {
+      if (run.status !== 'suspended' || run.updatedAt >= before) continue
+      for (const [key, step] of this.steps) {
+        if (!key.startsWith(`${runId}:`)) continue
+        if (step.status !== 'running') continue
+        if (step.rpcName !== APPROVAL_STEP_RPC_NAME) continue
+        if (step.updatedAt >= before) continue
+        pending.push({ runId, stepName: key.slice(runId.length + 1) })
+      }
+    }
+    return pending.slice(offset, offset + limit)
+  }
+
+  protected override async findRunsAwaitingDriver(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<string[]> {
+    return [...this.runs.values()]
+      .filter(
+        (run) =>
+          DRIVEN_RUN_STATUSES.includes(run.status) && run.updatedAt < before
+      )
+      .sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
+      .slice(offset, offset + limit)
+      .map((run) => run.id)
+  }
+
   protected async findStalledRunIds(
     before: Date,
     limit: number
   ): Promise<string[]> {
     const stalled: string[] = []
     for (const [runId, run] of this.runs) {
-      if (run.status !== 'running') continue
+      if (run.status !== 'running' && run.status !== 'compensating') continue
       const steps = this.stepHistory.get(runId) ?? []
       if (
-        steps.some(
-          (step) =>
-            step.status === 'scheduled' ||
+        this.latestSteps(runId).some(
+          ([stepName, step]) =>
+            // An unwind settles a forward step that was only dispatched.
+            (step.status === 'scheduled' &&
+              (run.status === 'running' || isCompensationStepName(stepName))) ||
             step.status === 'suspended' ||
-            (step.status === 'running' && isStepLeaseLive(step.leaseExpiresAt))
+            (isStepExecuting(step.status) &&
+              this.isExecutingStepHeld(runId, stepName, step))
         )
       ) {
         continue
@@ -588,9 +723,12 @@ export class InMemoryWorkflowService
 
   protected async setBranchTakenImpl(
     stepId: string,
-    branchKey: string
-  ): Promise<void> {
+    branchKey: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    if (!this.writableStep(stepId, from)) return false
     this.branchKeys.set(stepId, branchKey)
+    return true
   }
 
   protected async updateRunStateImpl(

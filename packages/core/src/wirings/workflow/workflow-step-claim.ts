@@ -1,22 +1,38 @@
-import { DEFAULT_STEP_RETRIES, isStepLeaseLive } from './workflow-constants.js'
+import { isParkedOnChild } from './workflow-child-step.js'
+import {
+  CLAIMABLE_STEP_STATUSES,
+  DEFAULT_STEP_RETRIES,
+  STEP_SOURCES,
+  isCompensationStepName,
+  isRunClosedToSteps,
+} from './workflow-constants.js'
 import {
   WorkflowStepFunctionMismatchError,
   WorkflowStepLeaseExpiredError,
+  WorkflowStepSupersededError,
 } from './workflow-errors.js'
 import { deriveInvocationId } from './workflow-invocation-id.js'
-import type { StepState } from './workflow.types.js'
+import type { StepState, StepStatus } from './workflow.types.js'
 import type { Logger } from '../../services/logger.js'
 import { parseTraceparent, tracedLogger } from '../../trace.js'
 
 /** What claiming a step needs from the workflow service. */
 export type StepClaimStore = {
   getStepState(runId: string, stepName: string): Promise<StepState>
-  setStepRunning(stepId: string): Promise<void>
+  getRun(runId: string): Promise<{ status: string } | null>
+  /** The atomic take of a step; see `WorkflowStepWrites.claimStepStatus`. */
+  claimStepStatus(
+    stepState: StepState,
+    from: readonly StepStatus[],
+    leaseMs: number
+  ): Promise<boolean>
+  setStepRunning(stepId: string, attempt?: number): Promise<void>
   setStepError(stepId: string, error: Error, attempt?: number): Promise<void>
   refreshStepLease(stepId: string, leaseMs: number | null): Promise<boolean>
   createRetryAttempt(
     failedStepId: string,
-    status: 'pending' | 'running'
+    status: 'pending' | 'running',
+    attempt?: number
   ): Promise<StepState>
   /**
    * Requeue the orchestrator so it sees the failure. Without it a step failed
@@ -130,15 +146,113 @@ export const takeBackLostInlineStep = async (
     )
     throw error
   }
-  const attempt = await store.createRetryAttempt(stepState.stepId, 'pending')
+  const attempt = await store.createRetryAttempt(
+    stepState.stepId,
+    'pending',
+    stepState.attemptCount
+  )
   await store.logStepRerun?.(runId, stepName, attempt.attemptCount)
   return attempt
 }
 
 /**
- * Decide whether this dispatch owns the step, by reading its state and then
- * writing it — which only excludes a concurrent dispatch when the caller holds
- * a lock that genuinely excludes one.
+ * The attempt an inline pass goes on from. A `failed` step reaches here only
+ * with retries left: whatever recorded the failure ended before it created the
+ * next attempt.
+ */
+export const resumeInlineStep = async (
+  store: Parameters<typeof takeBackLostInlineStep>[0],
+  runId: string,
+  stepName: string,
+  stepState: StepState
+): Promise<StepState> =>
+  stepState.status === 'failed'
+    ? store.createRetryAttempt(
+        stepState.stepId,
+        'pending',
+        stepState.attemptCount
+      )
+    : takeBackLostInlineStep(store, runId, stepName, stepState)
+
+/**
+ * The part of a claim every store shares: whether the step is one no dispatch
+ * may run. Resolves `true` when there is nothing to claim.
+ *
+ * A lost step that must not run again, because its attempts are spent or its run
+ * was stopped, is failed here. It is taken first, so a worker whose lease is
+ * live at that moment keeps it. A compensation is run however its run stands.
+ */
+export const settleUnclaimableStep = async (
+  store: StepClaimStore,
+  runId: string,
+  stepName: string,
+  stepState: StepState,
+  leaseMs: number
+): Promise<boolean> => {
+  if (
+    !CLAIMABLE_STEP_STATUSES.has(stepState.status) ||
+    isParkedOnChild(stepState)
+  ) {
+    return true
+  }
+  const exhausted = leaseAttemptsExhausted(stepState)
+  const isStopped = async () =>
+    !isCompensationStepName(stepName) &&
+    isRunClosedToSteps((await store.getRun(runId))?.status ?? '')
+  if (stepState.status === 'failed') {
+    // A failed step that has spent every attempt is settled, however it failed;
+    // a redelivered message must not buy it another one.
+    if (exhausted) return true
+    // Nor does a run that was stopped give it one.
+    if (!(await isStopped())) return false
+    await store.resumeWorkflow?.(runId)
+    return true
+  }
+  if (stepState.status !== 'running') return false
+
+  const stopped = await isStopped()
+  if (!exhausted && !stopped) return false
+  if (await failLostStep(store, runId, stepName, stepState, leaseMs)) {
+    // A null claim reads as "another dispatch owns it", which resumes nothing.
+    await store.resumeWorkflow?.(runId)
+  }
+  return true
+}
+
+/**
+ * Fail a step whose worker vanished, without running it again. It is taken
+ * first, so a worker whose lease is live by the store's clock keeps it, and
+ * `false` is resolved.
+ */
+export const failLostStep = async (
+  store: StepClaimStore,
+  runId: string,
+  stepName: string,
+  stepState: StepState,
+  leaseMs: number
+): Promise<boolean> => {
+  // Read before the claim, which may change `stepState` in place.
+  const { stepId, attemptCount } = stepState
+  const exhausted = leaseAttemptsExhausted(stepState)
+  if (
+    !(await store.claimStepStatus(stepState, STEP_SOURCES.inFlight, leaseMs))
+  ) {
+    return false
+  }
+  await store.setStepError(
+    stepId,
+    new WorkflowStepLeaseExpiredError(runId, stepName, attemptCount, exhausted),
+    attemptCount
+  )
+  if (exhausted) {
+    await store.logStepAttemptsExhausted?.(runId, stepName, attemptCount)
+  }
+  return true
+}
+
+/**
+ * Claim a step: read it, then take it with a write that applies only while it is
+ * as it was read.
  *
  * A store that can express the whole decision as a single conditional write
  * should do that instead of calling this.
@@ -158,49 +272,43 @@ export const claimStepByReadThenWrite = async (
   ) {
     throw new WorkflowStepFunctionMismatchError(runId, stepName)
   }
-  if (stepState.status === 'succeeded') {
+  // Read before any write, which may change `stepState` in place.
+  const { status, attemptCount } = stepState
+  if (await settleUnclaimableStep(store, runId, stepName, stepState, leaseMs)) {
     return null
   }
-  if (stepState.status === 'running') {
-    if (isStepLeaseLive(stepState.leaseExpiresAt)) {
+  if (status === 'pending' || status === 'scheduled') {
+    if (
+      !(await store.claimStepStatus(stepState, STEP_SOURCES.unclaimed, leaseMs))
+    ) {
       return null
     }
-    if (leaseAttemptsExhausted(stepState)) {
-      await store.setStepError(
-        stepState.stepId,
-        new WorkflowStepLeaseExpiredError(
-          runId,
-          stepName,
-          stepState.attemptCount
-        ),
-        stepState.attemptCount
-      )
-      await store.logStepAttemptsExhausted?.(
-        runId,
-        stepName,
-        stepState.attemptCount
-      )
-      await store.resumeWorkflow?.(runId)
-      return null
-    }
+    await store.setStepRunning(stepState.stepId, attemptCount)
+    return { ...stepState, status: 'running' }
   }
-  // A failed step that has spent every attempt is settled, however it failed;
-  // a redelivered message must not buy it another one.
-  if (stepState.status === 'failed' && leaseAttemptsExhausted(stepState)) {
+  const lost = status === 'running'
+  // Takes nothing unless the lease has lapsed.
+  if (
+    lost &&
+    !(await store.claimStepStatus(stepState, STEP_SOURCES.lost, leaseMs))
+  ) {
     return null
   }
-  if (stepState.status === 'failed' || stepState.status === 'running') {
-    const attempt = await store.createRetryAttempt(stepState.stepId, 'running')
-    await store.refreshStepLease(attempt.stepId, leaseMs)
-    // A `failed` step threw, and this is its ordinary retry.
-    if (stepState.status === 'running') {
-      await store.logStepRerun?.(runId, stepName, attempt.attemptCount)
-    }
-    return attempt
+  let attempt: StepState
+  try {
+    attempt = await store.createRetryAttempt(
+      stepState.stepId,
+      'running',
+      attemptCount
+    )
+  } catch (error) {
+    // Another dispatch retried this attempt first.
+    if (error instanceof WorkflowStepSupersededError) return null
+    throw error
   }
-  if (stepState.status === 'pending' || stepState.status === 'scheduled') {
-    await store.setStepRunning(stepState.stepId)
-    await store.refreshStepLease(stepState.stepId, leaseMs)
-  }
-  return stepState
+  await store.refreshStepLease(attempt.stepId, leaseMs)
+  // A `failed` step threw, and this is its ordinary retry.
+  if (!lost) return attempt
+  await store.logStepRerun?.(runId, stepName, attempt.attemptCount)
+  return { ...attempt, lapsedAttempt: attemptCount }
 }

@@ -1,8 +1,10 @@
 import { RedisWorkflowRunService } from './redis-workflow-run-service.js'
 import type { SerializedError } from '@pikku/core/errors'
 import {
+  DRIVEN_RUN_STATUSES,
+  DEFAULT_STEP_LEASE_MS,
+  isStepLeaseLive,
   PikkuWorkflowService,
-  WorkflowStepSupersededError,
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
@@ -13,37 +15,55 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
+  WorkflowRpcStepOptions,
 } from '@pikku/core/workflow'
 import { Redis, type RedisOptions } from 'ioredis'
 import { randomUUID } from 'crypto'
+import { drivenRunsKey, findDrivenRunIds } from './redis-driven-runs.js'
 
 /**
- * Writes a step's outcome only while it is still the attempt that wrote it.
- * KEYS[1] is the step hash; ARGV is the stepId, the attempt (empty for an
- * unfenced write), the field to clear, then field/value pairs to set.
- * Returns the step's attempt, or -1 when a newer claim owns it.
+ * Writes a step only while it is in a status that may precede the write and,
+ * with an attempt, still on that attempt. KEYS[1] is the step hash; ARGV is the
+ * stepId, the attempt (empty when unfenced), the number of such statuses, the
+ * statuses, the number of fields to clear, those fields, then field/value pairs
+ * to set. Returns the attempt the step was on, or -1 when nothing was written.
  */
-const FENCED_STEP_WRITE = `
+const CONDITIONAL_STEP_WRITE = `
 local stepId = redis.call('HGET', KEYS[1], 'stepId')
+local status = redis.call('HGET', KEYS[1], 'status')
 local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
-if ARGV[2] ~= '' and (stepId ~= ARGV[1] or current ~= tonumber(ARGV[2])) then
+if stepId ~= ARGV[1] or (ARGV[2] ~= '' and current ~= tonumber(ARGV[2])) then
   return -1
 end
-redis.call('HDEL', KEYS[1], ARGV[3])
-for i = 4, #ARGV, 2 do
+local sources = tonumber(ARGV[3])
+local allowed = false
+for i = 4, sources + 3 do
+  if ARGV[i] == status then
+    allowed = true
+  end
+end
+if not allowed then
+  return -1
+end
+local clears = tonumber(ARGV[sources + 4])
+for i = sources + 5, sources + 4 + clears do
+  redis.call('HDEL', KEYS[1], ARGV[i])
+end
+for i = sources + 5 + clears, #ARGV, 2 do
   redis.call('HSET', KEYS[1], ARGV[i], ARGV[i + 1])
 end
 return current
 `
 
 /**
- * Renews or releases a step's lease, fenced like `FENCED_STEP_WRITE`. ARGV is
- * the stepId, the attempt (empty when unfenced), and the new expiry in epoch
- * milliseconds (empty to release). Returns 1 when the lease moved.
+ * Renews or releases the lease of a `running` or `cancelling` step. ARGV is the stepId, the
+ * attempt (empty when unfenced), and the new expiry in epoch milliseconds
+ * (empty to release). Returns 1 when the lease moved.
  */
 const FENCED_LEASE_REFRESH = `
 local stepId = redis.call('HGET', KEYS[1], 'stepId')
-if stepId ~= ARGV[1] then
+local status = redis.call('HGET', KEYS[1], 'status')
+if stepId ~= ARGV[1] or (status ~= 'running' and status ~= 'cancelling') then
   return 0
 end
 local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
@@ -54,6 +74,96 @@ if ARGV[3] == '' then
   redis.call('HDEL', KEYS[1], 'leaseExpiresAt')
 else
   redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[3])
+end
+return 1
+`
+
+/**
+ * Takes back a lost step as a new attempt, only while it is still `running` on
+ * the attempt the claim read, its lease is still lapsed and no child run has
+ * been saved on it; otherwise nothing is written. KEYS[1] is the step hash; ARGV is the stepId, that
+ * attempt, the new attempt, the new lease expiry and the time, both in epoch
+ * milliseconds. Returns 1 when the step was taken.
+ */
+const ATOMIC_STEP_RECLAIM = `
+local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
+local lease = tonumber(redis.call('HGET', KEYS[1], 'leaseExpiresAt') or '')
+if redis.call('HGET', KEYS[1], 'stepId') ~= ARGV[1]
+  or not lease
+  or lease >= tonumber(ARGV[5])
+  or redis.call('HGET', KEYS[1], 'status') ~= 'running'
+  or current ~= tonumber(ARGV[2])
+  or redis.call('HEXISTS', KEYS[1], 'childRunId') == 1 then
+  return 0
+end
+redis.call('HSET', KEYS[1], 'attemptCount', ARGV[3])
+redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[4])
+redis.call('HSET', KEYS[1], 'updatedAt', ARGV[5])
+return 1
+`
+
+/**
+ * Takes a step under a fresh lease, only while it is on the attempt the claim
+ * read and in one of the named statuses; a `running` or `cancelling` one only
+ * once its lease has lapsed and with no child run. KEYS[1] is the step hash; ARGV is the stepId, the
+ * attempt, the new lease expiry and the time, both in epoch milliseconds, then
+ * the statuses. Returns 1 when the step was taken.
+ */
+const ATOMIC_STEP_CLAIM = `
+local status = redis.call('HGET', KEYS[1], 'status')
+local current = tonumber(redis.call('HGET', KEYS[1], 'attemptCount') or '1')
+if redis.call('HGET', KEYS[1], 'stepId') ~= ARGV[1]
+  or current ~= tonumber(ARGV[2]) then
+  return 0
+end
+local allowed = false
+for i = 5, #ARGV do
+  if ARGV[i] == status then
+    allowed = true
+  end
+end
+if not allowed then
+  return 0
+end
+if status == 'running' or status == 'cancelling' then
+  local lease = tonumber(redis.call('HGET', KEYS[1], 'leaseExpiresAt') or '')
+  if not lease or lease >= tonumber(ARGV[4])
+    or redis.call('HEXISTS', KEYS[1], 'childRunId') == 1 then
+    return 0
+  end
+end
+redis.call('HSET', KEYS[1], 'status', 'running')
+redis.call('HSET', KEYS[1], 'leaseExpiresAt', ARGV[3])
+redis.call('HSET', KEYS[1], 'updatedAt', ARGV[4])
+return 1
+`
+
+/**
+ * Moves a run only while its status is one that may precede the new one, and
+ * keeps the index of driven runs in step. KEYS are the run hash and that index;
+ * ARGV is the run id, the index score (empty when the new status is not a driven
+ * one), the number of preceding statuses, those statuses, then field/value pairs
+ * to set. Returns 1 when the run moved.
+ */
+const CONDITIONAL_RUN_WRITE = `
+local current = redis.call('HGET', KEYS[1], 'status')
+local sources = tonumber(ARGV[3])
+local allowed = false
+for i = 4, sources + 3 do
+  if ARGV[i] == current then
+    allowed = true
+  end
+end
+if not allowed then
+  return 0
+end
+for i = sources + 4, #ARGV, 2 do
+  redis.call('HSET', KEYS[1], ARGV[i], ARGV[i + 1])
+end
+if ARGV[2] == '' then
+  redis.call('ZREM', KEYS[2], ARGV[1])
+else
+  redis.call('ZADD', KEYS[2], ARGV[2], ARGV[1])
 end
 return 1
 `
@@ -138,7 +248,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     stepId: string,
     stepName: string,
     attemptCount: number,
-    status: 'pending' | 'running' | 'scheduled' | 'succeeded' | 'failed',
+    status: StepStatus,
     result?: any,
     error?: SerializedError,
     retries?: number,
@@ -191,7 +301,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     stepId: string,
     stepName: string,
     attemptCount: number,
-    status: 'running' | 'scheduled' | 'succeeded' | 'failed',
+    status: Exclude<StepStatus, 'pending' | 'suspended' | 'cancelled'>,
     result?: any,
     error?: SerializedError,
     retries?: number,
@@ -330,12 +440,13 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     }
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
+  ): Promise<boolean> {
     const now = Date.now()
     const key = this.runKey(id)
 
@@ -352,7 +463,26 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       fields.error = JSON.stringify(error)
     }
 
-    await this.redis.hmset(key, fields)
+    const moved = await this.redis.eval(
+      CONDITIONAL_RUN_WRITE,
+      2,
+      key,
+      drivenRunsKey(this.keyPrefix),
+      id,
+      DRIVEN_RUN_STATUSES.includes(status) ? now.toString() : '',
+      from.length.toString(),
+      ...from,
+      ...Object.entries(fields).flat()
+    )
+    return Number(moved) === 1
+  }
+
+  protected override findRunsAwaitingDriver(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<string[]> {
+    return findDrivenRunIds(this.redis, this.keyPrefix, before, limit, offset)
   }
 
   protected async insertStepStateImpl(
@@ -360,7 +490,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number },
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     const now = Date.now()
@@ -386,6 +516,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
     if (stepOptions?.retryDelay !== undefined) {
       fields.retryDelay = stepOptions.retryDelay.toString()
+    }
+
+    if (stepOptions?.timeout !== undefined) {
+      fields.timeout = stepOptions.timeout.toString()
     }
 
     if (fromStepName !== undefined) {
@@ -416,6 +550,7 @@ export class RedisWorkflowService extends PikkuWorkflowService {
         stepOptions?.retryDelay !== undefined
           ? stepOptions.retryDelay.toString()
           : undefined,
+      timeout: stepOptions?.timeout?.toString(),
       fromStepName,
       createdAt: new Date(now),
       updatedAt: new Date(now),
@@ -441,7 +576,9 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       attemptCount: Number(data.attemptCount || 1),
       retries: data.retries ? Number(data.retries) : undefined,
       retryDelay: data.retryDelay,
+      timeout: data.timeout || undefined,
       fromStepName: data.fromStepName || undefined,
+      childRunId: data.childRunId || undefined,
       leaseExpiresAt: data.leaseExpiresAt
         ? new Date(Number(data.leaseExpiresAt))
         : undefined,
@@ -528,93 +665,105 @@ export class RedisWorkflowService extends PikkuWorkflowService {
     )
   }
 
-  protected async setStepRunningImpl(stepId: string): Promise<void> {
-    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
-    const parts = stepId.split(':')
-    const runId = parts[0]!
-    const stepName = parts.slice(1, -1).join(':')
-
-    const now = Date.now()
-    const key = this.stepKey(runId, stepName)
-
-    // Get current attempt count and retries config
-    const data = await this.redis.hgetall(key)
-    const attemptCount = Number(data.attemptCount || 1)
-    const retries = data.retries ? Number(data.retries) : undefined
-    const retryDelay = data.retryDelay
-
-    await this.redis.hmset(
-      key,
-      'status',
-      'running',
-      'updatedAt',
-      now.toString()
-    )
-
-    // Update current history record to running (update in-place)
-    await this.updateCurrentHistoryRecord(
-      stepId,
-      stepName,
-      attemptCount,
-      'running',
-      undefined,
-      undefined,
-      retries,
-      retryDelay
-    )
+  protected async setStepRunningImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<boolean> {
+    return this.moveStep(stepId, 'running', from, attempt)
   }
 
-  protected async setStepScheduledImpl(stepId: string): Promise<void> {
-    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
-    const parts = stepId.split(':')
-    const runId = parts[0]!
-    const stepName = parts.slice(1, -1).join(':')
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    return this.moveStep(stepId, 'cancelling', from, attempt)
+  }
 
-    const now = Date.now()
-    const key = this.stepKey(runId, stepName)
+  protected async setStepScheduledImpl(
+    stepId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return this.moveStep(stepId, 'scheduled', from)
+  }
 
-    // Get current attempt count and retries config
-    const data = await this.redis.hgetall(key)
-    const attemptCount = Number(data.attemptCount || 1)
-    const retries = data.retries ? Number(data.retries) : undefined
-    const retryDelay = data.retryDelay
-
-    await this.redis.hmset(
-      key,
-      'status',
-      'scheduled',
-      'updatedAt',
-      now.toString()
+  /**
+   * `CONDITIONAL_STEP_WRITE` on the step `stepId` names. Resolves the attempt
+   * written, or `null` when nothing was.
+   */
+  private async writeStepIf(
+    stepId: string,
+    from: readonly StepStatus[],
+    fields: Record<string, string>,
+    attempt?: number,
+    clear: string[] = []
+  ): Promise<number | null> {
+    const { runId, stepName } = this.parseStepId(stepId)
+    const written = Number(
+      await this.redis.eval(
+        CONDITIONAL_STEP_WRITE,
+        1,
+        this.stepKey(runId, stepName),
+        stepId,
+        attempt?.toString() ?? '',
+        from.length.toString(),
+        ...from,
+        clear.length.toString(),
+        ...clear,
+        ...Object.entries({
+          ...fields,
+          updatedAt: Date.now().toString(),
+        }).flat()
+      )
     )
+    return written === -1 ? null : written
+  }
 
-    // Update current history record to scheduled (update in-place)
+  /** Move a step and its current history attempt to a status in flight. */
+  private async moveStep(
+    stepId: string,
+    status: 'running' | 'scheduled' | 'cancelling',
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<boolean> {
+    const written = await this.writeStepIf(stepId, from, { status }, attempt)
+    if (written === null) return false
+    await this.updateStepHistory(stepId, written, status)
+    return true
+  }
+
+  private async updateStepHistory(
+    stepId: string,
+    attempt: number,
+    status: Exclude<StepStatus, 'pending' | 'suspended' | 'cancelled'>,
+    result?: any,
+    error?: SerializedError
+  ): Promise<void> {
+    const { runId, stepName } = this.parseStepId(stepId)
+    const [retries, retryDelay] = await this.redis.hmget(
+      this.stepKey(runId, stepName),
+      'retries',
+      'retryDelay'
+    )
     await this.updateCurrentHistoryRecord(
       stepId,
       stepName,
-      attemptCount,
-      'scheduled',
-      undefined,
-      undefined,
-      retries,
-      retryDelay
+      attempt,
+      status,
+      result,
+      error,
+      retries ? Number(retries) : undefined,
+      retryDelay ?? undefined
     )
   }
 
   protected async setStepChildRunIdImpl(
     stepId: string,
-    childRunId: string
-  ): Promise<void> {
-    const parts = stepId.split(':')
-    const runId = parts[0]!
-    const stepName = parts.slice(1, -1).join(':')
-    const key = this.stepKey(runId, stepName)
-    await this.redis.hmset(
-      key,
-      'childRunId',
-      childRunId,
-      'updatedAt',
-      Date.now().toString()
-    )
+    childRunId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return (await this.writeStepIf(stepId, from, { childRunId })) !== null
   }
 
   public override async refreshStepLease(
@@ -637,83 +786,48 @@ export class RedisWorkflowService extends PikkuWorkflowService {
   protected async setStepResultImpl(
     stepId: string,
     result: any,
-    attempt?: number
-  ): Promise<void> {
-    await this.writeStepOutcome(stepId, 'succeeded', attempt, result)
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const written = await this.writeStepIf(
+      stepId,
+      from,
+      { status: 'succeeded', result: JSON.stringify(result) },
+      attempt,
+      ['error']
+    )
+    if (written === null) return false
+    await this.updateStepHistory(stepId, written, 'succeeded', result)
+    return true
   }
 
   protected async setStepErrorImpl(
     stepId: string,
     error: Error,
-    attempt?: number
-  ): Promise<void> {
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
     }
-    await this.writeStepOutcome(
+    const written = await this.writeStepIf(
       stepId,
-      'failed',
+      from,
+      { status: 'failed', error: JSON.stringify(serializedError) },
       attempt,
+      ['result']
+    )
+    if (written === null) return false
+    await this.updateStepHistory(
+      stepId,
+      written,
+      'failed',
       undefined,
       serializedError
     )
-  }
-
-  /**
-   * Record a step's outcome and its current history attempt. With `attempt`,
-   * a step claimed again since throws `WorkflowStepSupersededError` and keeps
-   * the newer claim's state.
-   */
-  private async writeStepOutcome(
-    stepId: string,
-    status: 'succeeded' | 'failed',
-    attempt: number | undefined,
-    result?: any,
-    error?: SerializedError
-  ): Promise<void> {
-    const { runId, stepName } = this.parseStepId(stepId)
-    const key = this.stepKey(runId, stepName)
-    const outcome =
-      status === 'succeeded'
-        ? ['result', JSON.stringify(result)]
-        : ['error', JSON.stringify(error)]
-
-    const written = Number(
-      await this.redis.eval(
-        FENCED_STEP_WRITE,
-        1,
-        key,
-        stepId,
-        attempt?.toString() ?? '',
-        status === 'succeeded' ? 'error' : 'result',
-        'status',
-        status,
-        ...outcome,
-        'updatedAt',
-        Date.now().toString()
-      )
-    )
-    if (written === -1) {
-      throw new WorkflowStepSupersededError(stepId, attempt!)
-    }
-
-    const [retries, retryDelay] = await this.redis.hmget(
-      key,
-      'retries',
-      'retryDelay'
-    )
-    await this.updateCurrentHistoryRecord(
-      stepId,
-      stepName,
-      written,
-      status,
-      result,
-      error,
-      retries ? Number(retries) : undefined,
-      retryDelay ?? undefined
-    )
+    return true
   }
 
   /** A stepId is `runId:stepName:timestamp`, and a step name may hold colons. */
@@ -724,8 +838,10 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
   protected async createRetryAttemptImpl(
     stepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState> {
+    status: 'pending' | 'running',
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<StepState | null> {
     // TODO: If status is 'running', we need to set the running_at timestamp in history
 
     // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
@@ -738,21 +854,29 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
     // Get current attempt count and retries config
     const data = await this.redis.hgetall(key)
-    const currentAttempt = Number(data.attemptCount || 1)
+    const currentAttempt = attempt ?? Number(data.attemptCount || 1)
     const newAttemptCount = currentAttempt + 1
     const retries = data.retries ? Number(data.retries) : undefined
     const retryDelay = data.retryDelay
 
-    // Reset step to pending for retry (keeps result/error for visibility)
-    await this.redis.hmset(
-      key,
-      'status',
-      status,
-      'attemptCount',
-      newAttemptCount.toString(),
-      'updatedAt',
-      now.toString()
+    // Fenced to the attempt being retried, so of two retries of it one applies.
+    // Keeps result/error for visibility. A `running` attempt takes a fresh lease
+    // in the same write: under the previous attempt's lapsed one, another claim
+    // could take it before `refreshStepLease` runs.
+    const written = await this.writeStepIf(
+      stepId,
+      from,
+      {
+        status,
+        attemptCount: newAttemptCount.toString(),
+        ...(status === 'running'
+          ? { leaseExpiresAt: (now + DEFAULT_STEP_LEASE_MS).toString() }
+          : {}),
+      },
+      currentAttempt,
+      ['childRunId']
     )
+    if (written === null) return null
 
     // Insert NEW history record for retry attempt
     await this.saveStepHistory(
@@ -775,10 +899,108 @@ export class RedisWorkflowService extends PikkuWorkflowService {
       attemptCount: newAttemptCount,
       retries: retries,
       retryDelay: retryDelay,
+      timeout: data.timeout || undefined,
       fromStepName: data.fromStepName || undefined,
       createdAt: new Date(Number(data.createdAt!)),
       updatedAt: new Date(now),
     }
+  }
+
+  /**
+   * A `running` step is decided on this one read: it belongs to its child or
+   * its lease holder, or it is lost and taken back by `ATOMIC_STEP_RECLAIM`.
+   * Reading and then resetting it would delete a child saved in between, and a
+   * second one would be started. Everything else is the engine's own claim.
+   */
+  protected override async claimStepForExecution(
+    runId: string,
+    stepName: string,
+    rpcName: string,
+    leaseMs: number
+  ): Promise<StepState | null> {
+    const seen = await this.getStepState(runId, stepName)
+    if (seen.status === 'running' && seen.rpcName === rpcName) {
+      if (seen.childRunId || isStepLeaseLive(seen.leaseExpiresAt)) {
+        return null
+      }
+      if (await this.settleUnclaimableStep(runId, stepName, seen, leaseMs)) {
+        return null
+      }
+      return this.reclaimLostStep(runId, stepName, seen, leaseMs)
+    }
+    return super.claimStepForExecution(runId, stepName, rpcName, leaseMs)
+  }
+
+  private async reclaimLostStep(
+    runId: string,
+    stepName: string,
+    seen: StepState,
+    leaseMs: number
+  ): Promise<StepState | null> {
+    const attempt = seen.attemptCount + 1
+    const claimed = await this.mirrored(
+      async () => {
+        const now = Date.now()
+        const taken = await this.redis.eval(
+          ATOMIC_STEP_RECLAIM,
+          1,
+          this.stepKey(runId, stepName),
+          seen.stepId,
+          seen.attemptCount.toString(),
+          attempt.toString(),
+          (now + leaseMs).toString(),
+          now.toString()
+        )
+        if (Number(taken) !== 1) return null
+        await this.saveStepHistory(
+          seen.stepId,
+          stepName,
+          attempt,
+          'running',
+          undefined,
+          undefined,
+          seen.retries,
+          seen.retryDelay?.toString()
+        )
+        return {
+          ...seen,
+          attemptCount: attempt,
+          leaseExpiresAt: new Date(now + leaseMs),
+          updatedAt: new Date(now),
+        }
+      },
+      async (mirror, newStep) => {
+        if (newStep) {
+          await mirror.createRetryAttempt(seen.stepId, {
+            ...newStep,
+            stepName,
+          })
+        }
+      }
+    )
+    if (!claimed) return null
+    await this.logStepRerun(runId, stepName, claimed.attemptCount)
+    return { ...claimed, lapsedAttempt: seen.attemptCount }
+  }
+
+  protected async claimStepStatus(
+    seen: StepState,
+    from: readonly StepStatus[],
+    leaseMs: number
+  ): Promise<boolean> {
+    const { runId, stepName } = this.parseStepId(seen.stepId)
+    const now = Date.now()
+    const taken = await this.redis.eval(
+      ATOMIC_STEP_CLAIM,
+      1,
+      this.stepKey(runId, stepName),
+      seen.stepId,
+      seen.attemptCount.toString(),
+      (now + leaseMs).toString(),
+      now.toString(),
+      ...from
+    )
+    return Number(taken) === 1
   }
 
   // ============================================================================
@@ -912,22 +1134,12 @@ export class RedisWorkflowService extends PikkuWorkflowService {
 
   protected async setBranchTakenImpl(
     stepId: string,
-    branchKey: string
-  ): Promise<void> {
-    // Extract runId and stepName from stepId (format: runId:stepName:timestamp)
-    const parts = stepId.split(':')
-    const runId = parts[0]!
-    const stepName = parts.slice(1, -1).join(':')
-
-    const now = Date.now()
-    const key = this.stepKey(runId, stepName)
-
-    await this.redis.hmset(
-      key,
-      'branchTaken',
-      branchKey,
-      'updatedAt',
-      now.toString()
+    branchKey: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return (
+      (await this.writeStepIf(stepId, from, { branchTaken: branchKey })) !==
+      null
     )
   }
 

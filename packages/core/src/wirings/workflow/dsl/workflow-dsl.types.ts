@@ -37,7 +37,19 @@ export interface WorkflowStepOptions {
    * The step is recorded durably like any RPC step.
    */
   virtualUser?: ScenarioVirtualUser
-  // Future: timeout, failFast, priority
+  // Future: failFast, priority
+}
+
+/** Options for a step that runs a function: the RPC form of `workflow.do()`. */
+export interface WorkflowRpcStepOptions extends WorkflowStepOptions {
+  /**
+   * How long one attempt may run (e.g. `'30s'`, or milliseconds). Past it the
+   * attempt's `signal` aborts and the attempt fails without waiting for the
+   * function, so a retry can run beside it: make the function's effects
+   * idempotent on `invocationId`. No default. Not supported on a step that
+   * starts a child workflow.
+   */
+  timeout?: string | number
 }
 
 /**
@@ -86,7 +98,7 @@ export type WorkflowWireDoRPC = <TOutput = any, TInput = any>(
   stepName: string,
   rpcName: string,
   data: TInput,
-  options?: WorkflowStepOptions
+  options?: WorkflowRpcStepOptions
 ) => Promise<TOutput>
 
 /**
@@ -271,7 +283,7 @@ export interface RpcStepMeta {
   /** Input source mappings, or 'passthrough' when entire data is passed */
   inputs?: Record<string, InputSource> | 'passthrough'
   /** Step options */
-  options?: WorkflowStepOptions
+  options?: WorkflowRpcStepOptions
   /** Scenario virtual user name this step runs as ({ virtualUser: virtualUsers.x }) */
   virtualUser?: string
   /** True for workflow.expectEventually polling steps */
@@ -593,6 +605,17 @@ export interface WorkflowStepWire {
    * e.g. in a cyclic graph `a → b → a → c`, the second `a` carries `b`'s id.
    */
   fromInvocationId?: string
+  /**
+   * Aborts when this attempt should stop: its run was cancelled
+   * (`WorkflowStepCancelledError`), it passed its `timeout`
+   * (`WorkflowStepTimeoutError`) or its worker lost its lease
+   * (`LeaseLostError`). A cancel never aborts a compensation. `beginChanges()`
+   * throws once it is aborted.
+   *
+   * Cooperative, and it does not cross a remote RPC transport. Absent for a
+   * step an agent runs, and on Cloudflare Durable Objects.
+   */
+  signal?: AbortSignal
 }
 
 /** The outcome of the forward call a `compensate` function is undoing. */

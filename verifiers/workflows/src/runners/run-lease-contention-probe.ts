@@ -117,8 +117,13 @@ export const recordingPasses = <T extends WorkflowServiceClass>(Base: T) => {
   abstract class Recording extends Base {
     readonly passes = new IntervalRecorder()
 
-    override withRunLease<R>(id: string, fn: () => Promise<R>): Promise<R> {
-      return super.withRunLease(id, () => this.passes.around(id, fn))
+    override withRunLease<R>(
+      id: string,
+      fn: (lost?: AbortSignal) => Promise<R>
+    ): Promise<R> {
+      return super.withRunLease(id, (lost) =>
+        this.passes.around(id, () => fn(lost))
+      )
     }
   }
   return Recording

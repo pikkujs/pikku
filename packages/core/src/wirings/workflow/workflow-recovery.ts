@@ -4,6 +4,7 @@ import type { Logger } from '../../services/logger.js'
 import { getSingletonServices } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
+  DRIVEN_RUN_STATUSES,
   DEFAULT_RECOVERY_INTERVAL_MS,
   DEFAULT_RECOVERY_STALLED_MS,
   DEFAULT_STALLED_RUN_LIMIT,
@@ -17,9 +18,11 @@ import {
   SLEEP_WAKE_GRACE_MS,
 } from './workflow-constants.js'
 import { isRunLeaseError } from './workflow-run-lease.js'
+import { approvalStateKey } from './workflow-approval.js'
 import type {
   StepState,
   WorkflowRecoveryOptions,
+  WorkflowStatus,
   WorkflowStepOptions,
 } from './workflow.types.js'
 
@@ -228,6 +231,59 @@ export const sweepUndispatchedSteps = async (
   }
 }
 
+/** An approval gate still open on a `suspended` run. */
+export type PendingApproval = { runId: string; stepName: string }
+
+const APPROVAL_PAGE_SIZE = 100
+
+const DRIVER_PAGE_SIZE = 100
+
+/** Runs waiting for a driver, up to `limit` of those due to be re-driven. */
+const findEligibleDrivenRunIds = async (
+  findRunsAwaitingDriver: WorkflowRecoveryHost['findRunsAwaitingDriver'],
+  isEligible: (runId: string) => boolean,
+  before: Date,
+  limit: number
+): Promise<string[]> => {
+  const runIds = new Set<string>()
+  for (let offset = 0; runIds.size < limit; offset += DRIVER_PAGE_SIZE) {
+    const page = await findRunsAwaitingDriver(before, DRIVER_PAGE_SIZE, offset)
+    for (const runId of page) {
+      if (runIds.size >= limit) break
+      if (isEligible(runId)) runIds.add(runId)
+    }
+    if (page.length < DRIVER_PAGE_SIZE) break
+  }
+  return [...runIds]
+}
+
+/**
+ * Suspended runs whose gate has a decision it has not acted on: the resume that
+ * follows a decision was lost. An undecided gate is waiting on purpose.
+ */
+const findDecidedApprovalRunIds = async (
+  findPendingApprovals: WorkflowRecoveryHost['findPendingApprovals'],
+  getRunState: WorkflowRecoveryHost['getRunState'],
+  isEligible: (runId: string) => boolean,
+  before: Date,
+  limit: number
+): Promise<string[]> => {
+  const runIds = new Set<string>()
+  for (let offset = 0; runIds.size < limit; offset += APPROVAL_PAGE_SIZE) {
+    const page = await findPendingApprovals(before, APPROVAL_PAGE_SIZE, offset)
+    for (const { runId, stepName } of page) {
+      if (runIds.size >= limit) break
+      if (!isEligible(runId)) continue
+      const state = await getRunState(runId)
+      const record = state[approvalStateKey(stepName)] as
+        { decision?: unknown } | undefined
+      if (record?.decision !== undefined) runIds.add(runId)
+    }
+    if (page.length < APPROVAL_PAGE_SIZE) break
+  }
+  return [...runIds]
+}
+
 /** A step parked on `scheduled`, waiting for a timer or a queue job. */
 export type ScheduledStep = {
   runId: string
@@ -371,6 +427,14 @@ export type WorkflowRecoveryHost = {
   listStepStates: (runId: string) => Promise<StepState[] | null>
   withRunLease: (runId: string, fn: () => Promise<void>) => Promise<void>
   findStalledRunIds: (before: Date, limit: number) => Promise<string[]>
+  findRunsAwaitingDriver: (
+    before: Date,
+    limit: number,
+    offset: number
+  ) => Promise<string[]>
+  getRunStatus: (runId: string) => Promise<WorkflowStatus | undefined>
+  /** Drive a run's unwind under its lease; `false` if another driver has it. */
+  redriveUnwind: (runId: string) => Promise<boolean>
   findUndispatchedSteps: (
     before: Date,
     limit: number
@@ -379,6 +443,13 @@ export type WorkflowRecoveryHost = {
     limit: number,
     offset: number
   ) => Promise<ScheduledStep[]>
+  findPendingApprovals: (
+    before: Date,
+    limit: number,
+    offset: number
+  ) => Promise<PendingApproval[]>
+  getRunState: (runId: string) => Promise<Record<string, unknown>>
+  handBackSettledChildren: (runId: string) => Promise<void>
   resumeWorkflow: (runId: string) => Promise<void>
   wakeSleep: (runId: string, stepId: string) => Promise<void>
   rearmSleep: (
@@ -430,10 +501,27 @@ export class WorkflowRecovery {
     }
   }
 
+  /**
+   * A run going back is driven here and now, which needs no queue. Any other is
+   * handed back to its orchestrator.
+   */
+  private async resume(runId: string): Promise<boolean> {
+    const status = await this.host.getRunStatus(runId)
+    if (status && DRIVEN_RUN_STATUSES.includes(status)) {
+      if (isWaitingOutRetryDelay(await this.host.listStepStates(runId))) {
+        return false
+      }
+      return this.host.redriveUnwind(runId)
+    }
+    return this.driveUnlessOwned(runId, async () => {
+      await this.host.handBackSettledChildren(runId)
+      await this.host.resumeWorkflow(runId)
+    })
+  }
+
   private get sweepDeps() {
     return {
-      resume: (runId: string) =>
-        this.driveUnlessOwned(runId, () => this.host.resumeWorkflow(runId)),
+      resume: (runId: string) => this.resume(runId),
       logger: this.logger,
     }
   }
@@ -442,7 +530,27 @@ export class WorkflowRecovery {
     options?: StalledSweepOptions
   ): Promise<{ resumed: string[] }> {
     return sweepStalledRuns(
-      this.host.findStalledRunIds,
+      async (before, limit) => {
+        const stalled = await this.host.findStalledRunIds(before, limit)
+        const isEligible = (runId: string) =>
+          this.backoff.isEligible(runId, Date.now())
+        const waiting = await findEligibleDrivenRunIds(
+          this.host.findRunsAwaitingDriver,
+          isEligible,
+          before,
+          limit
+        )
+        // A limit of their own, spent only on runs this tick can re-drive, so
+        // runs that stay stalled cannot crowd out a decided gate.
+        const decided = await findDecidedApprovalRunIds(
+          this.host.findPendingApprovals,
+          this.host.getRunState,
+          isEligible,
+          before,
+          limit
+        )
+        return [...new Set([...stalled, ...waiting, ...decided])]
+      },
       this.backoff,
       options,
       this.sweepDeps

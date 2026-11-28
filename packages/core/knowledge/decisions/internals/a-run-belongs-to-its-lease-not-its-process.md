@@ -25,15 +25,38 @@ run owned now may lose its owner by the next tick.
 
 The cost is that a run killed mid-step waits up to the lease's 30s TTL.
 
-`findStalledRunIds` no longer reads a null step lease as owned. It only meant that
-for a step parked on a child run, so a `running` step counts as in flight only
-under a live lease or with a `childRunId`. A step worked inside a pass has neither,
-and the run lease answers for it.
+`findStalledRunIds` does not read a null step lease as owned. A `running` step
+counts as in flight only under a live lease or while parked on a child run that has
+not settled. A step worked inside a pass has neither, and the run lease answers for
+it.
+
+## What a sweep covers besides `running` runs
+
+A `compensating` run is not handed to its orchestrator. Recovery
+[drives its unwind](an-unwind-waits-for-every-forward-step.md) under the run
+lease, which sends lost compensation jobs again and fails forward steps that are
+dead. No forward step is sent again.
+
+A child tells its parent when it settles, and that message can be lost. Replaying
+the parent cannot replace it, because running the step again starts a second
+child. So a sweep first gives each parked step its settled child's outcome, then
+resumes the parent. Replay and a redelivered step job leave a parked step alone
+whatever its lease says, and a new attempt at a step starts with no child. The
+claim decides this, not a read before it, because the child can be saved in
+between: a store with a conditional write puts the child check in that write. A
+`cancelled` child is left for 30s, because `cancelRun` writes that status before it
+moves a child with work to undo to `compensating`.
+
+A `suspended` run is swept only when an open approval gate holds a decision. The
+decision is saved before the run is resumed, so a saved decision on an open gate
+is a lost resume. Every other suspended run is waiting on purpose, and the run
+stays `suspended` until the pass the sweep queues moves it on.
 
 ## In-flight steps run at least once more
 
 A pass that meets its own step already `running` knows the pass before it died
-there, because the lease excludes any other. It retries the step as a counted
+there or [lost the lease](a-pass-that-lost-its-lease-writes-nothing.md),
+because the lease excludes any other. It retries the step as a counted
 attempt with the same `invocationId`, so a function can dedupe on it, and a step
 that kills its process every time runs out of attempts rather than crash-looping.
 The alternative, failing the step, turns every deploy into failed runs.

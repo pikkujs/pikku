@@ -1,10 +1,9 @@
 import type { SerializedError } from '@pikku/core/errors'
 import {
-  leaseAttemptsExhausted,
   PikkuWorkflowService,
   WorkflowStepFunctionMismatchError,
-  WorkflowStepLeaseExpiredError,
-  WorkflowStepSupersededError,
+  STEP_SOURCES,
+  DRIVEN_RUN_STATUSES,
 } from '@pikku/core/workflow'
 import type {
   WorkflowPlannedStep,
@@ -15,9 +14,13 @@ import type {
   StepStatus,
   WorkflowStatus,
   WorkflowVersionStatus,
+  WorkflowRpcStepOptions,
 } from '@pikku/core/workflow'
 import type { Db, Collection } from 'mongodb'
-import { MongoDBWorkflowRunService } from './mongodb-workflow-run-service.js'
+import {
+  WORKFLOW_STATE_OPTIONS,
+  MongoDBWorkflowRunService,
+} from './mongodb-workflow-run-service.js'
 
 interface WorkflowRunDoc {
   _id: string
@@ -49,6 +52,7 @@ interface WorkflowStepDoc {
   branchTaken: string | null
   retries: number | null
   retryDelay: string | null
+  timeout?: string | null
   fromStepName?: string | null
   /** The claim that owns the step; every history document carries its own. */
   attempt: number
@@ -93,6 +97,10 @@ const decodeStateKey = (key: string): string =>
     ? Buffer.from(key.slice(ENCODED_STATE_KEY.length), 'hex').toString('utf8')
     : key
 
+/** A step whose function has not ended, which a lease may hold. */
+const isStepExecuting = (status: StepStatus): boolean =>
+  (STEP_SOURCES.inFlight as readonly StepStatus[]).includes(status)
+
 export class MongoDBWorkflowService extends PikkuWorkflowService {
   private initialized = false
   private runService: MongoDBWorkflowRunService
@@ -104,12 +112,22 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   constructor(db: Db, options: WorkflowServiceOptions) {
     super(options)
     this.runService = new MongoDBWorkflowRunService(db)
-    this.runs = db.collection<WorkflowRunDoc>('workflow_runs')
-    this.steps = db.collection<WorkflowStepDoc>('workflow_step')
-    this.stepHistory = db.collection<WorkflowStepHistoryDoc>(
-      'workflow_step_history'
+    this.runs = db.collection<WorkflowRunDoc>(
+      'workflow_runs',
+      WORKFLOW_STATE_OPTIONS
     )
-    this.versions = db.collection<WorkflowVersionDoc>('workflow_versions')
+    this.steps = db.collection<WorkflowStepDoc>(
+      'workflow_step',
+      WORKFLOW_STATE_OPTIONS
+    )
+    this.stepHistory = db.collection<WorkflowStepHistoryDoc>(
+      'workflow_step_history',
+      WORKFLOW_STATE_OPTIONS
+    )
+    this.versions = db.collection<WorkflowVersionDoc>(
+      'workflow_versions',
+      WORKFLOW_STATE_OPTIONS
+    )
   }
 
   public async init(): Promise<void> {
@@ -117,6 +135,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
 
     await this.runs.createIndex({ workflow: 1 })
     await this.runs.createIndex({ status: 1 })
+    await this.runs.createIndex({ status: 1, updatedAt: 1 })
     await this.runs.createIndex({ createdAt: -1 })
 
     await this.steps.createIndex(
@@ -134,6 +153,26 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     )
 
     this.initialized = true
+  }
+
+  protected override async findRunsAwaitingDriver(
+    before: Date,
+    limit: number,
+    offset: number
+  ): Promise<string[]> {
+    const runs = await this.runs
+      .find(
+        {
+          status: { $in: [...DRIVEN_RUN_STATUSES] },
+          updatedAt: { $lt: before },
+        },
+        { projection: { _id: 1 } }
+      )
+      .sort({ updatedAt: 1, _id: 1 })
+      .skip(offset)
+      .limit(limit)
+      .toArray()
+    return runs.map((run) => String(run._id))
   }
 
   protected async createRunImpl(
@@ -174,14 +213,15 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.runService.getRun(id)
   }
 
-  protected async updateRunStatusImpl(
+  protected async transitionRunStatusImpl(
     id: string,
+    from: readonly WorkflowStatus[],
     status: WorkflowStatus,
     output?: any,
     error?: SerializedError
-  ): Promise<void> {
-    await this.runs.updateOne(
-      { _id: id },
+  ): Promise<boolean> {
+    const moved = await this.runs.updateOne(
+      { _id: id, status: { $in: [...from] } },
       {
         $set: {
           status,
@@ -191,6 +231,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
         },
       }
     )
+    return moved.matchedCount > 0
   }
 
   protected async insertStepStateImpl(
@@ -198,7 +239,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     stepName: string,
     rpcName: string | null,
     data: any,
-    stepOptions?: { retries?: number; retryDelay?: string | number },
+    stepOptions?: WorkflowRpcStepOptions,
     fromStepName?: string
   ): Promise<StepState> {
     const stepId = crypto.randomUUID()
@@ -216,6 +257,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       branchTaken: null,
       retries: stepOptions?.retries ?? null,
       retryDelay: stepOptions?.retryDelay?.toString() ?? null,
+      timeout: stepOptions?.timeout?.toString() ?? null,
       fromStepName: fromStepName ?? null,
       attempt: 1,
       createdAt: now,
@@ -233,6 +275,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       attemptCount: 1,
       retries: stepOptions?.retries,
       retryDelay: stepOptions?.retryDelay?.toString(),
+      timeout: stepOptions?.timeout?.toString(),
       fromStepName,
       createdAt: now,
       updatedAt: now,
@@ -264,7 +307,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       attemptCount: row.attempt,
       retries: row.retries != null ? Number(row.retries) : undefined,
       retryDelay: row.retryDelay ?? undefined,
+      timeout: row.timeout ?? undefined,
       fromStepName: row.fromStepName ?? undefined,
+      childRunId: row.childRunId ?? undefined,
       leaseExpiresAt: row.leaseExpiresAt ?? undefined,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt),
@@ -285,20 +330,69 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.runService.getRunHistory(runId)
   }
 
-  protected async setStepRunningImpl(stepId: string): Promise<void> {
-    await this.steps.updateOne(
-      { _id: stepId },
-      { $set: { status: 'running', updatedAt: new Date() } }
-    )
-    await this.writeLatestHistory(stepId, 'running')
+  protected async setStepRunningImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<boolean> {
+    if (
+      !(await this.writeStepIfIn(stepId, from, { status: 'running' }, attempt))
+    ) {
+      return false
+    }
+    await this.writeLatestHistory(stepId, 'running', {}, attempt)
+    return true
   }
 
-  protected async setStepScheduledImpl(stepId: string): Promise<void> {
-    await this.steps.updateOne(
-      { _id: stepId },
-      { $set: { status: 'scheduled', updatedAt: new Date() } }
-    )
+  protected async setStepCancellingImpl(
+    stepId: string,
+    from: readonly StepStatus[],
+    attempt: number
+  ): Promise<boolean> {
+    if (
+      !(await this.writeStepIfIn(
+        stepId,
+        from,
+        { status: 'cancelling' },
+        attempt
+      ))
+    ) {
+      return false
+    }
+    await this.writeLatestHistory(stepId, 'cancelling', {}, attempt)
+    return true
+  }
+
+  protected async setStepScheduledImpl(
+    stepId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    if (!(await this.writeStepIfIn(stepId, from, { status: 'scheduled' }))) {
+      return false
+    }
     await this.writeLatestHistory(stepId, 'scheduled')
+    return true
+  }
+
+  /**
+   * Update a step only while it is in one of `from` and, with `attempt`, still
+   * on that attempt. One filtered update, so the check and the write are atomic.
+   */
+  private async writeStepIfIn(
+    stepId: string,
+    from: readonly StepStatus[],
+    values: Partial<WorkflowStepDoc>,
+    attempt?: number
+  ): Promise<boolean> {
+    const written = await this.steps.updateOne(
+      {
+        _id: stepId,
+        status: { $in: [...from] },
+        ...(attempt === undefined ? {} : { attempt }),
+      },
+      { $set: { ...values, updatedAt: new Date() } }
+    )
+    return written.matchedCount > 0
   }
 
   /**
@@ -379,17 +473,10 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
 
   protected async setStepChildRunIdImpl(
     stepId: string,
-    childRunId: string
-  ): Promise<void> {
-    await this.steps.updateOne(
-      { _id: stepId },
-      {
-        $set: {
-          childRunId,
-          updatedAt: new Date(),
-        },
-      }
-    )
+    childRunId: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return this.writeStepIfIn(stepId, from, { childRunId })
   }
 
   public override async refreshStepLease(
@@ -398,7 +485,11 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     attempt?: number
   ): Promise<boolean> {
     const renewed = await this.steps.updateOne(
-      attempt === undefined ? { _id: stepId } : { _id: stepId, attempt },
+      {
+        _id: stepId,
+        status: { $in: [...STEP_SOURCES.inFlight] },
+        ...(attempt === undefined ? {} : { attempt }),
+      },
       {
         $set: {
           leaseExpiresAt:
@@ -412,67 +503,57 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   protected async setStepResultImpl(
     stepId: string,
     result: any,
-    attempt?: number
-  ): Promise<void> {
-    await this.writeStepOutcome(
-      stepId,
-      'succeeded',
-      { result, error: null },
-      attempt
-    )
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    const values = { status: 'succeeded' as const, result, error: null }
+    if (!(await this.writeStepIfIn(stepId, from, values, attempt))) {
+      return false
+    }
     await this.writeLatestHistory(stepId, 'succeeded', { result }, attempt)
+    return true
   }
 
   protected async setStepErrorImpl(
     stepId: string,
     error: Error,
-    attempt?: number
-  ): Promise<void> {
+    attempt: number | undefined,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
     const serializedError: SerializedError = {
       message: error.message,
       stack: error.stack,
       code: (error as any).code,
     }
-
-    await this.writeStepOutcome(
-      stepId,
-      'failed',
-      { error: serializedError, result: null },
-      attempt
-    )
+    const values = {
+      status: 'failed' as const,
+      error: serializedError,
+      result: null,
+    }
+    if (!(await this.writeStepIfIn(stepId, from, values, attempt))) {
+      return false
+    }
     await this.writeLatestHistory(
       stepId,
       'failed',
       { error: serializedError },
       attempt
     )
-  }
-
-  /**
-   * Settle a step. With `attempt`, a step claimed again since matches nothing
-   * and throws `WorkflowStepSupersededError`, keeping the newer claim's state.
-   */
-  private async writeStepOutcome(
-    stepId: string,
-    status: 'succeeded' | 'failed',
-    values: Partial<WorkflowStepDoc>,
-    attempt: number | undefined
-  ): Promise<void> {
-    const written = await this.steps.updateOne(
-      attempt === undefined ? { _id: stepId } : { _id: stepId, attempt },
-      { $set: { ...values, status, updatedAt: new Date() } }
-    )
-    if (attempt !== undefined && written.matchedCount === 0) {
-      throw new WorkflowStepSupersededError(stepId, attempt)
-    }
+    return true
   }
 
   protected async createRetryAttemptImpl(
     stepId: string,
-    status: 'pending' | 'running'
-  ): Promise<StepState> {
+    status: 'pending' | 'running',
+    from: readonly StepStatus[],
+    attempt?: number
+  ): Promise<StepState | null> {
     const row = await this.steps.findOneAndUpdate(
-      { _id: stepId },
+      {
+        _id: stepId,
+        status: { $in: [...from] },
+        ...(attempt === undefined ? {} : { attempt }),
+      },
       {
         $set: {
           status,
@@ -480,11 +561,12 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
           error: null,
           updatedAt: new Date(),
         },
+        $unset: { childRunId: '' },
         $inc: { attempt: 1 },
       },
       { returnDocument: 'after' }
     )
-    if (!row) throw new Error(`Step not found: ${stepId}`)
+    if (!row) return null
 
     await this.insertHistoryRecord(stepId, row.attempt, status)
     return this.toStepState(row)
@@ -520,39 +602,8 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
       throw new WorkflowStepFunctionMismatchError(runId, stepName)
     }
 
-    if (stepState.status === 'succeeded') {
-      return null
-    }
-
-    if (stepState.status === 'running' && leaseAttemptsExhausted(stepState)) {
-      // Fail it only if its lease is still lapsed at the moment of writing:
-      // a worker that renewed since the read above still owns the step.
-      if (!(await this.claimStepStatus(stepState, ['running'], leaseMs))) {
-        return null
-      }
-      await this.setStepError(
-        stepState.stepId,
-        new WorkflowStepLeaseExpiredError(
-          runId,
-          stepName,
-          stepState.attemptCount
-        ),
-        stepState.attemptCount
-      )
-      await this.logStepAttemptsExhausted(
-        runId,
-        stepName,
-        stepState.attemptCount
-      )
-      // A null claim reads as "another dispatch owns it", so nothing else
-      // would requeue the orchestrator to see this failure.
-      await this.resumeWorkflow(runId)
-      return null
-    }
-
-    // A step that has spent every attempt is settled, however it failed; a
-    // redelivered message must not buy it another one.
-    if (stepState.status === 'failed' && leaseAttemptsExhausted(stepState)) {
+    const { status } = stepState
+    if (await this.settleUnclaimableStep(runId, stepName, stepState, leaseMs)) {
       return null
     }
 
@@ -569,27 +620,19 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
         }
       )
       // A `failed` step threw, and this is its ordinary retry.
-      if (reclaimed && stepState.status === 'running') {
-        await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
-      }
-      return reclaimed
+      if (!reclaimed || status !== 'running') return reclaimed
+      await this.logStepRerun(runId, stepName, reclaimed.attemptCount)
+      return { ...reclaimed, lapsedAttempt: stepState.attemptCount }
     }
 
-    if (stepState.status === 'pending' || stepState.status === 'scheduled') {
-      if (
-        !(await this.claimStepStatus(
-          stepState,
-          ['pending', 'scheduled'],
-          leaseMs
-        ))
-      ) {
-        return null
-      }
-      await this.setStepRunning(stepState.stepId)
-      return { ...stepState, status: 'running' }
+    // `pending` or `scheduled`: the claimable statuses left.
+    if (
+      !(await this.claimStepStatus(stepState, STEP_SOURCES.unclaimed, leaseMs))
+    ) {
+      return null
     }
-
-    return stepState
+    await this.setStepRunning(stepState.stepId, stepState.attemptCount)
+    return { ...stepState, status: 'running' }
   }
 
   /**
@@ -612,6 +655,7 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
           leaseExpiresAt: new Date(now.getTime() + leaseMs),
           updatedAt: now,
         },
+        $unset: { childRunId: '' },
         $inc: { attempt: 1 },
       },
       { returnDocument: 'after' }
@@ -622,14 +666,9 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
     return this.toStepState(row)
   }
 
-  /**
-   * Move a step to `running` under a fresh lease, only if it is still the
-   * attempt that was read and in one of `from`, reporting whether this caller
-   * is the one that moved it.
-   */
-  private async claimStepStatus(
+  protected async claimStepStatus(
     stepState: StepState,
-    from: StepStatus[],
+    from: readonly StepStatus[],
     leaseMs: number
   ): Promise<boolean> {
     const now = new Date()
@@ -648,19 +687,21 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
   }
 
   /**
-   * A `running` step matches only once its lease has lapsed; a null lease —
-   * a step parked on a child run — never does.
+   * An executing step matches only once its lease has lapsed, and only with no
+   * child run: a step parked on a child is the child's to finish.
    */
   private claimFilter(
     stepState: StepState,
-    from: StepStatus[],
+    from: readonly StepStatus[],
     now: Date
   ): Record<string, unknown> {
     return {
       _id: stepState.stepId,
       attempt: stepState.attemptCount,
-      status: { $in: from },
-      ...(from.includes('running') ? { leaseExpiresAt: { $lt: now } } : {}),
+      status: { $in: [...from] },
+      ...(from.some(isStepExecuting)
+        ? { leaseExpiresAt: { $lt: now }, childRunId: null }
+        : {}),
     }
   }
 
@@ -742,12 +783,10 @@ export class MongoDBWorkflowService extends PikkuWorkflowService {
 
   protected async setBranchTakenImpl(
     stepId: string,
-    branchKey: string
-  ): Promise<void> {
-    await this.steps.updateOne(
-      { _id: stepId },
-      { $set: { branchTaken: branchKey, updatedAt: new Date() } }
-    )
+    branchKey: string,
+    from: readonly StepStatus[]
+  ): Promise<boolean> {
+    return this.writeStepIfIn(stepId, from, { branchTaken: branchKey })
   }
 
   protected async updateRunStateImpl(

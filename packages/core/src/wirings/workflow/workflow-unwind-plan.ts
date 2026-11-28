@@ -19,6 +19,7 @@ export interface UnwindRecord {
   childRunId?: string
   data?: unknown
   retries?: number
+  attemptCount?: number
 }
 
 export type UnwindStepState =
@@ -31,7 +32,8 @@ export interface UnwindPlan {
   stuck: Array<{ stepName: string; error: string }>
   restedAt?: string
   childRestedAt?: string
-  forwardInFlight: boolean
+  /** The forward steps in flight that the unwind waits for. */
+  inFlight: UnwindRecord[]
   settled: boolean
   compensated: boolean
 }
@@ -46,9 +48,29 @@ export interface PlanUnwindInput {
   skip: ReadonlySet<string>
   hasCompensation: (record: UnwindRecord) => boolean
   isChildWorkflow: (record: UnwindRecord) => boolean
+  /**
+   * Whether every forward step in flight is waited for, and not only those with
+   * a compensation.
+   */
+  awaitsAll?: boolean
+  /** Whether the unwind itself runs a `failed` compensation row again. */
+  resumesFailed?: (compensation: UnwindRecord) => boolean
 }
 
-export function planUnwind(input: PlanUnwindInput): UnwindPlan {
+/** A store may list every attempt of a step; the unwind reads the latest. */
+const latestAttempts = (records: UnwindRecord[]): UnwindRecord[] => {
+  const latest = new Map<string, UnwindRecord>()
+  for (const record of records) {
+    const seen = latest.get(record.stepName)
+    if (!seen || (record.attemptCount ?? 0) >= (seen.attemptCount ?? 0)) {
+      latest.set(record.stepName, record)
+    }
+  }
+  return records.filter((r) => latest.get(r.stepName) === r)
+}
+
+export function planUnwind(planInput: PlanUnwindInput): UnwindPlan {
+  const input = { ...planInput, records: latestAttempts(planInput.records) }
   const forward = input.records.filter(
     (r) =>
       !isCompensationStepName(r.stepName) && !isMilestoneStepName(r.stepName)
@@ -67,8 +89,10 @@ export function planUnwind(input: PlanUnwindInput): UnwindPlan {
     )
   const lastMilestone = milestones[0]
 
-  const forwardInFlight = forward.some(
-    (r) => STEP_IN_FLIGHT_STATES.has(r.status) && input.hasCompensation(r)
+  const inFlight = forward.filter(
+    (r) =>
+      STEP_IN_FLIGHT_STATES.has(r.status) &&
+      (input.awaitsAll || input.hasCompensation(r))
   )
 
   let candidates = forward.filter((r) => {
@@ -117,7 +141,7 @@ export function planUnwind(input: PlanUnwindInput): UnwindPlan {
       const restedAt = (comp.result as { restedAt?: string } | undefined)
         ?.restedAt
       state = restedAt ? 'rested' : 'done'
-    } else if (comp?.status === 'failed') {
+    } else if (comp?.status === 'failed' && !input.resumesFailed?.(comp)) {
       state = 'stuck'
     } else if (comp?.status === 'scheduled') {
       state = 'running'
@@ -139,7 +163,7 @@ export function planUnwind(input: PlanUnwindInput): UnwindPlan {
   }
   for (const c of candidates) resolve(c)
 
-  const ready = forwardInFlight
+  const ready = inFlight.length
     ? []
     : candidates.filter((c) => states.get(c.stepName) === 'ready')
 
@@ -179,8 +203,8 @@ export function planUnwind(input: PlanUnwindInput): UnwindPlan {
       ? milestoneNameOf(lastMilestone.stepName)
       : undefined,
     childRestedAt,
-    forwardInFlight,
-    settled: !forwardInFlight && !open,
+    inFlight,
+    settled: !inFlight.length && !open,
     compensated,
   }
 }

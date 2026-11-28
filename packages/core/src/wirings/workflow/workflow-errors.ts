@@ -139,38 +139,43 @@ addError(WorkflowStepFunctionMismatchError, {
 })
 
 /**
- * Every dispatch that took this step lost its worker before finishing it, and
- * the step has no attempts left to hand out. Failing here is the loud end of
- * the loop: without it the step would be re-claimed and abandoned forever.
+ * The step's worker was lost and nothing will run the step again: it has no
+ * attempts left to hand out, or its run was stopped. Failing here is the loud end
+ * of the loop: without it the step would be re-claimed and abandoned forever.
  */
 export class WorkflowStepLeaseExpiredError extends PikkuError {
   constructor(
     public readonly runId: string,
     public readonly stepName: string,
-    public readonly attemptCount: number
+    public readonly attemptCount: number,
+    outOfAttempts = true
   ) {
     super(
-      `Workflow step '${stepName}' (run ${runId}) lost its worker on every one of its ${attemptCount} attempts: the last lease expired with the step still running`
+      outOfAttempts
+        ? `Workflow step '${stepName}' (run ${runId}) lost its worker on every one of its ${attemptCount} attempts: the last lease expired with the step still running`
+        : `Workflow step '${stepName}' (run ${runId}) lost its worker on attempt ${attemptCount} and is not run again, because the run was stopped: the lease expired with the step still running`
     )
   }
 }
 addError(WorkflowStepLeaseExpiredError, {
   status: 500,
-  message: 'Workflow step lost its worker and has no attempts left.',
+  message: 'Workflow step lost its worker and is not run again.',
 })
 
 /**
- * A write from a dispatch that no longer owns its step: its lease lapsed and
- * another dispatch claimed the step as a newer attempt. The newer attempt owns
- * the outcome, so the stale one is dropped rather than recorded over it.
+ * A write from a dispatch that no longer owns its step: another dispatch claimed
+ * it as a newer attempt, or the step has already moved on. Whoever moved it owns
+ * the outcome, so the late one is dropped rather than recorded over it.
  */
 export class WorkflowStepSupersededError extends PikkuError {
   constructor(
     public readonly stepId: string,
-    public readonly attempt: number
+    public readonly attempt?: number
   ) {
     super(
-      `Workflow step ${stepId}: attempt ${attempt} was superseded by a newer claim`
+      attempt === undefined
+        ? `Workflow step ${stepId}: the write was superseded, because the step has moved on`
+        : `Workflow step ${stepId}: attempt ${attempt} was superseded, because the step has moved on`
     )
   }
 }
@@ -178,6 +183,68 @@ addError(WorkflowStepSupersededError, {
   status: 409,
   message: 'Workflow step was claimed by a newer attempt.',
 })
+
+/**
+ * The abort reason of a step's `signal` once its run has been cancelled.
+ * Responds 409.
+ */
+export class WorkflowStepCancelledError extends PikkuError {
+  constructor(public readonly runId: string) {
+    super(`Workflow run ${runId} was cancelled`)
+  }
+}
+addError(WorkflowStepCancelledError, {
+  status: 409,
+  message: 'Workflow was cancelled.',
+})
+
+/**
+ * An attempt of a step ran past its `timeout`. It is the abort reason of the
+ * step's `signal`, and the error the attempt fails with.
+ */
+export class WorkflowStepTimeoutError extends PikkuError {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string,
+    public readonly timeoutMs: number
+  ) {
+    super(
+      `Workflow step '${stepName}' (run ${runId}) timed out after ${timeoutMs}ms`
+    )
+  }
+}
+addError(WorkflowStepTimeoutError, {
+  status: 500,
+  message: 'Workflow step timed out.',
+})
+
+/** A step that was not started because its run had been stopped. */
+export class WorkflowRunStoppedError extends PikkuError {
+  constructor(
+    public readonly runId: string,
+    public readonly stepName: string
+  ) {
+    super(
+      `Workflow step '${stepName}' (run ${runId}) was not run: the run had been stopped`
+    )
+  }
+}
+addError(WorkflowRunStoppedError, {
+  status: 409,
+  message: 'Workflow run was stopped.',
+})
+
+/** A step's dispatch ends this way when a child run will complete the step. */
+export class ChildWorkflowStartedException extends Error {
+  name = 'ChildWorkflowStartedException'
+  constructor(
+    public parentRunId: string,
+    public stepId: string,
+    public childRunId: string
+  ) {
+    super(`Child workflow started: ${childRunId}`)
+  }
+}
 
 export class WorkflowStepNameNotString extends Error {
   constructor(stepName: unknown) {

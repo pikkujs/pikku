@@ -1,6 +1,9 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 
+import { pikkuState, resetPikkuState } from '@pikku/core/state'
+import { addWorkflow } from '@pikku/core/workflow'
+
 import { PikkuWorkflowDoService } from './pikku-workflow-do-service.js'
 import type {
   PikkuWorkflowDoEnv,
@@ -183,6 +186,7 @@ describe('PikkuWorkflowDoService — step lifecycle', () => {
   test('setStepError writes serialized error', async () => {
     const step = await service.insertStepState(RUN_ID, 'step1', 'rpc.fn', {})
     const err = Object.assign(new Error('boom'), { code: 'EBOOM' })
+    await service.setStepRunning(step.stepId)
     await service.setStepError(step.stepId, err)
 
     const fetched = await service.getStepState(RUN_ID, 'step1')
@@ -193,6 +197,7 @@ describe('PikkuWorkflowDoService — step lifecycle', () => {
 
   test('createRetryAttempt increments attemptCount and resets result/error', async () => {
     const step = await service.insertStepState(RUN_ID, 'step1', 'rpc.fn', {})
+    await service.setStepRunning(step.stepId)
     await service.setStepError(step.stepId, new Error('x'))
     const retried = await service.createRetryAttempt(step.stepId, 'pending')
     assert.equal(retried.attemptCount, 2)
@@ -211,10 +216,12 @@ describe('PikkuWorkflowDoService — graph state', () => {
 
   test('getCompletedGraphState reflects succeeded/failed steps and branches', async () => {
     const a = await service.insertStepState(RUN_ID, 'A', 'rpc.A', {})
-    await service.setStepResult(a.stepId, 1)
+    await service.setStepRunning(a.stepId)
     await service.setBranchTaken(a.stepId, 'left')
+    await service.setStepResult(a.stepId, 1)
 
     const b = await service.insertStepState(RUN_ID, 'B', 'rpc.B', {})
+    await service.setStepRunning(b.stepId)
     await service.setStepError(b.stepId, new Error('b failed'))
     // Only one attempt, no retries → counted as terminal failure
 
@@ -229,6 +236,7 @@ describe('PikkuWorkflowDoService — graph state', () => {
 
   test('getNodeResults returns only succeeded steps', async () => {
     const a = await service.insertStepState(RUN_ID, 'A', 'rpc.A', {})
+    await service.setStepRunning(a.stepId)
     await service.setStepResult(a.stepId, 'done')
     const b = await service.insertStepState(RUN_ID, 'B', 'rpc.B', {})
     await service.setStepRunning(b.stepId)
@@ -477,5 +485,318 @@ describe('PikkuStepWorker — trace', () => {
     assert.deepEqual(data, { n: 1 })
     assert.equal(wire.trace.traceId, 'a'.repeat(32))
     assert.equal(wire.trace.parentSpanId, 'b'.repeat(16))
+  })
+})
+
+describe('PikkuWorkflowDoService — step signals and deadlines', () => {
+  test('refuses a step with a timeout', async () => {
+    await assert.rejects(
+      service.insertStepState(RUN_ID, 'step', 'rpc.x', {}, { timeout: '1s' }),
+      /timeouts are not supported on Cloudflare/
+    )
+  })
+
+  test('refuses a timeout on a step recorded without one', async () => {
+    resetPikkuState()
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: { error() {}, info() {}, warn() {}, debug() {} },
+    } as never)
+    pikkuState(null, 'workflows', 'meta').flow = {
+      name: 'flow',
+      pikkuFuncId: 'flow',
+      source: 'dsl',
+      graphHash: 'h',
+    } as never
+    pikkuState(null, 'function', 'meta').flow = {
+      name: 'flow',
+      sessionless: true,
+      permissions: [],
+    } as never
+    addWorkflow('flow', {
+      func: async (_services: any, _input: any, { workflow }: any) =>
+        workflow.do('Charge', 'rpc.x', {}, { timeout: '1s' }),
+    } as never)
+    await service.createRun('flow', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+    await service.insertStepState(RUN_ID, 'Charge', 'rpc.x', {})
+
+    await service.runWorkflowJob(RUN_ID, {} as never).catch(() => {})
+
+    assert.deepEqual(dispatched, [], 'the step ran with no deadline')
+    const run = await service.getRun(RUN_ID)
+    assert.equal(run?.status, 'failed')
+    assert.match(
+      run!.error!.message!,
+      /timeouts are not supported on Cloudflare/
+    )
+  })
+
+  test('gives its steps no abort signal', () => {
+    assert.equal(service.openInlineStepAttempt(RUN_ID, true), undefined)
+  })
+})
+
+describe('PikkuWorkflowDoService — conditional run transitions', () => {
+  beforeEach(async () => {
+    await service.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+  })
+
+  const cause = { message: 'stop', stack: '', code: 'WORKFLOW_CANCELLED' }
+
+  test('a cancelled run is not moved by a late status write', async () => {
+    assert.equal(
+      await service.updateRunStatus(RUN_ID, 'cancelled', undefined, cause),
+      true
+    )
+    for (const late of ['completed', 'failed', 'suspended'] as const) {
+      assert.equal(await service.updateRunStatus(RUN_ID, late), false, late)
+    }
+    const run = await service.getRun(RUN_ID)
+    assert.equal(run?.status, 'cancelled')
+    assert.equal(run?.error?.code, 'WORKFLOW_CANCELLED')
+  })
+
+  test('of two writes racing from one status, only one applies', async () => {
+    const applied = await Promise.all([
+      service.updateRunStatus(RUN_ID, 'cancelled', undefined, cause),
+      service.updateRunStatus(RUN_ID, 'completed'),
+    ])
+    assert.deepEqual(applied, [true, false])
+    assert.equal((await service.getRun(RUN_ID))?.status, 'cancelled')
+  })
+})
+
+describe('PikkuWorkflowDoService — conditional step writes', () => {
+  beforeEach(async () => {
+    await service.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+  })
+
+  const running = async () => {
+    const { stepId } = await service.insertStepState(
+      RUN_ID,
+      'step1',
+      'rpc.x',
+      {},
+      { retries: 3 }
+    )
+    await service.setStepRunning(stepId)
+    return stepId
+  }
+  const step = () => service.getStepState(RUN_ID, 'step1')
+  const superseded = { name: 'WorkflowStepSupersededError' }
+
+  test('a late outcome for a settled step is refused', async () => {
+    const stepId = await running()
+    await service.setStepError(stepId, new Error('lease expired'), 1)
+
+    await assert.rejects(service.setStepResult(stepId, 'late', 1), superseded)
+    await assert.rejects(service.setStepRunning(stepId), superseded)
+    await service.setStepScheduled(stepId)
+
+    assert.equal((await step()).status, 'failed')
+    assert.equal((await step()).error?.message, 'lease expired')
+  })
+
+  test('an outcome from an older attempt is refused', async () => {
+    const stepId = await running()
+    await service.setStepError(stepId, new Error('no'), 1)
+    await service.createRetryAttempt(stepId, 'running', 1)
+
+    await assert.rejects(service.setStepResult(stepId, 'stale', 1), superseded)
+    await assert.rejects(
+      service.setStepError(stepId, new Error('stale'), 1),
+      superseded
+    )
+
+    assert.equal((await step()).status, 'running')
+  })
+
+  test('of two writes racing, only one applies', async () => {
+    const stepId = await running()
+
+    const outcomes = await Promise.allSettled([
+      service.setStepResult(stepId, 'first', 1),
+      service.setStepError(stepId, new Error('second'), 1),
+    ])
+
+    assert.deepEqual(
+      outcomes.map((o) => o.status),
+      ['fulfilled', 'rejected']
+    )
+    assert.equal((await step()).status, 'succeeded')
+  })
+
+  test('one attempt is retried once, and a succeeded step takes nothing', async () => {
+    const stepId = await running()
+    await service.setStepError(stepId, new Error('no'), 1)
+    const retries = await Promise.allSettled([
+      service.createRetryAttempt(stepId, 'running', 1),
+      service.createRetryAttempt(stepId, 'running', 1),
+    ])
+    assert.deepEqual(retries.map((o) => o.status).sort(), [
+      'fulfilled',
+      'rejected',
+    ])
+    await service.setStepResult(stepId, 'done', 2)
+
+    assert.equal(await service.setStepChildRunId(stepId, 'late'), false)
+    assert.equal(await service.refreshStepLease(stepId, 1000, 2), false)
+    await assert.rejects(
+      service.createRetryAttempt(stepId, 'pending', 2),
+      superseded
+    )
+    assert.equal((await step()).attemptCount, 2)
+  })
+
+  test('what the step worker reports for a dispatched step is recorded once', async () => {
+    const { stepId } = await service.insertStepState(
+      RUN_ID,
+      'step1',
+      'rpc.x',
+      {}
+    )
+    await service.setStepScheduled(stepId)
+
+    for (const report of ['first', 'redelivered']) {
+      await service.recordDispatchedOutcome(stepId, () =>
+        service.setStepResult(stepId, report)
+      )
+    }
+
+    assert.equal((await step()).status, 'succeeded')
+    assert.equal((await step()).result, 'first')
+  })
+})
+
+describe('PikkuWorkflowDoService — step claims', () => {
+  beforeEach(async () => {
+    await service.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+    await service.insertStepState(RUN_ID, 'step1', 'rpc.x', {}, { retries: 3 })
+  })
+
+  const claim = () =>
+    service['claimStepForExecution'](RUN_ID, 'step1', 'rpc.x', 60_000)
+  const step = () => service.getStepState(RUN_ID, 'step1')
+
+  for (const status of ['cancelled', 'cancelling', 'from-the-future']) {
+    test(`a step stored as '${status}' is not claimed`, async () => {
+      const { stepId } = await step()
+      const record = storage.data.get(`step:${stepId}`) as any
+      assert.ok(record, 'the step record moved from the key this test uses')
+      record.status = status
+
+      assert.equal(await claim(), null)
+
+      assert.equal((await step()).status, status)
+    })
+  }
+
+  for (const from of ['pending', 'failed'] as const) {
+    test(`two dispatches racing for a ${from} step: one gets it`, async () => {
+      if (from === 'failed') {
+        const first = (await claim())!
+        await service.setStepError(first.stepId, new Error('no'), 1)
+      }
+
+      const claims = await Promise.all([claim(), claim()])
+
+      assert.equal(claims.filter(Boolean).length, 1)
+      assert.equal((await step()).status, 'running')
+      assert.equal((await step()).attemptCount, from === 'failed' ? 2 : 1)
+    })
+  }
+
+  test('a running step, which has no lease to lapse, is left alone', async () => {
+    assert.ok(await claim())
+
+    assert.equal(await claim(), null)
+
+    assert.equal((await step()).attemptCount, 1)
+  })
+})
+
+describe('PikkuWorkflowDoService — cancelling', () => {
+  const runningStep = async () => {
+    await service.createRun('wf', {}, false, 'h', {
+      type: 'do',
+      id: RUN_ID,
+    } as any)
+    await service.insertStepState(RUN_ID, 's', 'rpc.s', {})
+    const { stepId } = await service.getStepState(RUN_ID, 's')
+    await service.setStepRunning(stepId, 1)
+    return stepId
+  }
+  const status = async () => (await service.getStepState(RUN_ID, 's')).status
+
+  test('a running step is marked cancelling once, by its attempt', async () => {
+    const stepId = await runningStep()
+
+    assert.equal(await service.setStepCancelling(stepId, 2), false)
+    assert.equal(await service.setStepCancelling(stepId, 1), true)
+    assert.equal(await service.setStepCancelling(stepId, 1), false)
+
+    assert.equal(await status(), 'cancelling')
+    assert.equal(
+      (await service.getRunHistory(RUN_ID)).at(-1)?.status,
+      'cancelling'
+    )
+  })
+
+  test('a cancelling step takes a lease refresh, a child and its outcome', async () => {
+    const stepId = await runningStep()
+    await service.setStepCancelling(stepId, 1)
+
+    assert.equal(await service.refreshStepLease(stepId, 1000, 1), true)
+    assert.equal(await service.setStepChildRunId(stepId, 'child'), true)
+    await service.setStepResult(stepId, 'done', 1)
+
+    assert.equal(await status(), 'succeeded')
+  })
+
+  test('a cancelling step takes an error', async () => {
+    const stepId = await runningStep()
+    await service.setStepCancelling(stepId, 1)
+
+    await service.setStepError(stepId, new Error('stopped'), 1)
+
+    assert.equal(await status(), 'failed')
+  })
+
+  test('a cancelling step is never claimed, set running or retried', async () => {
+    const stepId = await runningStep()
+    await service.setStepCancelling(stepId, 1)
+    const seen = await service.getStepState(RUN_ID, 's')
+
+    assert.equal(
+      await service['claimStepStatus'](seen, ['running', 'cancelling'], 1000),
+      false
+    )
+    await assert.rejects(service.setStepRunning(stepId, 1), {
+      name: 'WorkflowStepSupersededError',
+    })
+    await assert.rejects(service.createRetryAttempt(stepId, 'pending', 1), {
+      name: 'WorkflowStepSupersededError',
+    })
+    assert.equal(await status(), 'cancelling')
+  })
+
+  test('a running run moves to cancelling and is read back as such', async () => {
+    await runningStep()
+
+    assert.equal(await service.updateRunStatus(RUN_ID, 'cancelling'), true)
+    assert.equal(await service.updateRunStatus(RUN_ID, 'completed'), false)
+
+    assert.equal((await service.getRun(RUN_ID))?.status, 'cancelling')
   })
 })

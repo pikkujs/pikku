@@ -74,6 +74,7 @@ export const workflowSchema: PikkuSchema = {
         branchTaken: { type: 'text' },
         retries: { type: 'integer' },
         retryDelay: { type: 'text' },
+        timeout: { type: 'text' },
         fromStepName: { type: 'text' },
         currentAttempt: { type: 'integer' },
         leaseExpiresAt: { type: 'bigint' },

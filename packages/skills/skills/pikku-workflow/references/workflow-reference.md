@@ -2,7 +2,7 @@
 
 ## Step execution: inline vs queue dispatch
 
-Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call dispatch flag. `workflow.do(...)` options are only `description`/`retries`/`retryDelay`/`compensate: false`.
+Whether a step runs **inline** (same process/session, no queue round-trip) or is **dispatched to the queue** is decided **purely by the step's function** — there is no workflow-level or per-call dispatch flag. `workflow.do(...)` options are only `description`/`retries`/`retryDelay`/`compensate: false`, plus `timeout` on a step that runs a function (see [Cancel and step deadlines](#cancel-and-step-deadlines)).
 
 - **Steps default to inline.** Most steps don't need their own worker; running them inline avoids a queue round-trip per step, so a normally-started workflow executes its whole chain in one orchestrator pass.
 - **`workflowQueued: true` opts a function out.** Set it on the **function config** (`pikkuFunc` / `pikkuSessionlessFunc`, same level as `auth`/`expose`) to dispatch that step via the queue — for expensive/long-running steps that deserve their own worker, retry isolation, and concurrency limits. `workflowRetries` and `workflowTimeout` sit alongside it.
@@ -111,6 +111,60 @@ enqueues stays on it. Each hop is a new span whose parent is the span that start
 the run. An agent's tool calls are the exception: they are not on the run's trace
 yet.
 
+## Cancel and step deadlines
+
+A step that runs a function is handed `wire.workflowStep.signal`, an `AbortSignal` that is new for every attempt. Pass it to whatever can stop early:
+
+```typescript
+export const importFeed = pikkuSessionlessFunc({
+  workflowQueued: true,
+  func: async (_services, data, { workflowStep, abortScope }) => {
+    const feed = await fetch(data.url, { signal: workflowStep?.signal })
+    abortScope?.beginChanges() // throws AbandonedError once the signal is aborted
+    await save(await feed.json(), workflowStep!.invocationId)
+  },
+})
+```
+
+It aborts for three things, and `signal.reason` says which:
+
+| Cause                                                              | `signal.reason`              |
+| ------------------------------------------------------------------ | ---------------------------- |
+| The run was cancelled, including while it then compensates         | `WorkflowStepCancelledError` |
+| The attempt passed its `timeout`                                   | `WorkflowStepTimeoutError`   |
+| The worker lost the step's lease, or an inline pass lost the run's | `LeaseLostError`             |
+
+Another step failing does not abort a running step, although the run then starts compensating. A completed or failed run is not a cancel.
+
+- **Cooperative only.** Nothing is killed: a function that ignores the signal runs on. The signal does not cross a remote RPC transport, so a step served by another deployment never sees it abort.
+- **How fast.** A cancel made by the same process aborts at once. From another process, the worker reads the run every 20s, or every third of the step's lease when that is shorter.
+- **Compensation is never stopped by a cancel,** running or queued, and a second cancel changes nothing. Only a lost lease aborts its signal. It does not inherit its step's `timeout`.
+- **When the unwind runs.** One driver at a time, under the run lease. While a pass holds the lease, `cancelRun` returns without compensating and that pass unwinds before it lets go.
+- **Child workflows** are cancelled with their parent, including one being started as the cancel lands.
+- **After a cancel,** a step that throws is recorded failed, is not retried, and the run goes on to unwind. A step that returns keeps its result, so its `compensate` has it. The run's status never moves back from `cancelled` or the unwinding statuses.
+- **A queued step delivered to a run that is `cancelled` or unwinding,** for any cause, never runs. It is recorded failed with `WorkflowRunStoppedError`. The same goes for an inline step or retry that has not started. A step refused on its first attempt never ran, so its `compensate` is not called; a refused retry follows an attempt that did run and is still compensated. Compensation jobs still run.
+- **What an unwind waits for.** After a failure, every forward step in flight, with `compensate` or without, so the run is `compensating` even when there is nothing to undo. After a cancel, steps with `compensate` and child workflows.
+- **Dead steps.** A step that lost its worker is failed `WorkflowStepLeaseExpiredError`, is not run again, and has its `compensate` called with `ok: false`. A queued step is dead once its lease expires; an inline one only when the store's run lease shows its pass is gone, or on the in-memory store when this process is not working it. A step with a live lease, or one this process is working, is waited for however long it takes, and a warning names it: give it a `timeout`.
+- **Inline waits end on a cancel.** A `workflow.sleep` or `retryDelay` that an inline run sits out itself ends once the run is cancelled, at once from the same process and within 20s from another. A step failing elsewhere in the run does not end it.
+- **A pass waits for every step it started,** in a DSL body or an inline graph, before it ends. When one step in a `Promise.all` fails, the run's status is written at once, the pass then waits for the others, and the unwind finishes after them. A step a surviving branch asks for next does not run on a stopped run. You cannot abandon a step with `Promise.race` or by not awaiting it: the run does not complete until it ends. Give a step a `timeout` to bound it.
+- **Statuses.** `WorkflowStatus` includes `cancelling`, and `StepStatus` includes `cancelling` and `cancelled`; handle them where you switch over a status. Neither `cancelling` is an ended state. The engine does not write any of them yet: `cancelRun` returns `cancelled` or an unwinding status.
+
+`timeout` (`'30s'`, or milliseconds; no default) bounds one attempt of a step that runs a function, queued or inline: `workflow.do('Fetch', 'importFeed', data, { retries: 2, timeout: '30s' })`. It is stored with the step, so a job that is sent again keeps it. Past it the signal aborts and the attempt fails with `WorkflowStepTimeoutError` without waiting for the function; the usual retries apply and anything the abandoned call returns later is discarded. That call may still be running when the retry starts, so make the step's side effects idempotent on `workflowStep.invocationId`. A child-workflow step with a `timeout` fails the run, as does a value that is not at least one millisecond and under about 24.8 days. Closure and `expect*` steps do not accept it.
+
+**Not covered:** graph steps get the signal but take no `timeout`. Agent steps get no signal, and a step's abort does not reach an agent it runs, whose tool calls have their own `wire.abortScope`. Cloudflare Durable Object workflows give no signal, and setting `timeout` there is an error.
+
+## Lost leases
+
+A pass holds its run's lease, and a queued worker holds its step's. After a loss, whatever is thrown records nothing: no step failure, retry, run status, compensation or word to a parent. The step stays `running`, and the next owner runs it as another attempt, or fails it with `WorkflowStepLeaseExpiredError` when none are left. This covers function, closure, graph and compensation steps. A step that returns is still recorded unless a newer attempt has replaced it. Losing the lock a suspend or approval gate is recorded under does not turn the gate into a failure.
+
+An inline step, closure or compensation left `failed` with retries remaining, by a pass that lost its lease or died before creating the next attempt, spends a retry when replayed. Inline graph nodes do not. On a store with no real run lease (in-memory, Cloudflare Durable Object), a second pass leaves a closure step alone while this process is still working it.
+
+A queued run is woken through the queue. After a lost step lease the wake is delayed by a lease, and repeats for as long as that attempt still reads as leased. A custom orchestrator worker passes the job's `awaitedStep` to `orchestrateWorkflow`. An inline run, and an unwind that `cancelRun` is driving, take the lease again and carry on, up to three times. If someone else holds it or the pickups run out, they enqueue a wake where there is a queue and throw `LeaseLostError`.
+
+- **With no queue and no recovery,** a run whose lease cannot be taken again stays `running`. `cancelRun` stops it.
+- An inline child left this way leaves its parent `running` too.
+- An unwind waiting on a step that lost its lease is finished by recovery.
+
 ## Restarts
 
-A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at startup and every 30s: a sleep keeps its deadline, and a step caught in flight runs again as a new attempt. A settled step never reruns. So a step can run more than once: make its side effects idempotent on `workflowStep.invocationId`, which stays the same across attempts within one run. Separate runs for the same operation (duplicate deliveries that each start a run) get different ids, so an effect that must be unique across runs, such as a charge, takes a stable key for the business operation (`order-${orderId}-charge`) instead. A step with `retries: 0` caught in flight fails instead. Any other host calls `workflowService.startRecovery()` once the queue is consuming. Set `workflow.recovery: false` to turn it off.
+A run survives a crash or deploy. `pikku dev` and `pikku serve` recover it at startup and every 30s: a sleep keeps its deadline, and a step caught in flight runs again as a new attempt. A settled step never reruns. So a step can run more than once: make its side effects idempotent on `workflowStep.invocationId`, which stays the same across attempts within one run. Separate runs for the same operation (duplicate deliveries that each start a run) get different ids, so an effect that must be unique across runs, such as a charge, takes a stable key for the business operation (`order-${orderId}-charge`) instead. A step with `retries: 0` caught in flight fails instead, and so does a lost step of a run that is `cancelled` or unwinding: it is not run again. Compensations are, however the run stands. On the Kysely and in-memory stores, recovery also finishes a parent whose child settled without telling it and resumes an approval that was decided but never resumed. On the Kysely, MongoDB, Redis and in-memory stores it also drives every `compensating` run itself, without a queue unless a compensation is queued: it fails dead forward steps and sends lost compensation jobs again. Cloudflare Durable Object workflows do not. Any other host calls `workflowService.startRecovery()` once the queue is consuming. Set `workflow.recovery: false` to turn it off.

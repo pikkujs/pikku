@@ -131,6 +131,14 @@ const sqliteWorkflowServices = (getDb: () => Kysely<KyselyPikkuDB>) => ({
           .where('stepName', '=', stepName)
           .execute()
       },
+      forceStepStatus: async (runId, stepName, status) => {
+        await getDb()
+          .updateTable('workflowStep')
+          .set({ status })
+          .where('workflowRunId', '=', runId)
+          .where('stepName', '=', stepName)
+          .execute()
+      },
     }
   },
 })

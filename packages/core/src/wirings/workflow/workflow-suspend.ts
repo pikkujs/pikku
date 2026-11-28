@@ -2,6 +2,8 @@ import { WorkflowSuspendedException } from './workflow-errors.js'
 import type { ApprovalStore } from './workflow-approval.js'
 import type { StepState } from './workflow.types.js'
 
+export const SUSPEND_STEP_RPC_NAME = 'pikkuWorkflowSuspend'
+
 /** The durable step name a suspension point is recorded under. */
 export const suspendStepNameFor = (reason: string): string =>
   `__workflow_suspend:${reason}`
@@ -29,7 +31,7 @@ export const recordSuspension = async (
     store.insertStepState(
       runId,
       stepName,
-      'pikkuWorkflowSuspend',
+      SUSPEND_STEP_RPC_NAME,
       { reason },
       undefined,
       fromStepName

@@ -1,3 +1,4 @@
+import { RUN_STATUS_SOURCES } from './workflow-constants.js'
 import { runPikkuFunc } from '../../function/function-runner.js'
 import { runTraceWire } from './workflow-run-trace.js'
 import {
@@ -155,6 +156,7 @@ interface ScenarioStepContext {
   addonNamespace?: string | null
   workflowWire: PikkuScenarioWire
   rpcService: any
+  inlineStep: WorkflowRunEngine['inlineStep']
 }
 
 /**
@@ -589,12 +591,19 @@ export class PikkuScenarioService implements WorkflowRunExtension {
           hookError
         )
       } else {
-        await this.engine.updateRunStatus(runId, 'failed', undefined, {
-          message: hookError.message,
-          stack: hookError.stack,
-          code: hookError.code,
-        })
-        await this.engine.onChildWorkflowFailed(run, hookError)
+        // The run has already completed by now, which the hook overrules.
+        const failed = await this.engine.transitionRunStatus(
+          runId,
+          [...RUN_STATUS_SOURCES.failed, 'completed'],
+          'failed',
+          undefined,
+          {
+            message: hookError.message,
+            stack: hookError.stack,
+            code: hookError.code,
+          }
+        )
+        if (failed) await this.engine.onChildWorkflowFailed(run, hookError)
         throw hookError
       }
     }
@@ -714,9 +723,11 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       runId: string
       rpcService: any
       addonNamespace?: string | null
+      inlineStep?: WorkflowRunEngine['inlineStep']
     }
   ): void {
     const { name, runId, rpcService, addonNamespace } = context
+    const inlineStep = context.inlineStep ?? this.engine.inlineStep
     const workflowWire = wire as PikkuScenarioWire
     const scenarioStepContext = (): ScenarioStepContext => ({
       runId,
@@ -724,6 +735,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
       addonNamespace,
       workflowWire,
       rpcService,
+      inlineStep,
     })
     Object.assign(workflowWire, {
       context: this.contextForRun(runId),
@@ -745,7 +757,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             : rpcName
         const within = getDurationInMilliseconds(options?.within ?? '30s')
         const interval = getDurationInMilliseconds(options?.interval ?? '1s')
-        return await this.engine.inlineStep(
+        return await inlineStep(
           runId,
           stepName,
           async () => {
@@ -781,7 +793,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
           addonNamespace && !rpcName.includes(':')
             ? `${addonNamespace}:${rpcName}`
             : rpcName
-        return await this.engine.inlineStep(
+        return await inlineStep(
           runId,
           stepName,
           async () => {
@@ -825,7 +837,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
             `[workflow] expectService '${stepName}' needs 'service.method', got '${serviceMethod}'`
           )
         }
-        await this.engine.inlineStep(
+        await inlineStep(
           runId,
           stepName,
           async () => {
@@ -875,7 +887,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
         options?: WorkflowExpectScoreOptions
       ) => {
         this.engine.verifyStepName(stepName)
-        return await this.engine.inlineStep(
+        return await inlineStep(
           runId,
           stepName,
           async () => {
@@ -957,7 +969,8 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     data?: any,
     options?: ScenarioStepOptions
   ): Promise<any> {
-    const { runId, workflowName, addonNamespace, workflowWire } = context
+    const { runId, workflowName, addonNamespace, workflowWire, inlineStep } =
+      context
     // Also the guard for `then` being a wire member: an accidental
     // `await scenario` calls it with a resolve function, which lands here as a
     // loud, named error instead of a silent hang.
@@ -990,7 +1003,7 @@ export class PikkuScenarioService implements WorkflowRunExtension {
     const declared = this.declaredSurfaces(packageName, resolvedStepFunc)
     const resolution = resolveScenarioSurfaces(phase, declared, this.runSurface)
 
-    return await this.engine.inlineStep(
+    return await inlineStep(
       runId,
       stepName,
       async () => {

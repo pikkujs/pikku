@@ -20,9 +20,10 @@ with a one-second delay (`RUN_LEASE_RETRY_MS`) and the current message succeeds.
 `verifiers/workflows/src/runners/run-lease.runner.ts` holds a run's lease for 90
 seconds and checks the run still completes.
 
-The same errors never fail an inline run: its body already wrote its outcome,
-and losing the lease afterwards says only that the outcome was not produced
-alone — the run keeps the status it wrote.
+The same errors never fail an inline run. A body that already wrote its outcome
+keeps it, because losing the lease afterwards says only that the outcome was not
+produced alone. One that lost the lease part way is
+[picked up again](a-pass-that-lost-its-lease-writes-nothing.md).
 
 **What this rules out:** treating a taken run lease as a queue failure, and
 marking a run failed because its lease was lost.

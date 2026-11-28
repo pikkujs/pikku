@@ -114,6 +114,7 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         status: step.status,
         retries: step.retries ?? null,
         retryDelay: step.retryDelay?.toString() ?? null,
+        timeout: step.timeout?.toString() ?? null,
         fromStepName: step.fromStepName ?? null,
         currentAttempt: 1,
         createdAt: now,
@@ -131,6 +132,11 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
 
   async setStepScheduled(stepId: string): Promise<void> {
     await this.updateStepStatus(stepId, 'scheduled')
+  }
+
+  async setStepCancelling(stepId: string): Promise<void> {
+    await this.updateStepStatus(stepId, 'cancelling')
+    await this.appendOrUpdateLatestHistory(stepId, 'cancelling')
   }
 
   async setStepResult(stepId: string, result: any): Promise<void> {
@@ -193,6 +199,7 @@ export class KyselyWorkflowMirror implements WorkflowRunMirror {
         status: newStep.status,
         result: null,
         error: null,
+        childRunId: null,
         currentAttempt: attempt,
         updatedAt: new Date(),
       })
