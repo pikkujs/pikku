@@ -611,7 +611,6 @@
     "TemporaryFileService"
   ],
   "./services/wiring-service": [
-    "NotFoundError",
     "WiringService",
     "filterAllMetaByAddon"
   ],
