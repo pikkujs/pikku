@@ -1,5 +1,22 @@
 # @pikku/deploy-cloudflare
 
+## 0.12.25
+
+### Patch Changes
+
+- 33cde1a: Security: the generated standalone, server and container entries no longer overwrite the app's `hostname` with `0.0.0.0`. They listen on `HOST` when it is set, otherwise on the `hostname` from `createConfig`, otherwise on `0.0.0.0`. If your config sets `localhost` or `127.0.0.1` and the app runs in a container, set `HOST=0.0.0.0`.
+- 32d3ae5: A host can supply platform services from one module exporting `createPlatformServices(env, services, { requiredServices })`: a deploy provider names it with `platformServicesModule(ctx)`, and whoever starts `pikku dev` or `pikku serve` passes it with `--platform-services <module>`. On Cloudflare Workers, Cloudflare containers and the server entry, platform services are now built before `createConfig`, which receives the `variables` they provide. `pikkuPlatformServices` from `@pikku/core/lifecycle` types that module's function.
+- aaad408: Contributors are removed, with `@pikku/core/contributors`, `wireAddon({ contributors })`, the contributors command and config keys, and a deploy provider's `contributorSupport`. Services are ordinary code in three layers: a host's platform services (`createPlatformServices`, named by a deploy provider's `platformServicesModule(ctx)` or by `--platform-services`), `pikkuServices` and `pikkuWireServices`. Only the platform layer receives the raw environment. A `kysely` the platform module returns gets the app's column coercion map. See docs/MIGRATION.md.
+- Updated dependencies [6f7b3a1]
+- Updated dependencies [e2273da]
+- Updated dependencies [34929df]
+- Updated dependencies [d340ea3]
+- Updated dependencies [32d3ae5]
+- Updated dependencies [fdca6f2]
+- Updated dependencies [aaad408]
+  - @pikku/core@0.12.163
+  - @pikku/deploy@0.12.24
+
 ## 0.12.24
 
 ### Patch Changes

@@ -1,5 +1,24 @@
 # @pikku/inspector-go
 
+## 0.12.20
+
+### Patch Changes
+
+- 34929df: Experimental harness declarations: `pikkuHarness`, `pikkuHarnessGate` and `pikkuHarnessGateAgent` in `@pikku/core/harness`. Both inspector engines read them; `pikku all` writes `.pikku/harness/pikku-harness-meta.gen.json` and the `HarnessGateName` union, and refuses a harness that lists an undeclared gate (PKU157). Gates carry `harness: true`, `failOn` and `writes` in their function meta and are left out of the app's registrations, schema register and every deployment unit. Nothing runs a harness yet.
+- d340ea3: Harness gates are declared. A `pikkuHarnessGate` gets `wire.gate` (`worktree`, `base`, `attempt`, `changeId`, the run's `input`, `scratch`, `signal`, `tool(name)` for a binary pinned for the run, and `runCli`) and may list the rules a person can waive (`waivable`). A gate that writes nothing keeps `writes: []` in its meta. PKU644 no longer reports a complex workflow, whose inline steps (a harness run's) are not in its graph. `pikku changes done` runs its check and page compare with the running CLI, asynchronously, and no environment variable turns them off (`PIKKU_CHANGES_CHECK_GATE`, `PIKKU_COMPARE_GATE` are gone). `pikku changes next` takes `--merge-one`, and `--no-merge` replaces `PIKKU_CHANGES_NO_MERGE`. The changes addon's source may not import `spawnSync`, `execSync` or `execFileSync` (oxlint).
+- 0a6fe35: The Rust inspector, which the CLI runs by default, now handles `live` scopes as the Go inspector does. It reads `live` from `defineScope`, refuses one that is not a literal `true` or `false`, and sets `liveScopes` on every function that requires a live scope, directly or through an ancestor. Without it a function behind a live scope ran on the session's cached grants, so with `scopesTtlSeconds` set a revoked grant kept working until the cache expired. Run `pikku all` again to rewrite the function metadata.
+- 080bd26: The Rust inspector no longer aborts when two schema files reach a module that fails to link. A module that re-exports an unavailable package with `export * from`, or that uses `Intl` while it loads, now converts. A schema built from either is still reported as an error.
+- 7aaecc6: The public surface doc describes `pikkuFunc` and `pikkuSessionlessFunc` by the overloads that take a body. An overload tagged `@hidden` stays out of an export's signature and option keys, and the mock overloads carry that tag. The `pikkuAuth` and `pikkuApprovalDescription` examples are real code from the online-shop template, so neither shows an escaped code fence.
+- aaad408: Contributors are removed, with `@pikku/core/contributors`, `wireAddon({ contributors })`, the contributors command and config keys, and a deploy provider's `contributorSupport`. Services are ordinary code in three layers: a host's platform services (`createPlatformServices`, named by a deploy provider's `platformServicesModule(ctx)` or by `--platform-services`), `pikkuServices` and `pikkuWireServices`. Only the platform layer receives the raw environment. A `kysely` the platform module returns gets the app's column coercion map. See docs/MIGRATION.md.
+- Updated dependencies [6f7b3a1]
+- Updated dependencies [34929df]
+- Updated dependencies [d340ea3]
+- Updated dependencies [32d3ae5]
+- Updated dependencies [fdca6f2]
+- Updated dependencies [aaad408]
+  - @pikku/core@0.12.163
+  - @pikku/inspector@0.12.125
+
 ## 0.12.19
 
 ### Patch Changes
