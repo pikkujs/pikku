@@ -1,8 +1,0 @@
-{
-  "tsconfig": "./tsconfig.json",
-  "backends": {
-    "api": {
-      "filter": {}
-    }
-  }
-}

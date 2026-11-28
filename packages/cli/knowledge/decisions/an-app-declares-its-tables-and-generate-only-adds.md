@@ -19,7 +19,7 @@ physical names, and runs `compileTables` over the whole declaration so a mistake
 a sentence naming the column before anything touches a database.
 
 The earlier shape, `defineTables({ statements, requires, annotations })` from
-`@pikku/addon-kysely`, is refused in one sentence pointing at `docs/MIGRATION.md`. There
+`@pikku/kysely`, is refused in one sentence pointing at `docs/MIGRATION.md`. There
 is no fallback: builder statements could create anything, which is what made
 "only tables and indexes" a check after the fact instead of a property of the
 format. `requires` went with it; a `references` without a `type` is the

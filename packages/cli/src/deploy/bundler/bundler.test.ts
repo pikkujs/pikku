@@ -1,12 +1,16 @@
-import { describe, it, test, beforeEach, afterEach } from 'node:test'
+import { mkdirSync, rmSync } from 'node:fs'
+import { describe, it, test, after, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises'
 import { join } from 'node:path'
-import { tmpdir } from 'node:os'
 
 import { BaseBundler, getDeadGenFilePatterns } from './bundler.js'
 import type { CompileInput, CompileResult } from './bundler.interface.js'
 import type { DeploymentManifest, DeploymentUnit } from './types.js'
+
+const scratch = join(import.meta.dirname, '..', '..', '..', '.tmp', 'bundler')
+mkdirSync(scratch, { recursive: true })
+after(() => rmSync(scratch, { recursive: true, force: true }))
 
 /** A bundler whose compile always fails, so only the dispatch around it is under test. */
 class FailingBundler extends BaseBundler {
@@ -52,7 +56,7 @@ describe('BaseBundler serverless dispatch', () => {
   let sharpRoot: string
 
   beforeEach(async () => {
-    dir = await mkdtemp(join(tmpdir(), 'pikku-bundler-'))
+    dir = await mkdtemp(join(scratch, 'pikku-bundler-'))
     sharpRoot = join(dir, 'node_modules', 'sharp')
     await mkdir(sharpRoot, { recursive: true })
     await writeFile(
@@ -82,7 +86,10 @@ describe('BaseBundler serverless dispatch', () => {
     assert.equal(bundler.platforms[0], 'neutral', 'the compile ran serverless')
     assert.equal(errors.length, 1)
     assert.match(errors[0]!.error, /cannot be built for a serverless target/)
-    assert.match(errors[0]!.error, /sharp — builds a native addon with node-gyp/)
+    assert.match(
+      errors[0]!.error,
+      /sharp — builds a native addon with node-gyp/
+    )
     assert.match(errors[0]!.error, /serverlessIncompatible/)
     assert.ok(
       errors[0]!.error.includes(original),
@@ -122,7 +129,7 @@ describe('BaseBundler serverless dispatch', () => {
 const unitWithServices = async (
   services: Record<string, boolean>
 ): Promise<string> => {
-  const dir = await mkdtemp(join(tmpdir(), 'pikku-bundler-'))
+  const dir = await mkdtemp(join(scratch, 'pikku-bundler-'))
   await mkdir(join(dir, '.pikku'), { recursive: true })
   const body = Object.keys(services)
     .sort()
@@ -185,8 +192,36 @@ describe('getDeadGenFilePatterns', () => {
     assert.ok(stubs(patterns, 'src/.pikku/pikku-meta-service.gen.ts'))
   })
 
+  it('stubs the browser library only for a unit that wires no browser', async () => {
+    const without = await unitWithServices({ browser: false })
+    const withBrowser = await unitWithServices({ browser: true })
+
+    assert.ok(
+      stubs(await getDeadGenFilePatterns(without), '@cloudflare/puppeteer')
+    )
+    assert.ok(
+      !stubs(await getDeadGenFilePatterns(withBrowser), '@cloudflare/puppeteer')
+    )
+  })
+
+  it('stubs the browser library for a project that declares no browser service', async () => {
+    const patterns = await getDeadGenFilePatterns(
+      await unitWithServices({ logger: true })
+    )
+
+    assert.ok(stubs(patterns, '@cloudflare/puppeteer'))
+  })
+
+  it('keeps the AI SDKs when one name that claims them is wired and the other is not listed', async () => {
+    const patterns = await getDeadGenFilePatterns(
+      await unitWithServices({ ai: true })
+    )
+
+    assert.ok(!stubs(patterns, '@pikku/ai-vercel'))
+  })
+
   it('returns no patterns when the unit has no services gen', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'pikku-bundler-'))
+    const dir = await mkdtemp(join(scratch, 'pikku-bundler-'))
     assert.deepEqual(await getDeadGenFilePatterns(dir), [])
   })
 })

@@ -7,6 +7,7 @@ description: What "a standalone unit with a UI" does and does not mean, and what
 # Decisions
 
 <!-- pikku:knowledge-index -->
+- [A built entry listens where the app says](a-built-entry-listens-where-the-app-says.md) — HOST, then the hostname createConfig returns, then 0.0.0.0, in the standalone, server and container entries
 - [A native biometric prompt is not access control, and the next-steps output says so](a-biometric-prompt-is-not-access-control.md) — The biometric native API entry carries a caveat that a biometric check in front of a server-served screen is decoration, and the next-steps output prints it
 - [A native shell grants its IPC permissions only to the origin its mode names](a-native-shell-grants-ipc-only-to-the-origin-its-mode-names.md) — nativeGrantUrl returns no grant for a bundled UI, the named origin for a remote url, and every loopback port for a sidecar, and the capability file is written from that value
 - [A pikku server serves a static frontend, not a rendered one](a-pikku-server-serves-a-static-frontend.md) — The frontend is TanStack Start built to static output and served through a static mount; pikku never runs a framework renderer in-process

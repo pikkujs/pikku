@@ -443,9 +443,6 @@ jobs:
             virtual-users,
             pikku-studio,
             package-markers,
-            providers,
-            providers-deploy,
-            providers-controlplane,
           ]
     steps:
       - uses: actions/checkout@v7
@@ -659,8 +656,12 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - run: cd verifiers/db-schema && bun run test:db
+      - run: cd packages/cli && bun test src/functions/db/postgres/scratch-server.test.ts
+        env:
+          PIKKU_TEST_POSTGRES_URL: postgres://postgres:password@localhost:5432/postgres
     env:
       DATABASE_URL: postgres://postgres:password@localhost:5432/pikku_db_schema
+      PIKKU_SCRATCH_DATABASE_URL: postgres://postgres:password@localhost:5432/postgres
 
   # MySQL has no embedded engine, so the scratch databases db generate, check
   # and export need are created on this server, and only here does the auth

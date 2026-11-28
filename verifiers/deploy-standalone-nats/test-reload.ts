@@ -18,13 +18,11 @@
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process'
 import {
   existsSync,
-  mkdtempSync,
   readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { connect, headers } from '@nats-io/transport-node'
 import {
@@ -38,22 +36,23 @@ import {
 import {
   freePort,
   prefixOf,
+  scratchDir,
   stagePermissions,
   streamConfig,
   streamOf,
   until,
   type Stage,
 } from './broker.js'
-import { NatsServiceFactory } from '../../packages/addon/queue-nats/src/nats-service-factory.js'
-import { natsOptionsFromEnv } from '../../packages/addon/queue-nats/src/nats-service.js'
-import { consumeQueue } from '../../packages/addon/queue-nats/src/consume.js'
-import { mapPikkuWorkerToNats } from '../../packages/addon/queue-nats/src/nats-queue-worker.js'
+import { NatsServiceFactory } from '../../packages/services/queue-nats/src/nats-service-factory.js'
+import { natsOptionsFromEnv } from '../../packages/services/queue-nats/src/nats-service.js'
+import { consumeQueue } from '../../packages/services/queue-nats/src/consume.js'
+import { mapPikkuWorkerToNats } from '../../packages/services/queue-nats/src/nats-queue-worker.js'
 import {
   SCHEDULE_HEADER,
   SCHEDULE_TARGET_HEADER,
   scheduleSubjectFor,
   subjectForQueue,
-} from '../../packages/addon/queue-nats/src/utils.js'
+} from '../../packages/services/queue-nats/src/utils.js'
 
 const BIN = process.env.NATS_SERVER_BIN ?? 'nats-server'
 try {
@@ -100,7 +99,7 @@ ${stages.map((s) => userBlock(s, tweak(s))).join('\n')}
 ]
 `
 
-const dir = mkdtempSync(join(tmpdir(), 'pikku-nats-reload-'))
+const dir = scratchDir('pikku-nats-reload-')
 const port = await freePort()
 const monitorPort = await freePort()
 const pidFile = join(dir, 'nats.pid')
@@ -470,7 +469,7 @@ await check(
           `  ${s.stage.toUpperCase()}: { jetstream: { max_store: 4MB, max_streams: 4 }, users: [ { user: "${s.user}", password: "${s.password}" } ] }`
       )
       .join('\n')
-    const accDir = mkdtempSync(join(tmpdir(), 'pikku-nats-acc-'))
+    const accDir = scratchDir('pikku-nats-acc-')
     const accPort = await freePort()
     const accMon = await freePort()
     const accPid = join(accDir, 'nats.pid')

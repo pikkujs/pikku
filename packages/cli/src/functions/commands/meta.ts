@@ -162,7 +162,7 @@ const readServiceRows = (state: any, config: any): MetaRow[] => {
   const auth = state.auth?.definition
   return [
     ...fromFile('session', userSessionType),
-    ...fromFile('provider', singletonServicesType),
+    ...fromFile('service', singletonServicesType),
     ...(auth
       ? [
           {

@@ -22,7 +22,6 @@ wireAddon({
   globalSecrets: true as any,
   contentBucket: 'shop-content',
   contentGrants: { images: 'read' },
-  providers: ['inbox', 'cache', 'mailer'],
 })
 
 wireAddon({
@@ -41,7 +40,6 @@ wireAddon({
 wireAddon({
   name: 'unbuilt',
   package: '@fixture/unbuilt',
-  providers: someList,
 })
 wireAddon({
   name: 'missing',

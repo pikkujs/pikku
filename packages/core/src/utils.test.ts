@@ -1,7 +1,7 @@
 import { describe, test, beforeEach } from 'node:test'
 import assert from 'node:assert'
 import {
-  stopWireServices,
+  closeWireServices,
   createWeakUID,
   isSerializable,
   getTagGroups,
@@ -192,8 +192,8 @@ describe('freezeDedupe', () => {
   })
 })
 
-describe('stopWireServices', () => {
-  test('should call stop on services that have it', async () => {
+describe('closeWireServices', () => {
+  test('should call close on services that have it', async () => {
     let closeCalled = false
     const mockLogger = {
       info: () => {},
@@ -203,19 +203,19 @@ describe('stopWireServices', () => {
     }
     const wireServices = {
       serviceA: {
-        stop: async () => {
+        close: async () => {
           closeCalled = true
         },
       },
       serviceB: {},
     }
 
-    await stopWireServices(mockLogger as any, wireServices as any)
+    await closeWireServices(mockLogger as any, wireServices as any)
 
     assert.strictEqual(closeCalled, true)
   })
 
-  test('should handle errors during stop gracefully', async () => {
+  test('should handle errors during close gracefully', async () => {
     let errorLogged = false
     const mockLogger = {
       info: () => {},
@@ -227,33 +227,18 @@ describe('stopWireServices', () => {
     }
     const wireServices = {
       serviceA: {
-        stop: async () => {
-          throw new Error('stop failed')
+        close: async () => {
+          throw new Error('close failed')
         },
       },
     }
 
-    await stopWireServices(mockLogger as any, wireServices as any)
+    await closeWireServices(mockLogger as any, wireServices as any)
 
     assert.strictEqual(errorLogged, true)
   })
 
-  test('stops the last built service first, once per object', async () => {
-    const order: string[] = []
-    const shared = { stop: () => order.push('shared') }
-    const mockLogger = { error: () => {} }
-    await stopWireServices(
-      mockLogger as any,
-      {
-        first: { stop: () => order.push('first') },
-        second: shared,
-        third: shared,
-      } as any
-    )
-    assert.deepStrictEqual(order, ['shared', 'first'])
-  })
-
-  test('should skip services without stop method', async () => {
+  test('should skip services without close method', async () => {
     const mockLogger = {
       info: () => {},
       warn: () => {},
@@ -265,7 +250,7 @@ describe('stopWireServices', () => {
       serviceB: null,
     }
 
-    await stopWireServices(mockLogger as any, wireServices as any)
+    await closeWireServices(mockLogger as any, wireServices as any)
   })
 })
 

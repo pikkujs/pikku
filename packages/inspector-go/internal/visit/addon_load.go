@@ -67,84 +67,6 @@ func readResolvedJSON(req addonResolver, id string) (*ojson, error) {
 	return readJSONFile(p)
 }
 
-// declaredScalar is the scalar a JSON value holds, nil for null or an absent value.
-func declaredScalar(v *ojson) any {
-	if v == nil {
-		return nil
-	}
-	return v.scalar
-}
-
-// recordOptedInProviders resolves wireAddon({ providers }) against what the
-// addon declared. A name it does not declare is an error rather than a skip:
-// the project asked for a provider and would otherwise build without it.
-func (s *Context) recordOptedInProviders(ns string, decl *addonDecl, req addonResolver) {
-	registered := newOObject()
-	collections := newOObject()
-	via := "wireAddon('" + ns + "')"
-	if path := resolveAddonMeta(req, decl.pkg, "providers/pikku-providers-meta"); path != "" {
-		meta, err := readJSONFile(path)
-		if err != nil {
-			s.Log.Critical(diag.AddonProviderUnknown, fmt.Sprintf(
-				"%s opts in to providers, but the providers manifest of %s could not be read: %s", via, decl.pkg, err.Error()))
-			return
-		}
-		declared := meta.get("metaVersion")
-		if version, _ := declaredScalar(declared).(float64); version != 2 {
-			published := "none"
-			if meta.has("metaVersion") {
-				if declared.isJSObject() {
-					published = "[object Object]"
-				} else if declaredScalar(declared) == nil {
-					published = "null"
-				} else {
-					published = fmt.Sprint(declaredScalar(declared))
-				}
-			}
-			s.Log.Critical(diag.AddonProviderUnknown, fmt.Sprintf(
-				"Addon '%s' publishes provider meta version %s; this CLI reads version 2. Run 'pikku all' in the addon with this CLI.", decl.pkg, published))
-			return
-		}
-		if meta.get("providers").isObject() {
-			registered = meta.get("providers")
-		}
-		if meta.get("collections").isObject() {
-			collections = meta.get("collections")
-		}
-	}
-	selected := newOObject()
-	for _, name := range decl.providers {
-		if !registered.has(name) {
-			known := []string{}
-			registered.obj.Each(func(k string, _ *ojson) { known = append(known, k) })
-			hint := "It declares none; add a defineProvider export to the package and run pikku all in it."
-			if len(known) > 0 {
-				hint = "It declares: " + strings.Join(known, ", ") + "."
-			}
-			s.Log.Critical(diag.AddonProviderUnknown, fmt.Sprintf(
-				"%s opts in to provider '%s', but %s declares no such provider. %s", via, name, decl.pkg, hint))
-			continue
-		}
-		selected.set(name, registered.get(name))
-	}
-	if selected.obj.Len() == 0 {
-		return
-	}
-	entry := newOObject()
-	entry.set("packageName", ojsonString(decl.pkg))
-	entry.set("providers", selected)
-	entry.set("collections", collections)
-
-	all := newOObject()
-	if len(s.State.OptedInProviders) > 0 && string(s.State.OptedInProviders) != "null" {
-		if existing, err := parseOJSON(s.State.OptedInProviders); err == nil && existing.isObject() {
-			all = existing
-		}
-	}
-	all.set(ns, entry)
-	s.State.OptedInProviders = all.raw()
-}
-
 // namespaceAddonWebhookSources names an addon's webhook sources after the
 // namespace it is wired under.
 func namespaceAddonWebhookSources(sources *ojson, namespace string) *state.Record[*ojson] {
@@ -322,14 +244,11 @@ func (s *Context) LoadAddonFunctionsMeta() {
 	}
 }
 
-// loadRemoteAddonLocal reads the screens and providers a wireRemoteAddon
-// takes from its local package, under the remote addon's name.
+// loadRemoteAddonLocal reads the screens a wireRemoteAddon takes from its
+// local package, under the remote addon's name.
 func (s *Context) loadRemoteAddonLocal(ns string, decl *addonDecl) {
-	local := &addonDecl{pkg: decl.local.pkg, file: decl.file, ui: decl.local.ui, providers: decl.local.providers}
+	local := &addonDecl{pkg: decl.local.pkg, file: decl.file, ui: decl.local.ui}
 	req := addonResolver(addonResolutionDirs(s.RootDir, decl.file))
-	if len(local.providers) > 0 {
-		s.recordOptedInProviders(ns, local, req)
-	}
 	if local.ui {
 		if err := s.loadAddonStudio(ns, local, req); err != nil {
 			s.Log.Warn(fmt.Sprintf("Failed to load addon function metadata for '%s' (%s): %s", ns, local.pkg, err.Error()))
@@ -373,9 +292,6 @@ func (s *Context) loadAddon(ns string, decl *addonDecl) error {
 	req := addonResolver(dirs)
 
 	s.recordDeclaredUses(ns, decl, dirs)
-	if len(decl.providers) > 0 {
-		s.recordOptedInProviders(ns, decl, req)
-	}
 
 	if decl.ui {
 		if err := s.loadAddonStudio(ns, decl, req); err != nil {

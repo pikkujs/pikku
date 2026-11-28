@@ -26,7 +26,7 @@ Invoke through `wire.rpc.agent` from inside a Pikku function; it carries the ses
 
 Runs name the agent by its export (`shopAssistant`), not its `name` field (`shop-assistant`). Nothing under `.pikku/agent` needs opening.
 
-`pikku dev` supplies `agentStorage` itself. A runtime that does not (Next.js, a deployed app) registers `agentStorage: new KyselyAgentStorageService(kysely)` from `@pikku/addon-kysely` in `createSingletonServices`, or runs save and load no history. The hook's `run` resolves to `{ result, runId, usage }`, and `result` is the agent's text, or its `output` shape when it has one. Server-side, `wire.rpc.agent.run` returns `text` and `object` instead, so read the field that belongs to the caller you are in. `ref()` takes the name from `pikku meta functions`.
+`pikku dev` supplies `agentStorage` itself. A runtime that does not (Next.js, a deployed app) registers `agentStorage: new KyselyAgentStorageService(kysely)` from `@pikku/kysely` in `createSingletonServices`, or runs save and load no history. The hook's `run` resolves to `{ result, runId, usage }`, and `result` is the agent's text, or its `output` shape when it has one. Server-side, `wire.rpc.agent.run` returns `text` and `object` instead, so read the field that belongs to the caller you are in. `ref()` takes the name from `pikku meta functions`.
 
 `model` is an alias from `models` in pikku.config.json, named for its job (`fast`, `vision`). `pikku doc models` has the shape. If none fits, add one there and stop looking: take them from the project map if you have one, otherwise read `pikku.config.json` once, never services or `.env`. The runner is already wired. Never write a `provider/model` string in an agent, and tell the owner which model you chose.
 

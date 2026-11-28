@@ -104,7 +104,6 @@
     "./state": "./dist/pikku-state.js",
     "./classification": "./dist/classification/index.js",
     "./utils": "./dist/utils.js",
-    "./provider": "./dist/provider/index.js",
     "./telemetry-store": "./dist/telemetry-store/index.js",
     "./telemetry-store/testing": "./dist/telemetry-store/testing/index.js",
     "./lifecycle": "./dist/lifecycle.js",

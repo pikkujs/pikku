@@ -77,14 +77,13 @@ The console's `agentCredentialCheck` (scope `pikku:console:credentials:read`) wa
 
 ### OTLP and analytics sinks are registries; `analyticsService` and `accepts` are gone
 
-Core now creates the `otlpSinks` singleton service before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build; register OTLP sinks in plain code with `add(sink)`. Analytics sinks are the `analyticsSinks` provider collection: add one with `defineProvider({ addTo: analyticsSinks, ... })`. See [telemetry-sinks.md](./telemetry-sinks.md).
+Core now creates two singleton services, `otlpSinks` and `analyticsSinks`, before your `createSingletonServices` runs in `pikku dev`, `pikku serve` and a standalone build. Register sinks in plain code with `add(sink, map)`. See [telemetry-sinks.md](./telemetry-sinks.md).
 
 **Removed from `@pikku/core`:**
 
-- The `analyticsService` singleton service. Add a sink with a provider that returns `{ sink, map: { event_name: true } }` and `addTo: analyticsSinks` instead.
-- `AnalyticsSinkRegistry` and `createAnalyticsSinks`. `analyticsSinks` is now a `ProviderCollection<'analyticsSinks', { sink, map }>` and the services hold `readonly ProviderCollectionEntry<{ sink, map }>[]` under that key.
+- The `analyticsService` singleton service. Register a sink with `analyticsSinks.add(sink, { event_name: true })` instead.
 - `AnalyticsSink` (`{ service, accepts }`) and its `accepts` predicate. A sink now carries a map of the events it receives; an event not in the map never reaches it (fail closed).
-- The old `fanOutAnalytics(sinks)` signature. It is now `fanOutAnalytics(entries, fallback)`, over the `analyticsSinks` entries.
+- The old `fanOutAnalytics(sinks)` signature. It is now `fanOutAnalytics(registry, fallback)`.
 - `OtlpTracer`, `OtlpLogger` and `startProcessMetrics` no longer take an `OtlpHttpExporter`; they take an `OtlpSinkBase`.
 
 **Behaviour change:** with no `PIKKU_OTLP_ENDPOINT` the tracer is now real, not inert. The endpoint only decides whether the HTTP exporter is registered. `PIKKU_TELEMETRY=0` still turns it all off. Callers that passed `{}` as the environment to `createRuntimeTelemetry` and want it off must pass `{ PIKKU_TELEMETRY: '0' }`.
@@ -102,7 +101,7 @@ The bootstrap now imports `analytics/pikku-analytics-meta.gen.ts`, which registe
 
 ### `pikku all` no longer edits `package.json`
 
-**What changed:** `pikku all` used to add `@pikku/addon-kysely-sqlite`, `@pikku/better-auth`, `@pikku/websocket` and the other packages a generated file imports to your `package.json`, and print "run your package manager's install". It now fails instead, naming each missing package and the range this CLI was built against.
+**What changed:** `pikku all` used to add `@pikku/kysely-sqlite`, `@pikku/better-auth`, `@pikku/websocket` and the other packages a generated file imports to your `package.json`, and print "run your package manager's install". It now fails instead, naming each missing package and the range this CLI was built against.
 
 **What to write instead:** add the listed packages to the `dependencies` of the package that owns the generated file, run your package manager's install, then run `pikku all` again.
 
@@ -156,61 +155,17 @@ What an app sees:
 - Local content no longer reads files stored outside `private/` and `public/` under `localFileUploadPath`: move any old `<bucket>/<key>` files into `private/<bucket>/<key>`. `resolveContentRequestTarget(basePath, key)` is synchronous and takes no `mode`.
 - A column with `security: 'encrypted'` is no longer read: write `security: 'secret', form: 'wrapped'`.
 
-### `defineProvider` replaces contributors
+### Contributors are removed
 
-`@pikku/core/contributors` is gone: `defineContributors`, `wireContributors`, `Contributor`, `ContributorPlatform` and the resolver functions have no replacement under those names. Declare a provider with `defineProvider` from `@pikku/core/provider` instead.
+`@pikku/core/contributors` is gone: `defineContributors`, `wireContributors`, `Contributor`, `ContributorPlatform` and the resolver functions have no replacement. Services are ordinary code in three layers: platform services (the host's), `pikkuServices` and `pikkuWireServices`. See [`services.md`](./services.md).
 
-- `defineProvider(factory)` is the same on every target. `defineProvider({ dev, deploy, common, onServerStart })` is per target, and a target's own variant overrides `common`.
-- A factory takes `(services, env)`. Destructure `services` to say what it depends on (there is no `needs`); the keys of the returned object are what it provides (there is no `provides`). The inspector reads both from the source, so the factory must be written inline, destructure its first parameter by plain name, and return an object type with known keys.
-- A target runs only the services it reaches: a service is selected when a key it provides is destructured by the functions, middleware, permissions or wirings the target includes (the unit's own for a deploy unit), or by a selected service. A service nothing reaches gets no variant check, no `onServerStart` error and no import. Two services providing one key is a build error on every target, except one replacement of a baseline key. A selected service with no variant for the target fails there.
-- `wireAddon({ contributors })` and `wireRemoteAddon({ local: { contributors } })` are now `providers`, and name the addon's exported `defineProvider` consts. `wireContributors` is removed.
-- Teardown is the service's own `stop()`, which `stopSingletonServices` now calls in reverse of the order services were built. `ContributorServerHook` is `ServiceServerHook`, and `composeServerLifecycle` reports a `start-failed` `ProviderError`, `Provider '<name>' failed in onServerStart`.
-- In the object form `dev`, `deploy` and `common` may be a reference to an exported const instead of an inline function, so a build imports only the variant it runs. Each such variant must live in its own module (PKU375).
-- `pikku all` generates `#pikku/provider` (config key `providerTypesFile`, replacing `contributorTypesFile` and `#pikku/contributor`): `SingletonServices` is the type you declared plus every key a service provides, as required properties with no `any`, and `defineProvider` is typed against it. `SingletonServices` from `#pikku/function` is this merged type. Config keys `devContributorsFile` and `contributorsMetaJsonFile` are now `devProvidersFile` and `providersMetaJsonFile`.
-- `pikku dev` and `pikku serve` build the services on top of the local services (their `existingServices`) before `createSingletonServices` runs. A service may need only a key the dev baseline holds (`devBaselineServices`: no `variables`, `schema` or `secrets`) or another service provides. A service with only a `deploy` variant is an error on dev unless it provides only keys the dev baseline holds. A deploy provider reports what its entry holds through `serviceSupport(ctx)`, `{ baseline, runsServerLifecycle }`, replacing `contributorSupport`; `ctx.contributorPlatform` is gone, and the generated platform-services file has no `serverStopHooks`.
-- `@pikku/deploy-cloudflare` and `@pikku/deploy-standalone` implement `serviceSupport`. `STANDALONE_BINDING_SOURCES`, `CLOUDFLARE_BINDING_SOURCES`, `coercionContributor`, `COERCION_CONTRIBUTOR_NAME` and the Cloudflare adapter's `coercion` option are gone: the generated runner wraps the service providing `kysely` with the coercion map, for every provider.
-- `@pikku/addon-queue-nats` publishes `nats` as a `defineProvider` (`deploy:standalone` and `deploy:server` variants, and a dev variant that provides an inert `natsLifecycle`; the package is built as an addon and lives in `packages/addon/queue-nats`) instead of a contributor. Opt in with `wireAddon({ name: 'nats', package: '@pikku/addon-queue-nats', providers: ['nats'] })` in place of `wireContributors`. There is no `when`: a target selects `nats` when it reaches `queueService`, `schedulerService` or `natsLifecycle`, and a Worker unit that does is refused at build time, so wire it only for a standalone build. It provides `natsLifecycle` with a `stop()` that drains the workers and closes the connection.
-- The inspector state keys are `providers` and `optedInProviders`; an addon publishes `providers/pikku-providers-meta.gen.json`, `{ metaVersion: 2, providers, collections }`. PKU360 to PKU364 are retired; PKU369 to PKU376 cover a provider the build cannot read (PKU369), needs or provides it cannot read (PKU371, PKU372), an unreadable or unknown `wireAddon({ providers })` (PKU373, PKU374), variants sharing a module (PKU375), and a duplicate provider name (PKU376).
-
-### Providers: per-request providers, collections, protected keys, the lock and a scoped environment
-
-**What:** `defineProvider` grows the rest of its surface. All of it lands together with the rename above.
-
-| Old                                                                | New                                                                                       |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| `closeWireServices(logger, wireServices)` from `@pikku/core/utils` | `stopWireServices(logger, wireServices)`                                                  |
-| a per-request service's `close()`                                  | `stop()`, called last built first; `close()` is no longer called                          |
-| `AnalyticsSinkRegistry`, `createAnalyticsSinks`, the registry key  | the `analyticsSinks` collection from `@pikku/core/analytics`, read with `fanOutAnalytics` |
-| `PKU360` to `PKU364` (contributor errors)                          | retired; `PKU369` to `PKU399` (except `PKU370` and `PKU384`) are the provider codes       |
-
-- `defineWireProvider` builds a service per invocation from `(singletons, wire)`, opted in through the same `providers` list. A singleton provider that needs a wire key is PKU392; a wire key a singleton holds is PKU393; providing `auditLog`, `analytics`, `session` or `rpc` is PKU399. Core builds `auditLog` first, so a wire provider reads it as `optional`.
-- `defineProviderCollection(name)` and `defineProvider({ addTo })` add items to a list read as label-sorted `{ label, item }` entries. `analyticsSinks` is core's collection of `{ sink, map }`.
-- `optional: [...]` makes a need optional, and a key a provider returns conditionally is optional in the merged type. `deploy:<profile>` variants (`standalone`, `cloudflare-worker`, `cloudflare-container`, `server`) pick a build per deploy runtime.
-- `secrets`, `variables`, `credentialService`, `auth`, `jwt` and `logger` are protected: a provider provides one only with `replaces: ['logger']` (PKU394). A deploy provider's `serviceSupport` also returns `entryOwned` and `profile`; no provider may replace an entry-owned key, so a database addon has no `deploy:standalone` variant (PKU397).
-- Providers are in-process, trusted code. `wireRemoteAddon({ providers })` is PKU381: use `local: { package, providers }`.
-- **Declare what an addon provider reads.** An addon provider's `env` holds only the names its addon declares with `defineVariable` or `defineSecret` (and the ones `variableOverrides` and `secretOverrides` rename). An addon that reads `process.env`-style names it never declared now fails with `env-denied`: declare each one. A project's own providers read the raw environment.
-- `pikku-addons.lock` records every opted-in addon provider (its surface, not only its version). A changed surface is PKU395 until `pikku all --approve-providers[=id,...]` accepts it. `pikku all --frozen` refuses to write the lock (PKU396), and `CI=true` implies `--frozen`, so a project with addon providers needs the lock committed first. A version or hash change with an identical surface does not fail `--frozen`. An existing version 1 `pikku-addons.lock` (remote addon SDKs only) is read as version 2 with no providers and is not rewritten or flagged while the project opts in to no addon provider; the first `pikku all` without `--frozen` after you opt in writes the version 2 file, which you commit.
-- A project `createSingletonServices` no longer has to spread `existingServices` or check for injected keys: a key an opted-in provider provides is typed as present, and the runner merges injected keys onto what the factory returns.
-- A function that destructures a key no provider, baseline key or `createSingletonServices` provides fails the build for its unit (PKU390).
-- A factory that needs nothing may omit its parameter or name it `_services` and not read it; only a read of the whole object is PKU371.
-
-### The nats and kysely packages are addons and are renamed
-
-All of them live in `packages/addon/*` and are built as addons (`pikku all && tsc -b && pikku dist`, metadata served under `./.pikku/*`). Their public classes and factories are unchanged; only the package name changes, so update the dependency and every import.
-
-| Old name                    | New name                          |
-| --------------------------- | --------------------------------- |
-| `@pikku/queue-nats`         | `@pikku/addon-queue-nats`         |
-| `@pikku/kysely`             | `@pikku/addon-kysely`             |
-| `@pikku/kysely-postgres`    | `@pikku/addon-kysely-postgres`    |
-| `@pikku/kysely-mysql`       | `@pikku/addon-kysely-mysql`       |
-| `@pikku/kysely-sqlite`      | `@pikku/addon-kysely-sqlite`      |
-| `@pikku/kysely-bun-sqlite`  | `@pikku/addon-kysely-bun-sqlite`  |
-| `@pikku/kysely-node-sqlite` | `@pikku/addon-kysely-node-sqlite` |
-
-- `@pikku/addon-queue-nats` runs on a standalone or server build only: `deploy:standalone` and `deploy:server` replace the single `deploy` variant, so a Worker unit that reaches `queueService`, `schedulerService` or `natsLifecycle` is refused with PKU388.
-- Each engine package exports a `kysely` `defineProvider`, opted into with `wireAddon({ name: 'db', package: '@pikku/addon-kysely-postgres', providers: ['kysely'] })`. Wire one. It has `dev` and `deploy:cloudflare-*` variants and no `deploy:standalone` variant, because a standalone build opens its own database. A target that reaches no `kysely` does not bundle the driver. `@pikku/addon-kysely` is the shared base and exports no provider.
-- Postgres and MySQL read the secret `DATABASE_URL`; the libSQL provider in `@pikku/addon-kysely-sqlite` reads the secret `LIBSQL_URL` and the optional secret `LIBSQL_AUTH_TOKEN`; the bun and node SQLite providers read the optional variable `SQLITE_PATH` (default `:memory:`) and have a `dev` variant only.
+- A service your app builds goes in `pikkuServices`. Order and dependencies are the order of your code; where a contributor read the platform, read `variables`, `secrets` or the key the host put in `existingServices`.
+- A service that depends on where the app runs goes in the host's platform services module, a file exporting `createPlatformServices(env, services, { requiredServices })`. A deploy provider names it with `platformServicesModule(ctx)`; `pikku dev` and `pikku serve` take `--platform-services <module>`. Only this layer receives the raw environment.
+- `wireAddon({ contributors })`, `wireRemoteAddon({ local: { contributors } })`, `dev.contributors` and `deploy.contributors` are removed, and the CLI refuses the config keys. An addon builds its services with `pikkuAddonServices` and `pikkuAddonWireServices`; a service it used to hand the app is now built by the app, from the class or function the addon's package exports.
+- Startup work goes in `pikkuServerLifecycle`. Teardown is the service's own `stop()`, which `stopSingletonServices` calls in reverse of the order services were built.
+- A deploy provider's `contributorSupport` is gone, as are `ctx.contributorPlatform`, `STANDALONE_BINDING_SOURCES`, `CLOUDFLARE_BINDING_SOURCES`, `coercionContributor`, `COERCION_CONTRIBUTOR_NAME` and the Cloudflare adapter's `coercion` option. When the platform module returns a `kysely`, the build attaches the app's column coercion map to it.
+- `@pikku/queue-nats` is a plain library. In place of `wireContributors`, call `connectNats(logger, env)` in `pikkuServices` and return `queueService`, `schedulerService` and, last, `natsLifecycle`; list the first two under `allowShadowedServices`. Call `natsLifecycle.registerQueues(logger)` from `pikkuServerLifecycle`'s `beforeStart`, or queued jobs never run. `stopSingletonServices` calls `natsLifecycle.stop()`, which drains the workers and closes the connection.
+- `#pikku/contributor`, the `contributorTypesFile`, `devContributorsFile` and `contributorsMetaJsonFile` config keys and the contributors command are removed. PKU360 to PKU364 are retired.
 
 ### `srcDirectories` is replaced by package markers
 
@@ -230,7 +185,7 @@ All of them live in `packages/addon/*` and are built as addons (`pikku all && ts
 - `pikku new addon` writes a `namespace` (the addon's name) into the addon's `pikku.config.json`.
 - `pikku validate` checks the root as the project and the main package through it: the main package is not validated as a second project, and its own config is not a second config.
 - The root's tsconfig must include the main package's source, and the root has no `types/application-types.d.ts` of its own: the main package declares `Config`, `UserSession`, `SingletonServices` and `Services`.
-- Release order: `packages/cli/build.sh` bootstraps with the published `@pikku/cli`, which still requires `srcDirectories` and rejects `main`. `packages/cli/pikku.config.json` therefore keeps `srcDirectories`, which the new loader ignores, until a published `@pikku/cli` reads the markers; the key is then deleted from it. `packages/addon/queue-nats` and `e2e` build with the workspace CLI and are not affected.
+- Release order: `packages/cli/build.sh` bootstraps with the published `@pikku/cli`, which still requires `srcDirectories` and rejects `main`. `packages/cli/pikku.config.json` therefore keeps `srcDirectories`, which the new loader ignores, until a published `@pikku/cli` reads the markers; the key is then deleted from it. `packages/services/queue-nats` and `e2e` build with the workspace CLI and are not affected.
 - A backend filter selects an addon's functions with `names: ["<namespace>:*"]`.
 
 ```json
@@ -893,7 +848,7 @@ A contributor is no longer `{ name, needs, provides, imports, emit }`. It is `{ 
 
 **Cloudflare coercion** is now the named optional contributor `kysely-coercion` (`COERCION_CONTRIBUTOR_NAME`, `coercionContributor`). It applies only when some contributor provides `kysely` and the app has a coercion map. A deploy where `kysely` came from outside the contributors no longer gets the map from the adapter.
 
-**New peer dependencies.** `@pikku/core` is a peer of `@pikku/deploy`, `@pikku/deploy-standalone` and `@pikku/deploy-cloudflare`, and `@pikku/addon-kysely` is a peer of `@pikku/deploy-cloudflare`. `pikku update --update-peers` writes them.
+**New peer dependencies.** `@pikku/core` is a peer of `@pikku/deploy`, `@pikku/deploy-standalone` and `@pikku/deploy-cloudflare`, and `@pikku/kysely` is a peer of `@pikku/deploy-cloudflare`. `pikku update --update-peers` writes them.
 
 Search: `rg -n "\"contributors\"|PlatformServiceContributor|devPlatformServicesFile|collectContributor|dedupeContributors|partitionContributors|assertContributorsSupported|contributorBindingSources"`, and check the hits in `pikku.config.json` and addon `package.json` files for `"contributors"` under `"dev"`, `"deploy"` and `"pikku"`.
 
@@ -964,7 +919,7 @@ A run suspended for an approval or a credential now records `expiresAt` on each 
 - **Approvals saved before this release have no expiry and are refused.** Runs that were suspended at upgrade time cannot be resumed; start them again.
 - Every store refuses an expired approval inside its own claim as well. A custom `AgentRunStateService` must persist `expiresAt` and make `resolveApproval` return `false` for an approval past it, or with none.
 - Expired runs nobody resumes stay `suspended`; nothing sweeps them.
-- **Database:** `@pikku/addon-kysely`'s `agentToolCall` table has a new nullable `approvalExpiresAt bigint` column (epoch milliseconds). Run `pikku db generate` and then `pikku db migrate` before deploying. `KyselyAgentRunStateService` keeps approvals in its JSON column and needs no migration; MongoDB needs none.
+- **Database:** `@pikku/kysely`'s `agentToolCall` table has a new nullable `approvalExpiresAt bigint` column (epoch milliseconds). Run `pikku db generate` and then `pikku db migrate` before deploying. `KyselyAgentRunStateService` keeps approvals in its JSON column and needs no migration; MongoDB needs none.
 
 To find affected code, search for `implements AgentRunStateService|PendingApproval`.
 
@@ -1209,7 +1164,7 @@ Sessionless agent threads are no longer shared (core 0.12.74 `afef587`). Reading
   const redisWorkflows = new RedisWorkflowService(redis, 'workflows')
 
   // after
-  import { PgKyselyLeaseService } from '@pikku/addon-kysely-postgres'
+  import { PgKyselyLeaseService } from '@pikku/kysely-postgres'
   const leaseService = new PgKyselyLeaseService(db)
   const workflowService = new PgKyselyWorkflowService(db, { leaseService })
   const redisWorkflows = new RedisWorkflowService(redis, {
@@ -1419,6 +1374,7 @@ The generated local services (`pikku serve`, `pikku dev`, a generated local CLI)
 - **Dispatch routes fail closed** (`@pikku/cloudflare` 0.12.17 `c2d4f86`, `@pikku/node-http-server` 0.12.8 `b28e2da`). `POST /__pikku/queue-job` and `/__pikku/scheduler-job` reject every request until `PIKKU_DISPATCH_SECRET` is set on the worker and sent in `x-pikku-dispatch`.
 - **A deployed Cloudflare Worker is always production** (core 0.12.138 `6f11bb5`). The adapter pins `NODE_ENV=production`, so 5xx responses no longer include the error message or stack.
 - **The better-auth framework adapters moved** into `@pikku/next` and `@pikku/tanstack-start` (`c899301`).
+- **Built entries listen on your configured `hostname`** (`@pikku/cli`, `@pikku/deploy-standalone`, `@pikku/deploy-cloudflare`). The standalone binary and the server and container entries bind `HOST` when it is set, otherwise the `hostname` that `createConfig` returns, otherwise `0.0.0.0`. An app whose config says `localhost` or `127.0.0.1` is unreachable from outside its container: set `HOST=0.0.0.0` on the deployment, or remove `hostname` from the config. **Find:** `rg -n "hostname" -g '*config*.ts' -g 'services.ts'`
 
 Package names: the runtimes are published as `@pikku/express`, `@pikku/express-middleware`, `@pikku/fastify`, `@pikku/fastify-plugin`, `@pikku/next`, `@pikku/lambda`, `@pikku/cloudflare`, `@pikku/azure-functions`, `@pikku/bun-server`, `@pikku/node-http-server`, `@pikku/uws`, `@pikku/uws-handler`, `@pikku/ws`, `@pikku/tanstack-start` and `@pikku/modelcontextprotocol`.
 
@@ -1428,10 +1384,10 @@ Package names: the runtimes are published as `@pikku/express`, `@pikku/express-m
 
 ## Services
 
-- **Runtime tables are declared, not created at boot** (cli 0.12.111 `274cab3`; `@pikku/addon-kysely`). `ensurePikkuSchema` is replaced by `requirePikkuSchema`, which only checks that the tables exist and stops with a message naming `pikku db generate` and `pikku db migrate` when they are missing. `pikku db generate` writes only the tables your project's services use.
+- **Runtime tables are declared, not created at boot** (cli 0.12.111 `274cab3`; `@pikku/kysely`). `ensurePikkuSchema` is replaced by `requirePikkuSchema`, which only checks that the tables exist and stops with a message naming `pikku db generate` and `pikku db migrate` when they are missing. `pikku db generate` writes only the tables your project's services use.
 - **Lease services and workflow constructors**: see [Workflows](#workflows).
 - **Secrets have to be set again** after the PBKDF2 change: see [Secrets, content and other removals](#secrets-content-and-other-removals). The KEK salt table (Kysely), hash field (Redis) or collection (MongoDB) is created on first use.
-- **`@pikku/pg` → `@pikku/addon-kysely-postgres`**, **`@pikku/auth-js` → `@pikku/better-auth`**, and **`@pikku/db-migrator` / `@pikku/sql-migrator` → `@pikku/migrator-sql`**. The old packages are deprecated stubs or were never published.
+- **`@pikku/pg` → `@pikku/kysely-postgres`**, **`@pikku/auth-js` → `@pikku/better-auth`**, and **`@pikku/db-migrator` / `@pikku/sql-migrator` → `@pikku/migrator-sql`**. The old packages are deprecated stubs or were never published.
 
 **Find:** `rg -n "ensurePikkuSchema|@pikku/(pg|auth-js|db-migrator|sql-migrator)\b"`
 
@@ -1557,12 +1513,12 @@ Created by `pikku db generate`:
 
 `db/tables.ts` now holds a plain declaration: `defineTables` from `@pikku/core/db`, one entry per table with its `columns`, and the annotations on the columns. See [Declaring tables](./db-tables.md). It is opt-in: an app with no `db/tables.ts` and hand-written migrations behaves as before.
 
-The earlier shape is gone, with no fallback. `pikku db generate`, `migrate` and `check` stop on a `db/tables.ts` that exports `statements`, and say so. The pieces that shape used are removed from `@pikku/addon-kysely`: `defineTables`, `requiredType`, and the `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` types. `PikkuSchema`, `compileTables`, `tableRequirements`, `pikkuSchemas`, `applyPikkuSchemas` and `requiredPikkuSchemas` stay.
+The earlier shape is gone, with no fallback. `pikku db generate`, `migrate` and `check` stop on a `db/tables.ts` that exports `statements`, and say so. The pieces that shape used are removed from `@pikku/kysely`: `defineTables`, `requiredType`, and the `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` types. `PikkuSchema`, `compileTables`, `tableRequirements`, `pikkuSchemas`, `applyPikkuSchemas` and `requiredPikkuSchemas` stay.
 
 Before:
 
 ```ts
-import { defineTables, requiredType } from '@pikku/addon-kysely'
+import { defineTables, requiredType } from '@pikku/kysely'
 
 export const tables = defineTables({
   requires: [{ table: 'user', column: 'id', owner: 'Better Auth' }],
@@ -1616,17 +1572,17 @@ To move an app that has no `db/tables.ts` yet:
 3. Run `pikku db generate`. A table that matches its migrations is adopted and not created again. If it differs, generate refuses and names the column and the difference. Fix the declaration, not the migration. Then run `pikku db migrate`.
 4. From here on, change the declaration and run `pikku db generate`. Existing migration files stay as they are.
 
-**Find:** search for `statements:` and for `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` imported from `@pikku/addon-kysely`.
+**Find:** search for `statements:` and for `defineTables`, `requiredType`, `AppTables`, `SchemaStatementFactory` and `ForeignKeyTarget` imported from `@pikku/kysely`.
 
 ### Column annotation types moved to `@pikku/core/db`
 
-`ColumnAnnotation` and `TableAnnotations` are no longer exported from `@pikku/addon-kysely`. Import them from `@pikku/core/db`, which also holds the new plain table declaration types (`defineTables`, `TablesDeclaration`, `ColumnDeclaration`, `OnDelete`):
+`ColumnAnnotation` and `TableAnnotations` are no longer exported from `@pikku/kysely`. Import them from `@pikku/core/db`, which also holds the new plain table declaration types (`defineTables`, `TablesDeclaration`, `ColumnDeclaration`, `OnDelete`):
 
 ```ts
 import type { ColumnAnnotation, TableAnnotations } from '@pikku/core/db'
 ```
 
-Find affected code by searching for `ColumnAnnotation` and `TableAnnotations` imported from `@pikku/addon-kysely`.
+Find affected code by searching for `ColumnAnnotation` and `TableAnnotations` imported from `@pikku/kysely`.
 
 A declared foreign key now defaults to `onDelete: 'restrict'` instead of always cascading. Write `onDelete: 'cascade'` on a column that relied on it.
 
@@ -1683,7 +1639,7 @@ Then delete `db/annotations.ts` and run `pikku db migrate`. A column you do not 
 
 ### `PikkuSchema` is a table declaration, not a list of statements
 
-A `PikkuSchema` from `@pikku/addon-kysely` now holds `tables` (a `TablesDeclaration` from `@pikku/core/db`) where it held `statements`. `compileTables` turns the declaration into DDL, and its `requires` are read off any `references` that point outside it. DDL a declaration cannot express goes in `extraStatements`, which run after the tables and their indexes:
+A `PikkuSchema` from `@pikku/kysely` now holds `tables` (a `TablesDeclaration` from `@pikku/core/db`) where it held `statements`. `compileTables` turns the declaration into DDL, and its `requires` are read off any `references` that point outside it. DDL a declaration cannot express goes in `extraStatements`, which run after the tables and their indexes:
 
 ```ts
 const schema: PikkuSchema = {

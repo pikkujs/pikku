@@ -10,7 +10,7 @@ import {
 
 let queue: Promise<unknown> = Promise.resolve()
 
-// Same layout as the service hooks: the content store under
+// The log is a content store under
 // `<dir of PIKKU_HOOK_LOG>/private/hooks/<basename>`.
 const log = (line: string): Promise<void> => {
   const file = new LocalVariablesService().get<string>('PIKKU_HOOK_LOG')
@@ -27,11 +27,13 @@ const log = (line: string): Promise<void> => {
   return next
 }
 
-// `hookC` is what the service chain built; it only reaches the services
-// when the platform services were loaded before createSingletonServices.
+// `hostTag` reaches the app only when the platform services were loaded before
+// createSingletonServices.
 export const lifecycle = pikkuServerLifecycle({
   beforeStart: (services) =>
-    log(`app:beforeStart hookC=${(services as any).hookC?.tag ?? 'missing'}`),
+    log(
+      `app:beforeStart hostTag=${(services as any).hostTag?.tag ?? 'missing'}`
+    ),
   afterStart: () => log('app:afterStart'),
   beforeStop: () => log('app:beforeStop'),
   afterStop: () => log('app:afterStop'),

@@ -7,7 +7,7 @@ import {
   NoopAuditService,
   createInvocationAudit,
 } from '@pikku/core/services'
-import { createAuditedKysely } from '@pikku/addon-kysely'
+import { createAuditedKysely } from '@pikku/kysely'
 import { pikkuServices, pikkuWireServices } from '#pikku/setup'
 import { TypedSecretService } from '../.pikku/secrets/pikku-secrets.gen.js'
 import { TypedVariablesService } from '../.pikku/variables/pikku-variables.gen.js'

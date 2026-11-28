@@ -259,13 +259,6 @@ export interface PikkuCLICoreOutputFiles {
   // `pikku serve` injects them into createSingletonServices
   localServicesFile: string
 
-  // The services `pikku dev` runs: what the project declares with
-  // `defineProvider` and opted in to with `wireAddon({ services })`
-  devProvidersFile: string
-
-  // The services this package declares — present when it calls defineProvider
-  providersMetaJsonFile: string
-
   // Middleware
   middlewareFile: string
   middlewareGroupsMetaJsonFile: string
@@ -275,10 +268,6 @@ export interface PikkuCLICoreOutputFiles {
 
   // Config and service factories (the leaf `#pikku/setup` resolves to)
   setupTypesFile: string
-
-  // The merged `SingletonServices` and `defineProvider` (the leaf `#pikku/provider`
-  // resolves to). An application gets it, an addon does not.
-  providerTypesFile: string
 
   // Permissions, auth gates and credential definitions (part of `#pikku/auth`)
   authGuardsFile: string

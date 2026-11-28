@@ -99,21 +99,6 @@ function expandAndAddGroupServices(
   }
 }
 
-/** Every key a per-request provider the project declares or opts in to provides. */
-function wireProviderKeys(state: InspectorState): string[] {
-  const metas = [
-    ...Object.values(state.providers ?? {}),
-    ...Object.values(state.optedInProviders ?? {}).flatMap((opted) =>
-      Object.values(opted.providers)
-    ),
-  ]
-  return metas
-    .filter((meta) => meta.kind === 'wire')
-    .flatMap((meta) =>
-      Object.values(meta.variants).flatMap((variant) => variant?.provides ?? [])
-    )
-}
-
 /**
  * Applies the service names of the SingletonServices and Services types, which
  * `resolveServiceTypes` read off the checker during analysis. This provides the
@@ -135,12 +120,9 @@ function extractAllServices(state: InspectorState): void {
   if (resolved.services) {
     // Wire services are those in Services but not in SingletonServices
     const singletonSet = new Set(state.serviceAggregation.allSingletonServices)
-    state.serviceAggregation.allWireServices = [
-      ...new Set([
-        ...resolved.services.filter((name) => !singletonSet.has(name)),
-        ...wireProviderKeys(state),
-      ]),
-    ].sort()
+    state.serviceAggregation.allWireServices = resolved.services
+      .filter((name) => !singletonSet.has(name))
+      .sort()
     markSingletonServicesOnly(
       state,
       new Set(state.serviceAggregation.allWireServices)

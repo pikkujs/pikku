@@ -1323,7 +1323,7 @@ export abstract class PikkuWorkflowService implements WorkflowService {
    * exclusion it is built on: here, the step's lease on the app's
    * `leaseService`. A store able to express the decision as one conditional
    * write should override this rather than reach for a lock, which is what
-   * `@pikku/addon-kysely` does with a status-guarded `UPDATE`.
+   * `@pikku/kysely` does with a status-guarded `UPDATE`.
    *
    * Ownership is held for `leaseMs` rather than forever. A dispatch that
    * dies mid-step leaves the step `running` with nothing to complete it, and an

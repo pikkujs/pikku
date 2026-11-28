@@ -64,7 +64,7 @@ const link = (from: string, to: string) => {
  * copy of a package the CLI needs (@pikku/cli, core, schema-cfworker,
  * addon-graph, `relinkExtra`, and what they depend on) becomes a symlink into
  * the pikku checkout; the project's copies of each `dedupe` dependency point
- * at the one the local @pikku/addon-kysely uses, so TypeScript sees one Kysely; and
+ * at the one the local @pikku/kysely uses, so TypeScript sees one Kysely; and
  * `.bin/pikku` is the local CLI. Without it a worktree's `pikku` is the
  * published CLI, without the local gates.
  */

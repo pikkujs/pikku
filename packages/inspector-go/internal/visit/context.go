@@ -41,9 +41,6 @@ type Options struct {
 	ClassificationCheck bool
 	Types               *Types
 	IsAddon             bool
-	// DeferProviderProvides skips PKU372 for a defineProvider whose provides
-	// cannot be read yet.
-	DeferProviderProvides bool
 }
 
 // Context is what every visitor receives: the TS visitors' (logger, checker,

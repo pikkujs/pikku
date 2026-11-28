@@ -504,9 +504,8 @@ export async function runBuildPipeline(options: {
     ctx.platformServices = await writeUnitPlatformServices({
       provider,
       ctx,
-      state: inspectorState,
-      projectDir,
       requiredServices: inspectorState.serviceAggregation.requiredServices,
+      projectServicesRead: inspectorState.projectServicesRead,
     })
     const source = provider.generateEntrySource(ctx)
 
@@ -709,11 +708,8 @@ export async function runBuildPipeline(options: {
       ctx.platformServices = await writeUnitPlatformServices({
         provider,
         ctx,
-        state: inspectorState,
-        projectDir,
         requiredServices: await readUnitRequiredServices(pikkuDir),
-        genericServerEntry:
-          unit.target === 'server' && !provider.generateServerEntrySource,
+        projectServicesRead: inspectorState.projectServicesRead,
       })
       const source =
         unit.target === 'server'

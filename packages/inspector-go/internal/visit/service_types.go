@@ -132,18 +132,12 @@ func (s *Context) findSecretAliasServices(t *checker.Type) state.Strings {
 func (s *Context) FinishServiceTypes() {
 	singleton := s.resolveCoreType(s.State.SingletonServicesTypeImportMap)
 	services := s.resolveCoreType(s.State.WireServicesTypeImportMap)
-	out := &state.ServiceTypes{SecretAliases: state.Strings{}, SingletonOptional: state.Strings{}}
+	out := &state.ServiceTypes{SecretAliases: state.Strings{}}
 	if singleton != nil {
 		names := state.Strings(s.tsPropertyNames(singleton))
 		slices.Sort(names)
 		out.SingletonServices = &names
 		out.SecretAliases = s.findSecretAliasServices(singleton)
-		for _, p := range s.Checker.GetPropertiesOfType(singleton) {
-			if p.Flags&ast.SymbolFlagsOptional != 0 {
-				out.SingletonOptional = append(out.SingletonOptional, p.Name)
-			}
-		}
-		slices.Sort(out.SingletonOptional)
 	}
 	if services != nil {
 		names := state.Strings(s.tsPropertyNames(services))

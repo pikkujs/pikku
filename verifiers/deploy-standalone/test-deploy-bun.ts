@@ -83,102 +83,51 @@ process.on('SIGTERM', () => {
   process.exit(143)
 })
 const pinnedConfig = JSON.parse(originalConfig)
-// The project opts in to services of an addon with wireAddon. They are listed
-// out of order (`marker-reader` needs what `marker` provides, and `marker`
-// needs the entry's own logger), and the addon declares another the project
-// does not opt in to. A unit runs only the services it reaches, so the wiring
-// file also holds a route whose function destructures the keys under test. The
-// shared recipe project is wired for the run only: the addon is linked into
-// its node_modules and a wiring file is written into src, and both are removed
-// on exit like the pinned config.
-const ADDON_DIR = join(process.cwd(), 'service-marker')
-const ADDON_LINK = join(
-  FUNCTIONS_DIR,
-  'node_modules',
-  '@verifier',
-  'service-marker'
-)
-const WIRING_FILE = join(FUNCTIONS_DIR, 'src', 'zz-services-wiring.ts')
-// The app's own serverLifecycle is swapped for one that logs to the same file
-// the service hooks log to, so their relative order can be read back from
-// the compiled binary. Restored on exit like the config and the wiring.
+// The app's own serverLifecycle is swapped for one that logs to a file, so the
+// order of its hooks can be read back from the compiled binary. Restored on
+// exit like the config.
 const LIFECYCLE_FILE = join(FUNCTIONS_DIR, 'src', 'lifecycle.ts')
 const originalLifecycle = readFileSync(LIFECYCLE_FILE, 'utf-8')
-const unwireServices = () => {
-  rmSync(WIRING_FILE, { force: true })
-  rmSync(ADDON_LINK, { force: true })
-  writeFileSync(LIFECYCLE_FILE, originalLifecycle)
-}
-process.on('exit', unwireServices)
+const restoreLifecycle = () => writeFileSync(LIFECYCLE_FILE, originalLifecycle)
+process.on('exit', restoreLifecycle)
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
-    unwireServices()
+    restoreLifecycle()
     restoreConfig()
     process.exit(130)
   })
 }
-execCli(`node ${PIKKU_BIN} all`, {
-  cwd: ADDON_DIR,
-  stdio: 'pipe',
-  timeout: 60_000,
-})
-mkdirSync(join(FUNCTIONS_DIR, 'node_modules', '@verifier'), { recursive: true })
-rmSync(ADDON_LINK, { force: true })
-symlinkSync(ADDON_DIR, ADDON_LINK, 'dir')
-writeFileSync(
-  WIRING_FILE,
-  `import { wireAddon } from '#pikku/addon'
-import { pikkuSessionlessFunc } from '#pikku/function'
-import { wireHTTP } from '#pikku/http'
-
-wireAddon({
-  name: 'marker',
-  package: '@verifier/service-marker',
-  providers: ['markerReader', 'marker', 'hookB', 'hookA'],
-})
-
-// Reaching these keys is what puts the services providing them in the unit.
-export const zzServicesReach = pikkuSessionlessFunc<void, Record<string, unknown>>({
-  auth: false,
-  func: async ({ platformMarkerSeen, hookB }) => ({
-    platformMarkerSeen,
-    hookB: hookB.tag,
-  }),
-})
-
-wireHTTP({
-  method: 'get',
-  route: '/zz-services-reach',
-  auth: false,
-  func: zzServicesReach,
-})
-`
-)
 writeFileSync(
   LIFECYCLE_FILE,
-  `import { appendFileSync, mkdirSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+  `import { appendFileSync } from 'node:fs'
 import { pikkuServerLifecycle } from '#pikku/setup'
 
 const log = (line: string) => {
-  const base = process.env.PIKKU_HOOK_LOG
-  if (!base) return
-  // The service hooks write through the content service, which keeps the
-  // log at <dir>/private/hooks/<name>; append to that same file.
-  const dir = join(dirname(base), 'private', 'hooks')
-  mkdirSync(dir, { recursive: true })
-  appendFileSync(join(dir, basename(base)), line + '\\n')
+  const file = process.env.PIKKU_HOOK_LOG
+  if (file) appendFileSync(file, line + '\\n')
 }
 
 export const lifecycle = pikkuServerLifecycle({
-  beforeStart: (services) =>
-    log('app:beforeStart hookB=' + ((services as any).hookB?.tag ?? 'missing')),
+  beforeStart: () => log('app:beforeStart'),
   afterStart: () => log('app:afterStart'),
   beforeStop: () => log('app:beforeStop'),
   afterStop: () => log('app:afterStop'),
 })
 `
 )
+// The app names its own listen address, so a binary run without HOST has to
+// bind it rather than every interface.
+const APP_CONFIG_FILE = join(FUNCTIONS_DIR, 'src', 'config.ts')
+const originalAppConfig = readFileSync(APP_CONFIG_FILE, 'utf-8')
+const patchedAppConfig = originalAppConfig.replace(
+  "awsRegion: 'us-east-1',",
+  "awsRegion: 'us-east-1',\n    hostname: '127.0.0.1',"
+)
+if (patchedAppConfig === originalAppConfig)
+  throw new Error(`Could not set a hostname in ${APP_CONFIG_FILE}`)
+const restoreAppConfig = () => writeFileSync(APP_CONFIG_FILE, originalAppConfig)
+process.on('exit', restoreAppConfig)
+writeFileSync(APP_CONFIG_FILE, patchedAppConfig)
 pinnedConfig.backends.app.deploy = {
   ...pinnedConfig.backends.app.deploy,
   grouping: { strategy: 'function' },
@@ -268,71 +217,6 @@ await check('entry: bootstrap import + main()', () => {
     throw new Error('Missing graceful shutdown')
 })
 
-await check(
-  'entry: opted-in services run in needs/provides order with runtime services',
-  () => {
-    const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-    if (
-      !/import \{ createPlatformServices \} from '\.\/platform-services\.gen\.js'/.test(
-        e
-      )
-    )
-      throw new Error(
-        'the entry does not import the generated platform services'
-      )
-    const generated = readText(
-      join(DEPLOY_DIR, unitName, 'platform-services.gen.ts')
-    )
-    const names = [
-      ...generated.matchAll(/^import \{ (\w+) as service(\d+) \}/gm),
-    ].map((m) => m[1])
-    for (const expected of ['marker', 'markerReader', 'hookA', 'hookB'])
-      if (!names.includes(expected))
-        throw new Error(`the opted-in service '${expected}' was not generated`)
-    const added = [
-      ...generated.matchAll(/registry\.add\("marker\/(\w+)"/g),
-    ].map((m) => m[1])
-    if (added.length !== 4)
-      throw new Error(
-        'expected the four opted-in services: ' + added.join(', ')
-      )
-    // The registry orders by needs, so registration order is not run order; it
-    // is enough that the dependents are registered with what they read.
-    if (!generated.includes('"needs":["platformMarker"]'))
-      throw new Error('markerReader was registered without its need')
-    if (generated.includes('notOptedIn') || generated.includes('NEVER_BUNDLED'))
-      throw new Error('a service the project did not opt in to was generated')
-    const call = e.indexOf('await createPlatformServices(process.env')
-    if (call < 0 || !/createPlatformServices\([^)]*\{ logger,/.test(e))
-      throw new Error(
-        'createPlatformServices is not handed the runtime services'
-      )
-    if (call < e.search(/(const|let) triggerSourceStore/))
-      throw new Error('createPlatformServices runs before the runtime is built')
-    if (!/\.\.\.platformServices,/.test(e))
-      throw new Error(
-        'the provided services are not spread into the singleton services'
-      )
-  }
-)
-
-await check(
-  'entry: the server lifecycle composes the service start hooks before the app',
-  () => {
-    const e = readText(join(DEPLOY_DIR, unitName, 'entry.ts'))
-    if (!/composeServerLifecycle\(__pikkuLifecycle,/.test(e))
-      throw new Error('the entry does not compose the lifecycle')
-    const generated = readText(
-      join(DEPLOY_DIR, unitName, 'platform-services.gen.ts')
-    )
-    const hooks = [
-      ...generated.matchAll(/\{ name: "marker\/(\w+)", run: /g),
-    ].map((m) => m[1])
-    if (JSON.stringify(hooks) !== JSON.stringify(['hookA', 'hookB']))
-      throw new Error('start hooks are not in needs order: ' + hooks.join(', '))
-  }
-)
-
 // ---------------------------------------------------------------------------
 // Compile to a single executable with bun, then hit endpoints.
 // ---------------------------------------------------------------------------
@@ -346,22 +230,19 @@ const binaryPath = join(DEPLOY_DIR, unitName, 'server')
 let serverProc: ReturnType<typeof spawn> | null = null
 
 const HOOK_LOG = join(DEPLOY_DIR, 'hook-order.log')
-// The hooks write through the content service: <dir>/private/hooks/<name>.
-const HOOK_LOG_FILE = join(DEPLOY_DIR, 'private', 'hooks', 'hook-order.log')
 const readHookLog = (): string[] =>
-  existsSync(HOOK_LOG_FILE)
-    ? readFileSync(HOOK_LOG_FILE, 'utf-8').trim().split('\n').filter(Boolean)
+  existsSync(HOOK_LOG)
+    ? readFileSync(HOOK_LOG, 'utf-8').trim().split('\n').filter(Boolean)
     : []
 
 async function startBinary(): Promise<void> {
-  rmSync(HOOK_LOG_FILE, { force: true })
+  rmSync(HOOK_LOG, { force: true })
   const proc = spawn(binaryPath, [], {
     env: {
       ...process.env,
       PORT: String(port),
       HOST: '0.0.0.0',
       PIKKU_HOOK_LOG: HOOK_LOG,
-      PIKKU_HOOK_FAIL: '',
     },
     stdio: 'pipe',
     cwd: join(DEPLOY_DIR, unitName),
@@ -432,7 +313,7 @@ async function runToExit(
   env: Record<string, string>,
   options: { stopWithSigterm?: boolean } = {}
 ): Promise<{ code: number | null; output: string }> {
-  rmSync(HOOK_LOG_FILE, { force: true })
+  rmSync(HOOK_LOG, { force: true })
   const ownPort = await getFreePort()
   const proc = spawn(binaryPath, [], {
     env: {
@@ -480,14 +361,6 @@ if (!BUN_AVAILABLE) {
     const s = statSync(binaryPath)
     if (s.size < 1024 * 1024)
       throw new Error(`Binary too small: ${(s.size / 1024).toFixed(0)}KB`)
-  })
-
-  await check('bundle: carries the opted-in services and only those', () => {
-    const bundle = readText(join(DEPLOY_DIR, unitName, 'bundle.js'))
-    if (!bundle.includes('wireAddon.providers'))
-      throw new Error('the opted-in services are not in the bundle')
-    if (bundle.includes('NEVER_BUNDLED_MARKER'))
-      throw new Error('a service the project did not opt in to was bundled')
   })
 
   if (existsSync(binaryPath)) {
@@ -637,43 +510,20 @@ if (!BUN_AVAILABLE) {
         }
       )
 
-      await check(
-        'runtime: a function reads what the opted-in services provide',
-        async () => {
-          const res = await fetch(
-            `http://${clientHost}:${port}/zz-services-reach`
-          )
-          if (!res.ok) throw new Error(`Status ${res.status}`)
-          const body = (await res.json()) as Record<string, unknown>
-          if (body.platformMarkerSeen !== true || body.hookB !== 'a>b')
-            throw new Error(`got ${JSON.stringify(body)}`)
-        }
-      )
-
-      // Service hooks against the app's own serverLifecycle, read from the
-      // log both wrote to while the compiled binary was running.
-      await check(
-        'runtime: service start hooks run first, then the app lifecycle, and the app sees what the services provide',
-        async () => {
-          for (
-            let i = 0;
-            i < 50 && !readHookLog().includes('app:afterStart');
-            i++
-          )
-            await new Promise((r) => setTimeout(r, 100))
-          const expected = [
-            'start:hook-a',
-            'start:hook-b',
-            'app:beforeStart hookB=a>b',
-            'app:afterStart',
-          ]
-          if (JSON.stringify(readHookLog()) !== JSON.stringify(expected))
-            throw new Error(`got ${JSON.stringify(readHookLog())}`)
-        }
-      )
+      await check('runtime: the app lifecycle runs at startup', async () => {
+        for (
+          let i = 0;
+          i < 50 && !readHookLog().includes('app:afterStart');
+          i++
+        )
+          await new Promise((r) => setTimeout(r, 100))
+        const expected = ['app:beforeStart', 'app:afterStart']
+        if (JSON.stringify(readHookLog()) !== JSON.stringify(expected))
+          throw new Error(`got ${JSON.stringify(readHookLog())}`)
+      })
 
       await check(
-        'runtime: SIGTERM runs beforeStop, then each service stop() in reverse, then afterStop',
+        'runtime: SIGTERM runs beforeStop, then afterStop',
         async () => {
           const proc = serverProc!
           const exited = new Promise<number | null>((resolve) =>
@@ -682,13 +532,9 @@ if (!BUN_AVAILABLE) {
           proc.kill('SIGTERM')
           await exited
           const expected = [
-            'start:hook-a',
-            'start:hook-b',
-            'app:beforeStart hookB=a>b',
+            'app:beforeStart',
             'app:afterStart',
             'app:beforeStop',
-            'stop:hook-b',
-            'stop:hook-a',
             'app:afterStop',
           ]
           if (JSON.stringify(readHookLog()) !== JSON.stringify(expected))
@@ -697,48 +543,60 @@ if (!BUN_AVAILABLE) {
       )
 
       await check(
-        'runtime: a failing onServerStart aborts startup naming the service',
+        "runtime: without HOST the binary binds the app's configured hostname only",
         async () => {
-          const result = await runToExit({ PIKKU_HOOK_FAIL: 'start:hook-b' })
-          if (result.code === 0 || result.code === null)
-            throw new Error(`expected a non-zero exit, got ${result.code}`)
-          if (
-            !/Provider 'marker\/hookB' failed in onServerStart/.test(
-              result.output
-            )
-          )
-            throw new Error(
-              `error does not name the service:\n${result.output}`
-            )
-          if (
-            JSON.stringify(readHookLog()) !==
-            JSON.stringify(['start:hook-a', 'start:hook-b'])
-          )
-            throw new Error(`got ${JSON.stringify(readHookLog())}`)
+          const ownPort = await getFreePort()
+          const env = { ...process.env, PORT: String(ownPort) }
+          delete env.HOST
+          const proc = spawn(binaryPath, [], {
+            env,
+            stdio: 'pipe',
+            cwd: join(DEPLOY_DIR, unitName),
+          })
+          let output = ''
+          proc.stdout?.on('data', (d) => (output += d.toString()))
+          proc.stderr?.on('data', (d) => (output += d.toString()))
+          const exited = new Promise((r) => proc.on('exit', r))
+          const accepts = (host: string) =>
+            new Promise<boolean>((resolve) => {
+              const socket = connect(ownPort, host)
+              socket.setTimeout(2000, () => {
+                socket.destroy()
+                resolve(false)
+              })
+              socket.once('connect', () => {
+                socket.destroy()
+                resolve(true)
+              })
+              socket.once('error', () => resolve(false))
+            })
+          try {
+            for (let i = 0; i < 100 && !output.includes('pikku: ready on'); i++)
+              await new Promise((r) => setTimeout(r, 100))
+            if (!output.includes(`ready on http://127.0.0.1:${ownPort}`))
+              throw new Error(`wrong listen address:\n${output}`)
+            if (!(await accepts('127.0.0.1')))
+              throw new Error('the configured address refuses connections')
+            // Another address of this machine, which only a wildcard bind
+            // answers on.
+            if (await accepts('127.0.0.2'))
+              throw new Error('the binary also answers on 127.0.0.2')
+          } finally {
+            proc.kill('SIGTERM')
+            await exited
+          }
         }
       )
 
       await check(
-        'runtime: every service stop() is attempted when one throws',
+        "runtime: HOST wins over the app's configured hostname",
         async () => {
-          const result = await runToExit(
-            { PIKKU_HOOK_FAIL: 'stop:hook-b' },
-            { stopWithSigterm: true }
-          )
-          if (
-            !/Error stopping service hookB[\s\S]*hook-b stop exploded/.test(
-              result.output
-            )
-          )
-            throw new Error(`the failure was not reported:\n${result.output}`)
-          const log = readHookLog()
-          if (
-            JSON.stringify(log.slice(-3)) !==
-            JSON.stringify(['stop:hook-b', 'stop:hook-a', 'app:afterStop'])
-          )
-            throw new Error(`got ${JSON.stringify(log)}`)
+          const result = await runToExit({}, { stopWithSigterm: true })
+          if (!result.output.includes('ready on http://0.0.0.0:'))
+            throw new Error(`wrong listen address:\n${result.output}`)
         }
       )
+
       // --- runtime telemetry (PIKKU_OTLP_*), against a real OTLP receiver ---
       const receive = async () => {
         const requests: Array<{

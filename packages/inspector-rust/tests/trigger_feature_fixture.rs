@@ -1,6 +1,6 @@
 //! Runs `inspector-parity/fixtures/trigger_feature` through the Rust analysis and compares
 //! the state and diagnostics of the trigger / feature / feature-flag /
-//! virtual-user / analytics / defineProvider / definePlugin groups against
+//! virtual-user / analytics / definePlugin groups against
 //! `expected.go.json`, which the Go inspector produced for the same files
 //! (paths rewritten to `<fixture>`). The fixture hits every refusal the Go
 //! groups have, not just the happy path.

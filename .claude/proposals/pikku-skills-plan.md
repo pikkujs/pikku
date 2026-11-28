@@ -204,7 +204,7 @@ Service integrations show how to use specific infrastructure packages.
 **Content Outline**:
 
 - When to use: Type-safe SQL queries, PostgreSQL/MySQL/SQLite
-- Installing dependencies (`@pikku/addon-kysely`)
+- Installing dependencies (`@pikku/kysely`)
 - Database setup and connection pooling
 - PikkuKysely wrapper patterns
 - Migration setup and patterns

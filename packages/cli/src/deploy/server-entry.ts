@@ -9,11 +9,10 @@
  */
 
 import type { EntryGenerationContext } from '@pikku/deploy'
-import { composedLifecycleLines, entryLifecycleVariable } from '@pikku/deploy'
+import { entryLifecycleVariable } from '@pikku/deploy'
 
 export function generateServerEntrySource(ctx: EntryGenerationContext): string {
   const lifecycle = entryLifecycleVariable(ctx)
-  const composed = composedLifecycleLines(ctx)
   const lines: string[] = [
     `// Generated server entry for "${ctx.unit.name}" (${ctx.unit.role})`,
     `import { PikkuBunServer } from '@pikku/bun-server'`,
@@ -31,24 +30,23 @@ export function generateServerEntrySource(ctx: EntryGenerationContext): string {
           `import { createPlatformServices } from '${ctx.platformServices.importPath}'`,
         ]
       : []),
-    ...composed.imports,
     `import '${ctx.bootstrapPath}'`,
     ``,
-    ...composed.declaration,
-    ...(composed.declaration.length > 0 ? [``] : []),
     `const PORT = Number(process.env.PORT ?? 8080)`,
-    `const HOST = process.env.HOST ?? '0.0.0.0'`,
     ``,
     `async function main(): Promise<void> {`,
-    `  const config = await ${ctx.configVar}()`,
     ...(ctx.platformServices
       ? [
           `  const platformServices = await createPlatformServices(process.env as Record<string, string | undefined>)`,
+          `  const config = await ${ctx.configVar}(platformServices.variables as any)`,
           `  const singletonServices = await ${ctx.servicesVar}(config, platformServices)`,
-          `  Object.assign(singletonServices, { analyticsSinks: singletonServices.analyticsSinks ?? platformServices.analyticsSinks })`,
         ]
-      : [`  const singletonServices = await ${ctx.servicesVar}(config)`]),
+      : [
+          `  const config = await ${ctx.configVar}()`,
+          `  const singletonServices = await ${ctx.servicesVar}(config)`,
+        ]),
     `  pikkuState(null, 'package', 'singletonServices', singletonServices)`,
+    `  const HOST = process.env.HOST || config.hostname || '0.0.0.0'`,
     ``,
     `  const server = new PikkuBunServer(`,
     `    { ...config, hostname: HOST, port: PORT, healthCheckPath: '/__pikku/health' },`,

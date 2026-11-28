@@ -1,0 +1,50 @@
+{
+  "scopes": [
+    {
+      "name": "admin",
+      "description": "Admin",
+      "scopes": {
+        "users": {
+          "description": "Users",
+          "live": true,
+          "scopes": {
+            "ban": { "description": "Ban" },
+            "view": { "description": "View", "live": false }
+          }
+        }
+      }
+    },
+    {
+      "name": "root",
+      "description": "Root",
+      "live": true,
+      "scopes": { "child": { "description": "Child" }, "added": {} }
+    },
+    {
+      "name": "plain",
+      "description": "Plain",
+      "scopes": {
+        "read": { "description": "Read" },
+        "quoted": { "description": "Quoted", "live": true },
+        "computed": { "description": "Computed" }
+      }
+    }
+  ],
+  "liveScopes": {
+    "declared": true,
+    "direct": true,
+    "inherited": true,
+    "none": null,
+    "notLiteral": null,
+    "oneOfTwo": true,
+    "optedOut": null,
+    "parent": null,
+    "plain": null,
+    "quotedKey": true,
+    "rootLive": true,
+    "wildcard": true
+  },
+  "errors": [
+    "Scope 'plain:computed' sets `live` to something other than a literal true or false, so it cannot be resolved statically."
+  ]
+}

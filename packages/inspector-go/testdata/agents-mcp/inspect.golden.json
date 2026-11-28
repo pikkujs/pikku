@@ -1011,7 +1011,6 @@
     },
     "serviceTypes": {
       "singletonServices": null,
-      "singletonOptional": [],
       "services": null,
       "secretAliases": []
     },

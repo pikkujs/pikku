@@ -33,8 +33,8 @@ import {
   spy,
 } from '@pikku/core/services'
 import { stopSingletonServices } from '@pikku/core/utils'
-import { composeServerLifecycle } from '@pikku/core/lifecycle'
 import { pikkuState } from '@pikku/core/state'
+import { createAnalyticsSinks } from '@pikku/core/analytics'
 import { installEventHubDistributor } from '@pikku/core/internal/event-hub'
 import { createDevTelemetry } from '../../server/dev-telemetry.js'
 import { wireAgentScorerQueueWorkers } from '@pikku/core/agent-scorer'
@@ -57,8 +57,7 @@ import {
   loadUserModule,
 } from './load-user-project.js'
 import { createDevCredentialService } from './dev-credentials.js'
-import { loadDevProviders } from './dev-providers.js'
-import { devBaselineFor } from '../wirings/cli/write-dev-providers.js'
+import { loadPlatformServicesOption } from './platform-services-option.js'
 import { reconcileDevWebhooks } from './dev-webhook-registrations.js'
 import { registerScenarioInstrumentation } from '../wirings/scenarios/register-scenario-instrumentation.js'
 import { startCoverageService } from './start-coverage.js'
@@ -158,6 +157,7 @@ export const dev = pikkuSessionlessFunc<
     frontend?: string
     backend?: string
     serveOnly?: boolean
+    platformServices?: string
   },
   void
 >({
@@ -183,6 +183,7 @@ export const dev = pikkuSessionlessFunc<
       frontend,
       backend,
       serveOnly,
+      platformServices,
     }
   ) => {
     // Which backends this process carries is settled before anything starts, so
@@ -197,6 +198,7 @@ export const dev = pikkuSessionlessFunc<
         test,
         model,
         hmr,
+        platformServices,
       },
     })
     if (serveOnly && plan.mode !== 'inline') {
@@ -245,6 +247,7 @@ export const dev = pikkuSessionlessFunc<
       backend: plan.mode === 'inline' ? plan.backend : undefined,
       version: resolveProjectVersion(config.rootDir),
     })
+    const analyticsSinks = createAnalyticsSinks()
     // Created before the app's services so a relay can be added from
     // `createSingletonServices`; the distributor stays here and is reached by
     // the transports, while services get the publisher and the registry.
@@ -591,6 +594,7 @@ export const dev = pikkuSessionlessFunc<
       {
         kysely: kysely ?? null,
         otlpSinks: telemetry.otlpSinks,
+        analyticsSinks,
         logger: telemetry.enabled ? telemetry.logger : new ConsoleLogger(),
         ...(telemetry.enabled ? { tracer: telemetry.tracer } : {}),
         ...(vaultSecrets ? { secrets: vaultSecrets } : {}),
@@ -626,25 +630,32 @@ export const dev = pikkuSessionlessFunc<
       }
     )
 
-    const { services: localServices, startHooks } = await loadDevProviders(
+    const localServices = await loadPlatformServicesOption(
+      platformServices,
       baseLocalServices,
-      config.rootDir,
-      config.devProvidersFile,
-      devBaselineFor(config, inspectorState, 'dev'),
-      process.env
+      {
+        rootDir: config.rootDir,
+        env: process.env,
+        requiredServices: [
+          ...new Set([
+            ...requiredServices,
+            ...(inspectorState.projectServicesRead ?? []),
+          ]),
+        ],
+      }
     )
 
     const singletonServices = await userCreateSingletonServices(
       userConfig,
       localServices
     )
-    // The runtime's own registry wins: the tracer reads it, so an app that returned another would lose its sinks,
+    // The runtime's own registries win: the tracer and the analytics fan-out
+    // read these instances, so an app that returned others would lose its sinks,
     // and the event hub's publisher and registry are the distributor's own.
     const resolvedServices = {
       ...singletonServices,
       otlpSinks: telemetry.otlpSinks,
-      analyticsSinks:
-        singletonServices.analyticsSinks ?? localServices.analyticsSinks,
+      analyticsSinks,
       ...eventHubServices,
       getInspectorState,
       ...(coverageService ? { coverageService } : {}),
@@ -690,14 +701,12 @@ export const dev = pikkuSessionlessFunc<
       { contentSigningJWT, mcpJson, mcpSurfaces }
     )
 
-    const lifecycle = composeServerLifecycle(await loadLifecycle(), {
-      start: startHooks,
-    })
+    const lifecycle = await loadLifecycle()
 
     await pikkuServer.init()
-    await lifecycle.beforeStart?.(resolvedServices)
+    await lifecycle?.beforeStart?.(resolvedServices)
     await pikkuServer.start()
-    await lifecycle.afterStart?.(resolvedServices)
+    await lifecycle?.afterStart?.(resolvedServices)
     resolvedServices.workflowService?.startRecovery?.(
       userConfig.workflow?.recovery
     )
@@ -750,11 +759,11 @@ export const dev = pikkuSessionlessFunc<
       void runningFrontends?.stop()
       try {
         resolvedServices.workflowService?.stopRecovery?.()
-        await lifecycle.beforeStop?.(resolvedServices)
+        await lifecycle?.beforeStop?.(resolvedServices)
         await stopSingletonServices()
         await watcher?.close()
         await pikkuServer.stop()
-        await lifecycle.afterStop?.(resolvedServices)
+        await lifecycle?.afterStop?.(resolvedServices)
       } catch (error) {
         logger.error(
           `Error stopping dev server: ${error instanceof Error ? error.message : String(error)}`

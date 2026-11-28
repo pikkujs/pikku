@@ -1,26 +1,17 @@
 import { readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { InspectorState } from '@pikku/inspector'
 import type {
   EntryGenerationContext,
   EntryPlatformServices,
   ProviderAdapter,
-  ServiceSupport,
 } from '@pikku/deploy'
-import {
-  collectProviderSources,
-  functionNeedsOf,
-  resolveProviders,
-  runsNothing,
-} from '../providers/resolve-providers.js'
-import { serializeProviderRunner } from '../providers/serialize-provider-runner.js'
 
 export const PLATFORM_SERVICES_FILE = 'platform-services.gen.ts'
 
 /**
- * The services (singleton and per-request) a unit's own generated
- * `pikku-services.gen.ts` marks as required: what the functions, middleware and
- * permissions it bundles destructure. Empty when the file is missing.
+ * The services a unit's own generated `pikku-services.gen.ts` marks as
+ * required: what the functions, middleware and permissions it bundles
+ * destructure. Empty when the file is missing.
  */
 export const readUnitRequiredServices = async (
   pikkuDir: string
@@ -31,14 +22,12 @@ export const readUnitRequiredServices = async (
       join(pikkuDir, 'pikku-services.gen.ts'),
       'utf-8'
     )
-    for (const map of ['requiredSingletonServices', 'requiredWireServices']) {
-      const block = content.match(
-        new RegExp(`export const ${map} = \\{([^}]+)\\}`)
-      )
-      for (const line of block?.[1]!.split('\n') ?? []) {
-        const kv = line.match(/'([^']+)':\s*true/)
-        if (kv) required.add(kv[1]!)
-      }
+    const block = content.match(
+      /export const requiredSingletonServices = \{([^}]+)\}/
+    )
+    for (const line of block?.[1]!.split('\n') ?? []) {
+      const kv = line.match(/'([^']+)':\s*true/)
+      if (kv) required.add(kv[1]!)
     }
   } catch {
     // No services map: the unit reaches nothing.
@@ -46,92 +35,91 @@ export const readUnitRequiredServices = async (
   return required
 }
 
-type ProvidersState = Parameters<typeof resolveProviders>[0]['state'] &
-  Pick<InspectorState, 'functions'>
-
 /**
- * What the provider-agnostic server entry holds when services run: nothing (it
- * builds no services of its own).
- */
-export const genericServerEntrySupport = (): ServiceSupport => ({
-  baseline: [],
-  profile: 'server',
-  entryOwned: [],
-  runsServerLifecycle: true,
-})
-
-/**
- * Resolves the project's services for one unit and writes the platform-services
- * file the provider's entry imports, or removes a stale one and returns
- * undefined when the unit runs none.
+ * The file a unit's entry imports to run the host's platform services module. It
+ * exports `createPlatformServices(env, runtime)`, which returns what the entry
+ * already holds with what the host module returns over it.
  *
- * The provider says what its runtime holds and supports (`serviceSupport`); this
- * is the one place that turns it and the project's services into the file, so
- * every adapter gets the same selection, ordering and errors. Only the services
- * the unit reaches are selected (see `resolveProviders`). A provider with no
- * `serviceSupport` cannot run a service, so a project that declares one it
- * would run fails the build there rather than shipping without it.
+ * With a `coercionMap`, a `kysely` the host creates is wrapped with
+ * `createCoercionPlugin`, so a deployed query returns the Date, boolean and
+ * parsed JSON values `pikku dev` returns. The entry's own `kysely` is left as
+ * it is.
+ */
+export const serializePlatformServices = (options: {
+  /** The import specifier of the host's module, from the generated file. */
+  hostModule: string
+  /** The services the unit reaches, handed to the host module. */
+  requiredServices: readonly string[]
+  coercionMap?: Record<string, Record<string, string>>
+}): string => {
+  const { hostModule, requiredServices, coercionMap } = options
+  const coerce =
+    coercionMap !== undefined && Object.keys(coercionMap).length > 0
+
+  return [
+    ...(coerce ? [`import { createCoercionPlugin } from '@pikku/kysely'`] : []),
+    `import { createPlatformServices as createHostPlatformServices } from ${JSON.stringify(hostModule)}`,
+    ``,
+    ...(coerce
+      ? [
+          `const coercionMap = ${JSON.stringify(coercionMap)}`,
+          ``,
+          `const coercedKysely = (kysely: any): any => {`,
+          `  const coerced = kysely.withPlugin(createCoercionPlugin({ map: coercionMap as any }))`,
+          `  return Object.assign(coerced, { stop: () => (kysely.stop ? kysely.stop() : coerced.destroy()) })`,
+          `}`,
+          ``,
+        ]
+      : []),
+    `export const createPlatformServices = async (`,
+    `  env: Record<string, string | undefined>,`,
+    `  runtime: Record<string, unknown> = {}`,
+    `): Promise<Record<string, unknown>> => {`,
+    `  const hosted: Record<string, any> = {`,
+    `    ...(await createHostPlatformServices(env, { ...runtime }, { requiredServices: ${JSON.stringify(requiredServices)} })),`,
+    `  }`,
+    ...(coerce
+      ? [
+          `  if (hosted.kysely && hosted.kysely !== runtime.kysely) hosted.kysely = coercedKysely(hosted.kysely)`,
+        ]
+      : []),
+    `  return { ...runtime, ...hosted }`,
+    `}`,
+    ``,
+  ].join('\n')
+}
+
+/**
+ * Writes the platform services file for a unit whose provider names a host
+ * module, or removes a stale one and returns undefined when it names none.
  */
 export async function writeUnitPlatformServices(options: {
   provider: ProviderAdapter
   ctx: EntryGenerationContext
-  state: ProvidersState
-  projectDir: string
   /** The services the unit's functions, middleware and permissions destructure. */
   requiredServices: ReadonlySet<string>
-  /**
-   * True when the unit's entry is generated by the provider-agnostic server
-   * entry generator, which supports platform services on its own terms
-   * (`genericServerEntrySupport`) instead of the provider's.
-   */
-  genericServerEntry?: boolean
+  /** The services the project's own service factory reads. */
+  projectServicesRead?: readonly string[]
 }): Promise<EntryPlatformServices | undefined> {
-  const { provider, ctx, state, projectDir } = options
+  const { provider, ctx } = options
   const file = join(ctx.unitDir, PLATFORM_SERVICES_FILE)
-  const remove = () => rm(file, { force: true })
-
-  const support = options.genericServerEntry
-    ? genericServerEntrySupport()
-    : provider.serviceSupport?.(ctx)
-  if (!support) {
-    if (collectProviderSources(state, projectDir).length > 0) {
-      throw new Error(
-        `The ${provider.name} deploy cannot run the services the project declares with defineProvider or opts in to with wireAddon (unit '${ctx.unit.name}'): its entry builds no platform services. Remove them, or deploy with a provider that supports them.`
-      )
-    }
-    await remove()
-    return undefined
-  }
-
-  const resolved = resolveProviders({
-    state,
-    rootDir: projectDir,
-    target: 'deploy',
-    profile: support.profile,
-    baseline: support.baseline,
-    entryOwned: support.entryOwned,
-    requiredServices: options.requiredServices,
-    factoryServices: state.projectServicesRead,
-    functions: functionNeedsOf(state.functions.meta, ctx.unit.functionIds),
-    runsServerLifecycle: support.runsServerLifecycle,
-    targetLabel: `the ${provider.name} deploy`,
-    unitLabel: `unit '${ctx.unit.name}'`,
-  })
-  if (runsNothing(resolved)) {
-    await remove()
+  const hostModule = provider.platformServicesModule?.(ctx)
+  if (!hostModule) {
+    await rm(file, { force: true })
     return undefined
   }
 
   await writeFile(
     file,
-    serializeProviderRunner({
-      target: 'deploy',
-      profile: support.profile,
-      services: resolved.ordered,
-      wire: resolved.wire,
-      collections: resolved.collections,
-      specifier: (module) => module.replace(/\\/g, '/'),
+    serializePlatformServices({
+      hostModule,
       coercionMap: ctx.coercionMap,
+      requiredServices: [
+        ...new Set([
+          ...options.requiredServices,
+          ...(options.projectServicesRead ?? []),
+        ]),
+      ].sort(),
     }),
     'utf-8'
   )

@@ -25,17 +25,11 @@ with Node, or a self-contained executable compiled with `bun build --compile`.
 factories the deploy codegen expects, and hand-rolling an `ExportedHandler` is
 how a worker deploy fails at runtime instead of at build.
 
-Platform services an addon builds for the bundle come from the `defineProvider`s
-the project opted in to with `wireAddon({ providers: [...] })`, plus the ones the
-project declares itself. `plan` and `apply` select the `deploy` (or `common`)
-variant of each, order them by what they need and provide and, on standalone,
-run them after the database is open, with `logger` and `kysely` in reach.
-Standalone, the generic server entry and the Cloudflare adapter report what their
-entry holds through `serviceSupport`; a provider without it fails the build when
-the project declares a service. On a Cloudflare Worker a service with
-`onServerStart` is a build error. When the app has a column coercion map and a
-service provides `kysely`, the generated runner wraps it with the coercion
-plugin. See `docs/services.md`.
+A host can supply platform services for the bundle: the deploy provider names a
+module with `platformServicesModule`, and each unit's entry runs its
+`createPlatformServices` before your `createSingletonServices`. When the app has
+a column coercion map and that module returns a `kysely`, the build attaches the
+coercion plugin to it. See `docs/services.md`.
 
 Always run `plan` before `apply`, and read it. It names what will be created,
 updated and deleted — the deletions are the reason to look.

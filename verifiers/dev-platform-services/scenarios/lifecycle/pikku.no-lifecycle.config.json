@@ -1,0 +1,9 @@
+{
+  "ignoreFiles": ["src/lifecycle.ts", "**/*.test.ts", "**/*.spec.ts"],
+  "tsconfig": "./tsconfig.json",
+  "backends": {
+    "api": {
+      "filter": {}
+    }
+  }
+}

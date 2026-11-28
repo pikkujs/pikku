@@ -2,16 +2,16 @@
 /**
  * Keeps the committed Go goldens honest.
  *
- *   bun golden-check.ts [goBin] [--update] [--only addon-load,providers,trigger_feature,harness,workflow_edge]
+ *   bun golden-check.ts [goBin] [--update] [--only addon-load,trigger_feature,harness,workflow_edge,live_scopes]
  *
  * The Rust cargo tests compare against five committed files, each a slice of
  * what the Go inspector prints for a small fixture:
  *
  *   fixtures/addon-load/go.golden.json        tests/addons_checks.rs
- *   fixtures/providers/expected.go.json       tests/providers_fixture.rs
  *   fixtures/trigger_feature/expected.go.json tests/trigger_feature_fixture.rs
  *   fixtures/harness/expected.go.json         tests/harness_fixture.rs
  *   fixtures/workflow_edge/golden.json        tests/workflow_fixtures.rs
+ *   fixtures/live_scopes/expected.json        tests/live_scopes_fixture.rs
  *
  * Go is the reference, so a golden that no longer matches Go is stale. This
  * runs Go on each fixture, takes the same slice the Rust test compares, and
@@ -172,7 +172,7 @@ const SPECS: Spec[] = [
       }
       out.diagnostics = (go.diagnostics ?? []).filter(
         (d: Json) =>
-          codeIn(['PKU356', 'PKU363', 'PKU343', 'PKU364', 'PKU374'])(d) ||
+          codeIn(['PKU356', 'PKU363', 'PKU343', 'PKU364'])(d) ||
           String(d.message).startsWith('wireAddon(')
       )
       return out
@@ -181,23 +181,26 @@ const SPECS: Spec[] = [
   srcFixture('trigger_feature'),
   srcFixture('harness'),
   {
-    name: 'providers',
-    golden: join(FIXTURES, 'providers/expected.go.json'),
+    name: 'live_scopes',
+    golden: join(FIXTURES, 'live_scopes/expected.json'),
     placeholder: '<fixture>',
-    finalize: false,
-    prepare() {
-      const root = join(FIXTURES, 'providers')
-      return {
-        root,
-        routeFiles: tsFiles(join(root, 'src')),
-        options: { rootDir: root, tsconfig: join(root, 'tsconfig.json') },
-      }
-    },
+    finalize: true,
+    prepare: srcFixture('live_scopes').prepare,
     slice(go, current) {
-      const state: Json = {}
-      for (const key of Object.keys(current.state ?? {}))
-        state[key] = stateAt(go.state, key)
-      return { state, diagnostics: go.diagnostics ?? [] }
+      return {
+        scopes: go.state.scopes.definitions.map(
+          ({ sourceFile, origin, ...definition }: Json) => definition
+        ),
+        liveScopes: Object.fromEntries(
+          Object.keys(current.liveScopes).map((id) => [
+            id,
+            go.state.functions.meta[id]?.liveScopes ?? null,
+          ])
+        ),
+        errors: (go.diagnostics ?? [])
+          .filter((d: Json) => String(d.message).includes('`live`'))
+          .map((d: Json) => d.message),
+      }
     },
   },
   {

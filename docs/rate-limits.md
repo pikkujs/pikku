@@ -49,7 +49,7 @@ Add a `rateLimitService` to the singleton services:
 | Service                                                   | Counts are                                                   |
 | --------------------------------------------------------- | ------------------------------------------------------------ |
 | `InMemoryRateLimitService` (`@pikku/core/services`)       | per process, and gone on restart                             |
-| `KyselyRateLimitService` (`@pikku/addon-kysely`)          | in the `pikku_rate_limit` table, shared and durable          |
+| `KyselyRateLimitService` (`@pikku/kysely`)                | in the `pikku_rate_limit` table, shared and durable          |
 | `PgKyselyRateLimitService`, `MySQLKyselyRateLimitService` | as Kysely's, with windows judged on the database clock       |
 | `RedisRateLimitService` (`@pikku/redis`)                  | in Redis, shared and durable, with the key TTL as the window |
 

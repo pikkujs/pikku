@@ -38,29 +38,29 @@ export type DatabaseEngine = 'sqlite' | 'postgres' | 'mysql'
 /**
  * Each engine's workflow services and the lease service that fences its runs
  * between processes. SQLite's lease service is the base one in
- * `@pikku/addon-kysely`; the others judge leases on the database's clock.
+ * `@pikku/kysely`; the others judge leases on the database's clock.
  */
 const ENGINE_WORKFLOW = {
   sqlite: {
-    pkg: '@pikku/addon-kysely-sqlite',
+    pkg: '@pikku/kysely-sqlite',
     service: 'SQLiteKyselyWorkflowService',
     runService: 'SQLiteKyselyWorkflowRunService',
     leaseService: 'KyselyLeaseService',
-    leasePkg: '@pikku/addon-kysely',
+    leasePkg: '@pikku/kysely',
   },
   postgres: {
-    pkg: '@pikku/addon-kysely-postgres',
+    pkg: '@pikku/kysely-postgres',
     service: 'PgKyselyWorkflowService',
     runService: 'PgKyselyWorkflowRunService',
     leaseService: 'PgKyselyLeaseService',
-    leasePkg: '@pikku/addon-kysely-postgres',
+    leasePkg: '@pikku/kysely-postgres',
   },
   mysql: {
-    pkg: '@pikku/addon-kysely-mysql',
+    pkg: '@pikku/kysely-mysql',
     service: 'MySQLKyselyWorkflowService',
     runService: 'MySQLKyselyWorkflowRunService',
     leaseService: 'MySQLKyselyLeaseService',
-    leasePkg: '@pikku/addon-kysely-mysql',
+    leasePkg: '@pikku/kysely-mysql',
   },
 } as const
 
@@ -74,7 +74,7 @@ export interface SerializeLocalServicesOptions {
   /** The events the project declares with `defineAnalyticsEvents`: the map the local database sink is registered with. */
   analyticsEvents: string[]
   /**
-   * Whether the project has a database, which is what brings in `@pikku/addon-kysely`
+   * Whether the project has a database, which is what brings in `@pikku/kysely`
    * and the services backed by it. Without one the file imports from
    * `@pikku/core` alone.
    */
@@ -102,7 +102,7 @@ export const localServicesPackages = ({
   SerializeLocalServicesOptions,
   'database' | 'engine' | 'localCLI'
 >): string[] => [
-  ...(database ? ['@pikku/addon-kysely'] : []),
+  ...(database ? ['@pikku/kysely'] : []),
   ...(database && engine ? [ENGINE_WORKFLOW[engine].pkg] : []),
   ...(localCLI ? ['@pikku/schedule'] : []),
 ]
@@ -132,13 +132,13 @@ const sqliteOpener = (
       "This project's database is sqlite, and opening it under ${runtime} needs ${pkg}. Add it to the project's dependencies, or set DATABASE_URL to a database this process can open."
     )`
   const bun = drivers.bunSqlite
-    ? `const { createBunSqliteKysely } = await import('@pikku/addon-kysely-bun-sqlite')
+    ? `const { createBunSqliteKysely } = await import('@pikku/kysely-bun-sqlite')
     return createBunSqliteKysely<any>({ filename, plugins: ${plugins} })`
-    : missing('@pikku/addon-kysely-bun-sqlite', 'bun')
+    : missing('@pikku/kysely-bun-sqlite', 'bun')
   const node = drivers.nodeSqlite
-    ? `const { createNodeSqliteKysely } = await import('@pikku/addon-kysely-node-sqlite')
+    ? `const { createNodeSqliteKysely } = await import('@pikku/kysely-node-sqlite')
   return createNodeSqliteKysely<any>({ filename, plugins: ${plugins} })`
-    : missing('@pikku/addon-kysely-node-sqlite', 'node')
+    : missing('@pikku/kysely-node-sqlite', 'node')
   return `const openSqlite = async (filename: string): Promise<Kysely<any>> => {
   mkdirSync(dirname(filename), { recursive: true })
   if (typeof (globalThis as { Bun?: unknown }).Bun !== 'undefined') {
@@ -278,13 +278,13 @@ const inMemoryBody = (
   extras: LocalServicesExtras = {},
   options: LocalServicesOptions = {}
 ): Promise<Record<string, any>> => {
-  const { kysely, ...hostServices } = extras
+  const { kysely, analyticsSinks, ...hostServices } = extras
   if (kysely) {
     // Handed a database this file was generated without: the database-backed
     // services are only emitted for a project codegen saw a database in.
     const warnLogger = options.logger ?? stderr
     warnLogger.warn(
-      'A database is configured, but pikku-local-services.gen.ts was generated for a project without one, so its services run in memory. Add db/sqlite or db/postgres, or declare @pikku/addon-kysely, and regenerate.'
+      'A database is configured, but pikku-local-services.gen.ts was generated for a project without one, so its services run in memory. Add db/sqlite or db/postgres, or declare @pikku/kysely, and regenerate.'
     )
   }
   const queueService = new InMemoryQueueService()
@@ -303,6 +303,7 @@ ${localCLI ? cliOnlyServices : ''}    queueService,
     agentStorage: undefined,
     agentRunState: new InMemoryAgentRunStateService(),
     agentRunService: undefined,
+    analyticsSinks: analyticsSinks ?? createAnalyticsSinks(),
     ...(kysely ? { kysely } : {}),
     ...hostServices,
   }
@@ -347,7 +348,8 @@ export const createLocalServices = async (
   extras: LocalServicesExtras = {},
   options: LocalServicesOptions = {}
 ): Promise<Record<string, any>> => {
-  const { kysely: hostKysely, ...hostServices } = extras
+  const { kysely: hostKysely, analyticsSinks: hostAnalyticsSinks, ...hostServices } =
+    extras
   const warnLogger = options.logger ?? stderr
   const isRequired = (name: GatedService): boolean =>
     options.requiredServices
@@ -383,22 +385,18 @@ export const createLocalServices = async (
   const featureFlags = kysely
     ? await initOrWarn(new KyselyFeatureFlagStore(kysely), 'featureFlags', warnLogger)
     : undefined
+  const analyticsSinks = hostAnalyticsSinks ?? createAnalyticsSinks()
   const analyticsDatabase = kysely
     ? await initOrWarn(new KyselyAnalyticsService(kysely), 'analyticsSinks', warnLogger)
     : undefined
-  const analyticsSinks = analyticsDatabase
-    ? [
-        {
-          label: 'local/kysely',
-          item: {
-            sink: analyticsDatabase,
-            map: Object.fromEntries(
-              (options.analyticsEvents ?? declaredAnalyticsEvents).map((name) => [name, true])
-            ),
-          },
-        },
-      ]
-    : []
+  if (analyticsDatabase) {
+    analyticsSinks.add(
+      analyticsDatabase,
+      Object.fromEntries(
+        (options.analyticsEvents ?? declaredAnalyticsEvents).map((name) => [name, true])
+      )
+    )
+  }
 
   const scopeService =
     kysely && isRequired('scopeService') ? new KyselyScopeService(kysely) : undefined
@@ -541,8 +539,8 @@ export const serializeLocalServices = ({
   if (database) {
     imports.push(
       opens && (drivers?.pg || drivers?.mysql)
-        ? `import { CamelCasePlugin, Kysely${drivers?.mysql ? ', MysqlDialect' : ''}${drivers?.pg ? ', PostgresDialect' : ''} } from '@pikku/addon-kysely'`
-        : `import type { Kysely } from '@pikku/addon-kysely'`
+        ? `import { CamelCasePlugin, Kysely${drivers?.mysql ? ', MysqlDialect' : ''}${drivers?.pg ? ', PostgresDialect' : ''} } from '@pikku/kysely'`
+        : `import type { Kysely } from '@pikku/kysely'`
     )
   }
   imports.push(
@@ -556,6 +554,8 @@ export const serializeLocalServices = ({
     ...(database && engine
       ? [`import type { LeaseService } from '@pikku/core/services'`]
       : []),
+    `import { createAnalyticsSinks } from '@pikku/core/analytics'`,
+    `import type { AnalyticsSinkRegistry } from '@pikku/core/analytics'`,
     `import { InMemoryQueueService } from '@pikku/core/services/in-memory-queue'`,
     `import { InMemoryTriggerService } from '@pikku/core/services/in-memory-trigger'`,
     `import { InMemoryWorkflowService } from '@pikku/core/services/in-memory-workflow'`
@@ -578,10 +578,10 @@ export const serializeLocalServices = ({
   KyselyAnalyticsService,
   KyselyFeatureFlagStore,
   KyselyIncomingWebhookService,
-  ${engine && ENGINE_WORKFLOW[engine].leasePkg === '@pikku/addon-kysely' ? `${ENGINE_WORKFLOW[engine].leaseService},\n  ` : ''}KyselyScopeService,
+  ${engine && ENGINE_WORKFLOW[engine].leasePkg === '@pikku/kysely' ? `${ENGINE_WORKFLOW[engine].leaseService},\n  ` : ''}KyselyScopeService,
   KyselyTriggerSourceStore,
   KyselyWebhookService,
-} from '@pikku/addon-kysely'`)
+} from '@pikku/kysely'`)
     if (engine) {
       const { pkg, service, runService, leaseService, leasePkg } =
         ENGINE_WORKFLOW[engine]
@@ -638,6 +638,8 @@ export interface LocalServicesExtras {
    }
    */
   kysely?: ${database ? 'Kysely<any>' : 'unknown'} | null
+  /** The registry the host created; the local analytics sink is added to it. Created here when the host has none. */
+  analyticsSinks?: AnalyticsSinkRegistry
   /** Anything else the host provides, which wins over what is assembled here. */
   [service: string]: unknown
 }

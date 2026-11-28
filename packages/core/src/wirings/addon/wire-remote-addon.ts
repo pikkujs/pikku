@@ -60,12 +60,11 @@ export type WireRemoteAddonConfig = {
    */
   expose?: boolean | string[]
   /**
-   * A package installed in this project that carries the screens and
-   * services shown under this name, when they live apart from the contract
-   * package. Read at build time, never at runtime. `ui` mounts its screens;
-   * `providers` opts in to the ones it declares.
+   * A package installed in this project that carries the screens shown under
+   * this name, when they live apart from the contract package. Read at build
+   * time, never at runtime. `ui` mounts its screens.
    */
-  local?: { package: string; ui?: boolean; providers?: string[] }
+  local?: { package: string; ui?: boolean }
   /** Milliseconds a call may take before it is aborted. Defaults to {@link DEFAULT_REMOTE_ADDON_TIMEOUT_MS}. */
   timeoutMs?: number
   /** Extra headers for every call to the host. Cannot replace the auth, trace or contract headers. */

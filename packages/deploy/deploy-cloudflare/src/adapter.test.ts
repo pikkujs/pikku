@@ -70,34 +70,48 @@ describe('CloudflareProviderAdapter services', () => {
     )
     assert.match(source, /__pikkuPlatformServices\(env, services\)/)
   })
+})
 
-  test('a worker holds the queue binding service in its baseline', () => {
-    const support = new CloudflareProviderAdapter({}).serviceSupport({
-      ...(ctx as object),
-      unit: { ...(unit as object), target: 'serverless' },
-    } as never)
-    assert.ok(support.baseline.includes('queueService'))
-    assert.ok(support.baseline.includes('logger'))
+/** Runs the entry's own address declaration against a given env and config. */
+const listenAddress = (
+  source: string,
+  env: Record<string, string>,
+  config: { hostname?: string }
+): string => {
+  const declaration = source.match(/const HOST = (.+)$/m)
+  assert.ok(declaration, 'the entry declares no listen address')
+  assert.ok(
+    source.indexOf('const config = await') < declaration.index!,
+    'the address is resolved once the config exists'
+  )
+  return new Function('process', 'config', `return ${declaration[1]}`)(
+    { env },
+    config
+  )
+}
+
+describe('CloudflareProviderAdapter container listen address', () => {
+  const source = () =>
+    new CloudflareProviderAdapter().generateServerEntrySource(ctx)
+
+  test('HOST wins over the configured hostname', () => {
+    assert.equal(
+      listenAddress(source(), { HOST: '10.0.0.1' }, { hostname: '127.0.0.1' }),
+      '10.0.0.1'
+    )
   })
 
-  test('the container holds no bindings: logger and schema only', () => {
-    const support = new CloudflareProviderAdapter({}).serviceSupport({
-      ...(ctx as object),
-      unit: { ...(unit as object), target: 'server' },
-    } as never)
-    assert.deepEqual([...support.baseline], ['logger', 'schema'])
+  test('the configured hostname applies when HOST is unset or empty', () => {
+    for (const env of [{}, { HOST: '' }] as Record<string, string>[]) {
+      assert.equal(
+        listenAddress(source(), env, { hostname: '127.0.0.1' }),
+        '127.0.0.1'
+      )
+    }
   })
 
-  test('a worker and a container are different profiles and own nothing', () => {
-    const support = (target: string) =>
-      new CloudflareProviderAdapter({}).serviceSupport({
-        ...(ctx as object),
-        unit: { ...(unit as object), target },
-      } as never)
-    assert.equal(support('serverless').profile, 'cloudflare-worker')
-    assert.equal(support('server').profile, 'cloudflare-container')
-    assert.deepEqual([...support('serverless').entryOwned], [])
-    assert.deepEqual([...support('server').entryOwned], [])
+  test('every interface is the default when neither names an address', () => {
+    assert.equal(listenAddress(source(), {}, {}), '0.0.0.0')
   })
 })
 
@@ -415,52 +429,33 @@ describe('CloudflareProviderAdapter container server lifecycle', () => {
     assert.match(source, /server\.enableExitOnSignals\(\)/)
   })
 
-  test('service start hooks run before the app lifecycle', () => {
+  test('platform services exist before the app builds its own', () => {
     const source = generate({ lifecycle, platformServices })
-    assert.match(
-      source,
-      /import \{ serverStartHooks as __pikkuStartHooks \} from '\.\/platform-services\.gen\.js'/
-    )
-    assert.match(
-      source,
-      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/
-    )
     assert.ok(
       at(source, 'createPlatformServices(env)') <
         at(source, 'createSingletonServices(config'),
       'services exist before the app builds its own'
     )
     assert.ok(
-      at(source, 'server.init()') <
-        at(source, '__pikkuServerLifecycle?.beforeStart') &&
-        at(source, '__pikkuServerLifecycle?.beforeStart') <
-          at(source, 'server.start()') &&
-        at(source, 'server.start()') <
-          at(source, '__pikkuServerLifecycle?.afterStart')
+      at(source, 'await createPlatformServices(env)') <
+        at(source, 'await createConfig('),
+      'services exist before the config is read'
     )
     assert.match(
       source,
-      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuServerLifecycle\?\.beforeStop\?\.\(singletonServices\), afterStop: \(\) => __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\) \}\)/
+      /const variables = platformServices\.variables \?\? new LocalVariablesService\(env\)/
     )
-  })
-
-  test('the worker entry never imports or runs the hooks', () => {
-    const source = new CloudflareProviderAdapter({}).generateEntrySource({
-      ...(ctx as object),
-      unit: { ...(unit as object), target: 'serverless' },
-      lifecycle,
-      platformServices,
-    } as never)
-    assert.doesNotMatch(source, /serverStartHooks|composeServerLifecycle/)
-  })
-
-  test('only the container target runs the server lifecycle', () => {
-    const support = (target: string) =>
-      new CloudflareProviderAdapter({}).serviceSupport({
-        ...(ctx as object),
-        unit: { ...(unit as object), target },
-      } as never)
-    assert.equal(support('server').runsServerLifecycle, true)
-    assert.equal(support('serverless').runsServerLifecycle, false)
+    assert.ok(
+      at(source, 'server.init()') <
+        at(source, '__pikkuLifecycle?.beforeStart') &&
+        at(source, '__pikkuLifecycle?.beforeStart') <
+          at(source, 'server.start()') &&
+        at(source, 'server.start()') <
+          at(source, '__pikkuLifecycle?.afterStart')
+    )
+    assert.match(
+      source,
+      /enableExitOnSignals\(\{ beforeStop: \(\) => __pikkuLifecycle\?\.beforeStop\?\.\(singletonServices\), afterStop: \(\) => __pikkuLifecycle\?\.afterStop\?\.\(singletonServices\) \}\)/
+    )
   })
 })

@@ -327,12 +327,13 @@
   ],
   "./harness": ["pikkuHarness", "pikkuHarnessGate", "pikkuHarnessGateAgent"],
   "./analytics": [
+    "AnalyticsSinkRegistry",
     "LoggerAnalyticsService",
-    "analyticsSinks",
     "anonymousAnalyticsIdentity",
     "assertAnalyticsSinksDeclared",
     "composeAnalyticsIdentity",
     "cookieAnalyticsIdentity",
+    "createAnalyticsSinks",
     "createInvocationAnalytics",
     "defineAnalyticsEvents",
     "fanOutAnalytics",
@@ -673,6 +674,7 @@
     "unsafeAsWrapped"
   ],
   "./utils": [
+    "closeWireServices",
     "createWeakUID",
     "formatVersionedId",
     "freezeDedupe",
@@ -687,28 +689,13 @@
     "parseJson",
     "parseVersionedId",
     "pikkuServerLifecycle",
-    "stopSingletonServices",
-    "stopWireServices"
-  ],
-  "./provider": [
-    "PROTECTED_KEYS",
-    "PROVIDER_PROFILES",
-    "ProviderError",
-    "ProviderRegistry",
-    "WireProviders",
-    "defineProvider",
-    "defineProviderCollection",
-    "defineWireProvider",
-    "recordStopOrder",
-    "runProviders",
-    "scopedEnv",
-    "variantOrder"
+    "stopSingletonServices"
   ],
   "./telemetry-store": [],
   "./telemetry-store/testing": ["MemoryTelemetryStore", "conformance"],
   "./lifecycle": [
-    "composeServerLifecycle",
     "onShutdownSignals",
+    "pikkuPlatformServices",
     "pikkuServerLifecycle",
     "stopSingletonServices"
   ],

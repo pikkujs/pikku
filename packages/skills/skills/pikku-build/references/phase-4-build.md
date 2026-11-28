@@ -179,39 +179,6 @@ it is worth writing as a browser step on §7's scenario and running
 `pikku scenario run local --spawn --run browser`: same clicks, same assertions,
 in the repo, green or red on every future run.
 
-**A project can take platform services from an addon's `defineProvider`s.** The
-addon exports them (a function, or an object with `dev`, `deploy` and `common`
-variants and an optional `onServerStart`), and the project opts in by name:
-
-```ts
-wireAddon({
-  name: 'inbox',
-  package: '@my-org/addon-inbox',
-  providers: ['inbox'],
-})
-```
-
-A project declares its own the same way with `defineProvider` from
-`#pikku/provider`. A factory destructures what it needs from `services` and
-returns what it provides; the inspector reads both, so there is no `needs` or
-`provides` list.
-
-Nothing is injected without that list. `pikku all` resolves the `dev` variants
-(ordering by what each needs and provides) and writes
-`.pikku/providers/pikku-dev-providers.gen.ts`; `pikku dev` and `pikku serve` merge
-what it builds over the local services before `createSingletonServices` runs, so
-a provided `emailService` beats `LocalEmailService` (and the test-mode spy). Both
-skip the file under `NODE_ENV=production`. A service's `onServerStart` runs before
-the app's `beforeStart`; teardown is the provided value's `stop()`. An unmet need,
-a key provided twice or a cycle fails `pikku all`. A host that injects an addon
-(CI, Studio) writes a gitignored wiring file containing
-`wireAddon({ name, package, providers })`. Providers are in-process, trusted code:
-`pikku-addons.lock` records each addon provider's surface (commit it; `--frozen`,
-implied by `CI=true`, refuses to change it), and an addon provider reads only the
-variables and secrets its addon declares. `defineWireProvider` builds per-request
-services and `defineProviderCollection` plus `addTo` contribute list items.
-Reference: `docs/services.md`.
-
 ## 6a. Close the changeset against its plan, not against your memory
 
 ```sh

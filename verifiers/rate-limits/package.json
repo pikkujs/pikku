@@ -8,8 +8,8 @@
     "#pikku/*": "./.pikku/*/index.ts"
   },
   "dependencies": {
-    "@pikku/addon-kysely": "workspace:*",
     "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
     "@pikku/redis": "workspace:*",
     "@pikku/schema-cfworker": "workspace:*",
     "better-sqlite3": "^13.0.3",

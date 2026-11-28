@@ -13,8 +13,8 @@
     "lint": "oxlint --type-aware"
   },
   "dependencies": {
-    "@pikku/addon-kysely": "workspace:*",
-    "@pikku/addon-kysely-sqlite": "workspace:*",
-    "@pikku/core": "workspace:*"
+    "@pikku/core": "workspace:*",
+    "@pikku/kysely": "workspace:*",
+    "@pikku/kysely-sqlite": "workspace:*"
   }
 }

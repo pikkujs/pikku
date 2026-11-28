@@ -148,12 +148,11 @@ export const pikkuBootstrap = pikkuSessionlessFunc<BootstrapInput, void>({
   },
 })
 
-const readAddonBootstrap = async (
+const readAddonFile = async (
   rootDir: string,
   declFile: string | undefined,
-  packageName: string,
-  bootstrapSpecifier: string
-) => {
+  specifier: string
+): Promise<string | null> => {
   try {
     // Dynamic, like the other inspector uses in this package: a static import
     // would load the TypeScript compiler on every command, `pikku --help`
@@ -162,9 +161,19 @@ const readAddonBootstrap = async (
       await import('@pikku/inspector')
     const path = createAddonResolver(
       addonResolutionDirs(rootDir, declFile)
-    ).resolve(bootstrapSpecifier)
-    return splitAddonBootstrap(packageName, readFileSync(path, 'utf8'))
+    ).resolve(specifier)
+    return readFileSync(path, 'utf8')
   } catch {
     return null
   }
+}
+
+const readAddonBootstrap = async (
+  rootDir: string,
+  declFile: string | undefined,
+  packageName: string,
+  bootstrapSpecifier: string
+) => {
+  const source = await readAddonFile(rootDir, declFile, bootstrapSpecifier)
+  return source === null ? null : splitAddonBootstrap(packageName, source)
 }

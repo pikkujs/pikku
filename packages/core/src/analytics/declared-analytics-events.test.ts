@@ -5,7 +5,7 @@ import {
   assertAnalyticsSinksDeclared,
   getDeclaredAnalyticsEvents,
 } from './declared-analytics-events.js'
-import { fanOutAnalytics } from './fan-out-analytics.js'
+import { createAnalyticsSinks, fanOutAnalytics } from './fan-out-analytics.js'
 import type { AnalyticsRecord, AnalyticsService } from './analytics.types.js'
 
 const record = (name: string): AnalyticsRecord => ({
@@ -57,17 +57,11 @@ describe('getDeclaredAnalyticsEvents', () => {
   test('a sink mapped from them gets declared events and not an undeclared one', async () => {
     register('page_viewed')
     const { seen, sink } = collector()
-    const sinks = [
-      {
-        label: 'sink',
-        item: {
-          sink,
-          map: Object.fromEntries(
-            getDeclaredAnalyticsEvents().map((n) => [n, true])
-          ),
-        },
-      },
-    ]
+    const sinks = createAnalyticsSinks()
+    sinks.add(
+      sink,
+      Object.fromEntries(getDeclaredAnalyticsEvents().map((n) => [n, true]))
+    )
     await fanOutAnalytics(sinks, collector().sink).write([
       record('page_viewed'),
       record('not_declared'),
@@ -77,25 +71,24 @@ describe('getDeclaredAnalyticsEvents', () => {
 })
 
 describe('assertAnalyticsSinksDeclared', () => {
-  test('passes with no collection, or one with no sinks', () => {
+  test('passes with no registry, or a registry with no sinks', () => {
     assert.doesNotThrow(() => assertAnalyticsSinksDeclared(undefined))
-    assert.doesNotThrow(() => assertAnalyticsSinksDeclared([]))
+    assert.doesNotThrow(() =>
+      assertAnalyticsSinksDeclared(createAnalyticsSinks())
+    )
   })
 
   test('passes when sinks are registered and events are declared', () => {
     register('page_viewed')
-    const sinks = [
-      {
-        label: 's',
-        item: { sink: collector().sink, map: { page_viewed: true } },
-      },
-    ]
+    const sinks = createAnalyticsSinks()
+    sinks.add(collector().sink, { page_viewed: true })
     assert.doesNotThrow(() => assertAnalyticsSinksDeclared(sinks))
   })
 
   test('refuses sinks when the app declares no events', () => {
     register()
-    const sinks = [{ label: 's', item: { sink: collector().sink, map: {} } }]
+    const sinks = createAnalyticsSinks()
+    sinks.add(collector().sink, {})
     assert.throws(
       () => assertAnalyticsSinksDeclared(sinks),
       /1 analytics sink is registered, but the app declares no analytics events/
@@ -103,12 +96,8 @@ describe('assertAnalyticsSinksDeclared', () => {
   })
 
   test('refuses sinks when the declared events were never registered', () => {
-    const sinks = [
-      {
-        label: 's',
-        item: { sink: collector().sink, map: { page_viewed: true } },
-      },
-    ]
+    const sinks = createAnalyticsSinks()
+    sinks.add(collector().sink, { page_viewed: true })
     assert.throws(
       () => assertAnalyticsSinksDeclared(sinks),
       /did not import analytics\/pikku-analytics-meta\.gen\.ts/

@@ -128,6 +128,7 @@ pub fn run(log: &mut Logger, st: &mut State, opts: &Options) -> Result<(), Strin
         addons::validate_remote_addon_dependencies(log, st);
         addons::validate_remote_addon_auth(log, st);
         scopes::apply_declared_scopes(st);
+        scopes::mark_live_scope_functions(st);
         scopes::validate_scope_references(log, st);
         scopes::validate_system_role_scopes(log, st);
         scopes::validate_virtual_user_roles(log, st);

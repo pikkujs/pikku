@@ -17,8 +17,7 @@
     "src/wirings/agent/agent-middleware.types.test.ts",
     "src/wirings/harness/harness.test.ts",
     "src/wirings/webhook/define-outgoing-webhook.test.ts",
-    "src/provider/define-provider.types.test.ts",
-    "src/types/create-wire-services.types.test.ts",
+    "src/platform-services.types.test.ts",
     "src/crud/define-crud.types.test.ts"
   ]
 }

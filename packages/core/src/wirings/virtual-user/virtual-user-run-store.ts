@@ -95,7 +95,7 @@ export interface VirtualUserRunOutcome {
 
 /**
  * Where runs are kept. Declared here rather than in a database package so the
- * scaffolded RPCs depend on the shape and not on kysely — `@pikku/addon-kysely` ships
+ * scaffolded RPCs depend on the shape and not on kysely — `@pikku/kysely` ships
  * one implementation, and an app with its own store satisfies this instead.
  *
  * SECURITY: findings from an `adversarial` run are working exploits carrying

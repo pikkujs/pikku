@@ -201,6 +201,8 @@ pub struct FunctionMetaFields {
     pub scenario_step_template: String,
     #[serde(default, skip_serializing_if = "is_empty_vec")]
     pub scopes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub live_scopes: Option<bool>,
     #[serde(default, skip_serializing_if = "is_empty_str")]
     pub implementation_hash: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -1,17 +1,15 @@
 ---
 type: decision
 title: Telemetry sinks are registries and the tracer is always real
-description: otlpSinks is a registry the host creates and analyticsSinks is a provider collection; the endpoint only controls the HTTP sink; in-process sinks are trusted; metrics can still drop
+description: otlpSinks and analyticsSinks are singleton services created by the host; the endpoint only controls the HTTP sink; in-process sinks are trusted; metrics can still drop
 tags: core
 ---
 
 # Telemetry sinks are registries and the tracer is always real
 
-`pikku dev`, `pikku serve` and the standalone entry create `otlpSinks` before the
-app's `createSingletonServices` and re-attach it afterwards. `fanOutOtlp` reads
-the list lazily. `analyticsSinks` is a provider collection (`defineProviderCollection`)
-that providers add to with `addTo`: the runner builds it once, and
-`fanOutAnalytics` reads its label-sorted entries, preparing each item's map once.
+`pikku dev`, `pikku serve` and the standalone entry create `otlpSinks` and
+`analyticsSinks` before the app's `createSingletonServices` and re-attach them
+afterwards. `fanOutOtlp` and `fanOutAnalytics` read the list lazily.
 
 - `PIKKU_OTLP_ENDPOINT` only decides whether the HTTP exporter is registered. An
   explicit `PIKKU_TELEMETRY=0` stays inert.

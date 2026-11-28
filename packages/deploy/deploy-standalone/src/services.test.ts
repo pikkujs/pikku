@@ -45,7 +45,7 @@ describe(`StandaloneProviderAdapter services`, () => {
     )
     assert.match(
       source,
-      /otlpSinks: __pikkuTelemetry\.otlpSinks,\n    \.\.\.platformServices,\n  \}\)/,
+      /analyticsSinks: __pikkuAnalyticsSinks,\n    \.\.\.platformServices,\n  \}\)/,
       'provided services must be spread last so they override the defaults'
     )
     assert.doesNotMatch(source, /const createPlatformServices = async/)
@@ -65,36 +65,9 @@ describe(`StandaloneProviderAdapter services`, () => {
       /^await createPlatformServices\(process\.env as Record<string, string \| undefined>, \{ logger, kysely, /
     )
   })
-
-  test('serviceSupport lists the keys the entry holds, with kysely only when it opens a database', () => {
-    const adapter = new StandaloneProviderAdapter({})
-    const support = adapter.serviceSupport(ctx as never)
-    assert.ok(support.baseline.includes('logger'))
-    assert.ok(!support.baseline.includes('kysely'))
-    assert.ok(
-      adapter
-        .serviceSupport({
-          ...(ctx as object),
-          db: { engine: 'sqlite' },
-        } as never)
-        .baseline.includes('kysely')
-    )
-  })
-
-  test('serviceSupport names the standalone profile and owns kysely only when it opens a database', () => {
-    const adapter = new StandaloneProviderAdapter({})
-    const without = adapter.serviceSupport(ctx as never)
-    assert.equal(without.profile, 'standalone')
-    assert.deepEqual([...without.entryOwned], [])
-    const withDb = adapter.serviceSupport({
-      ...(ctx as object),
-      db: { engine: 'sqlite' },
-    } as never)
-    assert.deepEqual([...withDb.entryOwned], ['kysely'])
-  })
 })
 
-describe(`StandaloneProviderAdapter service server hooks`, () => {
+describe(`StandaloneProviderAdapter server lifecycle`, () => {
   const lifecycle = { importPath: './lifecycle.js', variable: 'lifecycle' }
   const platformServices = { importPath: './platform-services.gen.js' }
   const generate = (extra: object) =>
@@ -108,51 +81,28 @@ describe(`StandaloneProviderAdapter service server hooks`, () => {
     return index
   }
 
-  test('runs the server lifecycle', () => {
-    assert.equal(
-      new StandaloneProviderAdapter({}).serviceSupport(ctx).runsServerLifecycle,
-      true
-    )
-  })
-
-  test('without services the entry reads as it did: the app lifecycle alone', () => {
-    const source = generate({ lifecycle })
-    assert.doesNotMatch(source, /composeServerLifecycle|serverStartHooks/)
-    assert.match(source, /__pikkuLifecycle\?\.beforeStart/)
-  })
-
-  test('the composed lifecycle starts services first, on the signal path too', () => {
+  test('the app lifecycle runs around the server, on the signal path too', () => {
     const source = generate({ lifecycle, platformServices })
-    assert.match(
-      source,
-      /const __pikkuServerLifecycle = composeServerLifecycle\(__pikkuLifecycle, \{ start: __pikkuStartHooks \}\)/
-    )
     assert.ok(
-      at(source, '__pikkuServerLifecycle?.beforeStart') <
+      at(source, '__pikkuLifecycle?.beforeStart') <
         at(source, 'await server.start()') &&
         at(source, 'await server.start()') <
-          at(source, '__pikkuServerLifecycle?.afterStart')
+          at(source, '__pikkuLifecycle?.afterStart')
     )
     assert.match(
       source,
-      /server\.enableExitOnSignals\(\{ beforeStop: async \(\) => \{ await __pikkuServerLifecycle\?\.beforeStop\?\.\(singletonServices\) \}, afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuTelemetry\.close\(\) \} \}\)/
+      /server\.enableExitOnSignals\(\{ beforeStop: async \(\) => \{ await __pikkuLifecycle\?\.beforeStop\?\.\(singletonServices\) \}, afterStop: async \(\) => \{ await __pikkuLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuTelemetry\.close\(\) \} \}\)/
     )
-  })
-
-  test('service start hooks run even when the app declares no lifecycle', () => {
-    const source = generate({ platformServices })
-    assert.match(source, /composeServerLifecycle\(undefined,/)
-    assert.match(source, /__pikkuServerLifecycle\?\.beforeStart/)
   })
 
   test('the pool is closed after the app afterStop', () => {
     const source = generate({
-      platformServices,
+      lifecycle,
       db: { engine: 'postgres' },
     })
     assert.match(
       source,
-      /afterStop: async \(\) => \{ await __pikkuServerLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuPg\.close\(\); await __pikkuTelemetry\.close\(\) \}/
+      /afterStop: async \(\) => \{ await __pikkuLifecycle\?\.afterStop\?\.\(singletonServices\); await __pikkuPg\.close\(\); await __pikkuTelemetry\.close\(\) \}/
     )
   })
 })
