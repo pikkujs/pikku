@@ -86,6 +86,11 @@ import { wipeSqlite } from './sqlite/sqlite-wipe.js'
 import { devSeed as runDevSeed, type DevSeedResult } from './sqlite/dev-seed.js'
 import { PostgresMigrationExecutor } from '@pikku/migrator-sql/postgres'
 import { createPGliteKysely } from './postgres/pglite-kysely.js'
+import {
+  scratchServerUrl,
+  withScratchServerDatabase,
+} from './postgres/scratch-server.js'
+import { openPristineDatabase } from './postgres/pristine-snapshot.js'
 import { MysqlMigrationExecutor } from '@pikku/migrator-sql/mysql'
 import {
   checkChangeStatements,
@@ -574,7 +579,8 @@ export async function loadPGliteExtensions(
 
 async function createEmbeddedPostgres(
   context: PGliteExtensionContext,
-  dataDir?: string
+  dataDir?: string,
+  loadDataDir?: Blob
 ): Promise<PGlite> {
   embeddedPostgresWasm ??= loadEmbeddedPostgresWasm()
 
@@ -601,6 +607,7 @@ async function createEmbeddedPostgres(
   const exitCodeBeforeBoot = process.exitCode
   const db = new PGlite({
     ...(dataDir ? { dataDir } : {}),
+    ...(loadDataDir ? { loadDataDir } : {}),
     ...wasm,
     extensions: {
       pgcrypto,
@@ -1236,17 +1243,28 @@ function isMysqlAuthDatabase(options: {
 }
 
 // The scratch database is a throwaway used only to compute the desired Better
-// Auth schema and the migration-covered schema for drift detection. We always
-// use an in-memory PGlite instance for it — PGlite is real Postgres, so the
+// Auth schema and the migration-covered schema for drift detection. By default it
+// is an in-memory PGlite instance — PGlite is real Postgres, so the
 // introspection stays accurate, and it needs no `CREATEDB` privilege on the
-// target server. Creating a real database via `CREATE DATABASE` would require
-// elevated privileges that application roles (correctly) don't have, which made
-// `pikku db migrate` fail against managed/locked-down Postgres (error 42501).
+// target server, which application roles (correctly) don't have. Naming a
+// scratch server opts into throwaway databases there instead, which are far
+// quicker to create than a PGlite instance is to boot. Its extensions are then
+// the server's, not the ones `pgliteExtensions` declares.
 async function withScratchPostgresDatabase<T>(
   context: PGliteExtensionContext,
   run: (scratchDb: PostgresQueryClient) => Promise<T>
 ): Promise<T> {
-  const scratchDb = await createEmbeddedPostgres(context)
+  const serverUrl = scratchServerUrl()
+  if (serverUrl) {
+    return withScratchServerDatabase(serverUrl, (client, connectionString) =>
+      run(Object.assign(client, { __connectionString: connectionString }))
+    )
+  }
+
+  const scratchDb = await openPristineDatabase(
+    (loadDataDir) => createEmbeddedPostgres(context, undefined, loadDataDir),
+    () => createEmbeddedPostgres({ ...context, pgliteExtensions: [] })
+  )
   try {
     return await run(pgliteAsClient(scratchDb))
   } catch (error) {
@@ -1256,6 +1274,22 @@ async function withScratchPostgresDatabase<T>(
       await scratchDb.close()
     }
   }
+}
+
+/** A Kysely over a scratch database, whichever of the two backs it. */
+async function createScratchKysely(
+  scratchDb: PostgresQueryClient
+): Promise<Kysely<any>> {
+  if (scratchDb.__pglite) {
+    return createPGliteKysely<any>({ db: scratchDb.__pglite, camelCase: true })
+  }
+  const { Pool } = await import('pg')
+  return new Kysely<any>({
+    dialect: new PostgresDialect({
+      pool: new Pool({ connectionString: scratchDb.__connectionString }),
+    }),
+    plugins: [new CamelCasePlugin()],
+  })
 }
 
 async function postgresDatabaseToMap(
@@ -1277,14 +1311,9 @@ async function desiredPostgresAuthSchema(
   logger: { error: (msg: string) => void }
 ): Promise<DesiredAuthSchema | null> {
   return withScratchPostgresDatabase(context, async (scratchDb) => {
-    // The scratch DB is always an embedded PGlite instance (see
-    // withScratchPostgresDatabase), so drive Better Auth's migration codegen
-    // through the PGlite-backed Kysely regardless of how the app DB is
-    // configured.
-    const kysely = createPGliteKysely<any>({
-      db: scratchDb.__pglite!,
-      camelCase: true,
-    })
+    // Better Auth's migration codegen runs against the scratch database, not
+    // the configured app database.
+    const kysely = await createScratchKysely(scratchDb)
 
     try {
       const options = await loadAuthOptions({
@@ -1573,10 +1602,7 @@ async function withThrowawayKysely<T>(
   }
 
   return withScratchPostgresDatabase(resolved, async (db) => {
-    const kysely = createPGliteKysely<any>({
-      db: db.__pglite!,
-      camelCase: true,
-    })
+    const kysely = await createScratchKysely(db)
     try {
       return await work(kysely, () => postgresDatabaseToMap(db))
     } finally {
@@ -1714,14 +1740,53 @@ async function coveredSchema(
   }
 }
 
+/**
+ * The last replay in this process. One command asks for the covered schema
+ * several times, and the answer only changes when the migrations do.
+ */
+let lastPostgresReplay: { key: string; schema: SchemaMap } | undefined
+
+/** Everything a replay depends on, the migrations by content. */
+function replayKey(
+  migrationsDir: string,
+  context: PGliteExtensionContext
+): string {
+  const files = existsSync(migrationsDir)
+    ? readdirSync(migrationsDir)
+        .filter((name) => name.endsWith('.sql'))
+        .sort()
+        .map((name) => [name, readFileSync(join(migrationsDir, name), 'utf8')])
+    : []
+  return JSON.stringify([
+    migrationsDir,
+    context.rootDir,
+    context.pgliteExtensions,
+    scratchServerUrl(),
+    files,
+  ])
+}
+
 async function coveredPostgresSchema(
   migrationsDir: string,
   context: PGliteExtensionContext
 ): Promise<SchemaMap> {
-  return withScratchPostgresDatabase(context, async (client) => {
-    await migrate(new PostgresMigrationExecutor(client), migrationsDir, REPLAY)
-    return postgresDatabaseToMap(client)
-  })
+  const key = replayKey(migrationsDir, context)
+  if (lastPostgresReplay?.key !== key) {
+    const schema = await withScratchPostgresDatabase(
+      context,
+      async (client) => {
+        await migrate(
+          new PostgresMigrationExecutor(client),
+          migrationsDir,
+          REPLAY
+        )
+        return postgresDatabaseToMap(client)
+      }
+    )
+    lastPostgresReplay = { key, schema }
+  }
+  // A copy, so a caller that edits what it is handed cannot change the next one's.
+  return structuredClone(lastPostgresReplay.schema)
 }
 
 export interface SchemaDriftResult {

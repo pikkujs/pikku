@@ -1,3 +1,16 @@
+## 0.12.36
+
+### Patch Changes
+
+- 32d3ae5: A host can supply platform services from one module exporting `createPlatformServices(env, services, { requiredServices })`: a deploy provider names it with `platformServicesModule(ctx)`, and whoever starts `pikku dev` or `pikku serve` passes it with `--platform-services <module>`. On Cloudflare Workers, Cloudflare containers and the server entry, platform services are now built before `createConfig`, which receives the `variables` they provide. `pikkuPlatformServices` from `@pikku/core/lifecycle` types that module's function.
+- Updated dependencies [6f7b3a1]
+- Updated dependencies [34929df]
+- Updated dependencies [d340ea3]
+- Updated dependencies [32d3ae5]
+- Updated dependencies [fdca6f2]
+- Updated dependencies [aaad408]
+  - @pikku/core@0.12.163
+
 ## 0.12.35
 
 ### Patch Changes

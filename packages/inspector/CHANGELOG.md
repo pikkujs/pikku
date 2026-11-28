@@ -1,3 +1,17 @@
+## 0.12.125
+
+### Patch Changes
+
+- 34929df: Experimental harness declarations: `pikkuHarness`, `pikkuHarnessGate` and `pikkuHarnessGateAgent` in `@pikku/core/harness`. Both inspector engines read them; `pikku all` writes `.pikku/harness/pikku-harness-meta.gen.json` and the `HarnessGateName` union, and refuses a harness that lists an undeclared gate (PKU157). Gates carry `harness: true`, `failOn` and `writes` in their function meta and are left out of the app's registrations, schema register and every deployment unit. Nothing runs a harness yet.
+- aaad408: Contributors are removed, with `@pikku/core/contributors`, `wireAddon({ contributors })`, the contributors command and config keys, and a deploy provider's `contributorSupport`. Services are ordinary code in three layers: a host's platform services (`createPlatformServices`, named by a deploy provider's `platformServicesModule(ctx)` or by `--platform-services`), `pikkuServices` and `pikkuWireServices`. Only the platform layer receives the raw environment. A `kysely` the platform module returns gets the app's column coercion map. See docs/MIGRATION.md.
+- Updated dependencies [6f7b3a1]
+- Updated dependencies [34929df]
+- Updated dependencies [d340ea3]
+- Updated dependencies [32d3ae5]
+- Updated dependencies [fdca6f2]
+- Updated dependencies [aaad408]
+  - @pikku/core@0.12.163
+
 ## 0.12.124
 
 ### Patch Changes

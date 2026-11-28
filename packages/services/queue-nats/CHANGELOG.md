@@ -1,5 +1,18 @@
 # @pikku/queue-nats
 
+## 0.12.8
+
+### Patch Changes
+
+- 738cef5: `@pikku/queue-nats` is a plain library: it exports `connectNats(logger, env)`, which an app calls in `pikkuServices`, in place of the contributor. Register the queue workers with `natsLifecycle.registerQueues(logger)` from the server lifecycle's `beforeStart`. `natsLifecycle.stop()` drains the workers and closes the connection. See docs/MIGRATION.md.
+- Updated dependencies [6f7b3a1]
+- Updated dependencies [34929df]
+- Updated dependencies [d340ea3]
+- Updated dependencies [32d3ae5]
+- Updated dependencies [fdca6f2]
+- Updated dependencies [aaad408]
+  - @pikku/core@0.12.163
+
 ## 0.12.7
 
 ### Patch Changes
