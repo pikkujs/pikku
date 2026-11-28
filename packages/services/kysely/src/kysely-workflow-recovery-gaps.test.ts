@@ -11,8 +11,8 @@
  * 1. A step whose worker is hung but still renewing its lease. The renewal
  *    (`startStepLeaseRefresh` -> `refreshStepLease`) runs on a timer, not on
  *    the step's progress, so a hung promise keeps the step looking owned and
- *    the run looking active. There is no step deadline (`WorkflowStepOptions`
- *    reserves `// Future: timeout`), so the run stays `running` for good. The
+ *    the run looking active. A step deadline (`WorkflowRpcStepOptions.timeout`) is
+ *    opt-in and these steps set none, so the run stays `running` for good. The
  *    inline variant is the same thing one level up: a pass whose `holdLease`
  *    keeps renewing the run lease while a step inside it never settles.
  * 2. A run left `compensating` by a process that died mid-unwind. No job is
@@ -140,7 +140,7 @@ const seedRunningStep = async () => {
 describe('recovery gap: a hung step that keeps renewing its lease', () => {
   test(
     'a queued step hung for 6 hours under a renewed lease is never recovered',
-    { todo: 'steps have no deadline' },
+    { todo: 'a step deadline is opt-in and these steps set none' },
     async () => {
       const { runId, stepId } = await seedRunningStep()
       await backdateRun(runId, 6 * HOUR)
@@ -156,14 +156,14 @@ describe('recovery gap: a hung step that keeps renewing its lease', () => {
       assert.equal((await service.getRun(runId))?.status, 'running')
       assert.ok(
         recovered.includes(true),
-        `the step has been running for 6 hours and ${SWEEPS} recovery passes never handed the run back: a renewed lease holds it out of every sweep, and no step deadline exists`
+        `the step has been running for 6 hours and ${SWEEPS} recovery passes never handed the run back: a renewed lease holds it out of every sweep, and the step sets no deadline`
       )
     }
   )
 
   test(
     'an inline step hung inside a live pass (run lease renewed) is never recovered',
-    { todo: 'steps have no deadline' },
+    { todo: 'a step deadline is opt-in and these steps set none' },
     async () => {
       const { runId } = await seedRunningStep()
       await backdateRun(runId, 6 * HOUR)
@@ -185,7 +185,7 @@ describe('recovery gap: a hung step that keeps renewing its lease', () => {
       assert.equal((await service.getRun(runId))?.status, 'running')
       assert.ok(
         recovered.includes(true),
-        `the inline step has been running for 6 hours and ${SWEEPS} recovery passes never handed the run back: the renewed run lease answers for it, and no step deadline exists`
+        `the inline step has been running for 6 hours and ${SWEEPS} recovery passes never handed the run back: the renewed run lease answers for it, and the step sets no deadline`
       )
     }
   )
