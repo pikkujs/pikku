@@ -32,6 +32,15 @@ node scripts/embed-examples.mjs
 # PIKKU_CLI_VERSION selects another release, as one choice, for a rollback or
 # for testing a candidate. Nothing else here names a version.
 #
+# TEMPORARY EXCEPTION to the no-pins rule above: @pikku/core 0.12.163 and
+# @pikku/deploy 0.12.24 are published, but the @pikku/cli they were released
+# with (0.12.217) is not, because the publish run died part-way. The newest
+# published CLI (0.12.213) still imports @pikku/core/contributors and
+# withDeployUnit, which those two removed, so it cannot load and this build
+# could not start. The three pins below are the last releases that CLI loads
+# with. Delete them, and this paragraph, once @pikku/cli 0.12.217 or later is
+# on npm: from then on the published set is consistent again.
+#
 # The check after the install fails the build at once, naming the resolved set,
 # when the install did not produce a CLI that loads.
 echo "Bootstrapping with published @pikku/cli..."
@@ -46,6 +55,11 @@ cat > "$_bootstrap_dir/package.json" <<JSON
   "private": true,
   "dependencies": {
     "@pikku/cli": "${PIKKU_CLI_VERSION}"
+  },
+  "overrides": {
+    "@pikku/core": "0.12.162",
+    "@pikku/deploy": "0.12.23",
+    "@pikku/inspector": "0.12.123"
   }
 }
 JSON

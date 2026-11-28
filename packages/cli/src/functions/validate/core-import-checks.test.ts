@@ -130,6 +130,20 @@ describe('core import checks', () => {
     assert.deepEqual(await runCoreImportChecks(root), [])
   })
 
+  test('accepts the collection declaration, which the CLI loads before any leaf', async () => {
+    const root = await project()
+    await write(
+      root,
+      'db/collections.ts',
+      `import { defineCollections } from '@pikku/core/collections'\n`
+    )
+    await write(root, 'db/other.ts', `import x from '@pikku/core/scope'\n`)
+
+    const findings = await runCoreImportChecks(root)
+    assert.equal(findings.length, 1)
+    assert.match(findings[0]!.message, /@pikku\/core\/scope/)
+  })
+
   test('accepts the alias', async () => {
     const root = await project()
     await write(

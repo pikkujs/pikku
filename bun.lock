@@ -323,7 +323,7 @@
         "zod": "^4",
       },
       "peerDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@pikku/core": "^0.12.163",
         "zod": "^4",
       },
@@ -344,7 +344,7 @@
       },
       "peerDependencies": {
         "@pikku/addon-changes-cli": "^0.12.2",
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@pikku/core": "^0.12.163",
         "@pikku/jose": "^0.12.11",
         "zod": "^4",
@@ -391,7 +391,7 @@
     },
     "packages/cli": {
       "name": "@pikku/cli",
-      "version": "0.12.217",
+      "version": "0.12.218",
       "bin": {
         "pikku": "dist/bin/pikku.js",
       },
@@ -1381,7 +1381,7 @@
         "zod": "^4.6.7",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
       },
@@ -1480,7 +1480,7 @@
         "@pikku/websocket": "^0.12.7",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
         "tsx": "^4.23.15",
@@ -1544,7 +1544,7 @@
         "express": "^5",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@standard-schema/spec": "^1.1.0",
         "@types/cookie-parser": "^1.4.10",
         "@types/express": "^5.0.6",
@@ -1591,7 +1591,7 @@
       "name": "@pikku/templates-function-addon",
       "version": "0.0.0",
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@pikku/core": "^0.12.163",
         "@standard-schema/spec": "^1.1.0",
         "typescript": "^7.0.2",
@@ -1624,7 +1624,7 @@
         "@modelcontextprotocol/sdk": "1.32.1",
         "@pikku/azure-functions": "workspace:*",
         "@pikku/bun-server": "workspace:*",
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@pikku/cloudflare": "workspace:*",
         "@pikku/deploy-azure": "workspace:*",
         "@pikku/deploy-cloudflare": "workspace:*",
@@ -1661,7 +1661,7 @@
         "@pikku/modelcontextprotocol": "^0.12.19",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26.6.5",
         "tsx": "^4.23.15",
@@ -1685,7 +1685,7 @@
         "typescript": "^7.0.2",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
       },
@@ -1705,7 +1705,7 @@
         "typescript": "^7.0.2",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
       },
@@ -1728,7 +1728,7 @@
         "tsx": "^4.23.15",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
         "@types/react": "^19",
@@ -1768,7 +1768,7 @@
         "tsx": "^4.23.15",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@playwright/test": "1.64.1",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
@@ -1809,7 +1809,7 @@
         "typescript": "^7.0.2",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@pikku/inspector": "^0.12.125",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
@@ -1830,7 +1830,7 @@
         "typescript": "^7.0.2",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@pikku/inspector": "^0.12.125",
         "@standard-schema/spec": "^1.1.0",
         "@types/node": "^26",
@@ -1876,7 +1876,7 @@
         "zod": "^4",
       },
       "devDependencies": {
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@types/node": "^26",
         "@types/react": "^19",
         "@types/react-dom": "^19",
@@ -1908,7 +1908,7 @@
       },
       "devDependencies": {
         "@modelcontextprotocol/sdk": "1.32.1",
-        "@pikku/cli": "^0.12.217",
+        "@pikku/cli": "^0.12.218",
         "@pikku/deploy-standalone": "workspace:*",
         "@pikku/playwright": "workspace:*",
         "@playwright/test": "^1.64.1",

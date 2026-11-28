@@ -1,9 +1,43 @@
 import { timingSafeEqual } from 'node:crypto'
 import { addGlobalMiddleware, pikkuMiddleware } from '@pikku/core/middleware'
+import { pikkuState } from '@pikku/core/state'
 
 export const STUDIO_HEADER = 'x-pikku-studio'
 
-export const STUDIO_SESSION = { userId: 'studio', scopes: ['admin', 'pikku:otlp:runs'] }
+export const STUDIO_SESSION = {
+  userId: 'studio',
+  scopes: ['admin', 'pikku:otlp:runs'],
+}
+
+/**
+ * The root of every scope the functions of a wired addon require, so the Studio
+ * session can use the addons the project wires. Never the wildcard.
+ */
+const wiredAddonScopeRoots = () => {
+  const roots = new Set<string>()
+  for (const addon of pikkuState(null, 'addons', 'packages').values()) {
+    if (addon.remote) continue
+    const meta = pikkuState(addon.package, 'function', 'meta')
+    for (const { scopes } of Object.values(meta)) {
+      for (const scope of scopes ?? []) {
+        const root = scope.split(':')[0]
+        if (root && root !== '*') roots.add(root)
+      }
+    }
+  }
+  return roots
+}
+
+/**
+ * `collections` when the project has collections: only the functions `pikku all`
+ * generates from `db/collections.ts` require a scope under that root.
+ */
+const collectionScopeRoots = () =>
+  Object.values(pikkuState(null, 'function', 'meta')).some(({ scopes }) =>
+    scopes?.some((scope) => scope.startsWith('collections:'))
+  )
+    ? ['collections']
+    : []
 
 const matches = (presented: string, token: string) => {
   const a = Buffer.from(presented)
@@ -23,7 +57,13 @@ export const studioSession = (token: string) =>
       ) {
         setInitialSession({
           ...STUDIO_SESSION,
-          scopes: [...STUDIO_SESSION.scopes],
+          scopes: [
+            ...new Set([
+              ...STUDIO_SESSION.scopes,
+              ...wiredAddonScopeRoots(),
+              ...collectionScopeRoots(),
+            ]),
+          ],
         })
       }
       return next()

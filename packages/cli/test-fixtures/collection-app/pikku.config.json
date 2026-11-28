@@ -1,0 +1,17 @@
+{
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src"],
+  "schema": { "supportsImportAttributes": true },
+  "content": { "sizeLimit": "1mb", "buckets": ["site"] },
+  "backends": {
+    "api": {
+      "filter": {},
+      "content": {
+        "buckets": ["site"],
+        "uploadUrlPrefix": "/upload",
+        "assetUrlPrefix": "/assets"
+      }
+    }
+  },
+  "scaffold": { "pikkuDir": "./src/scaffold", "rpc": true }
+}

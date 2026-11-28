@@ -1,3 +1,9 @@
+## 0.12.218
+
+### Patch Changes
+
+- 2adf0d4: A relative config path (`-c ../../pikku.config.json`) is made absolute before it is read, so every pass `pikku all` starts in another directory reads the same file. Run from a main package, a relative path used to resolve against the package pass's own directory and write `.pikku` output above the project.
+
 ## 0.12.217
 
 ### Patch Changes

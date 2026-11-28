@@ -8,6 +8,8 @@ import {
   APP_SCOPE_ROOT,
   buildAppScopeDefinition,
 } from '@pikku/core/virtual-user'
+import { assertCollectionScopeRoot } from '../collections/assert-collection-scope-root.js'
+import { collectionFiles } from '../collections/collection-project.js'
 import type { VirtualUserDefinitions } from '@pikku/core/virtual-user'
 import type { ScopeDefinitions } from '@pikku/core/scope'
 import type { InspectorState } from '@pikku/inspector'
@@ -91,6 +93,10 @@ export const pikkuScopes = pikkuSessionlessFunc<{ bootstrap?: boolean }, void>({
     const state = await getInspectorState(false, bootstrap, bootstrap)
 
     const definitions = projectScopeDefinitions(state, config)
+    assertCollectionScopeRoot(
+      state.scopes.definitions,
+      collectionFiles(config).scopes
+    )
 
     const content = serializeScopesTypes({
       definitions,

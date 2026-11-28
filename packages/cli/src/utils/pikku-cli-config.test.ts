@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { after, describe, test } from 'node:test'
-import { rmSync } from 'node:fs'
+import { realpathSync, rmSync } from 'node:fs'
 import {
   DEFAULT_META_LOCALE,
   PikkuCLIConfigError,
@@ -311,6 +311,23 @@ describe('getPikkuCLIConfig', () => {
         /elsewhere ran as the main package of .*but that root's main package is .*packages\/main/
       )
     })
+  })
+
+  test('a relative config path is made absolute, so a pass in another directory reads the same file', async () => {
+    const root = realpathSync(await writeConfig())
+    const before = process.cwd()
+    process.chdir(join(root, 'src'))
+    try {
+      const config = await getPikkuCLIConfig(
+        silentLogger,
+        join('..', 'pikku.config.json'),
+        []
+      )
+      assert.equal(config.configPath, join(root, 'pikku.config.json'))
+      assert.equal(config.rootDir, root)
+    } finally {
+      process.chdir(before)
+    }
   })
 
   test('a project with no marked package is its own main', async () => {

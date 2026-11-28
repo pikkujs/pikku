@@ -45,14 +45,48 @@ signatures (name, input, output) of every function the screens call as `mock: tr
 
 ```json
 [
-  { "ref": "data", "title": "Recipes and their ingredients are kept", "specialist": "build", "dependsOn": [],
-    "body": "Store recipes (title, steps, servings) and ingredients. Declare listRecipes and saveRecipe with mock: true and three .mocks/ recipes. Done when you can list the mocked recipes." },
-  { "ref": "list", "title": "The recipe box page", "specialist": "frontend", "dependsOn": ["data"],
-    "body": "A page listing each recipe with its servings, and a form to add one. Done when you can add a recipe and see it in the list." },
-  { "ref": "save", "title": "Recipes are saved for real", "specialist": "build", "dependsOn": ["data"],
-    "body": "Build listRecipes and saveRecipe on the database. Decision: no sharing yet. Done when a saved recipe is still there after a reload." }
+  {
+    "ref": "data",
+    "title": "Recipes and their ingredients are kept",
+    "specialist": "build",
+    "dependsOn": [],
+    "body": "Store recipes (title, steps, servings) and ingredients. Declare listRecipes and saveRecipe with mock: true and three .mocks/ recipes. Done when you can list the mocked recipes."
+  },
+  {
+    "ref": "list",
+    "title": "The recipe box page",
+    "specialist": "frontend",
+    "dependsOn": ["data"],
+    "body": "A page listing each recipe with its servings, and a form to add one. Done when you can add a recipe and see it in the list."
+  },
+  {
+    "ref": "save",
+    "title": "Recipes are saved for real",
+    "specialist": "build",
+    "dependsOn": ["data"],
+    "body": "Build listRecipes and saveRecipe on the database. Decision: no sharing yet. Done when a saved recipe is still there after a reload."
+  }
 ]
 ```
+
+**Records the owner or staff edit after launch use the collection backend**, not hand-written admin functions. The data change
+declares their tables in `db/tables.ts` (`defineTables`) and a collection for each in `db/collections.ts` (`defineCollections`);
+`pikku all` generates the functions that list, read and write them, so those get no signature, `mock: true` or `.mocks/`.
+No collection screens ship yet: a `frontend` change still builds the `/admin` pages, which call the generated functions. A
+public form's submit function is still hand-written. Plan within these limits:
+
+- Create and delete are off unless a collection turns them on, and only the fields it lists for editing can change.
+  Visitor submissions are a collection with the submitted columns read-only and no create.
+- A field is one column: text, long or rich (Markdown) text, a choice from a fixed list, yes/no, number, date or time,
+  email, URL, money (whole minor units with a currency), image, or a relation to another collection. No JSON columns,
+  other file uploads or many-to-many fields.
+- Each table has a single-column primary key. In the app's own tables, a record cannot be deletable here if deleting it
+  would cascade to, or clear, other rows.
+- An addon's table is edited only through a collection the addon publishes: the app can switch its operations and actions
+  off and add checks, nothing more, and it has no image or relation fields.
+- It needs Better Auth and the scope tables: whoever uses `/admin` is granted the collections' `collections:` scopes. Keep the
+  whole `collections` scope out of system roles.
+- SQLite and Postgres only.
 
 The command checks the plan and, if it refuses, names every problem: fix those and run it again.
 There is no field for questions: where you are unsure, write "Decision: ..." in the body. When it

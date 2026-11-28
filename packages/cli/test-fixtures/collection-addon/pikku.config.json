@@ -1,0 +1,9 @@
+{
+  "tsconfig": "./tsconfig.json",
+  "srcDirectories": ["src", "types"],
+  "addon": {
+    "displayName": "Notes",
+    "description": "A test addon whose handlers keep records in memory and never query.",
+    "categories": ["Test"]
+  }
+}
