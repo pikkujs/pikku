@@ -129,4 +129,5 @@ A rule that was chosen, and what it rules out.
 
 - [A heavy library is stubbed unless a required service claims it](a-library-is-stubbed-unless-a-required-service-claims-it.md) — Every SERVICE_MODULE_MAP pattern is stubbed out of a unit unless a service the unit requires claims it
 
+- [The empty PGlite snapshot lives in the user's cache, never in the project](the-pglite-snapshot-lives-in-the-user-cache.md) — Scratch PGlite databases start from a copy of an empty data directory kept under XDG_CACHE_HOME or ~/.cache, so a checked-out repository cannot supply the database
 <!-- /pikku:knowledge-index -->
