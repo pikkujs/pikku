@@ -186,8 +186,9 @@ export abstract class PikkuWorkflowService implements WorkflowService {
     this.releaseContext(runId)
   }
 
+  /** Undefined until singleton services exist: the constructor wires queues before they do. */
   protected get logger() {
-    return getSingletonServices()?.logger
+    return pikkuState(null, 'package', 'singletonServices')?.logger
   }
 
   private readonly lostStepLog = {

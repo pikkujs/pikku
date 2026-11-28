@@ -37,6 +37,14 @@ miss them. `wireQueueWorkers` warns loudly when workflows exist but no
 fallback, but the isolation is gone and one slow step head-of-line-blocks every
 other workflow — invisible until a queue starves.
 
+The warning counts only the workflows the inspector generates a queue for — a
+graph with `nodes` whose `source` is not `scenario` — so a workflow registered at
+runtime, such as an attention func's refresh, which runs on the shared queue by
+design, does not set it off. Because the queues are wired before singleton
+services exist, the service's `logger` reads singleton state without
+`getSingletonServices()` (which throws while it is unset) and is undefined
+there; the warning then goes to the console rather than being dropped.
+
 **What this rules out:** defaulting to `'shared-groups'`, returning a job group
 under `'per-workflow'`, resolving queue names from `queue.registrations`, or
 dropping the wiring-time warning as noise.

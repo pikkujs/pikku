@@ -1,7 +1,7 @@
 import { holdLease, LeaseTakenError } from '../../services/lease-service.js'
 import type { LeaseService } from '../../services/lease-service.js'
 import type { Logger } from '../../services/logger.js'
-import { getSingletonServices } from '../../pikku-state.js'
+import { pikkuState } from '../../pikku-state.js'
 import { getDurationInMilliseconds } from '../../time-utils.js'
 import {
   DEFAULT_RECOVERY_INTERVAL_MS,
@@ -405,7 +405,7 @@ export class WorkflowRecovery {
   constructor(private readonly host: WorkflowRecoveryHost) {}
 
   private get logger() {
-    return getSingletonServices()?.logger
+    return pikkuState(null, 'package', 'singletonServices')?.logger
   }
 
   /**

@@ -12,6 +12,7 @@ import {
   pikkuWorkflowWorkerFunc,
 } from './workflow-queue-workers.js'
 import type { WorkflowQueueStrategy } from './workflow-queue-routing.js'
+import type { WorkflowRuntimeMeta } from './workflow.types.js'
 
 const ORCHESTRATOR_QUEUE_PREFIX = 'wf-orchestrator-'
 const STEP_QUEUE_PREFIX = 'wf-step-'
@@ -29,9 +30,9 @@ export type WorkflowQueueWiringOptions = {
   concurrency: number
   groupConcurrency: number | GroupConcurrencyConfig
   /**
-   * Resolved only when there is something to warn about: reading the logger
-   * throws while singleton services are uninitialized, and wiring queues before
-   * that point is legitimate.
+   * Resolved only when there is something to warn about. Undefined while
+   * singleton services are uninitialized, since wiring queues before that point
+   * is legitimate; the warning then goes to the console.
    */
   getLogger: () => Logger | undefined
 }
@@ -129,18 +130,26 @@ export const wireWorkflowQueueWorkers = ({
   }
 }
 
+/**
+ * Mirrors the inspector, which generates a `wf-orchestrator-*` queue for every
+ * workflow graph with nodes except a scenario. A workflow registered at runtime
+ * (an attention func's refresh) has no nodes and runs on the shared queue.
+ */
+const hasGeneratedOrchestratorQueue = (meta: WorkflowRuntimeMeta): boolean =>
+  !!meta.nodes && meta.source !== 'scenario'
+
 const warnOnMissingDedicatedQueues = (
   queueMeta: Record<string, unknown>,
   getLogger: () => Logger | undefined
 ) => {
-  const workflowCount = Object.keys(
+  const workflowCount = Object.values(
     pikkuState(null, 'workflows', 'meta') ?? {}
-  ).length
+  ).filter(hasGeneratedOrchestratorQueue).length
   const dedicatedQueues = Object.keys(queueMeta).filter((name) =>
     name.startsWith(ORCHESTRATOR_QUEUE_PREFIX)
   ).length
   if (workflowCount > 0 && dedicatedQueues === 0) {
-    getLogger()?.warn?.(
+    ;(getLogger() ?? console).warn(
       `[pikku] ${workflowCount} workflow(s) registered but no per-workflow orchestrator queues were found in queue meta. ` +
         `All workflows will share a single orchestrator queue, where one slow step blocks every other workflow behind it. ` +
         `Check that the generated bootstrap imports the queue-workers meta (pikku-queue-workers-wirings-meta.gen.js).`
