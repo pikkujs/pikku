@@ -422,6 +422,7 @@ jobs:
             hmr,
             dev-bun,
             dev-port,
+            scenario-mutate,
             dev-platform-services,
             deploy-cloudflare,
             deploy-serverless,
