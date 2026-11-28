@@ -51,6 +51,11 @@
  *                              the func, its workflow and its schedule, and
  *                              the scheduled task runs and starts the
  *                              workflow for each watched project
+ *  18b. wiring the workflow
+ *      queues before singleton
+ *      services exist        → neither throws nor warns that per-workflow
+ *                              queues are missing: the attention workflow
+ *                              runs on the shared queue by design
  *  19. an attention widget on
  *      a screen or slot the
  *      plugin does not arrange → an error naming the plugin, and the build
@@ -597,6 +602,58 @@ if (
 }
 console.log(
   '✓ #pikku/attention is typed, and the bootstrap registers the workflow and a schedule that runs'
+)
+
+// A deployed entry builds its workflow service, and so wires the workflow
+// queues, before singleton services exist. The attention workflow the
+// bootstrap registered is not one the inspector gives a queue, so wiring must
+// neither throw nor warn that per-workflow queues are missing.
+const wiredEarly = spawnSync(
+  'bun',
+  [
+    '-e',
+    `await import('./.pikku/addon/pikku-bootstrap.gen.ts')
+const { pikkuState } = await import('@pikku/core/state')
+const { InMemoryWorkflowService } = await import('@pikku/core/services/in-memory-workflow')
+const warnings = []
+console.warn = (message) => warnings.push(String(message))
+let error = null
+try {
+  new InMemoryWorkflowService().wireQueueWorkers()
+} catch (e) {
+  error = e.message
+}
+pikkuState(null, 'package', 'singletonServices', {
+  logger: { info() {}, warn: (message) => warnings.push(String(message)), error() {}, debug() {} },
+})
+new InMemoryWorkflowService().wireQueueWorkers()
+console.log(JSON.stringify({
+  workflow: pikkuState(null, 'workflows', 'meta')['attention.health.verdict']?.name ?? null,
+  error,
+  orchestrator: pikkuState(null, 'function', 'functions').has('pikkuWorkflowOrchestrator'),
+  missingQueueWarning: warnings.some((w) => w.includes('no per-workflow orchestrator queues')),
+}))`,
+  ],
+  { cwd: here, encoding: 'utf8' }
+)
+const wiring = `${wiredEarly.stdout}`.trim().split('\n').at(-1)
+if (
+  wiredEarly.status !== 0 ||
+  wiring !==
+    JSON.stringify({
+      workflow: 'attention.health.verdict',
+      error: null,
+      orchestrator: true,
+      missingQueueWarning: false,
+    })
+) {
+  fail(
+    'wiring workflow queues before singleton services exist failed, or warned about the attention workflow',
+    `${wiredEarly.stdout}${wiredEarly.stderr}`
+  )
+}
+console.log(
+  '✓ workflow queues wire before singleton services exist, without a missing-queue warning for an attention workflow'
 )
 
 const expectAttentionError = (pattern, message) => {

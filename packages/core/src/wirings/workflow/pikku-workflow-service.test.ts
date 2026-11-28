@@ -31,25 +31,28 @@ describe('pikku-workflow-service worker registration', () => {
 })
 
 describe('pikku-workflow-service per-workflow queue warning', () => {
-  const setup = (workflowNames: string[], perWorkflowQueues: string[] = []) => {
-    resetPikkuState()
-    const warnings: string[] = []
-    pikkuState(null, 'package', 'singletonServices', {
-      logger: {
-        error: () => {},
-        info: () => {},
-        debug: () => {},
-        warn: (message: string) => warnings.push(message),
-      },
-    } as any)
+  type WorkflowEntry = {
+    name: string
+    source?: 'dsl' | 'scenario'
+    nodes?: Record<string, unknown>
+  }
+  const graphWorkflow = (name: string): WorkflowEntry => ({
+    name,
+    nodes: { step: { nodeId: 'step', rpcName: 'doStep' } },
+  })
 
+  const registerWorkflows = (
+    workflows: WorkflowEntry[],
+    perWorkflowQueues: string[] = []
+  ) => {
     const metaState = pikkuState(null, 'workflows', 'meta')
-    for (const name of workflowNames) {
+    for (const { name, source = 'dsl', nodes } of workflows) {
       metaState[name] = {
         name,
         pikkuFuncId: name,
-        source: 'dsl',
+        source,
         graphHash: `${name}-hash`,
+        ...(nodes ? { nodes } : {}),
       } as any
     }
 
@@ -60,12 +63,40 @@ describe('pikku-workflow-service per-workflow queue warning', () => {
         name: queueName,
       } as any
     }
+  }
 
+  const setup = (
+    workflows: WorkflowEntry[],
+    perWorkflowQueues: string[] = []
+  ) => {
+    resetPikkuState()
+    const warnings: string[] = []
+    pikkuState(null, 'package', 'singletonServices', {
+      logger: {
+        error: () => {},
+        info: () => {},
+        debug: () => {},
+        warn: (message: string) => warnings.push(message),
+      },
+    } as any)
+    registerWorkflows(workflows, perWorkflowQueues)
+    return warnings
+  }
+
+  const captureConsoleWarn = (run: () => void): string[] => {
+    const warnings: string[] = []
+    const original = console.warn
+    console.warn = (message: string) => warnings.push(message)
+    try {
+      run()
+    } finally {
+      console.warn = original
+    }
     return warnings
   }
 
   test('warns when workflows exist but no per-workflow orchestrator queue is registered', () => {
-    const warnings = setup(['someWorkflow'])
+    const warnings = setup([graphWorkflow('someWorkflow')])
 
     new InMemoryWorkflowService().wireQueueWorkers()
 
@@ -76,7 +107,10 @@ describe('pikku-workflow-service per-workflow queue warning', () => {
   })
 
   test('does not warn when per-workflow orchestrator queues are present', () => {
-    const warnings = setup(['someWorkflow'], ['wf-orchestrator-some-workflow'])
+    const warnings = setup(
+      [graphWorkflow('someWorkflow')],
+      ['wf-orchestrator-some-workflow']
+    )
 
     new InMemoryWorkflowService().wireQueueWorkers()
 
@@ -94,6 +128,37 @@ describe('pikku-workflow-service per-workflow queue warning', () => {
     assert.ok(
       !warnings.some((w) => /no per-workflow orchestrator queues/.test(w)),
       `expected no warning, got: ${JSON.stringify(warnings)}`
+    )
+  })
+
+  test('does not warn for workflows the inspector gives no queue: runtime-registered ones and scenarios', () => {
+    const warnings = setup([
+      { name: 'attention.health.verdict' },
+      { ...graphWorkflow('signupScenario'), source: 'scenario' },
+    ])
+
+    new InMemoryWorkflowService().wireQueueWorkers()
+
+    assert.ok(
+      !warnings.some((w) => /no per-workflow orchestrator queues/.test(w)),
+      `expected no warning, got: ${JSON.stringify(warnings)}`
+    )
+  })
+
+  test('wiring queues before singleton services exist does not throw, and warns on the console', () => {
+    resetPikkuState()
+    registerWorkflows([graphWorkflow('someWorkflow')])
+
+    const warnings = captureConsoleWarn(() => {
+      new InMemoryWorkflowService().wireQueueWorkers()
+    })
+
+    assert.ok(
+      pikkuState(null, 'function', 'functions').has('pikkuWorkflowOrchestrator')
+    )
+    assert.ok(
+      warnings.some((w) => /no per-workflow orchestrator queues/.test(w)),
+      `expected a console warning, got: ${JSON.stringify(warnings)}`
     )
   })
 })
