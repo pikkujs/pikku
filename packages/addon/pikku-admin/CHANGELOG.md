@@ -1,5 +1,18 @@
 # @pikku/addon-admin
 
+## 0.12.20
+
+### Patch Changes
+
+- 6f7b3a1: `pikkuAttentionFunc({ widget, every, func })` declares in a `*.attention.ts` file whether a widget of an addon's arranged screens needs a look. It runs as the workflow `attention.<widget>` (a retried get step, then a store step), stores every run per project and widget with `updatedAt`, and refreshes on its `every` schedule and on demand. `@pikku/core/attention-func` exports it with `getAttention` and `refreshAttention`; `@pikku/addon-admin` exposes both as `getAttention` and `refreshAttention` functions. `pikku all` refuses a `widget` that is not a slot of the plugin's own arranged screens, naming the plugin.
+- Updated dependencies [6f7b3a1]
+- Updated dependencies [34929df]
+- Updated dependencies [d340ea3]
+- Updated dependencies [32d3ae5]
+- Updated dependencies [fdca6f2]
+- Updated dependencies [aaad408]
+  - @pikku/core@0.12.163
+
 ## 0.12.19
 
 ### Patch Changes
