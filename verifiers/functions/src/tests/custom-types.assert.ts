@@ -30,6 +30,7 @@ const trees = (): string[] => {
   const backends = join(outDir, 'backends')
   const children = existsSync(backends)
     ? readdirSync(backends)
+        .filter((entry) => entry !== '.tmp')
         .map((entry) => join(backends, entry))
         .filter((path) => statSync(path).isDirectory())
     : []
