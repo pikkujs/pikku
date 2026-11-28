@@ -342,8 +342,6 @@
     "randomDigits"
   ],
   "./gateway": [
-    "createListenerMessageHandler",
-    "resolveGatewayAdapter",
     "wireGateway"
   ],
   "./cli": [
